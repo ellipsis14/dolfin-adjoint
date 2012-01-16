@@ -10,6 +10,7 @@ import libadjoint
 import libadjoint.exceptions
 
 import hashlib
+import time
 
 import assembly
 
@@ -142,7 +143,7 @@ def annotate(*args, **kwargs):
   # Set up the data associated with the matrix on the left-hand side. This goes on the diagonal
   # of the 'large' system that incorporates all of the timelevels, which is why it is prefixed
   # with diag.
-  diag_name = hashlib.md5(str(eq_lhs)).hexdigest() # we don't have a useful human-readable name, so take the md5sum of the string representation of the form
+  diag_name = hashlib.md5(str(eq_lhs) + str(eq_rhs) + str(u) + str(time.time())).hexdigest() # we don't have a useful human-readable name, so take the md5sum of the string representation of the forms
   diag_deps = [adj_variables[coeff] for coeff in ufl.algorithms.extract_coefficients(eq_lhs) if hasattr(coeff, "function_space")]
   diag_coeffs = [coeff for coeff in ufl.algorithms.extract_coefficients(eq_lhs) if hasattr(coeff, "function_space")]
   diag_block = libadjoint.Block(diag_name, dependencies=diag_deps, test_hermitian=debugging["test_hermitian"], test_derivative=debugging["test_derivative"])

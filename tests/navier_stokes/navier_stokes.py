@@ -35,7 +35,8 @@ debugging["record_all"] = True
 parameters["std_out_all_processes"] = False;
 
 # Load mesh from file
-mesh = Mesh("lshape.xml.gz")
+#mesh = Mesh("lshape.xml.gz")
+mesh = UnitSquare(3,3)
 
 # Define function spaces (P2-P1)
 V = VectorFunctionSpace(mesh, "CG", 2)
@@ -53,7 +54,7 @@ T = 0.02
 nu = 0.01
 
 # Define time-dependent pressure boundary condition
-p_in = Expression("sin(3.0*t)", t=0.0)
+p_in = Expression("sin(3.0*t)", t=1.0)
 
 # Define boundary conditions
 noslip  = DirichletBC(V, (0, 0),
@@ -69,10 +70,6 @@ bcp = [inflow, outflow]
 u0 = Function(V)
 u1 = Function(V)
 p1 = Function(Q)
-
-print "u0: ", u0
-print "Velocity: ", u1
-print "Pressure: ", p1
 
 # Define coefficients
 k = Constant(dt)
