@@ -530,7 +530,8 @@ class Functional(libadjoint.Functional):
 
   def __init__(self, form):
 
-    self.form=form
+    self.form = form
+    self.activated = False
 
   def __call__(self, dependencies, values):
 
@@ -556,8 +557,9 @@ class Functional(libadjoint.Functional):
 
   def dependencies(self, adjointer, timestep):
 
-    if timestep == adjointer.timestep_count-1:
+    if self.activated is False:
       deps = [adj_variables[coeff] for coeff in ufl.algorithms.extract_coefficients(self.form) if hasattr(coeff, "function_space")]      
+      self.activated = True
     else:
       deps = []
     

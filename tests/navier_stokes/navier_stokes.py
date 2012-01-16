@@ -50,7 +50,7 @@ q = TestFunction(Q)
 def main(ic, annotate=False):
   # Set parameter values
   dt = 0.01
-  T = 0.01
+  T = 0.05
   nu = 0.01
 
   # Define time-dependent pressure boundary condition
