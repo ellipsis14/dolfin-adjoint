@@ -77,7 +77,7 @@ def annotate(*args, **kwargs):
     else:
       eq_lhs, eq_rhs = define_nonlinear_equation(eq.lhs, u)
       F = eq.lhs
-      eq_bcs = None
+      eq_bcs = []
       linear = False
 
     newargs = list(args)
@@ -286,6 +286,8 @@ def solve(*args, **kwargs):
 
   if to_annotate:
     linear, newargs = annotate(*args, **kwargs)
+  else:
+    newargs = args
 
   ret = dolfin.fem.solving.solve(*newargs, **kwargs)
 

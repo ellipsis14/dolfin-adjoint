@@ -129,6 +129,8 @@ def main(ic, annotate=False):
 
 if __name__ == "__main__":
 
+  import sys
+
   ic = Function(V)
   final_soln = main(ic, annotate=True)
   adj_html("navier_stokes_forward.html", "forward")
@@ -143,3 +145,5 @@ if __name__ == "__main__":
     return assemble(inner(soln, soln)*dx)
 
   minconv = test_initial_condition_adjoint(J, ic, final_adj, seed=1.0e-3)
+  if minconv < 1.9:
+    sys.exit(1)
