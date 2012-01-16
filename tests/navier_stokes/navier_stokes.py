@@ -28,6 +28,9 @@ on an L-shaped domain using Chorin's splitting method."""
 from dolfin import *
 from dolfin_adjoint import *
 
+# Record all variables solved for
+debugging["record_all"] = True
+
 # Print log messages only from the root process in parallel
 parameters["std_out_all_processes"] = False;
 
@@ -46,7 +49,7 @@ q = TestFunction(Q)
 
 # Set parameter values
 dt = 0.01
-T = 0.05
+T = 0.02
 nu = 0.01
 
 # Define time-dependent pressure boundary condition
@@ -66,6 +69,10 @@ bcp = [inflow, outflow]
 u0 = Function(V)
 u1 = Function(V)
 p1 = Function(Q)
+
+print "u0: ", u0
+print "Velocity: ", u1
+print "Pressure: ", p1
 
 # Define coefficients
 k = Constant(dt)
@@ -134,3 +141,4 @@ while t < T + DOLFIN_EPS:
 # Adjoint stuff below here
 adj_html("navier_stokes_forward.html", "forward")
 adj_html("navier_stokes_adjoint.html", "adjoint")
+replay_dolfin(forget=False)

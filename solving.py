@@ -299,11 +299,16 @@ def solve(*args, **kwargs):
     # Finally, if we want to record all of the solutions of the real forward model
     # (for comparison with a libadjoint replay later),
     # then we should record the value of the variable we just solved for.
-    if isinstance(args[0], ufl.classes.Equation):
-      if debugging["record_all"]:
+    if debugging["record_all"]:
+      if isinstance(args[0], ufl.classes.Equation):
         unpacked_args = dolfin.fem.solving._extract_args(*args, **kwargs)
         u  = unpacked_args[1]
         adjointer.record_variable(adj_variables[u], libadjoint.MemoryStorage(Vector(u)))
+      elif isinstance(args[0], dolfin.cpp.Matrix):
+        u = args[1]
+        adjointer.record_variable(adj_variables[u], libadjoint.MemoryStorage(Vector(u)))
+      else:
+        raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Don't know how to record, sorry")
 
   return ret
 
@@ -477,8 +482,14 @@ class Matrix(libadjoint.Matrix):
       else:
         bcs = self.bcs
 
+      solver_parameters = {}
+      if self.pc is not None:
+        solver_parameters["preconditioner"] = self.pc
+      if self.ksp is not None:
+        solver_parameters["linear_solver"] = self.ksp
+
       x=Vector(dolfin.Function(self.test_function().function_space()))
-      dolfin.fem.solving.solve(self.data==b.data, x.data, bcs)
+      dolfin.fem.solving.solve(self.data==b.data, x.data, bcs, solver_parameters=solver_parameters)
 
     return x
 
