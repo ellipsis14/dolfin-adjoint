@@ -35,8 +35,7 @@ debugging["record_all"] = True
 parameters["std_out_all_processes"] = False;
 
 # Load mesh from file
-#mesh = Mesh("lshape.xml.gz")
-mesh = UnitSquare(3,3)
+mesh = Mesh("lshape.xml.gz")
 
 # Define function spaces (P2-P1)
 V = VectorFunctionSpace(mesh, "CG", 2)
@@ -48,94 +47,99 @@ p = TrialFunction(Q)
 v = TestFunction(V)
 q = TestFunction(Q)
 
-# Set parameter values
-dt = 0.01
-T = 0.02
-nu = 0.01
+def main(ic, annotate=False):
+  # Set parameter values
+  dt = 0.01
+  T = 0.01
+  nu = 0.01
 
-# Define time-dependent pressure boundary condition
-p_in = Expression("sin(3.0*t)", t=1.0)
+  # Define time-dependent pressure boundary condition
+  p_in = Expression("sin(3.0*t)", t=1.0)
 
-# Define boundary conditions
-noslip  = DirichletBC(V, (0, 0),
-                      "on_boundary && \
-                       (x[0] < DOLFIN_EPS | x[1] < DOLFIN_EPS | \
-                       (x[0] > 0.5 - DOLFIN_EPS && x[1] > 0.5 - DOLFIN_EPS))")
-inflow  = DirichletBC(Q, p_in, "x[1] > 1.0 - DOLFIN_EPS")
-outflow = DirichletBC(Q, 0, "x[0] > 1.0 - DOLFIN_EPS")
-bcu = [noslip]
-bcp = [inflow, outflow]
+  # Define boundary conditions
+  noslip  = DirichletBC(V, (0, 0),
+                        "on_boundary && \
+                         (x[0] < DOLFIN_EPS | x[1] < DOLFIN_EPS | \
+                         (x[0] > 0.5 - DOLFIN_EPS && x[1] > 0.5 - DOLFIN_EPS))")
+  inflow  = DirichletBC(Q, p_in, "x[1] > 1.0 - DOLFIN_EPS")
+  outflow = DirichletBC(Q, 0, "x[0] > 1.0 - DOLFIN_EPS")
+  bcu = [noslip]
+  bcp = [inflow, outflow]
 
-# Create functions
-u0 = Function(V)
-u1 = Function(V)
-p1 = Function(Q)
+  # Create functions
+  u0 = Function(ic)
+  u1 = Function(V)
+  p1 = Function(Q)
 
-# Define coefficients
-k = Constant(dt)
-f = Constant((0, 0))
+  # Define coefficients
+  k = Constant(dt)
+  f = Constant((0, 0))
 
-# Tentative velocity step
-F1 = (1/k)*inner(u - u0, v)*dx + inner(grad(u0)*u0, v)*dx + \
-     nu*inner(grad(u), grad(v))*dx - inner(f, v)*dx
-a1 = lhs(F1)
-L1 = rhs(F1)
+  # Tentative velocity step
+  F1 = (1/k)*inner(u - u0, v)*dx + inner(grad(u0)*u0, v)*dx + \
+       nu*inner(grad(u), grad(v))*dx - inner(f, v)*dx
+  a1 = lhs(F1)
+  L1 = rhs(F1)
 
-# Pressure update
-a2 = inner(grad(p), grad(q))*dx
-L2 = -(1/k)*div(u1)*q*dx
+  # Pressure update
+  a2 = inner(grad(p), grad(q))*dx
+  L2 = -(1/k)*div(u1)*q*dx
 
-# Velocity update
-a3 = inner(u, v)*dx
-L3 = inner(u1, v)*dx - k*inner(grad(p1), v)*dx
+  # Velocity update
+  a3 = inner(u, v)*dx
+  L3 = inner(u1, v)*dx - k*inner(grad(p1), v)*dx
 
-# Assemble matrices
-A1 = assemble(a1)
-A2 = assemble(a2)
-A3 = assemble(a3)
+  # Assemble matrices
+  A1 = assemble(a1)
+  A2 = assemble(a2)
+  A3 = assemble(a3)
 
-# Create files for storing solution
-ufile = File("results/velocity.pvd")
-pfile = File("results/pressure.pvd")
+  # Time-stepping
+  t = dt
+  while t < T + DOLFIN_EPS:
 
-# Time-stepping
-t = dt
-while t < T + DOLFIN_EPS:
+      # Update pressure boundary condition
+      #p_in.t = t
 
-    # Update pressure boundary condition
-    #p_in.t = t
+      # Compute tentative velocity step
+      begin("Computing tentative velocity")
+      b1 = assemble(L1)
+      [bc.apply(A1, b1) for bc in bcu]
+      solve(A1, u1, b1, "gmres", "default")
+      end()
 
-    # Compute tentative velocity step
-    begin("Computing tentative velocity")
-    b1 = assemble(L1)
-    [bc.apply(A1, b1) for bc in bcu]
-    solve(A1, u1, b1, "gmres", "default")
-    end()
+      # Pressure correction
+      begin("Computing pressure correction")
+      b2 = assemble(L2)
+      [bc.apply(A2, b2) for bc in bcp]
+      solve(A2, p1, b2, "gmres", "amg")
+      end()
 
-    # Pressure correction
-    begin("Computing pressure correction")
-    b2 = assemble(L2)
-    [bc.apply(A2, b2) for bc in bcp]
-    solve(A2, p1, b2, "gmres", "amg")
-    end()
+      # Velocity correction
+      begin("Computing velocity correction")
+      b3 = assemble(L3)
+      [bc.apply(A3, b3) for bc in bcu]
+      solve(A3, u1, b3, "gmres", "default")
+      end()
 
-    # Velocity correction
-    begin("Computing velocity correction")
-    b3 = assemble(L3)
-    [bc.apply(A3, b3) for bc in bcu]
-    solve(A3, u1, b3, "gmres", "default")
-    end()
+      # Move to next time step
+      u0.assign(u1)
+      t += dt
+  return u0
 
-    # Save to file
-    ufile << u1
-    pfile << p1
+if __name__ == "__main__":
 
-    # Move to next time step
-    u0.assign(u1)
-    t += dt
-    print "t =", t
+  ic = Function(V)
+  final_soln = main(ic, annotate=True)
+  adj_html("navier_stokes_forward.html", "forward")
+  adj_html("navier_stokes_adjoint.html", "adjoint")
+  replay_dolfin(forget=False)
 
-# Adjoint stuff below here
-adj_html("navier_stokes_forward.html", "forward")
-adj_html("navier_stokes_adjoint.html", "adjoint")
-replay_dolfin(forget=False)
+  J = Functional(inner(final_soln, final_soln)*dx)
+  final_adj = adjoint_dolfin(J, forget=False)
+
+  def J(ic):
+    soln = main(ic)
+    return assemble(inner(soln, soln)*dx)
+
+  minconv = test_initial_condition_adjoint(J, ic, final_adj, seed=1.0e-3)
