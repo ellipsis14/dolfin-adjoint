@@ -106,7 +106,7 @@ t = dt
 while t < T + DOLFIN_EPS:
 
     # Update pressure boundary condition
-    p_in.t = t
+    #p_in.t = t
 
     # Compute tentative velocity step
     begin("Computing tentative velocity")
