@@ -2,7 +2,6 @@ import random
 
 from dolfin import *
 from dolfin_adjoint import *
-import numpy
 import sys
 
 mesh = UnitSquare(4, 4)
@@ -33,12 +32,12 @@ if __name__ == "__main__":
 
   ICParam = InitialConditionParameter(ic, perturbation_direction)
   dudm = tlm_dolfin(ICParam)
-  dudm_np = numpy.array(dudm.data.vector())
+  dudm_np = dudm.data.vector()
 
   dJdu = derivative(soln*dx, soln)
-  dJdu_np = numpy.array(assemble(dJdu))
+  dJdu_np = assemble(dJdu)
 
-  dJdm = numpy.dot(dJdu_np, dudm_np)
+  dJdm = dJdu_np.inner(dudm_np)
   print "Got dJdm: ", dJdm
 
   def J(soln):

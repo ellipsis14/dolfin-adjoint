@@ -34,6 +34,8 @@ debugging["record_all"] = True
 # Print log messages only from the root process in parallel
 parameters["std_out_all_processes"] = False;
 
+#parameters["mesh_partitioner"] = "SCOTCH";
+
 # Load mesh from file
 mesh = Mesh("lshape.xml.gz")
 

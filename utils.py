@@ -55,7 +55,6 @@ def test_initial_condition_adjoint(J, ic, final_adjoint, seed=0.01, perturbation
   # and check its correctness with the Taylor remainder convergence test.
   print "Running Taylor remainder convergence analysis for the adjoint model ... "
   import random
-  import numpy
 
   # First run the problem unperturbed
   ic_copy = dolfin.Function(ic)
@@ -89,11 +88,11 @@ def test_initial_condition_adjoint(J, ic, final_adjoint, seed=0.01, perturbation
   print "Taylor remainder without adjoint information: ", no_gradient
   print "Convergence orders for Taylor remainder without adjoint information (should all be 1): ", convergence_order(no_gradient)
 
-  adjoint_vector = numpy.array(final_adjoint.vector())
+  adjoint_vector = final_adjoint.vector()
 
   with_gradient = []
   for i in range(len(perturbations)):
-    remainder = abs(functional_values[i] - f_direct - numpy.dot(adjoint_vector, numpy.array(perturbations[i].vector())))
+    remainder = abs(functional_values[i] - f_direct - adjoint_vector.inner(perturbations[i].vector()))
     with_gradient.append(remainder)
 
   print "Taylor remainder with adjoint information: ", with_gradient
@@ -133,7 +132,6 @@ def test_initial_condition_tlm(J, dJ, ic, seed=0.01, perturbation_direction=None
   # and check its correctness with the Taylor remainder convergence test.
   print "Running Taylor remainder convergence analysis for the tangent linear model... "
   import random
-  import numpy
 
   # First run the problem unperturbed
   ic_copy = dolfin.Function(ic)
@@ -171,7 +169,7 @@ def test_initial_condition_tlm(J, dJ, ic, seed=0.01, perturbation_direction=None
   for i in range(len(perturbations)):
     param = InitialConditionParameter(ic, perturbations[i])
     final_tlm = tlm_dolfin(param).data
-    remainder = abs(functional_values[i] - f_direct - numpy.dot(numpy.array(final_tlm.vector()), numpy.array(dJ)))
+    remainder = abs(functional_values[i] - f_direct - final_tlm.vector().inner(dJ))
     with_gradient.append(remainder)
 
   print "Taylor remainder with tangent linear information: ", with_gradient
