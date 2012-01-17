@@ -11,6 +11,8 @@ n = 100
 mesh = UnitInterval(n)
 V = FunctionSpace(mesh, "CG", 2)
 
+parameters["num_threads"] = 2
+
 debugging["record_all"] = True
 #debugging["test_hermitian"] = (100, 1.0e-14)
 #debugging["test_derivative"] = 6
