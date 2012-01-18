@@ -464,7 +464,7 @@ class Vector(libadjoint.Vector):
   def write(self, var):
     import os.path
 
-    filename = var.__str__()
+    filename = str(var)
     suffix = "xml"
     if not os.path.isfile(filename+".%s" % suffix):
       print "Warning: Overwritting checkpoint file "+filename+"."+suffix
@@ -477,7 +477,7 @@ class Vector(libadjoint.Vector):
   @staticmethod
   def read(var):
 
-    filename = var.__str__()
+    filename = str(var)
     suffix = "xml"
 
     V = checkpoint_fs[filename]
@@ -489,7 +489,7 @@ class Vector(libadjoint.Vector):
     import os
     import os.path
 
-    filename = var.__str__()
+    filename = str(var)
     suffix = "xml"
 
     assert(os.path.isfile(filename+".%s" % suffix))
