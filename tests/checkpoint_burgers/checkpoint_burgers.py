@@ -39,10 +39,11 @@ def main(ic, annotate=False):
     t = 0.0
     end = 0.05
     if annotate: 
-      adjoint_checkpointing('multistage', int(ceil(end/float(timestep)))+2, 0, 5, verbose=True)
+      adjoint_checkpointing('multistage', int(ceil(end/float(timestep)))+1, 0, 5, verbose=True)
 
     u = Function(V)
     while (t <= end):
+        adj_inc_timestep()
         solve(a == L, u, bc, annotate=annotate)
 
         u_.assign(u, annotate=annotate)

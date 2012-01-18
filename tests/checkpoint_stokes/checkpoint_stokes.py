@@ -92,11 +92,12 @@ def main(ic, annotate=False):
     end = 1.0
 
     if annotate:
-      adjoint_checkpointing('multistage', int(ceil(end/float(timestep)))+2, 0, 5, verbose=True)
+      adjoint_checkpointing('multistage', int(ceil(end/float(timestep)))+1, 0, 5, verbose=True)
       print "Velocity: ", w
       print "Temperature: ", T
 
     while (t <= end):
+        adj_inc_timestep()
 
         solve(flow_eq[0] == flow_eq[1], w, flow_bcs, annotate=annotate)
 

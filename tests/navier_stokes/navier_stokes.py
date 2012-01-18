@@ -127,6 +127,7 @@ def main(ic, annotate=False):
       # Move to next time step
       u0.assign(u1)
       t += dt
+      adj_inc_timestep()
   return u0
 
 if __name__ == "__main__":
