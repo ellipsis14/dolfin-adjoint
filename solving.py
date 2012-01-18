@@ -818,6 +818,7 @@ class InitialConditionParameter(libadjoint.Parameter):
        perturbation: the perturbation direction in which you wish to compute the gradient. Must be a Function.'''
     self.var = adj_variables[coeff]
     self.var.c_object.timestep = 0 # we want to put in the source term only at the initial condition.
+    self.var.c_object.iteration = 0 # we want to put in the source term only at the initial condition.
     self.perturbation = Vector(perturbation).duplicate()
     self.perturbation.axpy(1.0, Vector(perturbation))
 
