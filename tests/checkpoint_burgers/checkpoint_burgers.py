@@ -37,9 +37,9 @@ def main(ic, annotate=False):
     bc = DirichletBC(V, 0.0, "on_boundary")
 
     t = 0.0
-    end = 0.05
+    end = 0.5
     if annotate: 
-      adjoint_checkpointing('multistage', int(ceil(end/float(timestep)))+1, 0, 5, verbose=True)
+      adjoint_checkpointing('multistage', int(ceil(end/float(timestep))), 5, 10, verbose=True)
 
     u = Function(V)
     while (t <= end):
