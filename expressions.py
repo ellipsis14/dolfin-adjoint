@@ -29,8 +29,9 @@ dolfin.Expression.__init__ = __init__
 expression_setattr = dolfin.Expression.__setattr__
 def __setattr__(self, k, v):
   expression_setattr(self, k, v)
-  expr_dict = expressions_dict[self]
-  expr_dict[k] = v
+  if k not in ["_ufl_element", "_count", "_countedclass"]:
+    expr_dict = expressions_dict[self]
+    expr_dict[k] = v
 dolfin.Expression.__setattr__ = __setattr__
 
 def update_expressions(d):
