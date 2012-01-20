@@ -13,6 +13,7 @@ import hashlib
 import time
 
 import assembly
+import expressions
 
 debugging={}
 
@@ -212,6 +213,14 @@ def annotate(*args, **kwargs):
   # With the initial conditions out of the way, let us now define the callbacks that
   # define the actions of the operator the user has passed in on the lhs of this equation.
 
+  # Our equation may depend on Expressions, and those Expressions may have parameters 
+  # (e.g. for time-dependent boundary conditions).
+  # In order to successfully replay the forward solve, we need to keep those parameters around.
+  # In expressions.py, we overloaded the Expression class to record all of the parameters
+  # as they are set. We're now going to copy that dictionary as it is at the annotation time,
+  # so that we can get back to this exact state:
+  frozen_expressions_dict = expressions.freeze_dict()
+
   def diag_assembly_cb(dependencies, values, hermitian, coefficient, context):
     '''This callback must conform to the libadjoint Python block assembly
     interface. It returns either the form or its transpose, depending on
@@ -220,6 +229,7 @@ def annotate(*args, **kwargs):
     assert coefficient == 1
 
     value_coeffs=[v.data for v in values]
+    expressions.update_expressions(frozen_expressions_dict)
     eq_l=dolfin.replace(eq_lhs, dict(zip(diag_coeffs, value_coeffs)))
 
     if hermitian:
@@ -234,6 +244,7 @@ def annotate(*args, **kwargs):
 
   def diag_action_cb(dependencies, values, hermitian, coefficient, input, context):
     value_coeffs = [v.data for v in values]
+    expressions.update_expressions(frozen_expressions_dict)
     eq_l = dolfin.replace(eq_lhs, dict(zip(diag_coeffs, value_coeffs)))
 
     if hermitian:
@@ -256,6 +267,7 @@ def annotate(*args, **kwargs):
     def derivative_action(dependencies, values, variable, contraction_vector, hermitian, input, coefficient, context):
       dolfin_variable = values[dependencies.index(variable)].data
       dolfin_values = [val.data for val in values]
+      expressions.update_expressions(frozen_expressions_dict)
 
       current_form = dolfin.replace(eq_lhs, dict(zip(diag_coeffs, dolfin_values)))
 

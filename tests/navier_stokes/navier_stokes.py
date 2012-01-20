@@ -56,7 +56,7 @@ def main(ic, annotate=False):
   nu = 0.01
 
   # Define time-dependent pressure boundary condition
-  p_in = Expression("sin(3.0*t)", t=1.0)
+  p_in = Expression("sin(3.0*t)", t=0.0)
 
   # Define boundary conditions
   noslip  = DirichletBC(V, (0, 0),
@@ -101,7 +101,7 @@ def main(ic, annotate=False):
   while t < T + DOLFIN_EPS:
 
       # Update pressure boundary condition
-      #p_in.t = t
+      p_in.t = t
 
       # Compute tentative velocity step
       begin("Computing tentative velocity")
