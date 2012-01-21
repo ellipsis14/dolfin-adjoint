@@ -684,6 +684,10 @@ class NonlinearRHS(RHS):
       var.c_object.timestep = var.c_object.timestep - 1
       self.deps.append(var)
       self.ic_var = var
+    elif var.timestep == 0 and debugging["fussy_replay"]:
+      self.ic_copy = dolfin.Function(u) # we can't record a value for this anywhere .. so we just store it.
+                                        # it only happens in the fussy replay, which is debugging-only, anyway.
+      self.ic_var = None
     else:
       self.ic_var = None
 
@@ -691,6 +695,10 @@ class NonlinearRHS(RHS):
     assert isinstance(self.form, ufl.form.Form)
 
     ic = self.u.function_space() # by default, initialise with a blank function in the solution FunctionSpace
+
+    if hasattr(self, "ic_copy"):
+      ic = self.ic_copy
+
     replace_map = {}
 
     for i in range(len(self.deps)):
