@@ -8,7 +8,7 @@ class InitialConditions(Expression):
     def __init__(self):
         random.seed(2 + MPI.process_number())
     def eval(self, values, x):
-        values[0] = 0.63 + 0.02*(0.5 - 0.1)
+        values[0] = 0.63 + 0.02*(0.5 - random.random())
         values[1] = 0.0
     def value_shape(self):
         return (2,)
@@ -70,9 +70,6 @@ def main(ic, annotate=False):
   parameters["newton_solver"]["convergence_criterion"] = "incremental"
   parameters["newton_solver"]["relative_tolerance"] = 1e-6
 
-  # Output file
-  file = File("output.pvd", "compressed")
-
   # Step in time
   t = 0.0
   T = 5*dt
@@ -80,7 +77,6 @@ def main(ic, annotate=False):
       t += dt
       u0.assign(u, annotate=annotate)
       solve(L == 0, u, solver_parameters=parameters, J=a, annotate=annotate)
-      file << (u.split()[0], t)
   return u
 
 if __name__ == "__main__":
