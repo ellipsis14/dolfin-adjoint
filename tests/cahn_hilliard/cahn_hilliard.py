@@ -28,7 +28,7 @@ mesh = UnitSquare(96, 96)
 V = FunctionSpace(mesh, "Lagrange", 1)
 ME = V*V
 
-def main():
+def main(ic, annotate=False):
 
   # Define trial and test functions
   du    = TrialFunction(ME)
@@ -44,9 +44,8 @@ def main():
   c0, mu0 = split(u0)
 
   # Create intial conditions and interpolate
-  u_init = InitialConditions()
-  u.interpolate(u_init)
-  u0.interpolate(u_init)
+  u.assign(ic, annotate=False)
+  u0.assign(ic, annotate=False)
 
   # Compute the chemical potential df/dc
   c = variable(c)
@@ -76,15 +75,34 @@ def main():
 
   # Step in time
   t = 0.0
-  T = 1*dt
+  T = 5*dt
   while (t < T):
       t += dt
-      u0.assign(u)
-      solve(L == 0, u, solver_parameters=parameters, J=a)
+      u0.assign(u, annotate=annotate)
+      solve(L == 0, u, solver_parameters=parameters, J=a, annotate=annotate)
       file << (u.split()[0], t)
+  return u
 
 if __name__ == "__main__":
-  main()
+  ic = Function(ME)
+  init = InitialConditions()
+  ic.interpolate(init)
+  ic_copy = Function(ic)
+
+  forward = main(ic, annotate=True)
+  forward_copy = Function(forward)
   adj_html("forward_cahn_hilliard.html", "forward")
   adj_html("adjoint_cahn_hilliard.html", "adjoint")
+
   replay_dolfin()
+
+  J = Functional(inner(forward, forward)*dx)
+  adjoint = adjoint_dolfin(J)
+
+  def J(ic):
+    u = main(ic, annotate=False)
+    return assemble(inner(u, u)*dx)
+
+  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=1.0e-5)
+  if minconv < 1.9:
+    sys.exit(1)
