@@ -11,6 +11,7 @@ import libadjoint.exceptions
 
 import hashlib
 import time
+import copy
 
 import assembly
 import expressions
@@ -48,6 +49,7 @@ def annotate(*args, **kwargs):
     u  = unpacked_args[1]
     bcs = unpacked_args[2]
     J = unpacked_args[3]
+    solver_parameters = copy.deepcopy(unpacked_args[7])
 
     if isinstance(eq.lhs, ufl.Form) and isinstance(eq.rhs, ufl.Form):
       eq_lhs = eq.lhs
@@ -61,18 +63,6 @@ def annotate(*args, **kwargs):
       linear = False
 
     newargs = list(args)
-
-    try:
-      solver_params = kwargs["solver_parameters"]
-      ksp = solver_params["linear_solver"]
-    except KeyError:
-      ksp = None
-
-    try:
-      solver_params = kwargs["solver_parameters"]
-      pc = solver_params["preconditioner"]
-    except KeyError:
-      pc = None
 
   elif isinstance(args[0], dolfin.cpp.Matrix):
     linear = True
@@ -92,15 +82,17 @@ def annotate(*args, **kwargs):
     newargs = list(args)
     newargs[1] = u.vector() # for the real solve later
 
-    try:
-      ksp = args[3]
-    except IndexError:
-      ksp = None
+    solver_parameters = {}
 
     try:
-      pc = args[4]
+      solver_parameters["linear_solver"] = args[3]
     except IndexError:
-      pc = None
+      pass
+
+    try:
+      solver_parameters["preconditioner"] = args[4]
+    except IndexError:
+      pass
 
     eq_bcs = list(set(assembly.bc_cache[args[0]] + assembly.bc_cache[args[2]]))
   else:
@@ -132,7 +124,7 @@ def annotate(*args, **kwargs):
   if linear:
     rhs = RHS(eq_rhs)
   else:
-    rhs = NonlinearRHS(eq_rhs, F, u, bcs, mass=eq_lhs)
+    rhs = NonlinearRHS(eq_rhs, F, u, bcs, mass=eq_lhs, solver_parameters=solver_parameters, J=J)
 
   # We need to check if this is the first equation,
   # so that we can register the appropriate initial conditions.
@@ -201,9 +193,9 @@ def annotate(*args, **kwargs):
       # solution associated with the lifted discrete system that is actually solved.
       adjoint_bcs = [dolfin.homogenize(bc) for bc in eq_bcs if isinstance(bc, dolfin.DirichletBC)]
       if len(adjoint_bcs) == 0: adjoint_bcs = None
-      return (Matrix(dolfin.adjoint(eq_l), bcs=adjoint_bcs, pc=pc, ksp=ksp), Vector(None, fn_space=u.function_space()))
+      return (Matrix(dolfin.adjoint(eq_l), bcs=adjoint_bcs, solver_parameters=solver_parameters), Vector(None, fn_space=u.function_space()))
     else:
-      return (Matrix(eq_l, bcs=eq_bcs, pc=pc, ksp=ksp), Vector(None, fn_space=u.function_space()))
+      return (Matrix(eq_l, bcs=eq_bcs, solver_parameters=solver_parameters), Vector(None, fn_space=u.function_space()))
   diag_block.assemble = diag_assembly_cb
 
   def diag_action_cb(dependencies, values, hermitian, coefficient, input, context):
@@ -489,7 +481,7 @@ class Matrix(libadjoint.Matrix):
   together, duplicating matrices, etc., that occur in the process of constructing
   the adjoint equations.'''
 
-  def __init__(self, data, bcs=None, ksp=None, pc=None):
+  def __init__(self, data, bcs=None, solver_parameters=None):
 
     if bcs is None:
       self.bcs = []
@@ -498,8 +490,7 @@ class Matrix(libadjoint.Matrix):
 
     self.data=data
 
-    self.ksp = ksp
-    self.pc = pc
+    self.solver_parameters = solver_parameters
 
   def solve(self, var, b):
       
@@ -512,14 +503,10 @@ class Matrix(libadjoint.Matrix):
       else:
         bcs = self.bcs
 
-      solver_parameters = {}
-      if self.pc is not None:
-        solver_parameters["preconditioner"] = self.pc
-      if self.ksp is not None:
-        solver_parameters["linear_solver"] = self.ksp
-
       x=Vector(dolfin.Function(self.test_function().function_space()))
-      dolfin.fem.solving.solve(self.data==b.data, x.data, bcs, solver_parameters=solver_parameters)
+      if "newton_solver" in self.solver_parameters:
+        del self.solver_parameters["newton_solver"]
+      dolfin.fem.solving.solve(self.data==b.data, x.data, bcs, solver_parameters=self.solver_parameters)
 
     return x
 
@@ -679,13 +666,15 @@ class NonlinearRHS(RHS):
   So in order to actually assemble the right-hand side term,
   we first need to solve F(u) = 0 to find the specific u,
   and then multiply that by the mass matrix.'''
-  def __init__(self, form, F, u, bcs, mass):
+  def __init__(self, form, F, u, bcs, mass, solver_parameters, J):
     '''form is M.u - F(u). F is the nonlinear equation, F(u) := 0.'''
     RHS.__init__(self, form)
     self.F = F
     self.u = u
     self.bcs = bcs
     self.mass = mass
+    self.solver_parameters = solver_parameters
+    self.J = J
 
     # We want to mark that the RHS term /also/ depends on
     # the previous value of u, as that's what we need to initialise
@@ -716,8 +705,14 @@ class NonlinearRHS(RHS):
     u = dolfin.Function(ic)
     current_F    = dolfin.replace(current_F, {self.u: u})
 
+    if self.J is not None:
+      J = dolfin.replace(self.J, replace_map)
+      J = dolfin.replace(J, {self.u: u})
+    else:
+      J = self.J
+
     # OK, here goes nothing:
-    dolfin.solve(current_F == 0, u, self.bcs)
+    dolfin.solve(current_F == 0, u, self.bcs, solver_parameters=self.solver_parameters, J=J)
 
     return Vector(dolfin.action(self.mass, u))
 

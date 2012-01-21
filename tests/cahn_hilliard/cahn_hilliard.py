@@ -76,7 +76,7 @@ def main():
 
   # Step in time
   t = 0.0
-  T = 8*dt
+  T = 1*dt
   while (t < T):
       t += dt
       u0.assign(u)
