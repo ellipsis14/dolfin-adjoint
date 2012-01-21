@@ -1,5 +1,7 @@
 import random
 from dolfin import *
+from dolfin_adjoint import *
+debugging["record_all"] = True
 
 # Class representing the intial conditions
 class InitialConditions(Expression):
@@ -26,55 +28,63 @@ mesh = UnitSquare(96, 96)
 V = FunctionSpace(mesh, "Lagrange", 1)
 ME = V*V
 
-# Define trial and test functions
-du    = TrialFunction(ME)
-q, v  = TestFunctions(ME)
+def main():
 
-# Define functions
-u   = Function(ME)  # current solution
-u0  = Function(ME)  # solution from previous converged step
+  # Define trial and test functions
+  du    = TrialFunction(ME)
+  q, v  = TestFunctions(ME)
 
-# Split mixed functions
-dc, dmu = split(du)
-c,  mu  = split(u)
-c0, mu0 = split(u0)
+  # Define functions
+  u   = Function(ME)  # current solution
+  u0  = Function(ME)  # solution from previous converged step
 
-# Create intial conditions and interpolate
-u_init = InitialConditions()
-u.interpolate(u_init)
-u0.interpolate(u_init)
+  # Split mixed functions
+  dc, dmu = split(du)
+  c,  mu  = split(u)
+  c0, mu0 = split(u0)
 
-# Compute the chemical potential df/dc
-c = variable(c)
-f    = 100*c**2*(1-c)**2
-dfdc = diff(f, c)
+  # Create intial conditions and interpolate
+  u_init = InitialConditions()
+  u.interpolate(u_init)
+  u0.interpolate(u_init)
 
-# mu_(n+theta)
-mu_mid = (1.0-theta)*mu0 + theta*mu
+  # Compute the chemical potential df/dc
+  c = variable(c)
+  f    = 100*c**2*(1-c)**2
+  dfdc = diff(f, c)
 
-# Weak statement of the equations
-L0 = c*q*dx - c0*q*dx + dt*dot(grad(mu_mid), grad(q))*dx
-L1 = mu*v*dx - dfdc*v*dx - lmbda*dot(grad(c), grad(v))*dx
-L = L0 + L1
+  # mu_(n+theta)
+  mu_mid = (1.0-theta)*mu0 + theta*mu
 
-# Compute directional derivative about u in the direction of du (Jacobian)
-a = derivative(L, u, du)
+  # Weak statement of the equations
+  L0 = c*q*dx - c0*q*dx + dt*dot(grad(mu_mid), grad(q))*dx
+  L1 = mu*v*dx - dfdc*v*dx - lmbda*dot(grad(c), grad(v))*dx
+  L = L0 + L1
 
-# Create nonlinear problem and Newton solver
-parameters = {}
-parameters["linear_solver"] = "lu"
-parameters["newton_solver"] = {}
-parameters["newton_solver"]["convergence_criterion"] = "incremental"
-parameters["newton_solver"]["relative_tolerance"] = 1e-6
+  # Compute directional derivative about u in the direction of du (Jacobian)
+  a = derivative(L, u, du)
 
-# Output file
-file = File("output.pvd", "compressed")
+  # Create nonlinear problem and Newton solver
+  parameters = {}
+  parameters["linear_solver"] = "lu"
+  parameters["newton_solver"] = {}
+  parameters["newton_solver"]["convergence_criterion"] = "incremental"
+  parameters["newton_solver"]["relative_tolerance"] = 1e-6
 
-# Step in time
-t = 0.0
-T = 80*dt
-while (t < T):
-    t += dt
-    u0.assign(u)
-    solve(L == 0, u, solver_parameters=parameters)
-    file << (u.split()[0], t)
+  # Output file
+  file = File("output.pvd", "compressed")
+
+  # Step in time
+  t = 0.0
+  T = 8*dt
+  while (t < T):
+      t += dt
+      u0.assign(u)
+      solve(L == 0, u, solver_parameters=parameters, J=a)
+      file << (u.split()[0], t)
+
+if __name__ == "__main__":
+  main()
+  adj_html("forward_cahn_hilliard.html", "forward")
+  adj_html("adjoint_cahn_hilliard.html", "adjoint")
+  replay_dolfin()
