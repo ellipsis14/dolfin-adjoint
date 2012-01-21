@@ -1,5 +1,5 @@
 run: clean
-	python sw.py
+	python sw_flather.py
 clean:
 	rm -f *vtu
 	rm -f *pvd
