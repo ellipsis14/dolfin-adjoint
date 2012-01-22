@@ -141,6 +141,8 @@ def annotate(*args, **kwargs):
 
       fn_space = coeff.function_space()
       block_name = "Identity: %s" % str(fn_space)
+      if len(block_name) > int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"]):
+        block_name = block_name[0:int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"])-1]
       identity_block = libadjoint.Block(block_name)
     
       init_rhs=Vector(coeff).duplicate()
