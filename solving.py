@@ -28,6 +28,7 @@ debugging["record_all"] = False
 debugging["test_hermitian"] = None
 debugging["test_derivative"] = None
 debugging["fussy_replay"] = True
+debugging["stop_annotating"] = False
 
 # Create the adjointer, the central object that records the forward solve
 # as it happens.
@@ -97,6 +98,7 @@ def annotate(*args, **kwargs):
     eq_bcs = list(set(assembly.bc_cache[args[0]] + assembly.bc_cache[args[2]]))
   else:
     raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to annotate your equation, sorry!")
+
 
   # Suppose we are solving for a variable w, and that variable shows up in the
   # coefficients of eq_lhs/eq_rhs.
@@ -270,6 +272,8 @@ def solve(*args, **kwargs):
   if "annotate" in kwargs:
     to_annotate = kwargs["annotate"]
     del kwargs["annotate"] # so we don't pass it on to the real solver
+  if debugging["stop_annotating"]:
+    to_annotate = False
 
   if to_annotate:
     linear, newargs = annotate(*args, **kwargs)
