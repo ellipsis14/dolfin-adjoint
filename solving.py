@@ -512,6 +512,14 @@ class Matrix(libadjoint.Matrix):
       x=Vector(dolfin.Function(self.test_function().function_space()))
       if "newton_solver" in self.solver_parameters:
         del self.solver_parameters["newton_solver"]
+
+      if b.data is None:
+        # This means we didn't get any contribution on the RHS of the adjoint system. This could be that the
+        # simulation ran further ahead than when the functional was evaluated, or it could be that the
+        # functional is set up incorrectly.
+        print "Warning: got zero RHS for the solve associated with variable ", var
+        b.data = dolfin.Function(self.test_function().function_space())
+
       dolfin.fem.solving.solve(self.data==b.data, x.data, bcs, solver_parameters=self.solver_parameters)
 
     return x
