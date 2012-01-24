@@ -63,8 +63,6 @@ def annotate(*args, **kwargs):
       eq_bcs = []
       linear = False
 
-    newargs = list(args)
-
   elif isinstance(args[0], dolfin.cpp.Matrix):
     linear = True
     try:
@@ -78,10 +76,8 @@ def annotate(*args, **kwargs):
       raise libadjoint.exceptions.LibadjointErrorInvalidInputs("dolfin_adjoint did not assemble your form, and so does not recognise your right-hand side. Did you from dolfin_adjoint import *?")
 
     u = args[1]
-    if not isinstance(u, dolfin.Function):
-      raise libadjoint.exceptions.LibadjointErrorInvalidInputs("dolfin_adjoint needs the Function you are solving for, rather than its .vector().")
-    newargs = list(args)
-    newargs[1] = u.vector() # for the real solve later
+    assert isinstance(u, dolfin.cpp.GenericVector)
+    u = assembly.vector_function[u] # look it up in the .vector() -> Function map created in assembly.py
 
     solver_parameters = {}
 
@@ -255,7 +251,7 @@ def annotate(*args, **kwargs):
     for coeff in adj_variables.coeffs.keys(): 
       if adj_variables[coeff] == var: continue
       adjointer.record_variable(adj_variables[coeff], libadjoint.DiskStorage(Vector(coeff), cs=True))
-  return linear, newargs
+  return linear
 
 def solve(*args, **kwargs):
   '''This solve routine comes from the dolfin_adjoint package, and wraps the real Dolfin
@@ -276,11 +272,9 @@ def solve(*args, **kwargs):
     to_annotate = False
 
   if to_annotate:
-    linear, newargs = annotate(*args, **kwargs)
-  else:
-    newargs = args
+    linear = annotate(*args, **kwargs)
 
-  ret = dolfin.fem.solving.solve(*newargs, **kwargs)
+  ret = dolfin.fem.solving.solve(*args, **kwargs)
 
   if to_annotate:
     if not linear and debugging["fussy_replay"]:
@@ -299,7 +293,7 @@ def solve(*args, **kwargs):
         u  = unpacked_args[1]
         adjointer.record_variable(adj_variables[u], libadjoint.MemoryStorage(Vector(u)))
       elif isinstance(args[0], dolfin.cpp.Matrix):
-        u = args[1]
+        u = assembly.vector_function[args[1]]
         adjointer.record_variable(adj_variables[u], libadjoint.MemoryStorage(Vector(u)))
       else:
         raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Don't know how to record, sorry")
@@ -323,7 +317,12 @@ class Vector(libadjoint.Vector):
 
   def __init__(self, data, zero=False, fn_space=None):
 
+
     self.data=data
+    if not (self.data is None or isinstance(self.data, dolfin.Function) or isinstance(self.data, ufl.Form)):
+      print "Got ", self.data.__class__, " as input to the Vector() class. Don't know how to handle that."
+      raise AssertionError
+
     # self.zero is true if we can prove that the vector is zero.
     if data is None:
       self.zero=True

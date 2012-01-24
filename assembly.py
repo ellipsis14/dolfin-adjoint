@@ -21,3 +21,10 @@ def adjoint_bc_apply(self, *args, **kwargs):
   return bc_apply(self, *args, **kwargs)
 dolfin.DirichletBC.apply = adjoint_bc_apply
 
+vector_function = {}
+function_vector = dolfin.Function.vector
+def adjoint_function_vector(self):
+  vec = function_vector(self)
+  vector_function[vec] = self
+  return vec
+dolfin.Function.vector = adjoint_function_vector
