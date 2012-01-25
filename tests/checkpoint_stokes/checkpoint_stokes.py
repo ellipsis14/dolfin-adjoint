@@ -97,8 +97,6 @@ def main(ic, annotate=False):
       print "Temperature: ", T
 
     while (t <= end):
-        adj_inc_timestep()
-
         solve(flow_eq[0] == flow_eq[1], w, flow_bcs, annotate=annotate)
 
         solve(temp_eq[0] == temp_eq[1], T, temp_bcs, annotate=annotate)
@@ -106,6 +104,7 @@ def main(ic, annotate=False):
         #plot(T)
 
         t += timestep
+        adj_inc_timestep()
 
     return T_
 

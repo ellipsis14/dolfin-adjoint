@@ -43,12 +43,12 @@ def main(ic, annotate=False):
 
     u = Function(V)
     while (t <= end):
-        adj_inc_timestep()
         solve(a == L, u, bc, annotate=annotate)
 
         u_.assign(u, annotate=annotate)
 
         t += float(timestep)
+        adj_inc_timestep()
         #plot(u)
 
     #interactive()

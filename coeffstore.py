@@ -6,7 +6,7 @@ class CoeffStore(object):
   variable, so that the user does not have to manually manage the time information.'''
   def __init__(self):
     self.coeffs={}
-    self.libadjoint_timestep = -1
+    self.libadjoint_timestep = 0
 
   def next(self, coeff):
     '''Increment the timestep corresponding to the provided Dolfin
@@ -14,12 +14,12 @@ class CoeffStore(object):
 
     try:
       (timestep, iteration) = self.coeffs[coeff]
-      if timestep == max(self.libadjoint_timestep, 0):
+      if timestep == self.libadjoint_timestep:
         self.coeffs[coeff] = (timestep, iteration + 1)
       else:
         self.coeffs[coeff] = (self.libadjoint_timestep, 0)
     except KeyError:
-      self.coeffs[coeff] = (max(self.libadjoint_timestep, 0), 0)
+      self.coeffs[coeff] = (self.libadjoint_timestep, 0)
 
     (timestep, iteration) = self.coeffs[coeff]
     return libadjoint.Variable(str(coeff), timestep, iteration)
@@ -28,7 +28,7 @@ class CoeffStore(object):
     '''Return the libadjoint variable corresponding to coeff.'''
 
     if not self.coeffs.has_key(coeff):
-      self.coeffs[coeff] = (max(self.libadjoint_timestep, 0), 0)
+      self.coeffs[coeff] = (self.libadjoint_timestep, 0)
 
     (timestep, iteration) = self.coeffs[coeff]
     return libadjoint.Variable(str(coeff), timestep, iteration)
