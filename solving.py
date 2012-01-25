@@ -726,11 +726,15 @@ class NonlinearRHS(RHS):
     u = dolfin.Function(ic)
     current_F    = dolfin.replace(current_F, {self.u: u})
 
-    if self.J is not None:
-      J = dolfin.replace(self.J, replace_map)
-      J = dolfin.replace(J, {self.u: u})
-    else:
-      J = self.J
+    try:
+      if self.J is not None:
+        J = dolfin.replace(self.J, replace_map)
+        J = dolfin.replace(J, {self.u: u})
+      else:
+        J = self.J
+    except ufl.log.UFLException:
+      print "Working around the DOLFIN bug (see https://bugs.launchpad.net/ufl/+bug/920674)"
+      J = None
 
     # OK, here goes nothing:
     dolfin.solve(current_F == 0, u, self.bcs, solver_parameters=self.solver_parameters, J=J)
