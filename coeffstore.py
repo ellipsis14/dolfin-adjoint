@@ -35,3 +35,6 @@ class CoeffStore(object):
 
   def increment_timestep(self):
     self.libadjoint_timestep += 1
+
+  def forget(self, coeff):
+    del self.coeffs[coeff]

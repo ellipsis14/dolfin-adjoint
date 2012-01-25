@@ -76,7 +76,8 @@ def main(ic, annotate=False):
   while (t < T):
       t += dt
       u0.assign(u, annotate=annotate)
-      solve(L == 0, u, solver_parameters=parameters, J=a, annotate=annotate)
+      solve(L == 0, u, solver_parameters=parameters, annotate=annotate)
+      adj_inc_timestep()
   return u
 
 if __name__ == "__main__":
