@@ -38,6 +38,7 @@ def main(ic, annotate=False):
         u_.assign(u, annotate=annotate)
 
         t += float(timestep)
+        adj_inc_timestep()
 
     return u_
 
