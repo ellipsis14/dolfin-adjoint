@@ -474,11 +474,14 @@ class Vector(libadjoint.Vector):
     import os
     import os.path
 
-    filename = str(var)
-    suffix = "xml"
+    try:
+      filename = str(var)
+      suffix = "xml"
 
-    assert(os.path.isfile(filename+".%s" % suffix))
-    os.remove(filename+".%s" % suffix)
+      assert(os.path.isfile(filename+".%s" % suffix))
+      os.remove(filename+".%s" % suffix)
+    except OSError:
+      pass
 
 class Matrix(libadjoint.Matrix):
   '''This class implements the libadjoint.Matrix abstract base class for the Dolfin adjoint.
@@ -807,7 +810,7 @@ def nonlinear_post_solve_projection(*args, **kwargs):
 
   dolfin.fem.solving.solve(mass == dolfin.action(mass, u), u)
 
-def adjoint_checkpointing(strategy, steps, snaps_on_disk, snaps_in_ram, verbose=False):
+def adj_checkpointing(strategy, steps, snaps_on_disk, snaps_in_ram, verbose=False):
   adjointer.set_checkpoint_strategy(strategy)
   adjointer.set_revolve_options(steps, snaps_on_disk, snaps_in_ram, verbose)
 

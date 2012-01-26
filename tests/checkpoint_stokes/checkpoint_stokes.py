@@ -92,7 +92,7 @@ def main(ic, annotate=False):
     end = 1.0
 
     if annotate:
-      adjoint_checkpointing('multistage', int(ceil(end/float(timestep)))+1, 0, 5, verbose=True)
+      adj_checkpointing('multistage', int(ceil(end/float(timestep)))+1, 0, 5, verbose=True)
       print "Velocity: ", w
       print "Temperature: ", T
 
