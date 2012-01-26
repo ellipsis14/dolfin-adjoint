@@ -123,13 +123,10 @@ def timeloop_theta(M, G, rhs_contr, ufl, ufr, state, params, annotate=True):
     A_r=M-(1-params["theta"])*params["dt"]*G
 
     u_out,p_out=output_files(params["basename"])
-    u_out_err,p_out_err=output_files(params["basename"]+"_error")
 
     M_u_out, v_out, u_out_state=u_output_projector(state.function_space())
-    M_u_error_out, v_error_out, u_error_out_state=u_output_projector(state.function_space())
 
     M_p_out, q_out, p_out_state=p_output_projector(state.function_space())
-    M_p_error_out, q_error_out, p_error_out_state=p_output_projector(state.function_space())
 
     # Project the solution to P1 for visualisation.
     rhs=assemble(inner(v_out,state.split()[0])*dx)
@@ -152,7 +149,7 @@ def timeloop_theta(M, G, rhs_contr, ufl, ufr, state, params, annotate=True):
     while (t < params["finish_time"]):
         t+=dt
 
-        ufl.t=t # Update time for the Boundary condition expression
+        ufl.t=t-(1.0-params["theta"])*dt # Update time for the Boundary condition expression
         step+=1
         rhs=action(A_r,state)+params["dt"]*rhs_contr
         
