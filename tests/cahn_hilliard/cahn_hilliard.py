@@ -1,7 +1,8 @@
 import random
 from dolfin import *
 from dolfin_adjoint import *
-debugging["record_all"] = True
+from math import sqrt
+#debugging["record_all"] = True
 
 # Class representing the intial conditions
 class InitialConditions(Expression):
@@ -14,19 +15,26 @@ class InitialConditions(Expression):
         return (2,)
 
 # Model parameters
-lmbda  = 1.0e-02  # surface parameter
-dt     = 5.0e-06  # time step
-theta  = 0.5      # time stepping family, e.g. theta=1 -> backward Euler, theta=0.5 -> Crank-Nicolson
+eps    = 0.1
+lmbda  = eps**2  # surface parameter
+dt     = 5.0e-06      # time step
+theta  = 0.5          # time stepping family, e.g. theta=1 -> backward Euler, theta=0.5 -> Crank-Nicolson
 
 # Form compiler options
 parameters["form_compiler"]["optimize"]     = True
 parameters["form_compiler"]["cpp_optimize"] = True
 parameters["form_compiler"]["representation"] = "quadrature"
+parameters["std_out_all_processes"] = False;
+debugging["fussy_replay"] = True
 
 # Create mesh and define function spaces
-mesh = UnitSquare(96, 96)
+nodes = 96*96
+mesh = UnitSquare(int(sqrt(nodes)), int(sqrt(nodes)))
 V = FunctionSpace(mesh, "Lagrange", 1)
 ME = V*V
+
+steps = 5
+adj_checkpointing('multistage', steps=steps, snaps_on_disk=10, snaps_in_ram=5, verbose=True)
 
 def main(ic, annotate=False):
 
@@ -70,14 +78,19 @@ def main(ic, annotate=False):
   parameters["newton_solver"]["convergence_criterion"] = "incremental"
   parameters["newton_solver"]["relative_tolerance"] = 1e-6
 
+  file = File("output.pvd", "compressed")
+
   # Step in time
   t = 0.0
-  T = 5*dt
+  T = steps*dt
+  import os
   while (t < T):
       t += dt
       u0.assign(u, annotate=annotate)
       solve(L == 0, u, J=a, solver_parameters=parameters, annotate=annotate)
+      file << (u.split()[0], t)
       adj_inc_timestep()
+
   return u
 
 if __name__ == "__main__":
@@ -91,7 +104,7 @@ if __name__ == "__main__":
   adj_html("forward_cahn_hilliard.html", "forward")
   adj_html("adjoint_cahn_hilliard.html", "adjoint")
 
-  replay_dolfin()
+  #replay_dolfin()
 
   J = Functional(inner(forward, forward)*dx)
   adjoint = adjoint_dolfin(J)
