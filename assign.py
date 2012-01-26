@@ -1,5 +1,5 @@
 import dolfin
-from solving import adjointer, adj_variables, debugging, solve, annotate
+from solving import adjointer, adj_variables, debugging, solve, annotate as solving_annotate
 
 dolfin_assign = dolfin.Function.assign
 def dolfin_adjoint_assign(self, other, annotate=True):
@@ -31,7 +31,7 @@ def dolfin_adjoint_assign(self, other, annotate=True):
   if debugging["fussy_replay"]:
     return solve(M == dolfin.action(M, other), self) # this takes care of all the annotation etc
   else:
-    annotate(M == dolfin.action(M, other), self)
+    solving_annotate(M == dolfin.action(M, other), self)
     return dolfin_assign(self, other)
 
 dolfin.Function.assign = dolfin_adjoint_assign

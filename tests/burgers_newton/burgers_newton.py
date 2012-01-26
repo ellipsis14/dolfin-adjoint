@@ -9,6 +9,7 @@ from dolfin import *
 from dolfin_adjoint import *
 
 debugging["record_all"] = True
+debugging["fussy_replay"] = False
 
 n = 30
 mesh = UnitInterval(n)
