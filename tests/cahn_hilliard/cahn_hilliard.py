@@ -106,12 +106,12 @@ if __name__ == "__main__":
 
   #replay_dolfin()
 
-  J = Functional(inner(forward, forward)*dx)
+  J = Functional((1.0/(4*eps)) * (pow( (-1.0/eps) * forward[1], 2))*dx)
   adjoint = adjoint_dolfin(J)
 
   def J(ic):
     u = main(ic, annotate=False)
-    return assemble(inner(u, u)*dx)
+    return assemble((1.0/(4*eps)) * (pow( (-1.0/eps) * u[1], 2))*dx)
 
   minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=1.0e-5)
   if minconv < 1.9:
