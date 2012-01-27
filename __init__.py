@@ -4,3 +4,4 @@ from expressions import *
 from utils import *
 from assign import *
 from matrix_free import *
+from functional import *
