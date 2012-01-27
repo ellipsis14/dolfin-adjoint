@@ -25,3 +25,18 @@ def adjoint_function_vector(self):
   vec.function = self
   return vec
 dolfin.Function.vector = adjoint_function_vector
+
+def assemble_system(*args, **kwargs):
+  lhs = args[0]
+  rhs = args[1]
+  bcs = args[2]
+
+  if not isinstance(bcs, list):
+    bcs = [bcs]
+
+  (lhs_out, rhs_out) = dolfin.assemble_system(*args, **kwargs)
+  lhs_out.form = lhs
+  lhs_out.bcs = bcs
+  rhs_out.form = rhs
+  rhs_out.bcs = bcs
+  return (lhs_out, rhs_out)
