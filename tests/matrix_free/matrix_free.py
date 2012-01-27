@@ -1,6 +1,8 @@
 from dolfin import *
 from dolfin_adjoint import *
 
+import sys
+
 debugging["record_all"] = True
 
 mesh = UnitSquare(32, 32)
@@ -31,14 +33,15 @@ def main(ic):
       def dependencies(self):
         return []
 
-  y = Function(V)
-  solve(A, y.vector(), b, "cg", "none")
+  #y = Function(V)
+  #solve(A, y.vector(), b, "cg", "none")
 
   x = Function(V)
   KrylovSolver = AdjointPETScKrylovSolver("cg","none")
   KrylovSolver.solve(KrylovMatrix(), down_cast(x.vector()), down_cast(b))
 
-  assert (x.vector() - y.vector()).norm("l2") == 0
+  #assert (x.vector() - y.vector()).norm("l2") == 0
+  return x
 
 if __name__ == "__main__":
 
@@ -49,7 +52,20 @@ if __name__ == "__main__":
   for i in range(len(icvec)):
     icvec[i] = random.random()
 
-  main(ic)
+  iccopy = Function(ic)
+  final = main(ic)
 
   adj_html("forward.html", "forward")
   replay_dolfin()
+
+  J = Functional(inner(final, final)*dx)
+  adjoint = adjoint_dolfin(J)
+
+  def J(ic):
+    soln = main(ic)
+    return assemble(inner(soln, soln)*dx)
+
+  minconv = test_initial_condition_adjoint(J, ic, adjoint, seed=1.0e-3)
+  if minconv < 1.9:
+    sys.exit(1)
+

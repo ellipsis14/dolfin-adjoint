@@ -3,6 +3,7 @@ import libadjoint
 import solving
 import hashlib
 import expressions
+import copy
 
 def down_cast(*args, **kwargs):
   dc = dolfin.down_cast(*args, **kwargs)
