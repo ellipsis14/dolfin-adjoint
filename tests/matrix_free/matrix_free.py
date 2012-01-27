@@ -1,4 +1,5 @@
 from dolfin import *
+from dolfin_adjoint import *
 
 mesh = UnitSquare(32, 32)
 V = FunctionSpace(mesh, 'CG', 1)
@@ -20,11 +21,14 @@ class KrylovMatrix(PETScKrylovMatrix) :
         A.transpmult(args[0], y)
         args[1].set_local(y.array())
 
+    def dependencies(self):
+      return []
+
 y = Function(V)
 solve(A, y.vector(), b, "cg", "none")
 
 x = Function(V)
-KrylovSolver = PETScKrylovSolver("cg","none")
+KrylovSolver = AdjointPETScKrylovSolver("cg","none")
 KrylovSolver.solve(KrylovMatrix(), down_cast(x.vector()), down_cast(b))
 
 print (y.vector()-x.vector()).norm("l2")

@@ -113,6 +113,8 @@ def annotate(*args, **kwargs):
   # so that libadjoint records the dependencies with the right timestep number.
   if not linear:
     var = adj_variables.next(u)
+  else:
+    var = None
 
   # Set up the data associated with the matrix on the left-hand side. This goes on the diagonal
   # of the 'large' system that incorporates all of the timelevels, which is why it is prefixed
@@ -133,36 +135,7 @@ def annotate(*args, **kwargs):
   # These equations are necessary so that libadjoint can assemble the
   # relevant adjoint equations for the adjoint variables associated with
   # the initial conditions.
-  for coeff, dep in zip(rhs.coefficients(),rhs.dependencies()) + zip(diag_coeffs, diag_deps):
-    # If coeff is not known, it must be an initial condition.
-    if not adjointer.variable_known(dep):
-
-      if not linear: # don't register initial conditions for the first nonlinear solve.
-        if dep == var:
-          continue
-
-      fn_space = coeff.function_space()
-      block_name = "Identity: %s" % str(fn_space)
-      if len(block_name) > int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"]):
-        block_name = block_name[0:int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"])-1]
-      identity_block = libadjoint.Block(block_name)
-    
-      init_rhs=Vector(coeff).duplicate()
-      init_rhs.axpy(1.0,Vector(coeff))
-
-      def identity_assembly_cb(variables, dependencies, hermitian, coefficient, context):
-        assert coefficient == 1
-        return (Matrix(ufl.Identity(fn_space.dim())), Vector(dolfin.Function(fn_space)))
-
-      identity_block.assemble=identity_assembly_cb
-
-      if debugging["record_all"]:
-        adjointer.record_variable(dep, libadjoint.MemoryStorage(Vector(coeff)))
-
-      initial_eq = libadjoint.Equation(dep, blocks=[identity_block], targets=[dep], rhs=RHS(init_rhs))
-      adjointer.register_equation(initial_eq)
-      assert adjointer.variable_known(dep)
-
+  register_initial_conditions(zip(rhs.coefficients(),rhs.dependencies()) + zip(diag_coeffs, diag_deps), linear=linear, var=var)
 
   # c.f. the discussion above. In the linear case, we want to bump the
   # timestep number /after/ all of the dependencies' timesteps have been
@@ -246,15 +219,8 @@ def annotate(*args, **kwargs):
   eqn = libadjoint.Equation(var, blocks=[diag_block], targets=[var], rhs=rhs)
 
   cs = adjointer.register_equation(eqn)
-  if cs == int(libadjoint.constants.adj_constants["ADJ_CHECKPOINT_STORAGE_MEMORY"]):
-    for coeff in adj_variables.coeffs.keys(): 
-      if adj_variables[coeff] == var: continue
-      adjointer.record_variable(adj_variables[coeff], libadjoint.MemoryStorage(Vector(coeff), cs=True))
+  do_checkpoint(cs, var)
 
-  elif cs == int(libadjoint.constants.adj_constants["ADJ_CHECKPOINT_STORAGE_DISK"]):
-    for coeff in adj_variables.coeffs.keys(): 
-      if adj_variables[coeff] == var: continue
-      adjointer.record_variable(adj_variables[coeff], libadjoint.DiskStorage(Vector(coeff), cs=True))
   return linear
 
 def solve(*args, **kwargs):
@@ -838,3 +804,45 @@ class InitialConditionParameter(libadjoint.Parameter):
 
   def __str__(self):
     return self.var.name + ':InitialCondition'
+
+def register_initial_conditions(coeffdeps, linear, var=None):
+  for coeff, dep in coeffdeps:
+    # If coeff is not known, it must be an initial condition.
+    if not adjointer.variable_known(dep):
+
+      if not linear: # don't register initial conditions for the first nonlinear solve.
+        if dep == var:
+          continue
+
+      fn_space = coeff.function_space()
+      block_name = "Identity: %s" % str(fn_space)
+      if len(block_name) > int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"]):
+        block_name = block_name[0:int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"])-1]
+      identity_block = libadjoint.Block(block_name)
+    
+      init_rhs=Vector(coeff).duplicate()
+      init_rhs.axpy(1.0,Vector(coeff))
+
+      def identity_assembly_cb(variables, dependencies, hermitian, coefficient, context):
+        assert coefficient == 1
+        return (Matrix(ufl.Identity(fn_space.dim())), Vector(dolfin.Function(fn_space)))
+
+      identity_block.assemble=identity_assembly_cb
+
+      if debugging["record_all"]:
+        adjointer.record_variable(dep, libadjoint.MemoryStorage(Vector(coeff)))
+
+      initial_eq = libadjoint.Equation(dep, blocks=[identity_block], targets=[dep], rhs=RHS(init_rhs))
+      adjointer.register_equation(initial_eq)
+      assert adjointer.variable_known(dep)
+
+def do_checkpoint(cs, var):
+  if cs == int(libadjoint.constants.adj_constants["ADJ_CHECKPOINT_STORAGE_MEMORY"]):
+    for coeff in adj_variables.coeffs.keys(): 
+      if adj_variables[coeff] == var: continue
+      adjointer.record_variable(adj_variables[coeff], libadjoint.MemoryStorage(Vector(coeff), cs=True))
+
+  elif cs == int(libadjoint.constants.adj_constants["ADJ_CHECKPOINT_STORAGE_DISK"]):
+    for coeff in adj_variables.coeffs.keys(): 
+      if adj_variables[coeff] == var: continue
+      adjointer.record_variable(adj_variables[coeff], libadjoint.DiskStorage(Vector(coeff), cs=True))
