@@ -91,7 +91,11 @@ def annotate(*args, **kwargs):
     except IndexError:
       pass
 
-    eq_bcs = list(set(assembly.bc_cache[args[0]] + assembly.bc_cache[args[2]]))
+    try:
+      eq_bcs = list(set(args[0].bcs + args[2].bcs))
+    except AttributeError:
+      assert not hasattr(args[0], 'bcs') and not hasattr(args[2], 'bcs')
+      eq_bcs = []
   else:
     raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to annotate your equation, sorry!")
 
