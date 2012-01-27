@@ -131,7 +131,7 @@ if __name__ == "__main__":
     replay()
 
     print "Running adjoint ... "
-    adjoint = adjoint_dolfin(Functional(T*T*dx))
+    adjoint = adjoint_dolfin(FinalFunctional(T*T*dx))
 
     def J(ic):
       T = main(ic, annotate=False)

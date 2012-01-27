@@ -58,7 +58,7 @@ if __name__ == "__main__":
   adj_html("forward.html", "forward")
   replay_dolfin()
 
-  J = Functional(inner(final, final)*dx)
+  J = FinalFunctional(inner(final, final)*dx)
   adjoint = adjoint_dolfin(J)
 
   def J(ic):

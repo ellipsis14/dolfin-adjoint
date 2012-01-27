@@ -55,7 +55,7 @@ if __name__ == "__main__":
     replay_dolfin()
     print "Running adjoint ... "
 
-    J = Functional(forward*forward*dx)
+    J = FinalFunctional(forward*forward*dx)
     adjoint = adjoint_dolfin(J)
 
     def Jfunc(ic):

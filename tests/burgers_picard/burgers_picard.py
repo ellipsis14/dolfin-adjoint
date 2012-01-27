@@ -61,7 +61,7 @@ if __name__ == "__main__":
     adj_html("burgers_picard_adjoint.html", "adjoint")
     print "Running adjoint ... "
 
-    J = Functional(forward*forward*dx)
+    J = FinalFunctional(forward*forward*dx)
     adjoint = adjoint_dolfin(J, forget=False)
 
     def Jfunc(ic):

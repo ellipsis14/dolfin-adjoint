@@ -5,8 +5,8 @@ import hashlib
 
 import solving
 
-class Functional(libadjoint.Functional):
-  '''This class implements the libadjoint.Functional abstract base class for the Dolfin adjoint.
+class FinalFunctional(libadjoint.Functional):
+  '''This class implements the libadjoint.FinalFunctional abstract base class for the Dolfin adjoint.
   It takes in a form, and implements the necessary routines such as calling the functional
   and taking its derivative.'''
 

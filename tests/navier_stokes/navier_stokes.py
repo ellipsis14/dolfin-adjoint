@@ -140,7 +140,7 @@ if __name__ == "__main__":
   adj_html("navier_stokes_adjoint.html", "adjoint")
   replay_dolfin(forget=False)
 
-  J = Functional(inner(final_soln, final_soln)*dx)
+  J = FinalFunctional(inner(final_soln, final_soln)*dx)
   final_adj = adjoint_dolfin(J, forget=False)
 
   def J(ic):

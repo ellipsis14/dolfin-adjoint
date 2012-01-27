@@ -122,7 +122,7 @@ if __name__ == "__main__":
     adj_html("stokes_adjoint.html", "adjoint")
 
     print "Running adjoint ... "
-    adjoint = adjoint_dolfin(Functional(T*T*dx))
+    adjoint = adjoint_dolfin(FinalFunctional(T*T*dx))
 
     def J(ic):
       T = main(ic, annotate=False)
