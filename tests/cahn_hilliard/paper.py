@@ -3,6 +3,8 @@ from dolfin import *
 from dolfin_adjoint import *
 from math import sqrt
 
+debugging["fussy_replay"] = False
+
 # Class representing the intial conditions
 class InitialConditions(Expression):
     def __init__(self):
@@ -26,12 +28,12 @@ parameters["form_compiler"]["representation"] = "quadrature"
 parameters["std_out_all_processes"] = False;
 
 # Create mesh and define function spaces
-nodes = 96*96
+nodes = 500000
 mesh = UnitSquare(int(sqrt(nodes)), int(sqrt(nodes)))
 V = FunctionSpace(mesh, "Lagrange", 1)
 ME = V*V
 
-steps = 5
+steps = 50
 adj_checkpointing('multistage', steps=steps, snaps_on_disk=10, snaps_in_ram=5, verbose=True)
 
 def main(ic, annotate=False):
@@ -71,7 +73,6 @@ def main(ic, annotate=False):
 
   # Create nonlinear problem and Newton solver
   parameters = {}
-  parameters["linear_solver"] = "lu"
   parameters["newton_solver"] = {}
   parameters["newton_solver"]["convergence_criterion"] = "incremental"
   parameters["newton_solver"]["relative_tolerance"] = 1e-6
@@ -85,7 +86,9 @@ def main(ic, annotate=False):
   while (t < T):
       t += dt
       u0.assign(u, annotate=annotate)
+      print "Starting solve at t=%s: " % t, os.popen("date").read()
       solve(L == 0, u, J=a, solver_parameters=parameters, annotate=annotate)
+      print "Finished solve at t=%s: " % t, os.popen("date").read()
       file << (u.split()[0], t)
       adj_inc_timestep()
 
