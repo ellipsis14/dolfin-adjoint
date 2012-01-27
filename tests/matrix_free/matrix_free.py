@@ -7,32 +7,49 @@ mesh = UnitSquare(32, 32)
 V = FunctionSpace(mesh, 'CG', 1)
 bc = DirichletBC(V, Constant(0.0), lambda x, on_boundary: on_boundary)
 u = TrialFunction(V); v = TestFunction(V);
-A, b = assemble_system( inner(grad(u), grad(v))*dx, Constant(1.0)*v*dx, bc)
 
-class KrylovMatrix(PETScKrylovMatrix) :
-    def __init__(self) :
-        PETScKrylovMatrix.__init__(self, V.dim(), V.dim())
+def main(ic):
+  A = assemble(inner(grad(u), grad(v))*dx)
+  bc.apply(A)
+  b = assemble(ic * v* dx)
+  bc.apply(b)
 
-    def mult(self, *args):
-        y = PETScVector(V.dim())
-        A.mult(args[0], y)
-        args[1].set_local(y.array())
+  class KrylovMatrix(PETScKrylovMatrix) :
+      def __init__(self) :
+          PETScKrylovMatrix.__init__(self, V.dim(), V.dim())
 
-    def transpmult(self, *args):
-        y = PETScVector(V.dim())
-        A.transpmult(args[0], y)
-        args[1].set_local(y.array())
+      def mult(self, *args):
+          y = PETScVector(V.dim())
+          A.mult(args[0], y)
+          args[1].set_local(y.array())
 
-    def dependencies(self):
-      return []
+      def transpmult(self, *args):
+          y = PETScVector(V.dim())
+          A.transpmult(args[0], y)
+          args[1].set_local(y.array())
 
-y = Function(V)
-solve(A, y.vector(), b, "cg", "none")
+      def dependencies(self):
+        return []
 
-x = Function(V)
-KrylovSolver = AdjointPETScKrylovSolver("cg","none")
-KrylovSolver.solve(KrylovMatrix(), down_cast(x.vector()), down_cast(b))
+  y = Function(V)
+  solve(A, y.vector(), b, "cg", "none")
 
-adj_html("forward.html", "forward")
+  x = Function(V)
+  KrylovSolver = AdjointPETScKrylovSolver("cg","none")
+  KrylovSolver.solve(KrylovMatrix(), down_cast(x.vector()), down_cast(b))
 
-replay_dolfin()
+  assert (x.vector() - y.vector()).norm("l2") == 0
+
+if __name__ == "__main__":
+
+  # There must be a better way of doing this ...
+  import random
+  ic = Function(V)
+  icvec = ic.vector()
+  for i in range(len(icvec)):
+    icvec[i] = random.random()
+
+  main(ic)
+
+  adj_html("forward.html", "forward")
+  replay_dolfin()
