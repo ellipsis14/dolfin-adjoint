@@ -113,7 +113,7 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
         for i in range(len(vec)):
           vec[i] = coefficient * vec[i]
 
-        return Vector(output_fn)
+        return solving.Vector(output_fn)
       diag_block.action = diag_action_cb
 
       if len(dependencies) > 0:
