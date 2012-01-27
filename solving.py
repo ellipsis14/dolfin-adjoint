@@ -77,7 +77,7 @@ def annotate(*args, **kwargs):
 
     u = args[1]
     assert isinstance(u, dolfin.cpp.GenericVector)
-    u = assembly.vector_function[u] # look it up in the .vector() -> Function map created in assembly.py
+    u = u.function
 
     solver_parameters = {}
 
@@ -293,7 +293,7 @@ def solve(*args, **kwargs):
         u  = unpacked_args[1]
         adjointer.record_variable(adj_variables[u], libadjoint.MemoryStorage(Vector(u)))
       elif isinstance(args[0], dolfin.cpp.Matrix):
-        u = assembly.vector_function[args[1]]
+        u = args[1].function
         adjointer.record_variable(adj_variables[u], libadjoint.MemoryStorage(Vector(u)))
       else:
         raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Don't know how to record, sorry")
