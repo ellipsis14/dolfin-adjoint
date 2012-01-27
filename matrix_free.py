@@ -5,6 +5,7 @@ import solving
 import hashlib
 import expressions
 import copy
+import time
 
 def down_cast(*args, **kwargs):
   dc = dolfin.down_cast(*args, **kwargs)
@@ -47,11 +48,8 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
   def solve(self, A, x, b, annotate=True):
 
     if annotate:
-      if not hasattr(A, 'transpmult'):
-        err = "Your PETScKrylovMatrix class has to implement a .transpmult method as well, as I need the transpose action. Note that if " + \
-              "your forward problem has Dirichlet boundary conditions, the .transpmult MUST impose /homogenous/ Dirichlet boundary conditions " + \
-              "on the resulting vector."
-        raise libadjoint.exceptions.LibadjointErrorInvalidInputs(err)
+      if not isinstance(A, AdjointKrylovMatrix):
+        raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Sorry, we only support AdjointKrylovMatrix's.")
 
       if not hasattr(x, 'function'):
         raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your x has to come from code like down_cast(my_function.vector()).")
@@ -72,7 +70,7 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
 
       rhs = solving.RHS(b.form)
 
-      diag_name = hashlib.md5(str(hash(A))).hexdigest()
+      diag_name = hashlib.md5(str(hash(A)) + str(time.time())).hexdigest()
       diag_block = libadjoint.Block(diag_name, dependencies=dependencies, test_hermitian=solving.debugging["test_hermitian"], test_derivative=solving.debugging["test_derivative"])
 
       solving.register_initial_conditions(zip(rhs.coefficients(),rhs.dependencies()) + zip(coeffs, dependencies), linear=False, var=None)
@@ -94,13 +92,29 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
           A.set_dependencies(dependencies, [val.data for val in values])
 
         if hermitian:
-          A_transpose = copy.copy(A)
-          (A_transpose.transpmult, A_transpose.mult) = (A.mult, A.transpmult)
-          adjoint_bcs = [dolfin.homogenize(bc) for bc in b.bcs if isinstance(bc, dolfin.DirichletBC)]
-          return (MatrixFree(A_transpose, fn_space=x.function.function_space(), bcs=adjoint_bcs, solver_parameters=self.solver_parameters), solving.Vector(None, fn_space=x.function.function_space()))
+          A_transpose = A.hermitian()
+          return (MatrixFree(A_transpose, fn_space=x.function.function_space(), bcs=A_transpose.bcs, solver_parameters=self.solver_parameters), solving.Vector(None, fn_space=x.function.function_space()))
         else:
           return (MatrixFree(A, fn_space=x.function.function_space(), bcs=b.bcs, solver_parameters=self.solver_parameters), solving.Vector(None, fn_space=x.function.function_space()))
       diag_block.assemble = diag_assembly_cb
+
+      def diag_action_cb(dependencies, values, hermitian, coefficient, input, context):
+        expressions.update_expressions(frozen_expressions_dict)
+        A.set_dependencies(dependencies, [val.data for val in values])
+
+        if hermitian:
+          acting_mat = A.transpose()
+        else:
+          acting_mat = A
+
+        output_fn = dolfin.Function(input.data.function_space())
+        acting_mat.mult(input.data.vector(), output_fn.vector())
+        vec = output_fn.vector()
+        for i in range(len(vec)):
+          vec[i] = coefficient * vec[i]
+
+        return Vector(output_fn)
+      diag_block.action = diag_action_cb
 
       if len(dependencies) > 0:
         def derivative_action(dependencies, values, variable, contraction_vector, hermitian, input, coefficient, context):
@@ -133,7 +147,10 @@ class AdjointKrylovMatrix(dolfin.PETScKrylovMatrix):
     if bcs is None:
       self.bcs = []
     else:
-      self.bcs = bcs
+      if isinstance(bcs, list):
+        self.bcs = bcs
+      else:
+        self.bcs = [bcs]
 
   def shape(self, a):
     args = ufl.algorithms.extract_arguments(a)
@@ -151,17 +168,12 @@ class AdjointKrylovMatrix(dolfin.PETScKrylovMatrix):
 
     action_form = dolfin.action(self.current_form, action_fn)
     dolfin.assemble(action_form, tensor=y)
-    for bc in self.bcs:
-      bc.apply(y)
-    args[1].set_local(y.array())
 
-  def transpmult(self, *args):
-    shapes = self.shape(self.current_form)
-    y = dolfin.PETScVector(shapes[1])
-    action_form = dolfin.action(dolfin.adjoint(self.current_form), args[0])
-    dolfin.assemble(action_form, tensor=y)
     for bc in self.bcs:
-      bc.apply(y)
+      bcvals = bc.get_boundary_values()
+      for idx in bcvals:
+        y[idx] = action_vec[idx]
+
     args[1].set_local(y.array())
 
   def dependencies(self):
@@ -170,6 +182,10 @@ class AdjointKrylovMatrix(dolfin.PETScKrylovMatrix):
   def set_dependencies(self, dependencies, values):
     replace_dict = dict(zip(self.dependencies(), values))
     self.current_form = dolfin.replace(self.original_form, replace_dict)
+
+  def hermitian(self):
+    adjoint_bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.DirichletBC)]
+    return AdjointKrylovMatrix(dolfin.adjoint(self.original_form), bcs=adjoint_bcs)
 
   def derivative_action(self, variable, contraction_vector, hermitian, input, coefficient):
     deriv = dolfin.derivative(self.current_form, variable)

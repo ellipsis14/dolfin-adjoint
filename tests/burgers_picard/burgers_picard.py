@@ -40,8 +40,11 @@ def main(ic, annotate=False):
     t = 0.0
     end = 0.025
     u = Function(V)
+
+    solver_parameters = {"linear_solver": "gmres", "preconditioner": "none",
+                         "krylov_solver": {"relative_tolerance": 1.0e-10}}
     while (t <= end):
-        solve(a == L, u, bc, annotate=annotate)
+        solve(a == L, u, bc, solver_parameters=solver_parameters, annotate=annotate)
 
         u_.assign(u, annotate=annotate)
 

@@ -14,7 +14,7 @@ V = FunctionSpace(mesh, "CG", 2)
 parameters["num_threads"] = 2
 
 debugging["record_all"] = True
-#debugging["test_hermitian"] = (100, 1.0e-14)
+debugging["test_hermitian"] = (100, 1.0e-14)
 #debugging["test_derivative"] = 6
 
 def Dt(u, u_, timestep):
@@ -41,7 +41,10 @@ def main(ic, annotate=False):
     u = Function(V)
 
     KrylovSolver = AdjointPETScKrylovSolver("gmres", "none")
-    MatFreeBurgers = AdjointKrylovMatrix(a)
+    MatFreeBurgers = AdjointKrylovMatrix(a, bcs=bc)
+
+    params = KrylovSolver.default_parameters()
+    params["relative_tolerance"] = 1.0e-10
 
     while (t <= end):
         b_rhs = assemble(L)
