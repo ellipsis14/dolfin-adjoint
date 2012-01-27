@@ -2,14 +2,14 @@ import dolfin
 import copy
 import collections
 
-assembly_cache = {}
 bc_cache = collections.defaultdict(list)
 
 dolfin_assemble = dolfin.assemble
 def assemble(*args, **kwargs):
   form = args[0]
   output = dolfin_assemble(*args, **kwargs)
-  assembly_cache[output] = form
+  if not isinstance(output, float):
+    output.form = form
   return output
 
 bc_apply = dolfin.DirichletBC.apply

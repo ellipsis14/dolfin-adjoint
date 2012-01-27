@@ -66,12 +66,12 @@ def annotate(*args, **kwargs):
   elif isinstance(args[0], dolfin.cpp.Matrix):
     linear = True
     try:
-      eq_lhs = assembly.assembly_cache[args[0]]
+      eq_lhs = args[0].form
     except KeyError:
       raise libadjoint.exceptions.LibadjointErrorInvalidInputs("dolfin_adjoint did not assemble your form, and so does not recognise your matrix. Did you from dolfin_adjoint import *?")
 
     try:
-      eq_rhs = assembly.assembly_cache[args[2]]
+      eq_rhs = args[2].form
     except KeyError:
       raise libadjoint.exceptions.LibadjointErrorInvalidInputs("dolfin_adjoint did not assemble your form, and so does not recognise your right-hand side. Did you from dolfin_adjoint import *?")
 
