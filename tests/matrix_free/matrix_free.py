@@ -1,6 +1,8 @@
 from dolfin import *
 from dolfin_adjoint import *
 
+debugging["record_all"] = True
+
 mesh = UnitSquare(32, 32)
 V = FunctionSpace(mesh, 'CG', 1)
 bc = DirichletBC(V, Constant(0.0), lambda x, on_boundary: on_boundary)
@@ -31,4 +33,6 @@ x = Function(V)
 KrylovSolver = AdjointPETScKrylovSolver("cg","none")
 KrylovSolver.solve(KrylovMatrix(), down_cast(x.vector()), down_cast(b))
 
-print (y.vector()-x.vector()).norm("l2")
+adj_html("forward.html", "forward")
+
+replay_dolfin()

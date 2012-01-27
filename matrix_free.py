@@ -13,21 +13,34 @@ def down_cast(*args, **kwargs):
   if hasattr(args[0], 'function'):
     dc.function = args[0].function
 
+  if hasattr(args[0], 'bcs'):
+    dc.bcs = args[0].bcs
+
   return dc
+
+class MatrixFree(solving.Matrix):
+  def __init__(self, *args, **kwargs):
+    self.fn_space = kwargs['fn_space']
+    del kwargs['fn_space']
+    solving.Matrix.__init__(self, *args, **kwargs)
+
+  def solve(self, var, b):
+    solver = dolfin.PETScKrylovSolver(*self.solver_parameters)
+    x = dolfin.Function(self.fn_space)
+    rhs = dolfin.assemble(b.data)
+    for bc in self.bcs:
+      bc.apply(rhs)
+
+    solver.solve(self.data, dolfin.down_cast(x.vector()), dolfin.down_cast(rhs))
+    return solving.Vector(x)
+
+  def axpy(self, alpha, x):
+    raise libadjoint.exceptions.LibadjointErrorNotImplemented("Can't add to a matrix-free matrix .. ")
 
 class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
   def __init__(self, *args):
-    if len(args) == 1:
-      raise libadjoint.exceptions.LibadjointErrorNotImplemented("Sorry, solver/pc from KSP not implemented yet .. should be easy though!")
-
     dolfin.PETScKrylovSolver.__init__(self, *args)
-
-    ksp = args[0]
-    pc  = args[1]
-
-    self.solver_parameters = {}
-    self.solver_parameters["linear_solver"] = ksp
-    self.solver_parameters["preconditioner"] = pc
+    self.solver_parameters = args
 
   def solve(self, A, x, b):
 
@@ -77,13 +90,19 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
       if hermitian:
         A_transpose = copy.copy(A)
         (A_transpose.transpmult, A_transpose.mult) = (A.mult, A.transpmult)
-        return (Matrix(A_transpose, solver_parameters=self.solver_parameters), Vector(None, fn_space=x.function.function_space()))
+        return (MatrixFree(A_transpose, fn_space=x.function.function_space(), bcs=b.bcs, solver_parameters=self.solver_parameters), solving.Vector(None, fn_space=x.function.function_space()))
       else:
-        return (Matrix(A, solver_parameters=self.solver_parameters), Vector(None, fn_space=x.function.function_space()))
+        return (MatrixFree(A, fn_space=x.function.function_space(), bcs=b.bcs, solver_parameters=self.solver_parameters), solving.Vector(None, fn_space=x.function.function_space()))
     diag_block.assemble = diag_assembly_cb
 
     eqn = libadjoint.Equation(var, blocks=[diag_block], targets=[var], rhs=rhs)
     cs = solving.adjointer.register_equation(eqn)
     solving.do_checkpoint(cs, var)
 
-    return dolfin.PETScKrylovSolver.solve(self, A, x, b)
+    out = dolfin.PETScKrylovSolver.solve(self, A, x, b)
+
+    if solving.debugging["record_all"]:
+      solving.adjointer.record_variable(var, libadjoint.MemoryStorage(solving.Vector(x.function)))
+
+    return out
+
