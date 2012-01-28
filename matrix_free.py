@@ -31,6 +31,9 @@ class MatrixFree(solving.Matrix):
     solver = dolfin.PETScKrylovSolver(*self.solver_parameters)
     x = dolfin.Function(self.fn_space)
     rhs = dolfin.assemble(b.data)
+
+    if var.type in ['ADJ_TLM']:
+      self.bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.DirichletBC)]
     for bc in self.bcs:
       bc.apply(rhs)
 
