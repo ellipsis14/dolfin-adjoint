@@ -42,7 +42,7 @@ def main(ic, annotate=False):
     MatFreeBurgers = AdjointKrylovMatrix(a, bcs=bc)
 
     params = KrylovSolver.default_parameters()
-    params["relative_tolerance"] = 1.0e-10
+    params["relative_tolerance"] = 2.0e-10 # this doesn't appear to change anything ... 
 
     while (t <= end):
         b_rhs = assemble(L)
