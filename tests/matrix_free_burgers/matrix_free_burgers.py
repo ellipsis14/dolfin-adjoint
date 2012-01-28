@@ -11,7 +11,7 @@ n = 100
 mesh = UnitInterval(n)
 V = FunctionSpace(mesh, "CG", 2)
 
-parameters["num_threads"] = 2
+#parameters["num_threads"] = 2
 
 debugging["record_all"] = True
 
@@ -42,7 +42,7 @@ def main(ic, annotate=False):
     MatFreeBurgers = AdjointKrylovMatrix(a, bcs=bc)
 
     params = KrylovSolver.default_parameters()
-    params["relative_tolerance"] = 2.0e-10 # this doesn't appear to change anything ... 
+    KrylovSolver.parameters["relative_tolerance"] = 1.0e-10
 
     while (t <= end):
         b_rhs = assemble(L)
