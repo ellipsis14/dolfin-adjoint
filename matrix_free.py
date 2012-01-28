@@ -32,12 +32,13 @@ class MatrixFree(solving.Matrix):
     x = dolfin.Function(self.fn_space)
     rhs = dolfin.assemble(b.data)
 
-    if var.type in ['ADJ_TLM']:
-      self.bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.DirichletBC)]
+    if var.type in ['ADJ_TLM', 'ADJ_ADJOINT']:
+      self.bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
     for bc in self.bcs:
       bc.apply(rhs)
 
     solver.solve(self.data, dolfin.down_cast(x.vector()), dolfin.down_cast(rhs))
+
     return solving.Vector(x)
 
   def axpy(self, alpha, x):
@@ -187,7 +188,7 @@ class AdjointKrylovMatrix(dolfin.PETScKrylovMatrix):
     self.current_form = dolfin.replace(self.original_form, replace_dict)
 
   def hermitian(self):
-    adjoint_bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.DirichletBC)]
+    adjoint_bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
     return AdjointKrylovMatrix(dolfin.adjoint(self.original_form), bcs=adjoint_bcs)
 
   def derivative_action(self, variable, contraction_vector, hermitian, input, coefficient):
@@ -199,5 +200,6 @@ class AdjointKrylovMatrix(dolfin.PETScKrylovMatrix):
       deriv = dolfin.adjoint(deriv)
 
     action = coefficient * dolfin.action(deriv, input)
+
     return action
 

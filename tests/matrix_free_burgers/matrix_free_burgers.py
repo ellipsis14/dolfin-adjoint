@@ -14,8 +14,6 @@ V = FunctionSpace(mesh, "CG", 2)
 parameters["num_threads"] = 2
 
 debugging["record_all"] = True
-debugging["test_hermitian"] = (100, 1.0e-14)
-debugging["test_derivative"] = 6
 
 def Dt(u, u_, timestep):
     return (u - u_)/timestep
@@ -37,10 +35,10 @@ def main(ic, annotate=False):
     bc = DirichletBC(V, 0.0, "on_boundary")
 
     t = 0.0
-    end = 0.025
+    end = 0.0001
     u = Function(V)
 
-    KrylovSolver = AdjointPETScKrylovSolver("gmres", "none")
+    KrylovSolver = AdjointPETScKrylovSolver("default", "none")
     MatFreeBurgers = AdjointKrylovMatrix(a, bcs=bc)
 
     params = KrylovSolver.default_parameters()
@@ -79,7 +77,7 @@ if __name__ == "__main__":
       return assemble(forward*forward*dx)
 
     ic.vector()[:] = ic_copy.vector()
-    minconv = test_initial_condition_adjoint(Jfunc, ic, adjoint, seed=1.0e-3)
+    minconv = test_initial_condition_adjoint(Jfunc, ic, adjoint, seed=1.0e-1)
     if minconv < 1.9:
       sys.exit(1)
 #
