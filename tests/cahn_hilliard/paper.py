@@ -77,7 +77,8 @@ def main(ic, annotate=False):
   parameters["newton_solver"]["convergence_criterion"] = "incremental"
   parameters["newton_solver"]["relative_tolerance"] = 1e-6
 
-  file = File("output.pvd", "compressed")
+  if annotate:
+    file = File("output.pvd", "compressed")
 
   # Step in time
   t = 0.0
@@ -89,7 +90,8 @@ def main(ic, annotate=False):
       print "Starting solve at t=%s: " % t, os.popen("date").read()
       solve(L == 0, u, J=a, solver_parameters=parameters, annotate=annotate)
       print "Finished solve at t=%s: " % t, os.popen("date").read()
-      file << (u.split()[0], t)
+      if annotate:
+        file << (u.split()[0], t)
       adj_inc_timestep()
 
   return u
