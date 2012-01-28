@@ -448,7 +448,6 @@ class Vector(libadjoint.Vector):
       filename = str(var)
       suffix = "xml"
 
-      assert(os.path.isfile(filename+".%s" % suffix))
       os.remove(filename+".%s" % suffix)
     except OSError:
       pass
