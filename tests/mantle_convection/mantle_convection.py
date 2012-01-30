@@ -143,7 +143,7 @@ n = 1
 # Solver for the Stokes systems
 solver = AdjointPETScKrylovSolver("tfqmr", "amg")
 
-while (t <= finish and n <= 1):
+while (t <= finish and n <= 2):
 
     message(t, dt)
 
@@ -190,6 +190,7 @@ while (t <= finish and n <= 1):
     u_.assign(u)
     t += dt
     n += 1
+    adj_inc_timestep()
 
 print "Replaying forward run ... "
 adj_html("forward.html", "forward")
