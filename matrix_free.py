@@ -25,12 +25,15 @@ class MatrixFree(solving.Matrix):
   def __init__(self, *args, **kwargs):
     self.fn_space = kwargs['fn_space']
     del kwargs['fn_space']
-    solving.Matrix.__init__(self, *args, **kwargs)
 
-    self.operators = (None, None)
+    self.operators = kwargs['operators']
+    del kwargs['operators']
+
+    solving.Matrix.__init__(self, *args, **kwargs)
 
   def solve(self, var, b):
     solver = dolfin.PETScKrylovSolver(*self.solver_parameters)
+
     x = dolfin.Function(self.fn_space)
     rhs = dolfin.assemble(b.data)
 
@@ -39,7 +42,11 @@ class MatrixFree(solving.Matrix):
     for bc in self.bcs:
       bc.apply(rhs)
 
-    solver.solve(self.data, dolfin.down_cast(x.vector()), dolfin.down_cast(rhs))
+    if self.operators[1] is not None: # we have a user-supplied preconditioner
+      solver.set_operators(self.data, self.operators[1])
+      solver.solve(dolfin.down_cast(x.vector()), dolfin.down_cast(rhs))
+    else:
+      solver.solve(self.data, dolfin.down_cast(x.vector()), dolfin.down_cast(rhs))
 
     return solving.Vector(x)
 
@@ -51,10 +58,14 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
     dolfin.PETScKrylovSolver.__init__(self, *args)
     self.solver_parameters = args
 
+    self.operators = (None, None)
+
   def set_operators(self, A, P):
+    dolfin.PETScKrylovSolver.set_operators(self, A, P)
     self.operators = (A, P)
 
   def set_operator(self, A):
+    dolfin.PETScKrylovSolver.set_operator(self, A)
     self.operators = (A, self.operators[1])
 
   def solve(self, *args, **kwargs):
@@ -119,9 +130,9 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
 
         if hermitian:
           A_transpose = A.hermitian()
-          return (MatrixFree(A_transpose, fn_space=x.function.function_space(), bcs=A_transpose.bcs, solver_parameters=self.solver_parameters), solving.Vector(None, fn_space=x.function.function_space()))
+          return (MatrixFree(A_transpose, fn_space=x.function.function_space(), bcs=A_transpose.bcs, solver_parameters=self.solver_parameters, operators=self.operators), solving.Vector(None, fn_space=x.function.function_space()))
         else:
-          return (MatrixFree(A, fn_space=x.function.function_space(), bcs=b.bcs, solver_parameters=self.solver_parameters), solving.Vector(None, fn_space=x.function.function_space()))
+          return (MatrixFree(A, fn_space=x.function.function_space(), bcs=b.bcs, solver_parameters=self.solver_parameters, operators=self.operators), solving.Vector(None, fn_space=x.function.function_space()))
       diag_block.assemble = diag_assembly_cb
 
       def diag_action_cb(dependencies, values, hermitian, coefficient, input, context):
@@ -155,7 +166,7 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
       cs = solving.adjointer.register_equation(eqn)
       solving.do_checkpoint(cs, var)
 
-    out = dolfin.PETScKrylovSolver.solve(self, A, x, b)
+    out = dolfin.PETScKrylovSolver.solve(self, *args)
 
     if annotate:
       if solving.debugging["record_all"]:

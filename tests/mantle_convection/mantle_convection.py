@@ -139,7 +139,7 @@ t += dt
 n = 1
 
 # Solver for the Stokes systems
-solver = PETScKrylovSolver("tfqmr", "amg")
+solver = AdjointPETScKrylovSolver("tfqmr", "amg")
 
 while (t <= finish and n <= 1):
 
@@ -189,5 +189,6 @@ while (t <= finish and n <= 1):
     t += dt
     n += 1
 
+print "Replaying forward run ... "
 adj_html("forward.html", "forward")
 replay_dolfin()
