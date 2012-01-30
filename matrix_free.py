@@ -35,6 +35,10 @@ class MatrixFree(solving.Matrix):
     solver = dolfin.PETScKrylovSolver(*self.solver_parameters)
 
     x = dolfin.Function(self.fn_space)
+    if b.data is None:
+      dolfin.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
+      return solving.Vector(x)
+
     rhs = dolfin.assemble(b.data)
 
     if var.type in ['ADJ_TLM', 'ADJ_ADJOINT']:
@@ -130,7 +134,7 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
 
         if hermitian:
           A_transpose = A.hermitian()
-          return (MatrixFree(A_transpose, fn_space=x.function.function_space(), bcs=A_transpose.bcs, solver_parameters=self.solver_parameters, operators=self.operators), solving.Vector(None, fn_space=x.function.function_space()))
+          return (MatrixFree(A_transpose, fn_space=x.function.function_space(), bcs=A_transpose.bcs, solver_parameters=self.solver_parameters, operators=transpose_operators(self.operators)), solving.Vector(None, fn_space=x.function.function_space()))
         else:
           return (MatrixFree(A, fn_space=x.function.function_space(), bcs=b.bcs, solver_parameters=self.solver_parameters, operators=self.operators), solving.Vector(None, fn_space=x.function.function_space()))
       diag_block.assemble = diag_assembly_cb
@@ -236,3 +240,17 @@ class AdjointKrylovMatrix(dolfin.PETScKrylovMatrix):
 
     return action
 
+def transpose_operators(operators):
+  out = [None, None]
+
+  for i in range(2):
+    op = operators[i]
+    if op is None: 
+      out[i] = None
+    elif isinstance(op, dolfin.cpp.GenericMatrix):
+      out[i] = op.__class__()
+      dolfin.assemble(dolfin.adjoint(op.form), tensor=out[i])
+    elif isinstance(op, dolfin.Form):
+      out[i] = dolfin.adjoint(op)
+
+  return out

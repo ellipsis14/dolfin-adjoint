@@ -488,7 +488,7 @@ class Matrix(libadjoint.Matrix):
         # This means we didn't get any contribution on the RHS of the adjoint system. This could be that the
         # simulation ran further ahead than when the functional was evaluated, or it could be that the
         # functional is set up incorrectly.
-        print "Warning: got zero RHS for the solve associated with variable ", var
+        dolfin.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
       else:
         dolfin.fem.solving.solve(self.data==b.data, x.data, bcs, solver_parameters=self.solver_parameters)
 

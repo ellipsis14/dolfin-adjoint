@@ -185,10 +185,15 @@ while (t <= finish and n <= 1):
 
     # Move to new timestep and update functions
     T_.assign(T)
+    adj_html("before_u_assign.html", "forward")
     u_.assign(u)
+    adj_html("after_u_assign.html", "forward")
     t += dt
     n += 1
 
 print "Replaying forward run ... "
 adj_html("forward.html", "forward")
 replay_dolfin()
+
+J = FinalFunctional(inner(u_, u_)*dx)
+adjoint = adjoint_dolfin(J)
