@@ -10,7 +10,6 @@ import numpy
 from stokes import *
 from composition import *
 from temperature import *
-from filtering import *
 from parameters import InitialTemperature, Ra, Rb, rho0, g
 from parameters import eta0, b_val, c_val, deltaT
 
@@ -22,12 +21,11 @@ def viscosity(T):
     eta = eta0 * exp(-b_val*T/deltaT + c_val*(1.0 - triangle.x[1])/height )
     return eta
 
-def store(phi, T, u, t):
-    density_series.store(phi.vector(), t)
+def store(T, u, t):
     temperature_series.store(T.vector(), t)
     velocity_series.store(u.vector(), t)
     if t == 0.0:
-        density_series.store(mesh, t)
+        temperature_series.store(mesh, t)
 
 def message(t, dt):
     print "\n" + "-"*60
@@ -45,9 +43,6 @@ def compute_timestep(u):
 def compute_initial_conditions(W, Q):
     begin("Computing initial conditions")
 
-    # Composition (phi) at previous time step
-    phi_ = Function(Q, rho.vector())
-
     # Define initial temperature (guess)
     T0 = InitialTemperature(Ra, length)
 
@@ -61,7 +56,7 @@ def compute_initial_conditions(W, Q):
     # Solve Stokes problem with given initial temperature and
     # composition
     eta = viscosity(T_)
-    (a, L, pre) = momentum(W, eta, (Ra*T_ - Rb*phi_)*g)
+    (a, L, pre) = momentum(W, eta, (Ra*T_)*g)
     (A, b) = assemble_system(a, L, bcs)
     P = assemble_system(pre, L, bcs)[0]
 
@@ -73,7 +68,7 @@ def compute_initial_conditions(W, Q):
     u_.assign(velocity_pressure.split()[0])
 
     end()
-    return (phi_, T_, u_, P)
+    return (T_, u_, P)
 
 parameters["form_compiler"]["cpp_optimize"] = True
 
@@ -93,9 +88,6 @@ W = stokes_space(mesh)
 V = W.sub(0).collapse()
 Q = FunctionSpace(mesh, "DG", 1)
 
-# Define boundary conditions for the composition phi
-bc = DirichletBC(Q, 1.0, "x[1] == 0.0", "geometric")
-
 # Define boundary conditions for the velocity and pressure u
 bottom = DirichletBC(W.sub(0), (0.0, 0.0), "x[1] == 0.0" )
 top = DirichletBC(W.sub(0).sub(1), 0.0, "x[1] == %g" % height)
@@ -111,34 +103,33 @@ T_bcs = [bottom_temperature, top_temperature]
 rho = interpolate(rho0, Q)
 
 # Functions at previous timestep (and initial conditions)
-(phi_, T_, u_, P) = compute_initial_conditions(W, Q)
+(T_, u_, P) = compute_initial_conditions(W, Q)
 
 # Predictor functions
 u_pr = Function(V)      # Tentative velocity (u)
-phi_pr = Function(Q)    # Tentative composition (phi)
 T_pr = Function(Q)      # Tentative temperature (T)
 
 # Functions at this timestep
 u = Function(V)         # Velocity (u) at this time step
-phi = Function(Q)       # Composition (phi) at this time step
 T = Function(Q)         # Temperature (T) at this time step
 velocity_pressure = Function(W)
 
 print "velocity_pressure: ", velocity_pressure
 print "T: ", T
-print "phi: ", phi
 print "u: ", u
+print "T_: ", T_
+print "len(T_.vector()): ", len(T_.vector())
+print "u_:", u_
+print "P: ", P
 print "u_pr: ", u_pr
-print "phi_pr: ", phi_pr
 print "T_pr: ", T_pr
 
 # Containers for storage
 velocity_series = TimeSeries("bin-final/velocity")
 temperature_series = TimeSeries("bin-final/temperature")
-density_series = TimeSeries("bin-final/density")
 
 # Store initial data
-store(phi_, T_, u_, 0.0)
+store(T_, u_, 0.0)
 
 # Define initial CLF and time step
 CLFnum = 0.5
@@ -158,18 +149,9 @@ while (t <= finish and n <= 1):
     solve(a == L, T_pr, T_bcs,
           solver_parameters={"linear_solver": "gmres"})
 
-    # Solve for predicted phi
-    (a, L) = transport(Q, Constant(dt), u_, phi_)
-    solve(a == L, phi_pr, bc,
-          solver_parameters={"linear_solver": "gmres"})
-
-    # Filter predicted phi (in place)
-    filter_properties(phi_pr)
-    phi.assign(phi_pr)
-
     # Solve for predicted velocity
     eta = viscosity(T_pr)
-    (a, L, precond) = momentum(W, eta, (Ra*T_pr - Rb*phi_pr)*g)
+    (a, L, precond) = momentum(W, eta, (Ra*T_pr)*g)
     (A, b) = assemble_system(a, L, bcs)
     solver.set_operators(A, P)
     solver.solve(velocity_pressure.vector(), b)
@@ -182,23 +164,23 @@ while (t <= finish and n <= 1):
 
     # Solve for corrected velocity
     eta = viscosity(T)
-    (a, L, precond) = momentum(W, eta, (Ra*T - Rb*phi)*g)
+    (a, L, precond) = momentum(W, eta, (Ra*T)*g)
     (A, b) = assemble_system(a, L, bcs)
     solver.set_operators(A, P)
     solver.solve(velocity_pressure.vector(), b)
     u.assign(velocity_pressure.split()[0])
 
     # Store stuff
-    store(phi, T, u, t)
+    store(T, u, t)
 
     # Compute time step
     dt = compute_timestep(u)
 
     # Move to new timestep and update functions
-    phi_.assign(phi)
     T_.assign(T)
     u_.assign(u)
     t += dt
     n += 1
 
+adj_html("forward.html", "forward")
 replay_dolfin()

@@ -767,27 +767,30 @@ def register_initial_conditions(coeffdeps, linear, var=None):
         if dep == var:
           continue
 
-      fn_space = coeff.function_space()
-      block_name = "Identity: %s" % str(fn_space)
-      if len(block_name) > int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"]):
-        block_name = block_name[0:int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"])-1]
-      identity_block = libadjoint.Block(block_name)
-    
-      init_rhs=Vector(coeff).duplicate()
-      init_rhs.axpy(1.0,Vector(coeff))
+      register_initial_condition(coeff, dep)
 
-      def identity_assembly_cb(variables, dependencies, hermitian, coefficient, context):
-        assert coefficient == 1
-        return (Matrix(ufl.Identity(fn_space.dim())), Vector(dolfin.Function(fn_space)))
+def register_initial_condition(coeff, dep):
+  fn_space = coeff.function_space()
+  block_name = "Identity: %s" % str(fn_space)
+  if len(block_name) > int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"]):
+    block_name = block_name[0:int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"])-1]
+  identity_block = libadjoint.Block(block_name)
 
-      identity_block.assemble=identity_assembly_cb
+  init_rhs=Vector(coeff).duplicate()
+  init_rhs.axpy(1.0,Vector(coeff))
 
-      if debugging["record_all"]:
-        adjointer.record_variable(dep, libadjoint.MemoryStorage(Vector(coeff)))
+  def identity_assembly_cb(variables, dependencies, hermitian, coefficient, context):
+    assert coefficient == 1
+    return (Matrix(ufl.Identity(fn_space.dim())), Vector(dolfin.Function(fn_space)))
 
-      initial_eq = libadjoint.Equation(dep, blocks=[identity_block], targets=[dep], rhs=RHS(init_rhs))
-      adjointer.register_equation(initial_eq)
-      assert adjointer.variable_known(dep)
+  identity_block.assemble=identity_assembly_cb
+
+  if debugging["record_all"]:
+    adjointer.record_variable(dep, libadjoint.MemoryStorage(Vector(coeff)))
+
+  initial_eq = libadjoint.Equation(dep, blocks=[identity_block], targets=[dep], rhs=RHS(init_rhs))
+  adjointer.register_equation(initial_eq)
+  assert adjointer.variable_known(dep)
 
 def do_checkpoint(cs, var):
   if cs == int(libadjoint.constants.adj_constants["ADJ_CHECKPOINT_STORAGE_MEMORY"]):
