@@ -33,9 +33,10 @@ def dolfin_adjoint_assign(self, other, annotate=True):
     return solve(M == dolfin.action(M, other), self) # this takes care of all the annotation etc
   else:
     solving_annotate(M == dolfin.action(M, other), self)
+    out = dolfin_assign(self, other)
     if debugging["record_all"]:
       adjointer.record_variable(adj_variables[self], libadjoint.MemoryStorage(Vector(self)))
-    return dolfin_assign(self, other)
+    return out
 
 dolfin.Function.assign = dolfin_adjoint_assign
 
