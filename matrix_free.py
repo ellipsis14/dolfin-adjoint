@@ -27,6 +27,8 @@ class MatrixFree(solving.Matrix):
     del kwargs['fn_space']
     solving.Matrix.__init__(self, *args, **kwargs)
 
+    self.operators = (None, None)
+
   def solve(self, var, b):
     solver = dolfin.PETScKrylovSolver(*self.solver_parameters)
     x = dolfin.Function(self.fn_space)
@@ -49,7 +51,27 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
     dolfin.PETScKrylovSolver.__init__(self, *args)
     self.solver_parameters = args
 
-  def solve(self, A, x, b, annotate=True):
+  def set_operators(self, A, P):
+    self.operators = (A, P)
+
+  def set_operator(self, A):
+    self.operators = (A, self.operators[1])
+
+  def solve(self, *args, **kwargs):
+
+    annotate = True
+    if "annotate" in kwargs:
+      annotate = kwargs["annotate"]
+      del kwargs["annotate"]
+
+    if len(args) == 3:
+      A = args[0]
+      x = args[1]
+      b = args[2]
+    elif len(args) == 2:
+      A = self.operators[0]
+      x = args[0]
+      b = args[1]
 
     if annotate:
       if not isinstance(A, AdjointKrylovMatrix):

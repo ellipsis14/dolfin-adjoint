@@ -58,7 +58,8 @@ def compute_initial_conditions(W, Q):
     eta = viscosity(T_)
     (a, L, pre) = momentum(W, eta, (Ra*T_)*g)
     (A, b) = assemble_system(a, L, bcs)
-    P = assemble_system(pre, L, bcs)[0]
+    P = PETScMatrix()
+    assemble(pre, tensor=P); [bc.apply(P) for bc in bcs]
 
     velocity_pressure = Function(W)
     solver = KrylovSolver("tfqmr", "amg")
@@ -75,8 +76,8 @@ parameters["form_compiler"]["cpp_optimize"] = True
 # Define spatial domain
 height = 1.0
 length = 2.0
-nx = 160
-ny = 80
+nx = 16
+ny = 8
 mesh = Rectangle(0, 0, length, height, nx, ny)
 
 # Define initial and end time
@@ -138,7 +139,7 @@ t += dt
 n = 1
 
 # Solver for the Stokes systems
-solver = KrylovSolver("tfqmr", "amg")
+solver = PETScKrylovSolver("tfqmr", "amg")
 
 while (t <= finish and n <= 1):
 
@@ -152,7 +153,10 @@ while (t <= finish and n <= 1):
     # Solve for predicted velocity
     eta = viscosity(T_pr)
     (a, L, precond) = momentum(W, eta, (Ra*T_pr)*g)
-    (A, b) = assemble_system(a, L, bcs)
+
+    b = assemble(L); [bc.apply(b) for bc in bcs]
+    A = AdjointKrylovMatrix(a, bcs=bcs)
+
     solver.set_operators(A, P)
     solver.solve(velocity_pressure.vector(), b)
     u_pr.assign(velocity_pressure.split()[0])
@@ -165,7 +169,10 @@ while (t <= finish and n <= 1):
     # Solve for corrected velocity
     eta = viscosity(T)
     (a, L, precond) = momentum(W, eta, (Ra*T)*g)
-    (A, b) = assemble_system(a, L, bcs)
+
+    b = assemble(L); [bc.apply(b) for bc in bcs]
+    A = AdjointKrylovMatrix(a, bcs=bcs)
+
     solver.set_operators(A, P)
     solver.solve(velocity_pressure.vector(), b)
     u.assign(velocity_pressure.split()[0])
