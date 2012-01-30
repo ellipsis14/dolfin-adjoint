@@ -6,3 +6,4 @@ from assign import *
 from matrix_free import *
 from functional import *
 from unimplemented import *
+from split import *

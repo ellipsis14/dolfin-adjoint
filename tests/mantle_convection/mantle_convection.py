@@ -13,9 +13,11 @@ from temperature import *
 from parameters import InitialTemperature, Ra, Rb, rho0, g
 from parameters import eta0, b_val, c_val, deltaT
 
-from dolfin import *
+from dolfin import *; import dolfin
 from dolfin_adjoint import *
 debugging["record_all"] = True
+debugging["fussy_replay"] = False
+dolfin.parameters["form_compiler"]["representation"] = "quadrature"
 
 def viscosity(T):
     eta = eta0 * exp(-b_val*T/deltaT + c_val*(1.0 - triangle.x[1])/height )
@@ -76,8 +78,8 @@ parameters["form_compiler"]["cpp_optimize"] = True
 # Define spatial domain
 height = 1.0
 length = 2.0
-nx = 16
-ny = 8
+nx = 4
+ny = 4
 mesh = Rectangle(0, 0, length, height, nx, ny)
 
 # Define initial and end time
@@ -159,7 +161,7 @@ while (t <= finish and n <= 1):
 
     solver.set_operators(A, P)
     solver.solve(velocity_pressure.vector(), b)
-    u_pr.assign(velocity_pressure.split()[0])
+    u_pr.assign(velocity_pressure.split(annotate=True)[0])
 
     # Solve for corrected temperature T
     (a, L) = energy_correction(Q, Constant(dt), u_pr, u_, T_)
@@ -175,7 +177,7 @@ while (t <= finish and n <= 1):
 
     solver.set_operators(A, P)
     solver.solve(velocity_pressure.vector(), b)
-    u.assign(velocity_pressure.split()[0])
+    u.assign(velocity_pressure.split(annotate=True)[0])
 
     # Store stuff
     store(T, u, t)
@@ -185,9 +187,7 @@ while (t <= finish and n <= 1):
 
     # Move to new timestep and update functions
     T_.assign(T)
-    adj_html("before_u_assign.html", "forward")
     u_.assign(u)
-    adj_html("after_u_assign.html", "forward")
     t += dt
     n += 1
 
@@ -195,5 +195,5 @@ print "Replaying forward run ... "
 adj_html("forward.html", "forward")
 replay_dolfin()
 
-J = FinalFunctional(inner(u_, u_)*dx)
-adjoint = adjoint_dolfin(J)
+#J = FinalFunctional(inner(u_, u_)*dx)
+#adjoint = adjoint_dolfin(J)

@@ -467,7 +467,10 @@ class Matrix(libadjoint.Matrix):
 
     self.data=data
 
-    self.solver_parameters = solver_parameters
+    if solver_parameters is not None:
+      self.solver_parameters = solver_parameters
+    else:
+      self.solver_parameters = {}
 
   def solve(self, var, b):
       
@@ -480,7 +483,8 @@ class Matrix(libadjoint.Matrix):
       else:
         bcs = self.bcs
 
-      x=Vector(dolfin.Function(self.test_function().function_space()))
+      x = Vector(dolfin.Function(self.test_function().function_space()))
+
       if "newton_solver" in self.solver_parameters:
         del self.solver_parameters["newton_solver"]
 
