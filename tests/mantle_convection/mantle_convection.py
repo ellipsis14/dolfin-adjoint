@@ -192,4 +192,4 @@ if __name__ == "__main__":
     Tfinal = main(ic)
     return assemble(inner(Tfinal, Tfinal)*dx)
 
-  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=1.0e-15)
+  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=1.0e-5)
