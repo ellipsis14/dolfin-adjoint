@@ -14,7 +14,7 @@ def dolfin_adjoint_assign(self, other, annotate=True):
     return dolfin_assign(self, other)
 
   # ignore anything that is an interpolation, rather than a straight assignment
-  if self.function_space() != other.function_space():
+  if str(self.function_space()) != str(other.function_space()):
     return dolfin_assign(self, other)
 
   other_var = adj_variables[other]
@@ -26,7 +26,11 @@ def dolfin_adjoint_assign(self, other, annotate=True):
     return dolfin_assign(self, other)
 
   # OK, so we have a variable we've seen before. Beautiful.
-  fn_space = other.function_space()
+  try:
+    fn_space = other.function_space().collapse()
+  except:
+    fn_space = other.function_space()
+
   u, v = dolfin.TestFunction(fn_space), dolfin.TrialFunction(fn_space)
   M = dolfin.inner(u, v)*dolfin.dx
   if debugging["fussy_replay"]:

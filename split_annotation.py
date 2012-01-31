@@ -4,6 +4,7 @@ import libadjoint
 
 import solving
 import assign
+import expressions
 
 import hashlib
 import time
@@ -15,16 +16,22 @@ def adjoint_split(self, **kwargs):
     annotate = kwargs["annotate"]
     del kwargs["annotate"]
 
+  bcs = []
+  if "bcs" in kwargs:
+    bcs = kwargs["bcs"]
+    del kwargs["bcs"]
+
   out = Function_split(self, **kwargs)
 
   if annotate:
+    dolfin.info_red("Warning: function.split() is not annotated; use ufl.split(function) instead")
     for idx, fn in enumerate(out):
-      annotate_split(self, idx, fn)
+      annotate_split(self, idx, fn, bcs)
 
   return out
 dolfin.Function.split = adjoint_split
 
-def annotate_split(bigfn, idx, smallfn):
+def annotate_split(bigfn, idx, smallfn, bcs):
   fn_space = smallfn.function_space().collapse()
   test = dolfin.TestFunction(fn_space)
   trial = dolfin.TrialFunction(fn_space)
@@ -38,6 +45,7 @@ def annotate_split(bigfn, idx, smallfn):
   solving.register_initial_conditions([(bigfn, solving.adj_variables[bigfn])], linear=True, var=None)
 
   var = solving.adj_variables.next(smallfn)
+  frozen_expressions_dict = expressions.freeze_dict()
 
   def diag_assembly_cb(dependencies, values, hermitian, coefficient, context):
     '''This callback must conform to the libadjoint Python block assembly
@@ -46,13 +54,16 @@ def annotate_split(bigfn, idx, smallfn):
 
     assert coefficient == 1
 
+    expressions.update_expressions(frozen_expressions_dict)
     value_coeffs=[v.data for v in values]
     eq_l = eq_lhs
 
     if hermitian:
-      return (solving.Matrix(dolfin.adjoint(eq_l)), solving.Vector(None, fn_space=fn_space))
+      adjoint_bcs = [dolfin.homogenize(bc) for bc in bcs if isinstance(bc, dolfin.DirichletBC)]
+      if len(adjoint_bcs) == 0: adjoint_bcs = None
+      return (solving.Matrix(dolfin.adjoint(eq_l), bcs=adjoint_bcs), solving.Vector(None, fn_space=fn_space))
     else:
-      return (solving.Matrix(eq_l), solving.Vector(None, fn_space=fn_space))
+      return (solving.Matrix(eq_l, bcs=bcs), solving.Vector(None, fn_space=fn_space))
   diag_block.assemble = diag_assembly_cb
 
   rhs = SplitRHS(test, bigfn, idx)

@@ -16,7 +16,7 @@ from parameters import eta0, b_val, c_val, deltaT
 from dolfin import *; import dolfin
 from dolfin_adjoint import *
 debugging["record_all"] = True
-debugging["fussy_replay"] = False
+debugging["fussy_replay"] = True
 dolfin.parameters["form_compiler"]["representation"] = "quadrature"
 
 def viscosity(T):
