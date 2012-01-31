@@ -41,6 +41,8 @@ def compute_timestep(w):
     mesh = u.function_space().mesh()
     hmin = mesh.hmin()
     dt = CLFnum*hmin/maxvel
+
+    dt = 3.0e-5
     return dt
 
 def compute_initial_conditions(W, Q):
@@ -190,5 +192,6 @@ print "Replaying forward run ... "
 adj_html("forward.html", "forward")
 replay_dolfin()
 
-#J = FinalFunctional(inner(u_, u_)*dx)
-#adjoint = adjoint_dolfin(J)
+adj_html("adjoint.html", "adjoint")
+J = FinalFunctional(inner(T_, T_)*dx)
+adjoint = adjoint_dolfin(J)
