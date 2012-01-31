@@ -90,7 +90,10 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
 
     if annotate:
       if not isinstance(A, AdjointKrylovMatrix):
-        raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Sorry, we only support AdjointKrylovMatrix's.")
+        try:
+          A = AdjointKrylovMatrix(A.form)
+        except AttributeError:
+          raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your A has to either be an AdjointKrylovMatrix or have been assembled after dolfin_adjoint was imported.")
 
       if not hasattr(x, 'function'):
         raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your x has to come from code like down_cast(my_function.vector()).")

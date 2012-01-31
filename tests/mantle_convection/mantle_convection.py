@@ -45,21 +45,17 @@ def compute_timestep(w):
     dt = 3.0e-5
     return dt
 
-def compute_initial_conditions(T_, W, Q, bcs):
+def compute_initial_conditions(T_, W, Q, bcs, annotate):
     # Solve Stokes problem with given initial temperature and
     # composition
     eta = viscosity(T_)
     (a, L, pre) = momentum(W, eta, (Ra*T_)*g)
-    (A, b) = assemble_system(a, L, bcs)
+    w = Function(W)
+
     P = PETScMatrix()
     assemble(pre, tensor=P); [bc.apply(P) for bc in bcs]
 
-    w = Function(W)
-    solver = dolfin.KrylovSolver("tfqmr", "amg")
-    solver.set_operators(A, P)
-    solver.solve(w.vector(), b)
-
-    end()
+    solve(a == L, w, bcs=bcs, solver_parameters={"linear_solver": "tfqmr", "preconditioner": "amg"}, annotate=annotate)
     return (w, P)
 
 parameters["form_compiler"]["cpp_optimize"] = True
@@ -100,7 +96,7 @@ def main(T_, annotate=False):
   rho = interpolate(rho0, Q)
 
   # Functions at previous timestep (and initial conditions)
-  (w_, P) = compute_initial_conditions(T_, W, Q, bcs)
+  (w_, P) = compute_initial_conditions(T_, W, Q, bcs, annotate=annotate)
 
   # Predictor functions
   T_pr = Function(Q)      # Tentative temperature (T)
@@ -178,19 +174,24 @@ def main(T_, annotate=False):
 if __name__ == "__main__":
   Tic = interpolate(InitialTemperature(Ra, length), Q)
   ic_copy = Function(Tic)
+  another_copy = Function(Tic)
 
   Tfinal = main(Tic, annotate=True)
+  dJ = assemble(derivative(inner(Tfinal, Tfinal)*dx, Tfinal))
 
   print "Replaying forward run ... "
   adj_html("forward.html", "forward")
-  replay_dolfin()
+  replay_dolfin(forget=False)
 
   adj_html("adjoint.html", "adjoint")
   J = FinalFunctional(inner(Tfinal, Tfinal)*dx)
-  adjoint = adjoint_dolfin(J)
+  adjoint = adjoint_dolfin(J, forget=False)
 
   def J(ic):
     Tfinal = main(ic)
     return assemble(inner(Tfinal, Tfinal)*dx)
 
   minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=1.0e-5)
+
+  #Tic.assign(another_copy)
+  #minconv = test_initial_condition_tlm(J, dJ, Tic, seed=1.0e-5)
