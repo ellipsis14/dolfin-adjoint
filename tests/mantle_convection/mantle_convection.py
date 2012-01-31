@@ -80,7 +80,12 @@ W = stokes_space(mesh)
 V = W.sub(0).collapse()
 Q = FunctionSpace(mesh, "DG", 1)
 
-def main(T_):
+# Define boundary conditions for the temperature
+top_temperature = DirichletBC(Q, 0.0, "x[1] == %g" % height, "geometric")
+bottom_temperature = DirichletBC(Q, 1.0, "x[1] == 0.0", "geometric")
+T_bcs = [bottom_temperature, top_temperature]
+
+def main(T_, annotate=False):
   # Define initial and end time
   t = 0.0
   finish = 0.015
@@ -91,11 +96,6 @@ def main(T_):
   left = DirichletBC(W.sub(0).sub(0), 0.0, "x[0] == 0.0")
   right = DirichletBC(W.sub(0).sub(0), 0.0, "x[0] == %g" % length)
   bcs = [bottom, top, left, right]
-
-  # Define boundary conditions for the temperature
-  top_temperature = DirichletBC(Q, 0.0, "x[1] == %g" % height, "geometric")
-  bottom_temperature = DirichletBC(Q, 1.0, "x[1] == 0.0", "geometric")
-  T_bcs = [bottom_temperature, top_temperature]
 
   rho = interpolate(rho0, Q)
 
@@ -131,7 +131,9 @@ def main(T_):
     # Solve for predicted temperature in terms of previous velocity
     (a, L) = energy(Q, Constant(dt), u_, T_)
     solve(a == L, T_pr, T_bcs,
-          solver_parameters={"linear_solver": "gmres"})
+          solver_parameters={"linear_solver": "gmres"}, annotate=annotate)
+
+    return T_pr
 
     # Solve for predicted flow
     eta = viscosity(T_pr)
@@ -141,12 +143,12 @@ def main(T_):
     A = AdjointKrylovMatrix(a, bcs=bcs)
 
     solver.set_operators(A, P)
-    solver.solve(w_pr.vector(), b)
+    solver.solve(w_pr.vector(), b, annotate=annotate)
 
     # Solve for corrected temperature T in terms of predicted and previous velocity
     (a, L) = energy_correction(Q, Constant(dt), u_pr, u_, T_)
     solve(a == L, T, T_bcs,
-          solver_parameters={"linear_solver": "gmres"})
+          solver_parameters={"linear_solver": "gmres"}, annotate=annotate)
 
     # Solve for corrected flow
     eta = viscosity(T)
@@ -156,7 +158,7 @@ def main(T_):
     A = AdjointKrylovMatrix(a, bcs=bcs)
 
     solver.set_operators(A, P)
-    solver.solve(w.vector(), b)
+    solver.solve(w.vector(), b, annotate=annotate)
 
     # Store stuff
     store(T, w, t)
@@ -177,7 +179,7 @@ if __name__ == "__main__":
   Tic = interpolate(InitialTemperature(Ra, length), Q)
   ic_copy = Function(Tic)
 
-  Tfinal = main(Tic)
+  Tfinal = main(Tic, annotate=True)
 
   print "Replaying forward run ... "
   adj_html("forward.html", "forward")
@@ -186,7 +188,6 @@ if __name__ == "__main__":
   adj_html("adjoint.html", "adjoint")
   J = FinalFunctional(inner(Tfinal, Tfinal)*dx)
   adjoint = adjoint_dolfin(J)
-  print list(adjoint.vector())
 
   def J(ic):
     Tfinal = main(ic)
