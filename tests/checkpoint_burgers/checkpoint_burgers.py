@@ -42,35 +42,37 @@ def main(ic, annotate=False):
       adj_checkpointing('multistage', int(ceil(end/float(timestep))), 5, 10, verbose=True)
 
     u = Function(V)
+    j = 0
     while (t <= end):
         solve(a == L, u, bc, annotate=annotate)
 
         u_.assign(u, annotate=annotate)
 
         t += float(timestep)
+        j += assemble(u_*u_*dx)
         adj_inc_timestep()
         #plot(u)
 
     #interactive()
-    return u_
+    return j, u_
 
 if __name__ == "__main__":
 
     
     ic = project(Expression("sin(2*pi*x[0])"),  V)
-    forward = main(ic, annotate=True)
+    j, forward = main(ic, annotate=True)
     adj_html("burgers_picard_checkpointing_forward.html", "forward")
     adj_html("burgers_picard_checkpointing_adjoint.html", "adjoint")
     #print "Running forward replay .... "
     #replay_dolfin()
     print "Running adjoint ... "
 
-    J = FinalFunctional(forward*forward*dx)
+    J = TimeFunctional(forward*forward*dx)
     adjoint = adjoint_dolfin(J)
 
     def Jfunc(ic):
-      forward = main(ic, annotate=False)
-      return assemble(forward*forward*dx)
+      j, forward = main(ic, annotate=False)
+      return j 
 
     minconv = test_initial_condition_adjoint(Jfunc, ic, adjoint, seed=1.0e-3)
     if minconv < 1.9:
