@@ -23,9 +23,9 @@ def viscosity(T):
     eta = eta0 * exp(-b_val*T/deltaT + c_val*(1.0 - triangle.x[1])/height )
     return eta
 
-def store(T, u, t):
+def store(T, w, t):
     temperature_series.store(T.vector(), t)
-    velocity_series.store(u.vector(), t)
+    flow_series.store(w.vector(), t)
     if t == 0.0:
         temperature_series.store(mesh, t)
 
@@ -35,7 +35,8 @@ def message(t, dt):
     print "dt = %0.5g" % dt
     print "-"*60
 
-def compute_timestep(u):
+def compute_timestep(w):
+    (u, p) = w.split(deepcopy=True)
     maxvel = numpy.max(numpy.abs(u.vector().array()))
     mesh = u.function_space().mesh()
     hmin = mesh.hmin()
@@ -51,10 +52,6 @@ def compute_initial_conditions(W, Q):
     # Temperature (T) at previous time step
     T_ = interpolate(T0, Q)
 
-    # Velocity (u) at previous time step
-    V = W.sub(0).collapse()
-    u_ = Function(V)
-
     # Solve Stokes problem with given initial temperature and
     # composition
     eta = viscosity(T_)
@@ -63,15 +60,13 @@ def compute_initial_conditions(W, Q):
     P = PETScMatrix()
     assemble(pre, tensor=P); [bc.apply(P) for bc in bcs]
 
-    velocity_pressure = Function(W)
-    solver = KrylovSolver("tfqmr", "amg")
+    w = Function(W)
+    solver = dolfin.KrylovSolver("tfqmr", "amg")
     solver.set_operators(A, P)
-    solver.solve(velocity_pressure.vector(), b)
-
-    u_.assign(velocity_pressure.split()[0])
+    solver.solve(w.vector(), b)
 
     end()
-    return (T_, u_, P)
+    return (T_, w, P)
 
 parameters["form_compiler"]["cpp_optimize"] = True
 
@@ -106,39 +101,40 @@ T_bcs = [bottom_temperature, top_temperature]
 rho = interpolate(rho0, Q)
 
 # Functions at previous timestep (and initial conditions)
-(T_, u_, P) = compute_initial_conditions(W, Q)
+(T_, w_, P) = compute_initial_conditions(W, Q)
 
 # Predictor functions
-u_pr = Function(V)      # Tentative velocity (u)
 T_pr = Function(Q)      # Tentative temperature (T)
 
 # Functions at this timestep
-u = Function(V)         # Velocity (u) at this time step
 T = Function(Q)         # Temperature (T) at this time step
-velocity_pressure = Function(W)
+w = Function(W)
 
-print "velocity_pressure: ", velocity_pressure
+print "w: ", w
+print "w_: ", w_
 print "T: ", T
-print "u: ", u
 print "T_: ", T_
 print "len(T_.vector()): ", len(T_.vector())
-print "u_:", u_
 print "P: ", P
-print "u_pr: ", u_pr
 print "T_pr: ", T_pr
 
 # Containers for storage
-velocity_series = TimeSeries("bin-final/velocity")
+flow_series = TimeSeries("bin-final/flow")
 temperature_series = TimeSeries("bin-final/temperature")
 
 # Store initial data
-store(T_, u_, 0.0)
+store(T_, w_, 0.0)
 
 # Define initial CLF and time step
 CLFnum = 0.5
-dt = compute_timestep(u_)
+dt = compute_timestep(w_)
 t += dt
 n = 1
+
+w_pr = Function(W)
+print "w_pr: ", w_pr
+(u_pr, p_pr) = split(w_pr)
+(u_, p_) = split(w_)
 
 # Solver for the Stokes systems
 solver = AdjointPETScKrylovSolver("tfqmr", "amg")
@@ -147,12 +143,12 @@ while (t <= finish and n <= 2):
 
     message(t, dt)
 
-    # Solve for predicted temperature
+    # Solve for predicted temperature in terms of previous velocity
     (a, L) = energy(Q, Constant(dt), u_, T_)
     solve(a == L, T_pr, T_bcs,
           solver_parameters={"linear_solver": "gmres"})
 
-    # Solve for predicted velocity
+    # Solve for predicted flow
     eta = viscosity(T_pr)
     (a, L, precond) = momentum(W, eta, (Ra*T_pr)*g)
 
@@ -160,15 +156,14 @@ while (t <= finish and n <= 2):
     A = AdjointKrylovMatrix(a, bcs=bcs)
 
     solver.set_operators(A, P)
-    solver.solve(velocity_pressure.vector(), b)
-    u_pr.assign(velocity_pressure.split(annotate=True)[0])
+    solver.solve(w_pr.vector(), b)
 
-    # Solve for corrected temperature T
+    # Solve for corrected temperature T in terms of predicted and previous velocity
     (a, L) = energy_correction(Q, Constant(dt), u_pr, u_, T_)
     solve(a == L, T, T_bcs,
           solver_parameters={"linear_solver": "gmres"})
 
-    # Solve for corrected velocity
+    # Solve for corrected flow
     eta = viscosity(T)
     (a, L, precond) = momentum(W, eta, (Ra*T)*g)
 
@@ -176,18 +171,17 @@ while (t <= finish and n <= 2):
     A = AdjointKrylovMatrix(a, bcs=bcs)
 
     solver.set_operators(A, P)
-    solver.solve(velocity_pressure.vector(), b)
-    u.assign(velocity_pressure.split(annotate=True)[0])
+    solver.solve(w.vector(), b)
 
     # Store stuff
-    store(T, u, t)
+    store(T, w, t)
 
     # Compute time step
-    dt = compute_timestep(u)
+    dt = compute_timestep(w)
 
     # Move to new timestep and update functions
     T_.assign(T)
-    u_.assign(u)
+    w_.assign(w)
     t += dt
     n += 1
     adj_inc_timestep()
