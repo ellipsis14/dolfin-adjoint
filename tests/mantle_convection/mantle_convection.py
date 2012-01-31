@@ -36,24 +36,16 @@ def message(t, dt):
     print "-"*60
 
 def compute_timestep(w):
-    (u, p) = w.split(deepcopy=True)
-    maxvel = numpy.max(numpy.abs(u.vector().array()))
-    mesh = u.function_space().mesh()
-    hmin = mesh.hmin()
-    dt = CLFnum*hmin/maxvel
+  #(u, p) = w.split(deepcopy=True)
+  #  maxvel = numpy.max(numpy.abs(u.vector().array()))
+  #  mesh = u.function_space().mesh()
+  #  hmin = mesh.hmin()
+  #  dt = CLFnum*hmin/maxvel
 
     dt = 3.0e-5
     return dt
 
-def compute_initial_conditions(W, Q):
-    begin("Computing initial conditions")
-
-    # Define initial temperature (guess)
-    T0 = InitialTemperature(Ra, length)
-
-    # Temperature (T) at previous time step
-    T_ = interpolate(T0, Q)
-
+def compute_initial_conditions(T_, W, Q, bcs):
     # Solve Stokes problem with given initial temperature and
     # composition
     eta = viscosity(T_)
@@ -68,7 +60,7 @@ def compute_initial_conditions(W, Q):
     solver.solve(w.vector(), b)
 
     end()
-    return (T_, w, P)
+    return (w, P)
 
 parameters["form_compiler"]["cpp_optimize"] = True
 
@@ -79,70 +71,61 @@ nx = 4
 ny = 4
 mesh = Rectangle(0, 0, length, height, nx, ny)
 
-# Define initial and end time
-t = 0.0
-finish = 0.015
+# Containers for storage
+flow_series = TimeSeries("bin-final/flow")
+temperature_series = TimeSeries("bin-final/temperature")
 
 # Create function spaces
 W = stokes_space(mesh)
 V = W.sub(0).collapse()
 Q = FunctionSpace(mesh, "DG", 1)
 
-# Define boundary conditions for the velocity and pressure u
-bottom = DirichletBC(W.sub(0), (0.0, 0.0), "x[1] == 0.0" )
-top = DirichletBC(W.sub(0).sub(1), 0.0, "x[1] == %g" % height)
-left = DirichletBC(W.sub(0).sub(0), 0.0, "x[0] == 0.0")
-right = DirichletBC(W.sub(0).sub(0), 0.0, "x[0] == %g" % length)
-bcs = [bottom, top, left, right]
+def main(T_):
+  # Define initial and end time
+  t = 0.0
+  finish = 0.015
 
-# Define boundary conditions for the temperature
-top_temperature = DirichletBC(Q, 0.0, "x[1] == %g" % height, "geometric")
-bottom_temperature = DirichletBC(Q, 1.0, "x[1] == 0.0", "geometric")
-T_bcs = [bottom_temperature, top_temperature]
+  # Define boundary conditions for the velocity and pressure u
+  bottom = DirichletBC(W.sub(0), (0.0, 0.0), "x[1] == 0.0" )
+  top = DirichletBC(W.sub(0).sub(1), 0.0, "x[1] == %g" % height)
+  left = DirichletBC(W.sub(0).sub(0), 0.0, "x[0] == 0.0")
+  right = DirichletBC(W.sub(0).sub(0), 0.0, "x[0] == %g" % length)
+  bcs = [bottom, top, left, right]
 
-rho = interpolate(rho0, Q)
+  # Define boundary conditions for the temperature
+  top_temperature = DirichletBC(Q, 0.0, "x[1] == %g" % height, "geometric")
+  bottom_temperature = DirichletBC(Q, 1.0, "x[1] == 0.0", "geometric")
+  T_bcs = [bottom_temperature, top_temperature]
 
-# Functions at previous timestep (and initial conditions)
-(T_, w_, P) = compute_initial_conditions(W, Q)
+  rho = interpolate(rho0, Q)
 
-# Predictor functions
-T_pr = Function(Q)      # Tentative temperature (T)
+  # Functions at previous timestep (and initial conditions)
+  (w_, P) = compute_initial_conditions(T_, W, Q, bcs)
 
-# Functions at this timestep
-T = Function(Q)         # Temperature (T) at this time step
-w = Function(W)
+  # Predictor functions
+  T_pr = Function(Q)      # Tentative temperature (T)
 
-print "w: ", w
-print "w_: ", w_
-print "T: ", T
-print "T_: ", T_
-print "len(T_.vector()): ", len(T_.vector())
-print "P: ", P
-print "T_pr: ", T_pr
+  # Functions at this timestep
+  T = Function(Q)         # Temperature (T) at this time step
+  w = Function(W)
 
-# Containers for storage
-flow_series = TimeSeries("bin-final/flow")
-temperature_series = TimeSeries("bin-final/temperature")
+  # Store initial data
+  store(T_, w_, 0.0)
 
-# Store initial data
-store(T_, w_, 0.0)
+  # Define initial CLF and time step
+  CLFnum = 0.5
+  dt = compute_timestep(w_)
+  t += dt
+  n = 1
 
-# Define initial CLF and time step
-CLFnum = 0.5
-dt = compute_timestep(w_)
-t += dt
-n = 1
+  w_pr = Function(W)
+  (u_pr, p_pr) = split(w_pr)
+  (u_, p_) = split(w_)
 
-w_pr = Function(W)
-print "w_pr: ", w_pr
-(u_pr, p_pr) = split(w_pr)
-(u_, p_) = split(w_)
+  # Solver for the Stokes systems
+  solver = AdjointPETScKrylovSolver("tfqmr", "amg")
 
-# Solver for the Stokes systems
-solver = AdjointPETScKrylovSolver("tfqmr", "amg")
-
-while (t <= finish and n <= 2):
-
+  while (t <= finish and n <= 1):
     message(t, dt)
 
     # Solve for predicted temperature in terms of previous velocity
@@ -188,10 +171,25 @@ while (t <= finish and n <= 2):
     n += 1
     adj_inc_timestep()
 
-print "Replaying forward run ... "
-adj_html("forward.html", "forward")
-replay_dolfin()
+  return T_
 
-adj_html("adjoint.html", "adjoint")
-J = FinalFunctional(inner(T_, T_)*dx)
-adjoint = adjoint_dolfin(J)
+if __name__ == "__main__":
+  Tic = interpolate(InitialTemperature(Ra, length), Q)
+  ic_copy = Function(Tic)
+
+  Tfinal = main(Tic)
+
+  print "Replaying forward run ... "
+  adj_html("forward.html", "forward")
+  replay_dolfin()
+
+  adj_html("adjoint.html", "adjoint")
+  J = FinalFunctional(inner(Tfinal, Tfinal)*dx)
+  adjoint = adjoint_dolfin(J)
+  print list(adjoint.vector())
+
+  def J(ic):
+    Tfinal = main(ic)
+    return assemble(inner(Tfinal, Tfinal)*dx)
+
+  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=1.0e-15)
