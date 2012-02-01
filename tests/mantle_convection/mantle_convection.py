@@ -120,6 +120,8 @@ def main(T_, annotate=False):
 
   # Solver for the Stokes systems
   solver = AdjointPETScKrylovSolver("tfqmr", "amg")
+  solver.parameters["relative_tolerance"] = 1.0e-14
+  solver.parameters["monitor_convergence"] = True
 
   while (t <= finish and n <= 1):
     message(t, dt)
@@ -127,8 +129,6 @@ def main(T_, annotate=False):
     # Solve for predicted temperature in terms of previous velocity
     (a, L) = energy(Q, Constant(dt), u_, T_)
     solve(a == L, T_pr, T_bcs, annotate=annotate)
-
-    return T_pr
 
     # Solve for predicted flow
     eta = viscosity(T_pr)
@@ -183,6 +183,7 @@ if __name__ == "__main__":
   adj_html("forward.html", "forward")
   replay_dolfin(forget=False)
 
+  print "Running adjoint ... "
   adj_html("adjoint.html", "adjoint")
   J = FinalFunctional(inner(Tfinal, Tfinal)*dx)
   adjoint = adjoint_dolfin(J, forget=False)
