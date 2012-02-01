@@ -1,6 +1,10 @@
 import ufl
 import dolfin
+
+import numpy
+
 import libadjoint
+
 import solving
 import hashlib
 import expressions
@@ -264,6 +268,24 @@ def transpose_operators(operators):
     elif isinstance(op, dolfin.cpp.GenericMatrix):
       out[i] = op.__class__()
       dolfin.assemble(dolfin.adjoint(op.form), tensor=out[i])
+
+      print "Before BCs: ", out[i].array()
+
+      # Apply the boundary conditions transposed ...
+      for bc in op.bcs:
+        bc_values = bc.get_boundary_values()
+        for row in bc_values: # row of the forward, i.e. non-transposed, matrix
+
+          rows = numpy.array([row], dtype='I')
+          rowidx = list(op.getrow(row)[0])
+          cols = numpy.array(rowidx, dtype='I')
+          data = numpy.zeros(cols.shape[0], dtype='d'); data[rowidx.index(row)] = 1.0
+
+          out[i].set(data, rows, cols)
+          out[i].apply('insert')
+
+      print "After BCs: ", out[i].array()
+
     elif isinstance(op, dolfin.Form):
       out[i] = dolfin.adjoint(op)
 
