@@ -5,7 +5,8 @@ import sys
 import subprocess
 
 test_cmds = {'tlm_simple': 'mpirun -n 2 python tlm_simple.py',
-             'navier_stokes': 'mpirun -n 2 python navier_stokes.py'}
+             'navier_stokes': 'mpirun -n 2 python navier_stokes.py',
+             'mantle_convection': None}
 
 basedir = os.path.dirname(os.path.abspath(sys.argv[0]))
 subdirs = [x for x in os.listdir(basedir) if os.path.isdir(os.path.join(basedir, x))]

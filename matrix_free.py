@@ -54,6 +54,16 @@ class MatrixFree(solving.Matrix):
     for bc in self.bcs:
       bc.apply(rhs)
 
+    A = dolfin.assemble(self.data.current_form); [bc.apply(A) for bc in self.data.bcs]
+    import numpy
+    numpy.set_printoptions(threshold='nan')
+    if var.type == 'ADJ_FORWARD':
+      print "Transpose matrix to solve: "
+      print A.array().T
+    elif var.type == 'ADJ_ADJOINT':
+      print "Matrix to solve: "
+      print A.array()
+
     if self.operators[1] is not None: # we have a user-supplied preconditioner
       solver.set_operators(self.data, self.operators[1])
       solver.solve(dolfin.down_cast(x.vector()), dolfin.down_cast(rhs))
