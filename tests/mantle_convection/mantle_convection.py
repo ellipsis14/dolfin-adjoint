@@ -126,8 +126,7 @@ def main(T_, annotate=False):
 
     # Solve for predicted temperature in terms of previous velocity
     (a, L) = energy(Q, Constant(dt), u_, T_)
-    solve(a == L, T_pr, T_bcs,
-          solver_parameters={"linear_solver": "gmres"}, annotate=annotate)
+    solve(a == L, T_pr, T_bcs, annotate=annotate)
 
     return T_pr
 
@@ -141,10 +140,11 @@ def main(T_, annotate=False):
     solver.set_operators(A, P)
     solver.solve(w_pr.vector(), b, annotate=annotate)
 
+    return w_pr
+
     # Solve for corrected temperature T in terms of predicted and previous velocity
     (a, L) = energy_correction(Q, Constant(dt), u_pr, u_, T_)
-    solve(a == L, T, T_bcs,
-          solver_parameters={"linear_solver": "gmres"}, annotate=annotate)
+    solve(a == L, T, T_bcs, annotate=annotate)
 
     # Solve for corrected flow
     eta = viscosity(T)
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     Tfinal = main(ic)
     return assemble(inner(Tfinal, Tfinal)*dx)
 
-  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=1.0e-5)
+  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=1.0e-4)
 
   #Tic.assign(another_copy)
   #minconv = test_initial_condition_tlm(J, dJ, Tic, seed=1.0e-5)
