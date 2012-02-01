@@ -269,8 +269,6 @@ def transpose_operators(operators):
       out[i] = op.__class__()
       dolfin.assemble(dolfin.adjoint(op.form), tensor=out[i])
 
-      print "Before BCs: ", out[i].array()
-
       # Apply the boundary conditions transposed ...
       for bc in op.bcs:
         bc_values = bc.get_boundary_values()
@@ -281,10 +279,9 @@ def transpose_operators(operators):
           cols = numpy.array(rowidx, dtype='I')
           data = numpy.zeros(cols.shape[0], dtype='d'); data[rowidx.index(row)] = 1.0
 
-          out[i].set(data, rows, cols)
-          out[i].apply('insert')
+          out[i].set(data.T, cols, rows)
 
-      print "After BCs: ", out[i].array()
+      out[i].apply('insert')
 
     elif isinstance(op, dolfin.Form):
       out[i] = dolfin.adjoint(op)
