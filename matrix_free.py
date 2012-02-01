@@ -29,10 +29,14 @@ class MatrixFree(solving.Matrix):
     self.operators = kwargs['operators']
     del kwargs['operators']
 
+    self.parameters = kwargs['parameters']
+    del kwargs['parameters']
+
     solving.Matrix.__init__(self, *args, **kwargs)
 
   def solve(self, var, b):
     solver = dolfin.PETScKrylovSolver(*self.solver_parameters)
+    solver.parameters.update(self.parameters)
 
     x = dolfin.Function(self.fn_space)
     if b.data is None:
@@ -122,6 +126,7 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
       var = solving.adj_variables.next(x.function)
 
       frozen_expressions_dict = expressions.freeze_dict()
+      frozen_parameters = copy.copy(self.parameters)
 
       def diag_assembly_cb(dependencies, values, hermitian, coefficient, context):
         '''This callback must conform to the libadjoint Python block assembly
@@ -137,9 +142,15 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
 
         if hermitian:
           A_transpose = A.hermitian()
-          return (MatrixFree(A_transpose, fn_space=x.function.function_space(), bcs=A_transpose.bcs, solver_parameters=self.solver_parameters, operators=transpose_operators(self.operators)), solving.Vector(None, fn_space=x.function.function_space()))
+          return (MatrixFree(A_transpose, fn_space=x.function.function_space(), bcs=A_transpose.bcs, 
+                             solver_parameters=self.solver_parameters, 
+                             operators=transpose_operators(self.operators),
+                             parameters=frozen_parameters), solving.Vector(None, fn_space=x.function.function_space()))
         else:
-          return (MatrixFree(A, fn_space=x.function.function_space(), bcs=b.bcs, solver_parameters=self.solver_parameters, operators=self.operators), solving.Vector(None, fn_space=x.function.function_space()))
+          return (MatrixFree(A, fn_space=x.function.function_space(), bcs=b.bcs, 
+                             solver_parameters=self.solver_parameters, 
+                             operators=self.operators,
+                             parameters=frozen_parameters), solving.Vector(None, fn_space=x.function.function_space()))
       diag_block.assemble = diag_assembly_cb
 
       def diag_action_cb(dependencies, values, hermitian, coefficient, input, context):
