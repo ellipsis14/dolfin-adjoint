@@ -57,12 +57,6 @@ class MatrixFree(solving.Matrix):
     A = dolfin.assemble(self.data.current_form); [bc.apply(A) for bc in self.data.bcs]
     import numpy
     numpy.set_printoptions(threshold='nan')
-    if var.type == 'ADJ_FORWARD':
-      print "Transpose matrix to solve: "
-      print A.array().T
-    elif var.type == 'ADJ_ADJOINT':
-      print "Matrix to solve: "
-      print A.array()
 
     if self.operators[1] is not None: # we have a user-supplied preconditioner
       solver.set_operators(self.data, self.operators[1])
@@ -278,22 +272,12 @@ def transpose_operators(operators):
     elif isinstance(op, dolfin.cpp.GenericMatrix):
       out[i] = op.__class__()
       dolfin.assemble(dolfin.adjoint(op.form), tensor=out[i])
-
-      # Apply the boundary conditions transposed ...
-      for bc in op.bcs:
-        bc_values = bc.get_boundary_values()
-        for row in bc_values: # row of the forward, i.e. non-transposed, matrix
-
-          rows = numpy.array([row], dtype='I')
-          rowidx = list(op.getrow(row)[0])
-          cols = numpy.array(rowidx, dtype='I')
-          data = numpy.zeros(cols.shape[0], dtype='d'); data[rowidx.index(row)] = 1.0
-
-          out[i].set(data.T, cols, rows)
-
-      out[i].apply('insert')
+      adjoint_bcs = [dolfin.homogenize(bc) for bc in op.bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
+      print "Adjoint preconditioner BCs: ", adjoint_bcs
+      [bc.apply(out[i]) for bc in adjoint_bcs]
 
     elif isinstance(op, dolfin.Form):
       out[i] = dolfin.adjoint(op)
+      out[i].bcs = [dolfin.homogenize(bc) for bc in op.bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
 
   return out

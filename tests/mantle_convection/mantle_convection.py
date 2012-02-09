@@ -119,7 +119,7 @@ def main(T_, annotate=False):
   (u_, p_) = split(w_)
 
   # Solver for the Stokes systems
-  solver = AdjointPETScKrylovSolver("tfqmr", "amg")
+  solver = AdjointPETScKrylovSolver("gmres", "amg")
   solver.parameters["relative_tolerance"] = 1.0e-14
   solver.parameters["monitor_convergence"] = True
 
