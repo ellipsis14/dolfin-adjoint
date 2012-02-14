@@ -51,12 +51,9 @@ class MatrixFree(solving.Matrix):
 
     if var.type in ['ADJ_TLM', 'ADJ_ADJOINT']:
       self.bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
+
     for bc in self.bcs:
       bc.apply(rhs)
-
-    A = dolfin.assemble(self.data.current_form); [bc.apply(A) for bc in self.data.bcs]
-    import numpy
-    numpy.set_printoptions(threshold='nan')
 
     if self.operators[1] is not None: # we have a user-supplied preconditioner
       solver.set_operators(self.data, self.operators[1])
@@ -273,7 +270,6 @@ def transpose_operators(operators):
       out[i] = op.__class__()
       dolfin.assemble(dolfin.adjoint(op.form), tensor=out[i])
       adjoint_bcs = [dolfin.homogenize(bc) for bc in op.bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
-      print "Adjoint preconditioner BCs: ", adjoint_bcs
       [bc.apply(out[i]) for bc in adjoint_bcs]
 
     elif isinstance(op, dolfin.Form):

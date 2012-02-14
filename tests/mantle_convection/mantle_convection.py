@@ -63,8 +63,8 @@ parameters["form_compiler"]["cpp_optimize"] = True
 # Define spatial domain
 height = 1.0
 length = 2.0
-nx = 2
-ny = 2
+nx = 3
+ny = 3
 mesh = Rectangle(0, 0, length, height, nx, ny)
 
 # Containers for storage
@@ -121,10 +121,10 @@ def main(T_, annotate=False):
   # Solver for the Stokes systems
   solver = AdjointPETScKrylovSolver("gmres", "amg")
   solver.parameters["relative_tolerance"] = 1.0e-14
-  solver.parameters["monitor_convergence"] = True
+  solver.parameters["monitor_convergence"] = False
 
   while (t <= finish and n <= 1):
-    message(t, dt)
+    #message(t, dt)
 
     # Solve for predicted temperature in terms of previous velocity
     (a, L) = energy(Q, Constant(dt), u_, T_)
@@ -139,8 +139,6 @@ def main(T_, annotate=False):
 
     solver.set_operators(A, P)
     solver.solve(w_pr.vector(), b, annotate=annotate)
-
-    return w_pr
 
     # Solve for corrected temperature T in terms of predicted and previous velocity
     (a, L) = energy_correction(Q, Constant(dt), u_pr, u_, T_)
