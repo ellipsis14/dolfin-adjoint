@@ -63,8 +63,8 @@ parameters["form_compiler"]["cpp_optimize"] = True
 # Define spatial domain
 height = 1.0
 length = 2.0
-nx = 3
-ny = 3
+nx = 5
+ny = 5
 mesh = Rectangle(0, 0, length, height, nx, ny)
 
 # Containers for storage

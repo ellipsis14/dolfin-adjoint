@@ -63,7 +63,7 @@ class Properties(Expression):
             values[0] = self.nubottom
 
 # Parameter values
-Ra = 1.0e+2
+Ra = 1.0e+3
 Rb = 1.0e+6
 
 eta0 = 1.0
@@ -72,7 +72,7 @@ eta0 = 1.0
 #c_val = 1.0 #ln(2.0) # ln(64.0)
 
 deltaT = 1.0
-b_val = ln(1.0)
+b_val = ln(2.5)
 c_val = ln(2.0)
 
 rbottom = 1.0
