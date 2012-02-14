@@ -2,7 +2,7 @@ __author__ = "Lyudmyla Vynnytska and Marie E. Rognes"
 __copyright__ = "Copyright (C) 2011 Simula Research Laboratory and %s" % __author__
 __license__  = "GNU LGPL Version 3 or any later version"
 
-# Last changed: 2011-10-17
+# Last changed: 2012-02-14
 
 import time
 import numpy
@@ -168,6 +168,24 @@ def main(T_, annotate=False):
     adj_inc_timestep()
 
   return T_
+
+def Nusselt(T):
+    "Definition of Nusselt number, cf Blankenbach et al 1989"
+
+    # Define markers (2) for top boundary, remaining facets are marked
+    # by 0
+    markers = FacetFunction("uint", self.mesh)
+    markers.set_all(0)
+    top = compile_subdomains("near(x[1], %s)" % height)
+    top.mark(markers, 2)
+    ds = Measure("ds")[markers]
+
+    # Compute \int_bottom T apriori:
+    Nu2 = deltaT*length
+
+    # Define nusselt number
+    Nu = - (1.0/Nu2)*grad(T)[1]*ds(2)
+    return Nu
 
 if __name__ == "__main__":
   Tic = interpolate(InitialTemperature(Ra, length), Q)
