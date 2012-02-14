@@ -123,7 +123,7 @@ def main(T_, annotate=False):
   solver.parameters["relative_tolerance"] = 1.0e-14
   solver.parameters["monitor_convergence"] = False
 
-  while (t <= finish and n <= 1):
+  while (t <= finish and n <= 3):
     #message(t, dt)
 
     # Solve for predicted temperature in terms of previous velocity
