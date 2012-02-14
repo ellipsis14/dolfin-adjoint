@@ -169,12 +169,12 @@ def main(T_, annotate=False):
 
   return T_
 
-def Nusselt(T):
+def Nusselt():
     "Definition of Nusselt number, cf Blankenbach et al 1989"
 
     # Define markers (2) for top boundary, remaining facets are marked
     # by 0
-    markers = FacetFunction("uint", self.mesh)
+    markers = FacetFunction("uint", mesh)
     markers.set_all(0)
     top = compile_subdomains("near(x[1], %s)" % height)
     top.mark(markers, 2)
@@ -183,9 +183,11 @@ def Nusselt(T):
     # Compute \int_bottom T apriori:
     Nu2 = deltaT*length
 
+    return (ds(2), Nu2)
+
     # Define nusselt number
-    Nu = - (1.0/Nu2)*grad(T)[1]*ds(2)
-    return Nu
+    #Nu = - (1.0/Nu2)*grad(T)[1]*ds(2)
+    #return Nu
 
 if __name__ == "__main__":
   Tic = interpolate(InitialTemperature(Ra, length), Q)
@@ -201,14 +203,16 @@ if __name__ == "__main__":
 
   print "Running adjoint ... "
   adj_html("adjoint.html", "adjoint")
-  J = FinalFunctional(inner(Tfinal, Tfinal)*dx)
+
+  (ds2, Nu2) = Nusselt()
+  J = FinalFunctional(-(1.0/Nu2)*inner(grad(Tfinal), grad(Tfinal))*dx)
   adjoint = adjoint_dolfin(J, forget=False)
 
   def J(ic):
     Tfinal = main(ic)
-    return assemble(inner(Tfinal, Tfinal)*dx)
+    return assemble(-(1.0/Nu2)*inner(grad(Tfinal), grad(Tfinal))*dx)
 
-  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=1.0e-4)
+  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=1.0e-3)
 
   #Tic.assign(another_copy)
   #minconv = test_initial_condition_tlm(J, dJ, Tic, seed=1.0e-5)
