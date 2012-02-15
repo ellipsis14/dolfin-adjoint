@@ -7,6 +7,7 @@ __license__  = "GNU LGPL Version 3 or any later version"
 import time
 import numpy
 import sys
+import os
 
 from stokes import *
 from composition import *
@@ -32,6 +33,7 @@ def message(t, dt):
     print "\n" + "-"*60
     print "t = %0.5g" % t
     print "dt = %0.5g" % dt
+    os.system("date")
     print "-"*60
 
 def compute_timestep(w):
