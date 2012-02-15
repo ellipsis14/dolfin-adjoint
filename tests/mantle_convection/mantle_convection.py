@@ -25,10 +25,8 @@ def viscosity(T):
     return eta
 
 def store(T, w, t):
-    temperature_series.store(T.vector(), t)
-    flow_series.store(w.vector(), t)
-    if t == 0.0:
-        temperature_series.store(mesh, t)
+    temperature_series << (T, t)
+    flow_series << (w, t)
 
 def message(t, dt):
     print "\n" + "-"*60
@@ -69,8 +67,8 @@ ny = 10
 mesh = Rectangle(0, 0, length, height, nx, ny)
 
 # Containers for storage
-flow_series = TimeSeries("bin-final/flow")
-temperature_series = TimeSeries("bin-final/temperature")
+flow_series = File("bin-final/flow.pvd", "compressed")
+temperature_series = File("bin-final/temperature.pvd", "compressed")
 
 # Create function spaces
 W = stokes_space(mesh)
