@@ -73,6 +73,7 @@ eta0 = 1.0
 
 deltaT = 1.0
 b_val = ln(2.5)
+#b_val = ln(1.0)
 c_val = ln(2.0)
 
 rbottom = 1.0

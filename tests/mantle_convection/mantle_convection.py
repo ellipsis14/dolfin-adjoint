@@ -63,8 +63,8 @@ parameters["form_compiler"]["cpp_optimize"] = True
 # Define spatial domain
 height = 1.0
 length = 2.0
-nx = 5
-ny = 5
+nx = 10
+ny = 10
 mesh = Rectangle(0, 0, length, height, nx, ny)
 
 # Containers for storage
@@ -128,7 +128,7 @@ def main(T_, annotate=False):
 
     # Solve for predicted temperature in terms of previous velocity
     (a, L) = energy(Q, Constant(dt), u_, T_)
-    solve(a == L, T_pr, T_bcs, annotate=annotate)
+    solve(a == L, T_pr, T_bcs, solver_parameters={"krylov_solver": {"relative_tolerance": 1.0e-14}}, annotate=annotate)
 
     # Solve for predicted flow
     eta = viscosity(T_pr)
@@ -142,7 +142,7 @@ def main(T_, annotate=False):
 
     # Solve for corrected temperature T in terms of predicted and previous velocity
     (a, L) = energy_correction(Q, Constant(dt), u_pr, u_, T_)
-    solve(a == L, T, T_bcs, annotate=annotate)
+    solve(a == L, T, T_bcs, annotate=annotate, solver_parameters={"krylov_solver": {"relative_tolerance": 1.0e-14}})
 
     # Solve for corrected flow
     eta = viscosity(T)
@@ -195,7 +195,8 @@ if __name__ == "__main__":
   another_copy = Function(Tic)
 
   Tfinal = main(Tic, annotate=True)
-  dJ = assemble(derivative(inner(Tfinal, Tfinal)*dx, Tfinal))
+  (ds2, Nu2) = Nusselt()
+  dJ = assemble(-(1.0/Nu2)*grad(Tfinal)[1]*ds2)
 
   print "Replaying forward run ... "
   adj_html("forward.html", "forward")
@@ -204,15 +205,14 @@ if __name__ == "__main__":
   print "Running adjoint ... "
   adj_html("adjoint.html", "adjoint")
 
-  (ds2, Nu2) = Nusselt()
-  J = FinalFunctional(-(1.0/Nu2)*inner(grad(Tfinal), grad(Tfinal))*dx)
+  J = FinalFunctional(-(1.0/Nu2)*grad(Tfinal)[1]*ds2)
   adjoint = adjoint_dolfin(J, forget=False)
 
   def J(ic):
     Tfinal = main(ic)
-    return assemble(-(1.0/Nu2)*inner(grad(Tfinal), grad(Tfinal))*dx)
+    return assemble(-(1.0/Nu2)*grad(Tfinal)[1]*ds2)
 
-  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=1.0e-3)
+  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=2.0e-1)
 
   #Tic.assign(another_copy)
   #minconv = test_initial_condition_tlm(J, dJ, Tic, seed=1.0e-5)
