@@ -76,6 +76,8 @@ W = stokes_space(mesh)
 V = W.sub(0).collapse()
 Q = FunctionSpace(mesh, "DG", 1)
 
+print "Number of degrees of freedom:", (W*Q).dim()
+
 # Define boundary conditions for the temperature
 top_temperature = DirichletBC(Q, 0.0, "x[1] == %g" % height, "geometric")
 bottom_temperature = DirichletBC(Q, 1.0, "x[1] == 0.0", "geometric")
@@ -196,11 +198,10 @@ if __name__ == "__main__":
 
   Tfinal = main(Tic, annotate=True)
   (ds2, Nu2) = Nusselt()
-  dJ = assemble(-(1.0/Nu2)*grad(Tfinal)[1]*ds2)
 
-  print "Replaying forward run ... "
-  adj_html("forward.html", "forward")
-  replay_dolfin(forget=False)
+  #print "Replaying forward run ... "
+  #adj_html("forward.html", "forward")
+  #replay_dolfin(forget=False)
 
   print "Running adjoint ... "
   adj_html("adjoint.html", "adjoint")
@@ -214,5 +215,5 @@ if __name__ == "__main__":
 
   minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=2.0e-1)
 
-  #Tic.assign(another_copy)
-  #minconv = test_initial_condition_tlm(J, dJ, Tic, seed=1.0e-5)
+  if minconv < 1.9:
+    sys.exit(1)
