@@ -6,6 +6,7 @@ __license__  = "GNU LGPL Version 3 or any later version"
 
 import time
 import numpy
+import sys
 
 from stokes import *
 from composition import *
@@ -213,7 +214,7 @@ if __name__ == "__main__":
     Tfinal = main(ic)
     return assemble(-(1.0/Nu2)*grad(Tfinal)[1]*ds2)
 
-  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=2.0e-1)
+  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=4.0e-1)
 
   if minconv < 1.9:
     sys.exit(1)
