@@ -64,8 +64,8 @@ parameters["form_compiler"]["cpp_optimize"] = True
 # Define spatial domain
 height = 1.0
 length = 2.0
-nx = 100
-ny = 100
+nx = 50
+ny = 50
 mesh = Rectangle(0, 0, length, height, nx, ny)
 
 # Containers for storage
@@ -87,7 +87,7 @@ T_bcs = [bottom_temperature, top_temperature]
 def main(T_, annotate=False):
   # Define initial and end time
   t = 0.0
-  finish = 0.015
+  finish = 0.01
 
   # Define boundary conditions for the velocity and pressure u
   bottom = DirichletBC(W.sub(0), (0.0, 0.0), "x[1] == 0.0" )
