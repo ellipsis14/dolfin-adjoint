@@ -8,6 +8,7 @@ import time
 import numpy
 import sys
 import os
+import math
 
 from stokes import *
 from composition import *
@@ -43,7 +44,7 @@ def compute_timestep(w):
   #  hmin = mesh.hmin()
   #  dt = CLFnum*hmin/maxvel
 
-    dt = 3.0e-5
+    dt = constant_dt
     return dt
 
 def compute_initial_conditions(T_, W, Q, bcs, annotate):
@@ -64,8 +65,8 @@ parameters["form_compiler"]["cpp_optimize"] = True
 # Define spatial domain
 height = 1.0
 length = 2.0
-nx = 30
-ny = 30
+nx = 3
+ny = 3
 mesh = Rectangle(0, 0, length, height, nx, ny)
 
 # Containers for storage
@@ -83,11 +84,14 @@ print "Number of degrees of freedom:", (W*Q).dim()
 top_temperature = DirichletBC(Q, 0.0, "x[1] == %g" % height, "geometric")
 bottom_temperature = DirichletBC(Q, 1.0, "x[1] == 0.0", "geometric")
 T_bcs = [bottom_temperature, top_temperature]
+constant_dt = 3.0e-5
+finish = 0.01
+
+adj_checkpointing('multistage', steps=int(math.ceil(finish/constant_dt)), snaps_on_disk=50, snaps_in_ram=20, verbose=True)
 
 def main(T_, annotate=False):
   # Define initial and end time
   t = 0.0
-  finish = 0.01
 
   # Define boundary conditions for the velocity and pressure u
   bottom = DirichletBC(W.sub(0), (0.0, 0.0), "x[1] == 0.0" )
