@@ -12,6 +12,13 @@ import libadjoint.exceptions
 import hashlib
 import time
 import copy
+import os
+import os.path
+import random
+
+import numpy
+import scipy
+import scipy.linalg
 
 import assembly
 import expressions
@@ -363,7 +370,6 @@ class Vector(libadjoint.Vector):
     if isinstance(self.data, dolfin.Function):
       return (abs(dolfin.assemble(dolfin.inner(self.data, self.data)*dolfin.dx)))**0.5
     elif isinstance(self.data, ufl.form.Form):
-      import scipy.linalg
       vec = dolfin.assemble(self.data)
       n = scipy.linalg.norm(vec)
       return n
@@ -373,7 +379,6 @@ class Vector(libadjoint.Vector):
     if isinstance(self.data, ufl.form.Form):
       return dolfin.assemble(dolfin.inner(self.data, y.data)*dolfin.dx)
     elif isinstance(self.data, dolfin.Function):
-      import numpy
       if isinstance(y.data, ufl.form.Form):
         other = dolfin.assemble(y.data)
       else:
@@ -384,7 +389,6 @@ class Vector(libadjoint.Vector):
 
   def set_random(self):
     assert isinstance(self.data, dolfin.Function) or hasattr(self, "fn_space")
-    import random
 
     if self.data is None:
       self.data = dolfin.Function(self.fn_space)
@@ -417,8 +421,6 @@ class Vector(libadjoint.Vector):
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to set values.")
   
   def write(self, var):
-    import os.path
-
     filename = str(var)
     suffix = "xml"
     if not os.path.isfile(filename+".%s" % suffix):
@@ -441,9 +443,6 @@ class Vector(libadjoint.Vector):
 
   @staticmethod
   def delete(var):
-    import os
-    import os.path
-
     try:
       filename = str(var)
       suffix = "xml"
