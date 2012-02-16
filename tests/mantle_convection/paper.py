@@ -18,7 +18,6 @@ from parameters import eta0, b_val, c_val, deltaT
 
 from dolfin import *; import dolfin
 from dolfin_adjoint import *
-debugging["record_all"] = True
 debugging["fussy_replay"] = True
 dolfin.parameters["form_compiler"]["representation"] = "quadrature"
 
@@ -87,7 +86,7 @@ T_bcs = [bottom_temperature, top_temperature]
 constant_dt = 3.0e-5
 finish = 0.01
 
-adj_checkpointing('multistage', steps=int(math.ceil(finish/constant_dt)), snaps_on_disk=50, snaps_in_ram=20, verbose=True)
+adj_checkpointing('multistage', steps=int(math.floor(finish/constant_dt)), snaps_on_disk=50, snaps_in_ram=20, verbose=True)
 
 def main(T_, annotate=False):
   # Define initial and end time
@@ -127,7 +126,7 @@ def main(T_, annotate=False):
 
   # Solver for the Stokes systems
   solver = AdjointPETScKrylovSolver("gmres", "amg")
-  solver.parameters["relative_tolerance"] = 1.0e-14
+  solver.parameters["relative_tolerance"] = 1.0e-7
   solver.parameters["monitor_convergence"] = False
 
   while (t <= finish):
@@ -135,7 +134,7 @@ def main(T_, annotate=False):
 
     # Solve for predicted temperature in terms of previous velocity
     (a, L) = energy(Q, Constant(dt), u_, T_)
-    solve(a == L, T_pr, T_bcs, solver_parameters={"krylov_solver": {"relative_tolerance": 1.0e-14}}, annotate=annotate)
+    solve(a == L, T_pr, T_bcs, solver_parameters={"krylov_solver": {"relative_tolerance": 1.0e-7}}, annotate=annotate)
 
     # Solve for predicted flow
     eta = viscosity(T_pr)
@@ -149,7 +148,7 @@ def main(T_, annotate=False):
 
     # Solve for corrected temperature T in terms of predicted and previous velocity
     (a, L) = energy_correction(Q, Constant(dt), u_pr, u_, T_)
-    solve(a == L, T, T_bcs, annotate=annotate, solver_parameters={"krylov_solver": {"relative_tolerance": 1.0e-14}})
+    solve(a == L, T, T_bcs, annotate=annotate, solver_parameters={"krylov_solver": {"relative_tolerance": 1.0e-7}})
 
     # Solve for corrected flow
     eta = viscosity(T)
@@ -218,7 +217,7 @@ if __name__ == "__main__":
     Tfinal = main(ic)
     return assemble(-(1.0/Nu2)*grad(Tfinal)[1]*ds2)
 
-  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=4.0e-1)
+  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=2.0e-1)
 
   if minconv < 1.9:
     sys.exit(1)
