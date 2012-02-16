@@ -64,8 +64,8 @@ parameters["form_compiler"]["cpp_optimize"] = True
 # Define spatial domain
 height = 1.0
 length = 2.0
-nx = 50
-ny = 50
+nx = 30
+ny = 30
 mesh = Rectangle(0, 0, length, height, nx, ny)
 
 # Containers for storage
@@ -126,7 +126,7 @@ def main(T_, annotate=False):
   solver.parameters["relative_tolerance"] = 1.0e-14
   solver.parameters["monitor_convergence"] = False
 
-  while (t <= finish and n <= 3):
+  while (t <= finish):
     message(t, dt)
 
     # Solve for predicted temperature in terms of previous velocity
