@@ -81,7 +81,27 @@ Since $\gamma$ is skew, we can clean up the structure:
 \end{align}
 for all $\tau_j$, $w$ and $\eta$
 
+\section{Discretizing in time with backward Euler:}
+
+\begin{enumerate}
+\item
+  Assume that $\sigma_j^{n}$ for the required $j$ is known.
+\item
+  BE-step: Let $k_n$ denote the timestep
+  \begin{align}
+    \inner{A_E^{j} k_n^{-1} (\sigma_j^{n+1} - \sigma_j^n)}{\tau_j}
+    + \inner{A_{V}^{j} \sigma_j^{n+1}}{\tau_j}
+    + \inner{\Div \tau_j}{v^{n+1}}
+    + \inner{\Skew \tau_j}{\gamma^{n+1}}
+    &= \inner{v^{n+1}}{\tau_j \cdot n}_{\partial \Omega}
+    \quad j = 0, 1 \\
+    \inner{\Div \sigma^{n+1}}{w} + \inner{\Skew \sigma^{n+1}}{\eta}
+    &= \inner{f^{n+1}}{w}
+  \end{align}
+\end{enumerate}
+
 \section{Discretizing in time}
+
 
 We want to apply a TR-BDF$_2$ scheme; in other words, a two-step
 temporal discretization with first a trapezoidal rule step and then a

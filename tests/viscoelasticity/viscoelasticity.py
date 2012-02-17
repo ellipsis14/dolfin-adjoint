@@ -39,18 +39,8 @@ def A11(tau):
     foo = 1.0/(2*mu)*(tau - lamda/(2*mu + 3*lamda)*tr(tau)*Identity(3))
     return foo
 
-def main():
-    parameters["form_compiler"]["optimize"] = True
-    parameters["form_compiler"]["cpp_optimize"] = True
-    set_log_level(DEBUG)
-
-    dt = 0.01
-    T = 1.0
-    coarseness = 4
-    #mesh = Mesh("mesh_edgelength%d.xml.gz" % coarseness)
-    #mesh = UnitCube(3, 3, 3)
-    mesh = Box(0., 0., 0., 0.5, 0.5, 1.0, 4, 4, 8)
-    #plot(mesh, interactive=True)
+def get_box():
+    mesh = Box(0., 0., 0., 0.2, 0.2, 1.0, 3, 3, 6)
 
     # Mark all facets by 0, exterior facets by 1, and then top and
     # bottom by 2
@@ -62,12 +52,37 @@ def main():
     on_bdry.mark(boundaries, 1)
     top.mark(boundaries, 2)
     bottom.mark(boundaries, 2)
+
+    return (mesh, boundaries)
+
+def get_spinal_cord():
+    mesh = Mesh("mesh_edgelength4.xml.gz")
+    boundaries = mesh.domains().facet_domains(mesh)
+    for (i, a) in enumerate(boundaries.array()):
+        if a > 10:
+            boundaries.array()[i] = 0
+        if a == 3:
+            boundaries.array()[i] = 2
+
+    print "Boundary markers: ", set(boundaries.array())
+    return (mesh, boundaries)
+
+def main():
+    parameters["form_compiler"]["optimize"] = True
+    parameters["form_compiler"]["cpp_optimize"] = True
+    set_log_level(DEBUG)
+
+    (mesh, boundaries) = get_spinal_cord()
+    #(mesh, boundaries) = get_box()
+    dt = 0.01
+    T = 2.0
     ds = Measure("ds")[boundaries]
 
     # Define function spaces
     S = VectorFunctionSpace(mesh, "BDM", 1)
     V = VectorFunctionSpace(mesh, "DG", 0)
     Q = VectorFunctionSpace(mesh, "DG", 0)
+    CG1 = VectorFunctionSpace(mesh, "CG", 1)
     Z = MixedFunctionSpace([S, S, V, Q])
 
     # Define trial and test functions
@@ -97,50 +112,68 @@ def main():
 
     n = FacetNormal(mesh)
 
+    v_D = Function(V)     # Velocity boundary value
     v_D_mid = Function(V) # 0.5*(v^* +  v^n) Dirichlet condition
-    #v_D_mid = Expression(("0.0", "0.0", "x[2]*(1-x[2])*sin(t)"), t=0)
 
-    # Boundary traction
-    #p = Expression("sin(2*pi*t)*x[2]", t=0)
-    #p = Expression("x[2]")
-    p = Expression("1.0")
-    g = p*n
+    # Boundary traction (pressure originating from CSF flow)
+    p = Expression("sin(2*pi*t)*(1.0/(171 - 78)*(x[2] - 78))", t=0)
+    # p = Expression("sin(2*pi*t)*x[2]", t=0) # For box
+    g = - p*n
     beta = Constant(10000.0)
     h = tetrahedron.volume
 
-    F = (inner(inv(k_n)*A10(sigma0 - sigma0_), tau0)*dx
-         + inner(A00(sigma0_mid), tau0)*dx
-         + inner(inv(k_n)*A11(sigma1 - sigma1_), tau1)*dx
-         + inner(div(tau0 + tau1), v_mid)*dx
-         + inner(skw(tau0 + tau1), gamma_mid)*dx
-         + inner(div(sigma0_mid + sigma1_mid), w)*dx
-         + inner(skw(sigma0_mid + sigma1_mid), eta)*dx
-         #- inner(f_mid, w)*dx # Zero body source
-         #- inner(v_mid, (tau0 + tau1)*n)*ds(1) # Traction bdry cf penalty
-         - inner(v_D_mid, (tau0 + tau1)*n)*ds(2) # Velocity on dO_D
-         )
+    disc = "BE"
+    if disc == "TR":
+        F = (inner(inv(k_n)*A10(sigma0 - sigma0_), tau0)*dx
+             + inner(A00(sigma0_mid), tau0)*dx
+             + inner(inv(k_n)*A11(sigma1 - sigma1_), tau1)*dx
+             + inner(div(tau0 + tau1), v_mid)*dx
+             + inner(skw(tau0 + tau1), gamma_mid)*dx
+             + inner(div(sigma0_mid + sigma1_mid), w)*dx
+             + inner(skw(sigma0_mid + sigma1_mid), eta)*dx
+             #- inner(f_mid, w)*dx # Zero body source
+             #- inner(v_mid, (tau0 + tau1)*n)*ds(1) # Traction bdry cf penalty
+             - inner(v_D_mid, (tau0 + tau1)*n)*ds(2) # Velocity on dO_D
+             )
 
-    # Tricky to enforce Dirichlet boundary conditions on varying sums
-    # of components (same deal as for slip for Stokes for
-    # instance). Use penalty instead
-    #F_penalty = (beta*inv(h)*inner((tau0 + tau1)*n,
-    #                               (sigma0 + sigma1)*n - g)*ds(1))
-    F_penalty = (beta*inv(h)*inner((tau0 + tau1)*n,
-                                   (sigma0_mid + sigma1_mid)*n - g)*ds(1))
+        # Tricky to enforce Dirichlet boundary conditions on varying sums
+        # of components (same deal as for slip for Stokes for
+        # instance). Use penalty instead
+        # F_penalty = (beta*inv(h)*inner((tau0 + tau1)*n,
+        #                               (sigma0 + sigma1)*n - g)*ds(1))
+        F_penalty = (beta*inv(h)*inner((tau0 + tau1)*n,
+                                       (sigma0_mid + sigma1_mid)*n - g)*ds(1))
 
-    F = F + F_penalty
+        F = F + F_penalty
+    elif disc == "BE":
+        F = (inner(inv(k_n)*A10(sigma0 - sigma0_), tau0)*dx
+             + inner(A00(sigma0), tau0)*dx
+             + inner(inv(k_n)*A11(sigma1 - sigma1_), tau1)*dx
+             + inner(div(tau0 + tau1), v)*dx
+             + inner(skw(tau0 + tau1), gamma)*dx
+             + inner(div(sigma0 + sigma1), w)*dx
+             + inner(skw(sigma0 + sigma1), eta)*dx
+             )
+
+        # Use penalty to enforce essential bc on sigma
+        F_penalty = (beta*inv(h)*inner((tau0 + tau1)*n,
+                                       (sigma0 + sigma1)*n - g)*ds(1))
+        F = F + F_penalty
+
 
     (a, L) = system(F)
     A = assemble(a)
     solver = LUSolver(A)
     solver.parameters["reuse_factorization"] = True
 
-    current_v = Function(V)
-    pvds = File("results/velocities.pvd")
+    velocities = File("results/velocities.pvd")
+    displacements = File("results/displacement.pvd")
+    displacement = Function(CG1)
     while (t <= T):
+
+        # Update source(s)
         print "t = ", t
-        #p.t = t
-        #v_D_mid.t = t
+        p.t = t
 
         # Assemble right-hand side
         b = assemble(L)
@@ -148,14 +181,16 @@ def main():
         # Solve system
         solver.solve(z.vector(), b)
 
+        # Store velocities and displacements
+        cg_v = project(z.split()[2], CG1)
+        cg_d = project(displacement + k_n*z.split()[2], CG1)
+        displacements << cg_d
+        velocities << cg_v
+
         # Update time
         z_.assign(z)
-        current_v.assign(z.split()[2])
-        plot(current_v)
-        pvds << current_v
+        displacement.assign(cg_d)
         t += dt
-
-    interactive()
 
 
 if __name__ == "__main__":
