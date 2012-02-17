@@ -1,0 +1,109 @@
+\documentclass{amsart}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\DeclareMathOperator{\Div}{div}
+\DeclareMathOperator{\Grad}{grad}
+\DeclareMathOperator{\Skew}{skew}
+\newcommand{\avg}[1]{[#1]}
+\newcommand{\inner}[2]{\langle #1, #2 \rangle}
+
+\begin{document}
+
+\title{Quasi-static Viscoelasticity}
+\maketitle
+
+\section{The basics}
+
+System of equations: find $\sigma_0, \sigma_1, v$ such that
+\begin{align}
+  A_E^{j} \dot \sigma_j + A_{V}^{j} \sigma_j - \varepsilon(v) &= 0
+  \quad j = 0, \cdots, n-1 \\
+  \sigma &= \sum_{j} \sigma_j \\
+  \Div \sigma & = f \\
+  \Skew \sigma &= 0
+\end{align}
+with initial conditions:
+\begin{equation}
+  \sigma_j(0) = \sigma_j^0
+\end{equation}
+for all $j$ where $A_E^{j} \not = 0$, and boundary conditions
+\begin{align}
+  \sigma \cdot n &= g \quad \text{ on } \partial \Omega_N \\
+  v &= v_{D} \quad \text{ on } \partial \Omega_D
+\end{align}
+
+First, note that
+\begin{equation}
+  \varepsilon(v) = \frac{1}{2} (\Grad(v) + \Grad(v)^T)
+  = \Grad(v) + \frac{1}{2}(\Grad(v)^T - \Grad(v))
+\end{equation}
+Introduce the variable $\gamma$:
+\begin{equation}
+  \gamma = \frac{1}{2}(\Grad(v) - \Grad(v)^T)
+\end{equation}
+which is clearly skew-symmetric, and moreover
+\begin{equation}
+  \varepsilon(v) = \Grad(v) - \gamma
+\end{equation}
+
+Rewriting the system, we have:
+\begin{align}
+  A_E^{j} \dot \sigma_j + A_{V}^{j} \sigma_j - \Grad(v) + \gamma &= 0
+  \quad j = 0, 1 \\
+  \sigma &= \sum_{j} \sigma_j \\
+  \Div \sigma & = f \\
+  \Skew \sigma &= 0
+\end{align}
+
+\section{Discretizing in space}
+
+Take $\tau_j$, $w$ and $\eta$ test functions in space, multiply, and
+integrate
+\begin{align}
+  \inner{A_E^{j} \dot \sigma_j}{\tau_j} + \inner{A_{V}^{j} \sigma_j}{\tau_j} - \inner{\Grad(v)}{\tau_j} + \inner{\gamma}{\tau_j} &= 0
+  \quad j = 0, 1 \\
+  \inner{\Div \sigma}{w} & = \inner{f}{w} \\
+  \inner{\Skew \sigma}{\eta} &= 0
+\end{align}
+with $\sigma = \sum_j \sigma_j$. And integrating by parts getting rid of the $\Grad(v)$'s:
+\begin{align}
+  \inner{A_E^{j} \dot \sigma_j}{\tau_j} + \inner{A_{V}^{j} \sigma_j}{\tau_j} + \inner{v}{\Div \tau_j} + \inner{\gamma}{\tau_j}  &= \inner{v}{\tau_j \cdot n}_{\partial \Omega}
+  \quad j = 0, 1 \\
+  \inner{\Div \sigma}{w} & = \inner{f}{w} \\
+  \inner{\Skew \sigma}{\eta} &= 0
+\end{align}
+Since $\gamma$ is skew, we can clean up the structure:
+\begin{align}
+  \inner{A_E^{j} \dot \sigma_j}{\tau_j} + \inner{A_{V}^{j} \sigma_j}{\tau_j} + \inner{\Div \tau_j}{v} + \inner{\Skew \tau_j}{\gamma}  &= \inner{v}{\tau_j \cdot n}_{\partial \Omega}
+  \quad j = 0, 1 \\
+  \inner{\Div \sigma}{w} + \inner{\Skew \sigma}{\eta} & = \inner{f}{w}
+\end{align}
+for all $\tau_j$, $w$ and $\eta$
+
+\section{Discretizing in time}
+
+We want to apply a TR-BDF$_2$ scheme; in other words, a two-step
+temporal discretization with first a trapezoidal rule step and then a
+BDF$_2$ step.
+
+The algorithm can then be summarized as:
+\begin{enumerate}
+\item
+  Assume that $\sigma_j^{n}$ for the required $j$ is known. (Actually that all variables are known...)
+\item
+  TR-step: Let $k_n$ denote the timestep
+  \begin{align}
+    \inner{A_E^{j} k_n^{-1} (\sigma_j^{\bigstar} - \sigma_j^n)}{\tau_j}
+    + \inner{A_{V}^{j} \avg{\sigma_j^{\bigstar} }}{\tau_j}
+    + \inner{\Div \tau_j}{\avg{v^{\bigstar}} }
+    + \inner{\Skew \tau_j}{\avg{\gamma^{\bigstar}}}
+    &= \inner{\avg{v^{\bigstar}}}{\tau_j \cdot n}_{\partial \Omega}
+    \quad j = 0, 1 \\
+    \inner{\Div \avg{\sigma^{\bigstar}}}{w} + \inner{\Skew \avg{\sigma^{\bigstar}}}{\eta} & = \inner{\avg{f}}{w}
+  \end{align}
+  where $2 \avg{v^{\bigstar}} = v^{\bigstar} - v^{n}$
+\end{enumerate}
+
+
+\end{document}
