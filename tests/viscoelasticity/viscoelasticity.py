@@ -14,6 +14,9 @@ Standard linear solid (SLS) viscoelastic model:
 from dolfin import *
 from dolfin import div as d
 
+from dolfin_adjoint import *
+debugging["record_all"] = True
+
 def div(v):
     return as_vector((d(v[0]), d(v[1]), d(v[2])))
 
@@ -75,7 +78,7 @@ def main():
     (mesh, boundaries) = get_spinal_cord()
     #(mesh, boundaries) = get_box()
     dt = 0.01
-    T = 2.0
+    T = 0.01
     ds = Measure("ds")[boundaries]
 
     # Define function spaces
@@ -196,3 +199,7 @@ def main():
 if __name__ == "__main__":
 
     main()
+
+    print "Replaying forward run ... "
+    adj_html("forward.html", "forward")
+    replay_dolfin(forget=False)
