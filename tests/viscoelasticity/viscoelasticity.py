@@ -11,6 +11,8 @@ Standard linear solid (SLS) viscoelastic model:
   \skew \sigma = 0
 """
 
+import sys
+
 from dolfin import *
 from dolfin import div as d
 
@@ -43,7 +45,7 @@ def A11(tau):
     return foo
 
 def get_box():
-    mesh = Box(0., 0., 0., 0.2, 0.2, 1.0, 3, 3, 6)
+    mesh = Box(0., 0., 0., 0.2, 0.2, 1.0, 3, 3, 3)
 
     # Mark all facets by 0, exterior facets by 1, and then top and
     # bottom by 2
@@ -70,23 +72,23 @@ def get_spinal_cord():
     print "Boundary markers: ", set(boundaries.array())
     return (mesh, boundaries)
 
-def main():
+#(mesh, boundaries) = get_spinal_cord()
+(mesh, boundaries) = get_box()
+dt = 0.01
+T = 0.02
+ds = Measure("ds")[boundaries]
+
+# Define function spaces
+S = VectorFunctionSpace(mesh, "BDM", 1)
+V = VectorFunctionSpace(mesh, "DG", 0)
+Q = VectorFunctionSpace(mesh, "DG", 0)
+CG1 = VectorFunctionSpace(mesh, "CG", 1)
+Z = MixedFunctionSpace([S, S, V, Q])
+
+def main(ic=None, annotate=False):
     parameters["form_compiler"]["optimize"] = True
     parameters["form_compiler"]["cpp_optimize"] = True
     set_log_level(DEBUG)
-
-    (mesh, boundaries) = get_spinal_cord()
-    #(mesh, boundaries) = get_box()
-    dt = 0.01
-    T = 0.01
-    ds = Measure("ds")[boundaries]
-
-    # Define function spaces
-    S = VectorFunctionSpace(mesh, "BDM", 1)
-    V = VectorFunctionSpace(mesh, "DG", 0)
-    Q = VectorFunctionSpace(mesh, "DG", 0)
-    CG1 = VectorFunctionSpace(mesh, "CG", 1)
-    Z = MixedFunctionSpace([S, S, V, Q])
 
     # Define trial and test functions
     (sigma0, sigma1, v, gamma) = TrialFunctions(Z)
@@ -96,6 +98,9 @@ def main():
     f = Function(V)
 
     z_ = Function(Z)
+    if ic is not None:
+      z_ = Function(ic)
+
     (sigma0_, sigma1_, v_, gamma_) = split(z_)
 
     #z_star = Function(Z)
@@ -182,7 +187,9 @@ def main():
         b = assemble(L)
 
         # Solve system
-        solver.solve(z.vector(), b)
+        solver.solve(z.vector(), b, annotate=annotate)
+
+        return z
 
         # Store velocities and displacements
         cg_v = project(z.split()[2], CG1)
@@ -195,11 +202,32 @@ def main():
         displacement.assign(cg_d)
         t += dt
 
+    return z_
+
 
 if __name__ == "__main__":
 
-    main()
+    ic = Function(Z)
+    ic_copy = Function(ic)
+    z = main(ic, annotate=True)
 
-    print "Replaying forward run ... "
+    info_blue("Replaying forward run ... ")
     adj_html("forward.html", "forward")
     replay_dolfin(forget=False)
+
+    J = FinalFunctional(inner(z, z)*dx)
+    info_blue("Running adjoint ... ")
+    adjoint = adjoint_dolfin(J, forget=False)
+
+    def Jfunc(ic):
+      z = main(ic, annotate=False)
+      J = assemble(inner(z, z)*dx)
+      print "J(.): ", J
+      return J
+
+    ic.vector()[:] = ic_copy.vector()
+    info_blue("Checking adjoint correctness ... ")
+    minconv = test_initial_condition_adjoint(Jfunc, ic, adjoint, seed=1.0e-5)
+
+    if minconv < 1.9:
+      sys.exit(1)
