@@ -48,6 +48,12 @@ def annotate(*args, **kwargs):
   '''This routine handles all of the annotation, recording the solves as they
   happen so that libadjoint can rewind them later.'''
 
+  if 'matrix_class' in kwargs:
+    matrix_class = kwargs['matrix_class']
+    del kwargs['matrix_class']
+  else:
+    matrix_class = Matrix
+
   if isinstance(args[0], ufl.classes.Equation):
     # annotate !
 
@@ -105,7 +111,6 @@ def annotate(*args, **kwargs):
       eq_bcs = []
   else:
     raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to annotate your equation, sorry!")
-
 
   # Suppose we are solving for a variable w, and that variable shows up in the
   # coefficients of eq_lhs/eq_rhs.
@@ -177,9 +182,9 @@ def annotate(*args, **kwargs):
       # solution associated with the lifted discrete system that is actually solved.
       adjoint_bcs = [dolfin.homogenize(bc) for bc in eq_bcs if isinstance(bc, dolfin.DirichletBC)]
       if len(adjoint_bcs) == 0: adjoint_bcs = None
-      return (Matrix(dolfin.adjoint(eq_l), bcs=adjoint_bcs, solver_parameters=solver_parameters), Vector(None, fn_space=u.function_space()))
+      return (matrix_class(dolfin.adjoint(eq_l), bcs=adjoint_bcs, solver_parameters=solver_parameters), Vector(None, fn_space=u.function_space()))
     else:
-      return (Matrix(eq_l, bcs=eq_bcs, solver_parameters=solver_parameters), Vector(None, fn_space=u.function_space()))
+      return (matrix_class(eq_l, bcs=eq_bcs, solver_parameters=solver_parameters), Vector(None, fn_space=u.function_space()))
   diag_block.assemble = diag_assembly_cb
 
   def diag_action_cb(dependencies, values, hermitian, coefficient, input, context):
@@ -472,7 +477,7 @@ class Matrix(libadjoint.Matrix):
       self.solver_parameters = {}
 
   def solve(self, var, b):
-      
+
     if isinstance(self.data, ufl.Identity):
       x=b.duplicate()
       x.axpy(1.0, b)
