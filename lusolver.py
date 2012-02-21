@@ -1,32 +1,50 @@
 import dolfin
 import solving
+import assembly
 import libadjoint
 
 lu_solvers = {}
+adj_lu_solvers = {}
 
-class LUSolverMatrix(solving.Matrix):
-  def solve(self, var, b):
+def make_LUSolverMatrix(form, reuse_factorization):
+  class LUSolverMatrix(solving.Matrix):
+    def solve(self, var, b):
 
-    if self.data not in lu_solvers:
-      return solving.Matrix.solve(self, var, b)
+      if reuse_factorization is False:
+        return solving.Matrix.solve(self, var, b)
 
-    if var.type in ['ADJ_TLM', 'ADJ_ADJOINT']:
-      bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.DirichletBC)] + [bc for bc in self.bcs if not isinstance(bc, dolfin.DirichletBC)]
-    else:
-      bcs = self.bcs
+      if var.type in ['ADJ_TLM', 'ADJ_ADJOINT']:
+        bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.DirichletBC)] + [bc for bc in self.bcs if not isinstance(bc, dolfin.DirichletBC)]
+      else:
+        bcs = self.bcs
 
-    x = solving.Vector(dolfin.Function(self.test_function().function_space()))
+      if var.type in ['ADJ_FORWARD', 'ADJ_TLM']:
+        dolfin.info_red("Reusing the LUSolver from the forward run")
+        solver = lu_solvers[form]
+      else:
+        if adj_lu_solvers[form] is None:
+          dolfin.info_red("Got a cache miss, creating the LUSolver")
+          A = assembly.assemble(self.data); [bc.apply(A) for bc in bcs]
+          adj_lu_solvers[form] = LUSolver(A)
+          adj_lu_solvers[form].parameters["reuse_factorization"] = True
+        else:
+          dolfin.info_red("Got a cache hit, reusing the LUSolver")
 
-    if b.data is None:
-      # This means we didn't get any contribution on the RHS of the adjoint system. This could be that the
-      # simulation ran further ahead than when the functional was evaluated, or it could be that the
-      # functional is set up incorrectly.
-      dolfin.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
-    else:
-      b_vec = dolfin.assemble(b.data); [bc.apply(b_vec) for bc in bcs]
-      lu_solvers[self.data].solve(x.data.vector(), b_vec, annotate=False)
+        solver = adj_lu_solvers[form]
 
-    return x
+      x = solving.Vector(dolfin.Function(self.test_function().function_space()))
+
+      if b.data is None:
+        # This means we didn't get any contribution on the RHS of the adjoint system. This could be that the
+        # simulation ran further ahead than when the functional was evaluated, or it could be that the
+        # functional is set up incorrectly.
+        dolfin.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
+      else:
+        b_vec = dolfin.assemble(b.data); [bc.apply(b_vec) for bc in bcs]
+        solver.solve(x.data.vector(), b_vec, annotate=False)
+
+      return x
+  return LUSolverMatrix
 
 class LUSolver(dolfin.LUSolver):
   def __init__(self, *args):
@@ -67,9 +85,11 @@ class LUSolver(dolfin.LUSolver):
         eq_bcs = []
 
       if self.parameters["reuse_factorization"]:
+        print "reuse_factorization is True, configuring lu_solvers appropriately ... "
         lu_solvers[A] = self
+        adj_lu_solvers[A] = None
 
-      solving.annotate(A == b, x, eq_bcs, solver_parameters={"linear_solver": "lu"}, matrix_class=LUSolverMatrix)
+      solving.annotate(A == b, x, eq_bcs, solver_parameters={"linear_solver": "lu"}, matrix_class=make_LUSolverMatrix(A, self.parameters["reuse_factorization"]))
 
     out = dolfin.LUSolver.solve(self, *args, **kwargs)
 
