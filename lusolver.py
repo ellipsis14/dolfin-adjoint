@@ -19,16 +19,12 @@ def make_LUSolverMatrix(form, reuse_factorization):
         bcs = self.bcs
 
       if var.type in ['ADJ_FORWARD', 'ADJ_TLM']:
-        dolfin.info_red("Reusing the LUSolver from the forward run")
         solver = lu_solvers[form]
       else:
         if adj_lu_solvers[form] is None:
-          dolfin.info_red("Got a cache miss, creating the LUSolver")
           A = assembly.assemble(self.data); [bc.apply(A) for bc in bcs]
           adj_lu_solvers[form] = LUSolver(A)
           adj_lu_solvers[form].parameters["reuse_factorization"] = True
-        else:
-          dolfin.info_red("Got a cache hit, reusing the LUSolver")
 
         solver = adj_lu_solvers[form]
 
@@ -85,7 +81,6 @@ class LUSolver(dolfin.LUSolver):
         eq_bcs = []
 
       if self.parameters["reuse_factorization"]:
-        print "reuse_factorization is True, configuring lu_solvers appropriately ... "
         lu_solvers[A] = self
         adj_lu_solvers[A] = None
 
