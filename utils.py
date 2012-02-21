@@ -70,7 +70,8 @@ def test_initial_condition_adjoint(J, ic, final_adjoint, seed=0.01, perturbation
   # Run the forward problem for various perturbed initial conditions
   functional_values = []
   perturbations = []
-  for perturbation_size in [seed/(2**i) for i in range(5)]:
+  perturbation_sizes = [seed/(2**i) for i in range(5)]
+  for perturbation_size in perturbation_sizes:
     perturbation = dolfin.Function(perturbation_direction)
     vec = perturbation.vector()
     vec *= perturbation_size
@@ -91,12 +92,18 @@ def test_initial_condition_adjoint(J, ic, final_adjoint, seed=0.01, perturbation
   adjoint_vector = final_adjoint.vector()
 
   with_gradient = []
+  gradient_fd   = []
   for i in range(len(perturbations)):
+    gradient_fd.append((functional_values[i] - f_direct)/perturbation_sizes[i])
+
     remainder = abs(functional_values[i] - f_direct - adjoint_vector.inner(perturbations[i].vector()))
     with_gradient.append(remainder)
 
   print "Taylor remainder with adjoint information: ", with_gradient
   print "Convergence orders for Taylor remainder with adjoint information (should all be 2): ", convergence_order(with_gradient)
+
+  print "Gradients (finite differencing): ", gradient_fd
+  print "Gradient (adjoint): ", adjoint_vector.inner(perturbation_direction.vector())
 
   return min(convergence_order(with_gradient))
 
@@ -125,7 +132,7 @@ def test_initial_condition_tlm(J, dJ, ic, seed=0.01, perturbation_direction=None
      the unperturbed solution (a dolfin Vector).
 
      This function returns the order of convergence of the Taylor
-     series remainder, which should be 2 if the adjoint is working
+     series remainder, which should be 2 if the TLM is working
      correctly.'''
 
   # We will compute the gradient of the functional with respect to the initial condition,
