@@ -72,8 +72,8 @@ if __name__ == "__main__":
       return assemble(forward*forward*dx)
 
     ic.vector()[:] = ic_copy.vector()
-    minconv = test_initial_condition_adjoint(Jfunc, ic, adjoint, seed=1.0e-3)
-    if minconv < 1.9:
+    minconv = test_initial_condition_adjoint_cdiff(Jfunc, ic, adjoint, seed=5.0e-3)
+    if minconv < 2.9:
       sys.exit(1)
 
     ic.vector()[:] = ic_copy.vector()

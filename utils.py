@@ -183,3 +183,82 @@ def test_initial_condition_tlm(J, dJ, ic, seed=0.01, perturbation_direction=None
   print "Convergence orders for Taylor remainder with tangent linear information (should all be 2): ", convergence_order(with_gradient)
 
   return min(convergence_order(with_gradient))
+
+def test_initial_condition_adjoint_cdiff(J, ic, final_adjoint, seed=0.01, perturbation_direction=None):
+  '''forward must be a function that takes in the initial condition (ic) as a dolfin.Function
+     and returns the functional value by running the forward run:
+
+       func = J(ic)
+
+     final_adjoint is the adjoint associated with the initial condition
+     (usually the last adjoint equation solved).
+
+     This function returns the order of convergence of the Taylor
+     series remainder of central finite differencing, which should be 3 
+     if the adjoint is working correctly.'''
+
+  # We will compute the gradient of the functional with respect to the initial condition,
+  # and check its correctness with the Taylor remainder convergence test.
+  print "Running central differencing Taylor remainder convergence analysis for the adjoint model ... "
+  import random
+
+  # First run the problem unperturbed
+  ic_copy = dolfin.Function(ic)
+  f_direct = J(ic_copy)
+
+  # Randomise the perturbation direction:
+  if perturbation_direction is None:
+    perturbation_direction = dolfin.Function(ic.function_space())
+    vec = perturbation_direction.vector()
+    for i in range(len(vec)):
+      vec[i] = random.random()
+
+  # Run the forward problem for various perturbed initial conditions
+  functional_values_plus = []
+  functional_values_minus = []
+  perturbations = []
+  perturbation_sizes = [seed/(2**i) for i in range(5)]
+  for perturbation_size in perturbation_sizes:
+    perturbation = dolfin.Function(perturbation_direction)
+    vec = perturbation.vector()
+    vec *= perturbation_size
+    perturbations.append(perturbation)
+
+    perturbation = dolfin.Function(perturbation_direction)
+    vec = perturbation.vector()
+    vec *= perturbation_size/2.0
+
+    perturbed_ic = dolfin.Function(ic)
+    vec = perturbed_ic.vector()
+    vec += perturbation.vector()
+    functional_values_plus.append(J(perturbed_ic))
+
+    perturbed_ic = dolfin.Function(ic)
+    vec = perturbed_ic.vector()
+    vec -= perturbation.vector()
+    functional_values_minus.append(J(perturbed_ic))
+
+  # First-order Taylor remainders (not using adjoint)
+  no_gradient = [abs(functional_values_plus[i] - functional_values_minus[i]) for i in range(len(functional_values_plus))]
+
+  print "Taylor remainder without adjoint information: ", no_gradient
+  print "Convergence orders for Taylor remainder without adjoint information (should all be 1): ", convergence_order(no_gradient)
+
+  adjoint_vector = final_adjoint.vector()
+
+  with_gradient = []
+  gradient_fd   = []
+  for i in range(len(perturbations)):
+    gradient_fd.append((functional_values_plus[i] - functional_values_minus[i])/perturbation_sizes[i])
+
+    remainder = abs(functional_values_plus[i] - functional_values_minus[i] - adjoint_vector.inner(perturbations[i].vector()))
+    with_gradient.append(remainder)
+
+  print "Taylor remainder with adjoint information: ", with_gradient
+  print "Convergence orders for Taylor remainder with adjoint information (should all be 3): ", convergence_order(with_gradient)
+
+  print "Gradients (finite differencing): ", gradient_fd
+  print "Gradient (adjoint): ", adjoint_vector.inner(perturbation_direction.vector())
+
+  return min(convergence_order(with_gradient))
+
