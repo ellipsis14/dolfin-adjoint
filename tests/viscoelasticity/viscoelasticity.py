@@ -6,12 +6,15 @@ Standard linear solid (SLS) viscoelastic model:
 
   \sigma = \sigma_0 + \sigma_1
 
-  \div \sigma = g
+  \div \sigma = gx
   \skew \sigma = 0
 """
 
 from dolfin import *
 from dolfin import div as d
+
+# Adjoint stuff
+from dolfin_adjoint import *
 
 # Vectorized div
 def div(v):
@@ -136,7 +139,22 @@ def bdf2_step(Z, z_, z__, k_n, g, v_D, ds):
     F = F + F_penalty
     return F
 
-def main(T=1.0, dt=0.01):
+# Quick testing:
+(mesh, boundaries) = get_box()
+p = Expression("sin(2*pi*t)*x[2]", t=0) # For box
+
+# Semi-realistic stuff:
+#(mesh, boundaries) = get_spinal_cord()
+#p = Expression("sin(2*pi*t)*(1.0/(171 - 78)*(x[2] - 78))", t=0)
+
+# Define function spaces
+S = VectorFunctionSpace(mesh, "BDM", 1)
+V = VectorFunctionSpace(mesh, "DG", 0)
+Q = VectorFunctionSpace(mesh, "DG", 0)
+CG1 = VectorFunctionSpace(mesh, "CG", 1)
+Z = MixedFunctionSpace([S, S, V, Q])
+
+def main(ic, T=1.0, dt=0.01, annotate=False):
     # dk = half the timestep
     dk = dt/2.0
 
@@ -144,22 +162,7 @@ def main(T=1.0, dt=0.01):
     parameters["form_compiler"]["cpp_optimize"] = True
     set_log_level(PROGRESS)
 
-    # Quick testing:
-    #(mesh, boundaries) = get_box()
-    #p = Expression("sin(2*pi*t)*x[2]", t=0) # For box
-
-    # Semi-realistic stuff:
-    (mesh, boundaries) = get_spinal_cord()
-    p = Expression("sin(2*pi*t)*(1.0/(171 - 78)*(x[2] - 78))", t=0)
-
     ds = Measure("ds")[boundaries]
-
-    # Define function spaces
-    S = VectorFunctionSpace(mesh, "BDM", 1)
-    V = VectorFunctionSpace(mesh, "DG", 0)
-    Q = VectorFunctionSpace(mesh, "DG", 0)
-    CG1 = VectorFunctionSpace(mesh, "CG", 1)
-    Z = MixedFunctionSpace([S, S, V, Q])
 
     # Define functions for previous timestep (z_), half-time (z_star)
     # and current (z)
@@ -207,7 +210,7 @@ def main(T=1.0, dt=0.01):
         b = assemble(L_cn)
 
         # Solve Crank-Nicolson system
-        cn_solver.solve(z_star.vector(), b)
+        cn_solver.solve(z_star.vector(), b, annotate=annotate)
 
         # Increase time
         t += dk
@@ -220,7 +223,7 @@ def main(T=1.0, dt=0.01):
         b = assemble(L_bdf)
 
         # Solve BDF system
-        bdf_solver.solve(z.vector(), b)
+        bdf_solver.solve(z.vector(), b, annotate=annotate)
 
         # Store solutions
         (sigma0, sigma1, v, gamma) = z.split()
@@ -243,5 +246,32 @@ def main(T=1.0, dt=0.01):
 
 if __name__ == "__main__":
 
-    main(T= 1.0, dt=0.01)
+    debugging["record_all"] = True
+
+    ic = Function(Z)
+    ic_copy = Function(ic)
+
+    z = main(ic, T=1.0, dt=0.01, annotate=True)
+
+    info_blue("Replaying forward run ... ")
+    adj_html("forward.html", "forward")
+    replay_dolfin(forget=False)
+
+    J = FinalFunctional(inner(z, z)*dx)
+    info_blue("Running adjoint ... ")
+    adjoint = adjoint_dolfin(J, forget=False)
+
+    def Jfunc(ic):
+      z = main(ic, annotate=False)
+      J = assemble(inner(z, z)*dx)
+      print "J(.): ", J
+      return J
+
+    ic.vector()[:] = ic_copy.vector()
+    info_blue("Checking adjoint correctness ... ")
+    minconv = test_initial_condition_adjoint(Jfunc, ic, adjoint, seed=1.0e-5)
+
+    if minconv < 1.9:
+      sys.exit(1)
+
 
