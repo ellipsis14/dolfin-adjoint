@@ -167,6 +167,8 @@ def main(ic, T=1.0, dt=0.01, annotate=False):
     # Define functions for previous timestep (z_), half-time (z_star)
     # and current (z)
     z_ = Function(Z)
+    if ic is not None:
+      z_ = Function(ic)
     z_star = Function(Z)
     z = Function(Z)
 
@@ -243,6 +245,8 @@ def main(ic, T=1.0, dt=0.01, annotate=False):
         #plot(displacement)
 
         progress += 1
+
+    return z_
 
 if __name__ == "__main__":
 
