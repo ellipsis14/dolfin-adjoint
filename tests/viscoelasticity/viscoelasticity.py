@@ -25,19 +25,22 @@ def skw(tau):
     s = 2*skew(tau)
     return as_vector((s[0][1], s[0][2], s[1][2]))
 
-# Compliance tensors (Arbitrarily chosen values and units)
+# Compliance tensors (Semi-arbitrarily chosen values and units)
 def A00(tau):
-    mu = 5.0; lamda = 100.0
+    "Maxwell dashpot (eta)"
+    mu = 37.466; lamda = 100.0 # kPA * some time unit
     foo = 1.0/(2*mu)*(tau - lamda/(2*mu + 3*lamda)*tr(tau)*Identity(3))
     return foo
 
 def A10(tau):
-    mu = 30.0; lamda = 100.0
+    "Maxwell spring (A2)"
+    mu = 4.158; lamda = 100.0 # kPa
     foo = 1.0/(2*mu)*(tau - lamda/(2*mu + 3*lamda)*tr(tau)*Identity(3))
     return foo
 
 def A11(tau):
-    mu = 20.0; lamda = 100.0
+    "Maxwell spring (A1)"
+    mu = 2.39; lamda = 100.0 # KPa
     foo = 1.0/(2*mu)*(tau - lamda/(2*mu + 3*lamda)*tr(tau)*Identity(3))
     return foo
 
@@ -141,11 +144,11 @@ def bdf2_step(Z, z_, z__, k_n, g, v_D, ds):
 
 # Quick testing:
 (mesh, boundaries) = get_box()
-p = Expression("sin(2*pi*t)*x[2]", t=0) # For box
+p = Expression("0.05*sin(2*pi*t)*x[2]", t=0) # For box # kPa
 
 # Semi-realistic stuff:
 #(mesh, boundaries) = get_spinal_cord()
-#p = Expression("sin(2*pi*t)*(1.0/(171 - 78)*(x[2] - 78))", t=0)
+#p = Expression("0.05*sin(2*pi*t)*(1.0/(171 - 78)*(x[2] - 78))", t=0)  # kPa
 
 # Define function spaces
 S = VectorFunctionSpace(mesh, "BDM", 1)
@@ -255,19 +258,24 @@ if __name__ == "__main__":
     ic = Function(Z)
     ic_copy = Function(ic)
 
-    z = main(ic, T=1.0, dt=0.01, annotate=True)
+    z = main(ic, T=0.05, dt=0.01, annotate=True)
 
     info_blue("Replaying forward run ... ")
     adj_html("forward.html", "forward")
     replay_dolfin(forget=False)
 
-    J = FinalFunctional(inner(z, z)*dx)
+    # Use x-traction in on vertical plane as measure
+    (sigma0, sigma1, v, gamma) = split(z)
+    zx_traction = sigma0[2][0] + sigma1[2][0]
+    J = FinalFunctional(inner(zx_traction, zx_traction)*dx)
     info_blue("Running adjoint ... ")
     adjoint = adjoint_dolfin(J, forget=False)
 
     def Jfunc(ic):
       z = main(ic, annotate=False)
-      J = assemble(inner(z, z)*dx)
+      (sigma0, sigma1, v, gamma) = split(z)
+      zx_traction = sigma0[2][0] + sigma1[2][0]
+      J = assemble(inner(zx_traction, zx_traction)*dx)
       print "J(.): ", J
       return J
 
