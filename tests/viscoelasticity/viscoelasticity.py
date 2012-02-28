@@ -10,6 +10,8 @@ Standard linear solid (SLS) viscoelastic model:
   \skew \sigma = 0
 """
 
+import sys
+
 from dolfin import *
 from dolfin import div as d
 
@@ -272,7 +274,7 @@ if __name__ == "__main__":
     adjoint = adjoint_dolfin(J, forget=False)
 
     def Jfunc(ic):
-      z = main(ic, annotate=False)
+      z = main(ic, T=0.05, dt=0.01, annotate=False)
       (sigma0, sigma1, v, gamma) = split(z)
       zx_traction = sigma0[2][0] + sigma1[2][0]
       J = assemble(inner(zx_traction, zx_traction)*dx)
