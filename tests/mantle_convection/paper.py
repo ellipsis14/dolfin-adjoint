@@ -19,7 +19,9 @@ from parameters import eta0, b_val, c_val, deltaT
 from dolfin import *; import dolfin
 from dolfin_adjoint import *
 debugging["fussy_replay"] = True
+#debugging["record_all"] = True
 dolfin.parameters["form_compiler"]["representation"] = "quadrature"
+dolfin.parameters["num_threads"] = 8
 
 def viscosity(T):
     eta = eta0 * exp(-b_val*T/deltaT + c_val*(1.0 - triangle.x[1])/height )
@@ -64,8 +66,8 @@ parameters["form_compiler"]["cpp_optimize"] = True
 # Define spatial domain
 height = 1.0
 length = 2.0
-nx = 3
-ny = 3
+nx = 40
+ny = 40
 mesh = Rectangle(0, 0, length, height, nx, ny)
 
 # Containers for storage
@@ -84,9 +86,9 @@ top_temperature = DirichletBC(Q, 0.0, "x[1] == %g" % height, "geometric")
 bottom_temperature = DirichletBC(Q, 1.0, "x[1] == 0.0", "geometric")
 T_bcs = [bottom_temperature, top_temperature]
 constant_dt = 3.0e-5
-finish = 0.01
+finish = 0.005
 
-adj_checkpointing('multistage', steps=int(math.floor(finish/constant_dt)), snaps_on_disk=50, snaps_in_ram=20, verbose=True)
+adj_checkpointing('multistage', steps=int(math.floor(finish/constant_dt)), snaps_on_disk=30, snaps_in_ram=30, verbose=True)
 
 def main(T_, annotate=False):
   # Define initial and end time
@@ -112,7 +114,8 @@ def main(T_, annotate=False):
   w = Function(W)
 
   # Store initial data
-  store(T_, w_, 0.0)
+  if annotate:
+    store(T_, w_, 0.0)
 
   # Define initial CLF and time step
   CLFnum = 0.5
@@ -126,7 +129,7 @@ def main(T_, annotate=False):
 
   # Solver for the Stokes systems
   solver = AdjointPETScKrylovSolver("gmres", "amg")
-  solver.parameters["relative_tolerance"] = 1.0e-7
+  solver.parameters["relative_tolerance"] = 1.0e-14
   solver.parameters["monitor_convergence"] = False
 
   while (t <= finish):
@@ -134,7 +137,7 @@ def main(T_, annotate=False):
 
     # Solve for predicted temperature in terms of previous velocity
     (a, L) = energy(Q, Constant(dt), u_, T_)
-    solve(a == L, T_pr, T_bcs, solver_parameters={"krylov_solver": {"relative_tolerance": 1.0e-7}}, annotate=annotate)
+    solve(a == L, T_pr, T_bcs, solver_parameters={"krylov_solver": {"relative_tolerance": 1.0e-14}}, annotate=annotate)
 
     # Solve for predicted flow
     eta = viscosity(T_pr)
@@ -145,10 +148,11 @@ def main(T_, annotate=False):
 
     solver.set_operators(A, P)
     solver.solve(w_pr.vector(), b, annotate=annotate)
+    #solve(a == L, w_pr, bcs, solver_parameters={"krylov_solver": {"relative_tolerance": 1.0e-14}}, annotate=annotate)
 
     # Solve for corrected temperature T in terms of predicted and previous velocity
     (a, L) = energy_correction(Q, Constant(dt), u_pr, u_, T_)
-    solve(a == L, T, T_bcs, annotate=annotate, solver_parameters={"krylov_solver": {"relative_tolerance": 1.0e-7}})
+    solve(a == L, T, T_bcs, annotate=annotate, solver_parameters={"krylov_solver": {"relative_tolerance": 1.0e-14}})
 
     # Solve for corrected flow
     eta = viscosity(T)
@@ -159,9 +163,11 @@ def main(T_, annotate=False):
 
     solver.set_operators(A, P)
     solver.solve(w.vector(), b, annotate=annotate)
+    #solve(a == L, w, bcs, solver_parameters={"krylov_solver": {"relative_tolerance": 1.0e-14}}, annotate=annotate)
 
     # Store stuff
-    store(T, w, t)
+    if annotate:
+      store(T, w, t)
 
     # Compute time step
     dt = compute_timestep(w)
@@ -203,21 +209,24 @@ if __name__ == "__main__":
   Tfinal = main(Tic, annotate=True)
   (ds2, Nu2) = Nusselt()
 
-  #print "Replaying forward run ... "
-  #adj_html("forward.html", "forward")
-  #replay_dolfin(forget=False)
-
   print "Running adjoint ... "
   adj_html("adjoint.html", "adjoint")
 
   J = FinalFunctional(-(1.0/Nu2)*grad(Tfinal)[1]*ds2)
+  #J = FinalFunctional(inner(Tfinal, Tfinal)*dx)
   adjoint = adjoint_dolfin(J, forget=False)
+
+  adjoint_vtu = File("bin-final/adjoint.pvd", "compressed")
+  adjoint_vtu << adjoint
 
   def J(ic):
     Tfinal = main(ic)
     return assemble(-(1.0/Nu2)*grad(Tfinal)[1]*ds2)
+    #return assemble(inner(Tfinal, Tfinal)*dx)
 
-  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=2.0e-1)
+  perturbation_direction = Function(Q)
+  perturbation_direction.vector()[:] = 1.0
+  minconv = test_initial_condition_adjoint_cdiff(J, ic_copy, adjoint, seed=0.1, perturbation_direction=perturbation_direction)
 
-  if minconv < 1.9:
+  if minconv < 2.9:
     sys.exit(1)
