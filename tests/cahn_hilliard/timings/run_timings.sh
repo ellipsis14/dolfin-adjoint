@@ -1,6 +1,8 @@
 #!/bin/bash
 
+export PYTHONPATH=../../../..
+
 for i in $(seq 1 5)
 do
-  time mpiexec -n 8 python $1
+  /usr/bin/time python $1 2>&1
 done
