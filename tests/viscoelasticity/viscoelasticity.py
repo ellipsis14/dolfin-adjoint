@@ -39,7 +39,7 @@ def div(v):
 
 # Vectorized skew
 def skw(tau):
-    s = 2*skew(tau)
+    s = 2*skew(tau) # FIXME: Why did I put a 2 here?
     return as_vector((s[0][1], s[0][2], s[1][2]))
 
 # Compliance tensors (Semi-arbitrarily chosen values and units)
@@ -165,12 +165,12 @@ def bdf2_step(Z, z_, z__, k_n, g, v_D, ds):
     return F
 
 # Quick testing for box:
-(mesh, boundaries) = get_box()
-p = Expression("0.05*sin(2*pi*t)*1.0/(100)*x[2]", t=0)
+#(mesh, boundaries) = get_box()
+#p = Expression("0.05*sin(2*pi*t)*1.0/(100)*x[2]", t=0)
 
 # Semi-realistic stuff:
-#(mesh, boundaries) = get_spinal_cord()
-#p = Expression("0.05*sin(2*pi*t)*(1.0/(171 - 78)*(x[2] - 78))", t=0)  # kPa
+(mesh, boundaries) = get_spinal_cord()
+p = Expression("0.05*sin(2*pi*t)*(1.0/(171 - 78)*(x[2] - 78))", t=0)  # kPa
 
 # Define function spaces
 S = VectorFunctionSpace(mesh, "BDM", 1)
@@ -291,8 +291,10 @@ if __name__ == "__main__":
 
     T = 0.05
     dt = 0.01
-    z = main(ic, T=T, dt=dt, annotate=True, verbose=False)
+    #z = main(ic, T=T, dt=dt, annotate=False, verbose=True)
+    z = main(ic, T=T, dt=dt, annotate=True, verbose=True)
 
+    exit()
     info_blue("Replaying forward run ... ")
     adj_html("forward.html", "forward")
     replay_dolfin(forget=False)
