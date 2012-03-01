@@ -1,7 +1,10 @@
+import sys
 import random
 from dolfin import *
 from dolfin_adjoint import *
 from math import sqrt
+
+debugging["record_all"] = True
 
 # Class representing the intial conditions
 class InitialConditions(Expression):
@@ -32,7 +35,6 @@ V = FunctionSpace(mesh, "Lagrange", 1)
 ME = V*V
 
 steps = 5
-adj_checkpointing('multistage', steps=steps, snaps_on_disk=10, snaps_in_ram=5, verbose=True)
 
 def main(ic, annotate=False):
 
@@ -89,7 +91,7 @@ def main(ic, annotate=False):
       file << (u.split()[0], t)
       adj_inc_timestep()
 
-  return u
+  return (u, u0)
 
 if __name__ == "__main__":
   ic = Function(ME)
@@ -97,18 +99,22 @@ if __name__ == "__main__":
   ic.interpolate(init)
   ic_copy = Function(ic)
 
-  forward = main(ic, annotate=True)
+  (forward, ic) = main(ic, annotate=True)
   forward_copy = Function(forward)
-  adj_html("forward_cahn_hilliard.html", "forward")
-  adj_html("adjoint_cahn_hilliard.html", "adjoint")
+  ic.vector()[:] = ic_copy.vector()
 
   J = FinalFunctional((1.0/(4*eps)) * (pow( (-1.0/eps) * forward[1], 2))*dx)
-  adjoint = adjoint_dolfin(J)
+  adjoint = adjoint_dolfin(J, forget=False)
 
   def J(ic):
-    u = main(ic, annotate=False)
+    u = main(ic, annotate=False)[0]
     return assemble((1.0/(4*eps)) * (pow( (-1.0/eps) * u[1], 2))*dx)
 
   minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=1.0e-5)
+  if minconv < 1.9:
+    sys.exit(1)
+
+  dJ = assemble(derivative((1.0/(4*eps)) * (pow( (-1.0/eps) * forward_copy[1], 2))*dx, forward_copy))
+  minconv = test_initial_condition_tlm(J, dJ, ic, seed=1.0e-5)
   if minconv < 1.9:
     sys.exit(1)
