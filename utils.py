@@ -217,7 +217,7 @@ def test_initial_condition_adjoint_cdiff(J, ic, final_adjoint, seed=0.01, pertur
   functional_values_plus = []
   functional_values_minus = []
   perturbations = []
-  perturbation_sizes = [seed/(2**i) for i in range(5)]
+  perturbation_sizes = [seed/(2**i) for i in range(4)]
   for perturbation_size in perturbation_sizes:
     perturbation = dolfin.Function(perturbation_direction)
     vec = perturbation.vector()

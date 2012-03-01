@@ -226,7 +226,7 @@ if __name__ == "__main__":
 
   perturbation_direction = Function(Q)
   perturbation_direction.vector()[:] = 1.0
-  minconv = test_initial_condition_adjoint_cdiff(J, ic_copy, adjoint, seed=0.1, perturbation_direction=perturbation_direction)
+  minconv = test_initial_condition_adjoint_cdiff(J, ic_copy, adjoint, seed=7.5e-3, perturbation_direction=perturbation_direction)
 
   if minconv < 2.9:
     sys.exit(1)

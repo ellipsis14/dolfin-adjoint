@@ -314,7 +314,7 @@ if __name__ == "__main__":
 
     ic.vector()[:] = ic_copy.vector()
     info_blue("Checking adjoint correctness ... ")
-    minconv = test_initial_condition_adjoint(Jfunc, ic, adjoint, seed=1.0e-5)
+    minconv = test_initial_condition_adjoint(Jfunc, ic, adjoint, seed=1.0e-4)
 
     if minconv < 1.9:
       sys.exit(1)
