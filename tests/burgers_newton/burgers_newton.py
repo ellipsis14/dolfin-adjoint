@@ -46,20 +46,32 @@ def main(ic, annotate=False):
 if __name__ == "__main__":
 
     ic = project(Expression("sin(2*pi*x[0])"),  V)
+    ic_copy = Function(ic)
     forward = main(ic, annotate=True)
+    forward_copy = Function(forward)
 
     adj_html("burgers_newton_forward.html", "forward")
     adj_html("burgers_newton_adjoint.html", "adjoint")
 
     print "Running forward replay .... "
-    replay_dolfin()
+    replay_dolfin(forget=False)
     print "Running adjoint ... "
 
     J = FinalFunctional(forward*forward*dx)
-    adjoint = adjoint_dolfin(J)
+    adjoint = adjoint_dolfin(J, forget=False)
 
     def Jfunc(ic):
       forward = main(ic, annotate=False)
       return assemble(forward*forward*dx)
 
-    minconv = test_initial_condition_adjoint(Jfunc, ic, adjoint, seed=1.0e-6)
+    minconv = test_initial_condition_adjoint(Jfunc, ic, adjoint, seed=1.0e-5)
+    if minconv < 1.9:
+      sys.exit(1)
+
+    dJ = assemble(derivative(forward_copy*forward_copy*dx, forward_copy))
+
+    ic = forward
+    ic.vector()[:] = ic_copy.vector()
+    minconv = test_initial_condition_tlm(Jfunc, dJ, ic, seed=1.0e-5)
+    if minconv < 1.9:
+      sys.exit(1)

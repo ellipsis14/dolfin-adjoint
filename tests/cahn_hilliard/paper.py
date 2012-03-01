@@ -1,9 +1,12 @@
 import random
+import sys
+
 from dolfin import *
 from dolfin_adjoint import *
 from math import sqrt
 
 debugging["fussy_replay"] = False
+debugging["record_all"] = True
 
 # Class representing the intial conditions
 class InitialConditions(Expression):
@@ -28,7 +31,8 @@ parameters["form_compiler"]["representation"] = "quadrature"
 parameters["std_out_all_processes"] = False;
 
 # Create mesh and define function spaces
-nodes = 500000
+#nodes = 500000
+nodes = 1000
 mesh = UnitSquare(int(sqrt(nodes)), int(sqrt(nodes)))
 V = FunctionSpace(mesh, "Lagrange", 1)
 ME = V*V
@@ -101,19 +105,25 @@ if __name__ == "__main__":
   init = InitialConditions()
   ic.interpolate(init)
   ic_copy = Function(ic)
+  tlm_copy = Function(ic)
 
   forward = main(ic, annotate=True)
   forward_copy = Function(forward)
-  adj_html("forward_cahn_hilliard.html", "forward")
-  adj_html("adjoint_cahn_hilliard.html", "adjoint")
 
-  J = FinalFunctional((1.0/(4*eps)) * (pow( (-1.0/eps) * forward[1], 2))*dx)
-  adjoint = adjoint_dolfin(J)
+#  J = FinalFunctional((1.0/(4*eps)) * (pow( (-1.0/eps) * forward[1], 2))*dx)
+#  adjoint = adjoint_dolfin(J)
 
   def J(ic):
     u = main(ic, annotate=False)
-    return assemble((1.0/(4*eps)) * (pow( (-1.0/eps) * u[1], 2))*dx)
+    return assemble(inner(u, u)*dx)
+    #return assemble((1.0/(4*eps)) * (pow( (-1.0/eps) * u[1], 2))*dx)
 
-  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=1.0e-5)
+#  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=1.0e-5)
+#  if minconv < 1.9:
+#    sys.exit(1)
+
+  dJ = assemble(derivative(inner(forward_copy, forward_copy)*dx, forward_copy))
+  ic.vector()[:] = ic_copy.vector()
+  minconv = test_initial_condition_tlm(J, dJ, ic, seed=1.0e-9)
   if minconv < 1.9:
     sys.exit(1)
