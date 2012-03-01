@@ -140,6 +140,10 @@ def test_initial_condition_tlm(J, dJ, ic, seed=0.01, perturbation_direction=None
   print "Running Taylor remainder convergence analysis for the tangent linear model... "
   import random
 
+  adj_var = adj_variables[ic]; adj_var.timestep = 0
+  if not adjointer.variable_known(adj_var):
+    raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your initial condition must be the /exact same Function/ as the initial condition used in the forward model.")
+
   # First run the problem unperturbed
   ic_copy = dolfin.Function(ic)
   f_direct = J(ic_copy)
