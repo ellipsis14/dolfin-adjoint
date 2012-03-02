@@ -23,6 +23,7 @@ in mm/s, stresses in kPa
 """
 
 import sys
+import pylab
 
 from dolfin import *
 from dolfin import div as d
@@ -165,12 +166,12 @@ def bdf2_step(Z, z_, z__, k_n, g, v_D, ds):
     return F
 
 # Quick testing for box:
-#(mesh, boundaries) = get_box()
-#p = Expression("0.05*sin(2*pi*t)*1.0/(100)*x[2]", t=0)
+(mesh, boundaries) = get_box()
+p = Expression("0.05*sin(2*pi*t)*1.0/(100)*x[2]", t=0)
 
 # Semi-realistic stuff:
-(mesh, boundaries) = get_spinal_cord()
-p = Expression("0.05*sin(2*pi*t)*(1.0/(171 - 78)*(x[2] - 78))", t=0)  # kPa
+#(mesh, boundaries) = get_spinal_cord()
+#p = Expression("0.05*sin(2*pi*t)*(1.0/(171 - 78)*(x[2] - 78))", t=0)  # kPa
 
 # Define function spaces
 S = VectorFunctionSpace(mesh, "BDM", 1)
@@ -255,13 +256,13 @@ def main(ic, T=1.0, dt=0.01, annotate=False, verbose=False):
         bdf_solver.solve(z.vector(), b, annotate=annotate)
 
         # Store solutions
-        (sigma0, sigma1, v, gamma) = z.split()
-        cg_v = project(v, CG1)
-        cg_d = project(displacement + Constant(dt)*v, CG1)
-        stress_02 = project(sigma0[2] + sigma1[2], CG1)
-        displacements << cg_d
-        velocities << cg_v
-        stresses << stress_02
+        #(sigma0, sigma1, v, gamma) = z.split()
+        #cg_v = project(v, CG1)
+        #cg_d = project(displacement + Constant(dt)*v, CG1)
+        #stress_02 = project(sigma0[2] + sigma1[2], CG1)
+        #displacements << cg_d
+        #velocities << cg_v
+        #stresses << stress_02
 
         # Print some output
         if verbose:
@@ -275,7 +276,7 @@ def main(ic, T=1.0, dt=0.01, annotate=False, verbose=False):
         # Update time and variables
         t += dk
         z_.assign(z)
-        displacement.assign(cg_d)
+        #displacement.assign(cg_d)
         #plot(displacement)
 
         progress += 1
@@ -287,24 +288,62 @@ if __name__ == "__main__":
     debugging["record_all"] = True
 
     ic = Function(Z)
+
     ic_copy = Function(ic)
 
-    T = 0.05
+    T = .1
     dt = 0.01
     #z = main(ic, T=T, dt=dt, annotate=False, verbose=True)
-    z = main(ic, T=T, dt=dt, annotate=True, verbose=True)
+    z = main(ic, T=T, dt=dt, annotate=True, verbose=False)
 
-    exit()
-    info_blue("Replaying forward run ... ")
-    adj_html("forward.html", "forward")
-    replay_dolfin(forget=False)
+    #info_blue("Replaying forward run ... ")
+    #adj_html("forward.html", "forward")
+    #replay_dolfin(forget=False)
+    adj_html("adjoint.html", "adjoint")
 
-    # Use x-traction in on vertical plane as measure
+    # Use elastic/viscous traction on vertical plane as measure
     (sigma0, sigma1, v, gamma) = split(z)
     sigma = sigma0 + sigma1
-    J = FinalFunctional(inner(sigma[2], sigma[2])*dx)
+    #J = FinalFunctional(inner(sigma[2], sigma[2])*dx)
+    #J = FinalFunctional(inner(sigma1[2], sigma1[2])*dx)
+    J = FinalFunctional(inner(sigma0[2], sigma0[2])*dx)
+    #adjoint = adjoint_dolfin(J, forget=False)
+
     info_blue("Running adjoint ... ")
-    adjoint = adjoint_dolfin(J, forget=False)
+    adjoints = File("results/adjoints.pvd")
+    norms = []
+    adjoint_velocity = Function(CG1)
+    for i in range(adjointer.equation_count)[::-1]:
+        print "i = ", i
+        (adj_var, output) = adjointer.get_adjoint_solution(i, J)
+
+        storage = libadjoint.MemoryStorage(output)
+        adjointer.record_variable(adj_var, storage)
+
+        print adj_var.name
+        #print output.data.__class__
+        #print output.data.function_space()
+        if adj_var.name == "w_3":
+            (tau0, tau1, w, eta) = output.data.split()
+            no =  norm(output.data)
+            adjoint_velocity.assign(project(tau1[2], CG1))
+            #plot(adjoint_velocity)
+            norms += [(i, no)]
+    print "norm = ", norms
+    pylab.figure()
+    data = zip(*norms)
+    print "data = ", data
+    x = data[0]
+    y = data[1]
+    pylab.plot(x, y, '*-')
+    pylab.show()
+    interactive()
+        #plot(w, title="Adjoint velocity")
+        #plot(eta, title="Adjoint vorticity", interactive=True)
+
+    #print adjointer
+    #print adjoint.__class__
+    exit()
 
     def Jfunc(ic):
       z = main(ic, T=T, dt=dt, annotate=False)

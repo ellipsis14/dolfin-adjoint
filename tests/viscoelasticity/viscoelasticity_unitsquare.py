@@ -32,7 +32,8 @@ from dolfin import div as d
 from dolfin_adjoint import *
 
 factor = 1.
-penalty_beta = 10**8 # NB: Sensitive to this for values less than 10^6
+penalty_beta = 10**6 # NB: Sensitive to this for values less than 10^6
+#penalty_beta = 0.0 # NB: Sensitive to this for values less than 10^6
 dim = 2
 
 # Vectorized div
@@ -47,22 +48,22 @@ def skw(tau):
 # Compliance tensors (Semi-arbitrarily chosen values and units)
 def A00(tau):
     "Maxwell dashpot (eta)"
-    mu = Constant(3.7466 * 10) # kPa
-    lamda = Constant(10**4) # kPa
+    mu = Constant(1.0) # kPa
+    lamda = Constant(10) # kPa
     foo = 1.0/(2*mu)*(tau - lamda/(2*mu + dim*lamda)*tr(tau)*Identity(dim))
     return foo
 
 def A10(tau):
     "Maxwell spring (A2)"
-    mu = Constant(4.158)
-    lamda = Constant(10**3) # kPa
+    mu = Constant(10)
+    lamda = Constant(10) # kPa
     foo = 1.0/(2*mu)*(tau - lamda/(2*mu + dim*lamda)*tr(tau)*Identity(dim))
     return foo
 
 def A11(tau):
     "Elastic spring (A1)"
-    mu = Constant(2.39) # kPa
-    lamda = Constant(10**3) # kPa
+    mu = Constant(1) # kPa
+    lamda = Constant(10) # kPa
     foo = 1.0/(2*mu)*(tau - lamda/(2*mu + dim*lamda)*tr(tau)*Identity(dim))
     return foo
 
@@ -156,7 +157,7 @@ def bdf2_step(Z, z_, z__, k_n, g, v_D, ds):
 
 # Quick testing for box:
 (mesh, boundaries) = get_square()
-p = Expression("0.05*sin(2*pi*t)*1.0/(100)*x[1]", t=0)
+p = Expression("sin(2*pi*t)*1.0*x[1]", t=0)
 
 # Define function spaces
 S = VectorFunctionSpace(mesh, "BDM", 1)
@@ -181,6 +182,8 @@ def main(ic, T=1.0, dt=0.01, annotate=False, verbose=False):
     z = Function(Z)
 
     # Boundary conditions
+    #v_D = Expression(("x[1]*(1. - x[1])*sin(2*pi*t)", "0.0"), t = 0.0)
+    #v_D_mid = v_D
     v_D_mid = Function(V) # Velocity condition at half time
     v_D = Function(V)     # Velocity condition at time
 
@@ -220,6 +223,7 @@ def main(ic, T=1.0, dt=0.01, annotate=False, verbose=False):
         # Half-time step:
         # Update source(s)
         p.t = t
+        v_D.t = t
 
         # Assemble right-hand side for CN system
         b = assemble(L_cn)
@@ -233,6 +237,7 @@ def main(ic, T=1.0, dt=0.01, annotate=False, verbose=False):
         # Next-time step:
         # Update sources
         p.t = t
+        v_D_mid.t = t
 
         # Assemble right-hand side for BDF system
         b = assemble(L_bdf)
@@ -241,12 +246,13 @@ def main(ic, T=1.0, dt=0.01, annotate=False, verbose=False):
         bdf_solver.solve(z.vector(), b, annotate=annotate)
 
         # Store solutions
-        #(sigma0, sigma1, v, gamma) = z.split()
-        #cg_v = project(v, CG1)
-        #cg_d = project(displacement + Constant(dt)*v, CG1)
+        (sigma0, sigma1, v, gamma) = z.split()
+        cg_v = project(v, CG1)
+        cg_d = project(displacement + Constant(dt)*v, CG1)
         #stress_02 = project(sigma0[2] + sigma1[2], CG1)
-        #displacements << cg_d
-        #velocities << cg_v
+        displacements << cg_d
+        velocities << cg_v
+
         #stresses << stress_02
 
         # Print some output
@@ -261,11 +267,12 @@ def main(ic, T=1.0, dt=0.01, annotate=False, verbose=False):
         # Update time and variables
         t += dk
         z_.assign(z)
-        #displacement.assign(cg_d)
+        displacement.assign(cg_d)
         #plot(displacement)
 
         progress += 1
 
+    #interactive()
     return z_
 
 if __name__ == "__main__":
@@ -276,7 +283,7 @@ if __name__ == "__main__":
 
     ic_copy = Function(ic)
 
-    T = 0.1
+    T = 0.5
     dt = 0.01
     #z = main(ic, T=T, dt=dt, annotate=False, verbose=True)
     z = main(ic, T=T, dt=dt, annotate=True, verbose=False)
@@ -290,13 +297,13 @@ if __name__ == "__main__":
     (sigma0, sigma1, v, gamma) = split(z)
     #sigma = sigma0 + sigma1
     #J = FinalFunctional(inner(sigma[2], sigma[2])*dx)
-    J = FinalFunctional(inner(z, z)*dx)
+    J = FinalFunctional(inner(sigma0[1], sigma0[1])*dx)
     #adjoint = adjoint_dolfin(J, forget=False)
 
     info_blue("Running adjoint ... ")
     adjoints = File("results/adjoints.pvd")
     norms = []
-    adjoint_velocity = Function(Z.sub(2).collapse())
+    adjoint = Function(CG1)
     for i in range(adjointer.equation_count)[::-1]:
         print "i = ", i
         (adj_var, output) = adjointer.get_adjoint_solution(i, J)
@@ -310,8 +317,8 @@ if __name__ == "__main__":
         if adj_var.name == "w_3":
             (tau0, tau1, w, eta) = output.data.split()
             no = norm(output.data)
-            adjoint_velocity.assign(w)
-            plot(adjoint_velocity)
+            adjoint.assign(project(tau1[1], CG1))
+            plot(adjoint)
             norms += [(i, no)]
     print "norm = ", norms
     pylab.figure()
