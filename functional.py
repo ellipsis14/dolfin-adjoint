@@ -53,9 +53,8 @@ class FinalFunctional(libadjoint.Functional):
 
 
 class TimeFunctional(libadjoint.Functional):
-  '''This class implements the libadjoint.Functional abstract base class for the Dolfin adjoint
-  for implementing functionals:
-      \int_{T} form dt + finalform(T)
+  '''This class implements the libadjoint.Functional abstract base class for the Dolfin adjoint for implementing functionals of the form:
+      \sum_{t=0..T} form(t)  + finalform(T)
   The two forms, form and finalform, may only use variables of the same timelevel. 
   If finalform is not provided, the second term is neglected.'''
 
