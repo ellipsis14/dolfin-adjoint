@@ -39,6 +39,7 @@ class MatrixFree(solving.Matrix):
     solving.Matrix.__init__(self, *args, **kwargs)
 
   def solve(self, var, b):
+    timer = dolfin.Timer("Matrix-free solver")
     solver = dolfin.PETScKrylovSolver(*self.solver_parameters)
     solver.parameters.update(self.parameters)
 
@@ -61,6 +62,7 @@ class MatrixFree(solving.Matrix):
     else:
       solver.solve(self.data, dolfin.down_cast(x.vector()), dolfin.down_cast(rhs))
 
+    timer.stop()
     return solving.Vector(x)
 
   def axpy(self, alpha, x):
@@ -82,6 +84,8 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
     self.operators = (A, self.operators[1])
 
   def solve(self, *args, **kwargs):
+
+    timer = dolfin.Timer("Matrix-free solver")
 
     annotate = True
     if "annotate" in kwargs:
@@ -194,6 +198,8 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
     if annotate:
       if solving.debugging["record_all"]:
         solving.adjointer.record_variable(var, libadjoint.MemoryStorage(solving.Vector(x.function)))
+
+    timer.stop()
 
     return out
 

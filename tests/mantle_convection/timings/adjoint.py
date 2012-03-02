@@ -209,7 +209,12 @@ if __name__ == "__main__":
   Tfinal = main(Tic, annotate=True)
   (ds2, Nu2) = Nusselt()
 
+  print "Timings of forward model: "
+  list_timings(True)
 
   J = FinalFunctional(-(1.0/Nu2)*grad(Tfinal)[1]*ds2)
   #J = FinalFunctional(inner(Tfinal, Tfinal)*dx)
   adjoint = adjoint_dolfin(J, forget=False)
+
+  print "Timings of adjoint model: "
+  list_timings(True)
