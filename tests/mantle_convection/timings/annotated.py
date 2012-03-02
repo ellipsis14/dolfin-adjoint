@@ -21,7 +21,7 @@ from parameters import eta0, b_val, c_val, deltaT
 from dolfin import *; import dolfin
 from dolfin_adjoint import *
 
-debugging["fussy_replay"] = True
+debugging["fussy_replay"] = False
 debugging["record_all"] = True
 dolfin.parameters["form_compiler"]["representation"] = "quadrature"
 
@@ -68,8 +68,8 @@ parameters["form_compiler"]["cpp_optimize"] = True
 # Define spatial domain
 height = 1.0
 length = 2.0
-nx = 10
-ny = 10
+nx = 20
+ny = 20
 mesh = Rectangle(0, 0, length, height, nx, ny)
 
 # Containers for storage
