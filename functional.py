@@ -59,9 +59,12 @@ class TimeFunctional(libadjoint.Functional):
   The two forms, form and finalform, may only use variables of the same timelevel. 
   If finalform is not provided, the second term is neglected.'''
 
-  def __init__(self, form):
+  def __init__(self, form, finalform=None):
 
     self.form = form
+
+    if finalform is not None:
+      raise libadjoint.exceptions.LibadjointErrorNotImplemented("finalform is not supported yet.")
 
   def __call__(self, timestep, dependencies, values):
 
