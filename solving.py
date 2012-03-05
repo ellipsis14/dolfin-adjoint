@@ -302,7 +302,7 @@ class Vector(libadjoint.Vector):
 
     self.data=data
     if not (self.data is None or isinstance(self.data, dolfin.Function) or isinstance(self.data, ufl.Form)):
-      print "Got ", self.data.__class__, " as input to the Vector() class. Don't know how to handle that."
+      dolfin.info_red("Got " + str(self.data.__class__) + " as input to the Vector() class. Don't know how to handle that.")
       raise AssertionError
 
     # self.zero is true if we can prove that the vector is zero.
@@ -429,7 +429,7 @@ class Vector(libadjoint.Vector):
     filename = str(var)
     suffix = "xml"
     if not os.path.isfile(filename+".%s" % suffix):
-      print "Warning: Overwriting checkpoint file "+filename+"."+suffix
+      dolfin.info_red("Warning: Overwriting checkpoint file "+filename+"."+suffix)
     file = dolfin.File(filename+".%s" % suffix)
     file << self.data
 
@@ -666,7 +666,6 @@ class NonlinearRHS(RHS):
       else:
         J = self.J
     except ufl.log.UFLException:
-      print "Working around the DOLFIN bug (see https://bugs.launchpad.net/ufl/+bug/920674)"
       J = None
 
     # OK, here goes nothing:

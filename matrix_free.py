@@ -115,7 +115,7 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
         raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your b has to have the .form attribute: was it assembled with from dolfin_adjoint import *?")
 
       if not hasattr(A, 'dependencies'):
-        print "A has no .dependencies method; assuming no nonlinear dependencies of the matrix-free operator."
+        dolfin.info_red("A has no .dependencies method; assuming no nonlinear dependencies of the matrix-free operator.")
         coeffs = []
         dependencies = []
       else:
