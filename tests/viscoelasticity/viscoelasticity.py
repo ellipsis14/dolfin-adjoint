@@ -34,7 +34,7 @@ from dolfin import div as d
 from dolfin_adjoint import *
 
 penalty_beta = 10**8 # NB: Sensitive to this for values less than 10^6
-dirname = "fine-spinal-results"
+dirname = "test-results"
 
 # Vectorized div
 def div(v):
@@ -169,12 +169,12 @@ def bdf2_step(Z, z_, z__, k_n, g, v_D, ds):
     return F
 
 # Quick testing for box:
-#(mesh, boundaries) = get_box()
-#p = Expression("0.05*sin(2*pi*t)*1.0/(100)*x[2]", t=0)
+(mesh, boundaries) = get_box()
+p = Expression("0.05*sin(2*pi*t)*1.0/(100)*x[2]", t=0)
 
 # Semi-realistic stuff:
-(mesh, boundaries) = get_spinal_cord()
-p = Expression("0.05*sin(2*pi*t)*(1.0/(171 - 78)*(x[2] - 78))", t=0)  # kPa
+#(mesh, boundaries) = get_spinal_cord()
+#p = Expression("0.05*sin(2*pi*t)*(1.0/(171 - 78)*(x[2] - 78))", t=0)  # kPa
 
 # Define function spaces
 S = VectorFunctionSpace(mesh, "BDM", 1)
@@ -265,7 +265,7 @@ def main(ic, T=1.0, dt=0.01, annotate=False):
 if __name__ == "__main__":
 
     # Adjust behaviour at will:
-    T = 2.0
+    T = 0.05
     dt = 0.01
     set_log_level(PROGRESS)
 
