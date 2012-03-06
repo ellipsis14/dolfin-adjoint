@@ -405,14 +405,14 @@ class Vector(libadjoint.Vector):
     self.zero = False
 
   def size(self):
-    if hasattr(self, "fn_space"):
-      return self.fn_space.dim()
-
     if isinstance(self.data, dolfin.Function):
-      return len(self.data.vector())
+      return self.data.vector().local_size()
 
     if isinstance(self.data, ufl.form.Form):
-      return len(dolfin.assemble(self.data))
+      return dolfin.assemble(self.data).local_size()
+
+    if hasattr(self, "fn_space"):
+      return self.fn_space.dim()
 
     raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to get the size.")
 
