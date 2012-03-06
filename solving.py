@@ -425,6 +425,14 @@ class Vector(libadjoint.Vector):
     else:
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to set values.")
   
+  def get_values(self, array):
+    if isinstance(self.data, dolfin.Function):
+      vec = self.data.vector()
+      for i in range(len(array)):
+        array[i] = vec[i]
+    else:
+      raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to get values.")
+  
   def write(self, var):
     filename = str(var)
     suffix = "xml"
