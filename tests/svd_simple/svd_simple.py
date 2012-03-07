@@ -26,5 +26,5 @@ if __name__ == "__main__":
   soln = main(ic, annotate=True)
 
   svd = adj_compute_tlm_svd(ic, soln, 1)
-  print "Maximal singular value: ", svd.get_svd(0)
+  print "Maximal singular value: ", svd.get_svd(0, return_error=True)
 

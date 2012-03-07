@@ -337,7 +337,6 @@ class Vector(libadjoint.Vector):
 
     if (self.data is None):
       # self is an empty form.
-      assert(isinstance(x.data, ufl.form.Form))
       self.data=alpha*x.data
     elif isinstance(self.data, dolfin.Coefficient):
       if isinstance(x.data, dolfin.Coefficient):
@@ -418,6 +417,12 @@ class Vector(libadjoint.Vector):
 
   def set_values(self, array):
     if isinstance(self.data, dolfin.Function):
+      vec = self.data.vector()
+      for i in range(len(array)):
+        vec[i] = array[i]
+      self.zero = False
+    elif self.data is None and hasattr(self, 'fn_space'):
+      self.data = dolfin.Function(self.fn_space)
       vec = self.data.vector()
       for i in range(len(array)):
         vec[i] = array[i]
@@ -505,6 +510,12 @@ class Matrix(libadjoint.Matrix):
         # simulation ran further ahead than when the functional was evaluated, or it could be that the
         # functional is set up incorrectly.
         dolfin.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
+      elif isinstance(b.data, dolfin.Function):
+        assembled_lhs = dolfin.assemble(self.data)
+        [bc.apply(assembled_lhs) for bc in bcs]
+        assembled_rhs = dolfin.Function(b.data).vector()
+        [bc.apply(assembled_rhs) for bc in bcs]
+        dolfin.fem.solving.solve(assembled_lhs, x.data.vector(), assembled_rhs, solver_parameters=self.solver_parameters)
       else:
         dolfin.fem.solving.solve(self.data==b.data, x.data, bcs, solver_parameters=self.solver_parameters)
 
