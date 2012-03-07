@@ -418,14 +418,12 @@ class Vector(libadjoint.Vector):
   def set_values(self, array):
     if isinstance(self.data, dolfin.Function):
       vec = self.data.vector()
-      for i in range(len(array)):
-        vec[i] = array[i]
+      vec.set_local(array)
       self.zero = False
     elif self.data is None and hasattr(self, 'fn_space'):
       self.data = dolfin.Function(self.fn_space)
       vec = self.data.vector()
-      for i in range(len(array)):
-        vec[i] = array[i]
+      vec.set_local(array)
       self.zero = False
     else:
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to set values.")
@@ -433,8 +431,7 @@ class Vector(libadjoint.Vector):
   def get_values(self, array):
     if isinstance(self.data, dolfin.Function):
       vec = self.data.vector()
-      for i in range(len(array)):
-        array[i] = vec[i]
+      vec.get_local(array)
     else:
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to get values.")
   

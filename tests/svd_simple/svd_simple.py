@@ -26,6 +26,8 @@ if __name__ == "__main__":
   svd = adj_compute_tlm_svd(ic, soln, 1)
   (sigma, error) = svd.get_svd(0, return_error=True)
 
+  print "Maximal singular value: ", (sigma, error)
+
   if (abs(sigma - 1.0) > 1.0e-15):
     sys.exit(1)
 
