@@ -111,7 +111,7 @@ if __name__ == "__main__":
   ic = final_forward
   ic.vector()[:] = 0
 
-  minconv = test_initial_condition_tlm(J, dJ, ic, seed=1.0)
+  minconv = test_initial_condition_tlm(J, dJ, ic, seed=10.0)
 
   if minconv < 1.9:
     sys.exit(1)
