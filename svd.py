@@ -15,19 +15,11 @@ def compute_propagator_matrix(svd):
   (u, v) = (u.data.vector().array(), v.data.vector().array())
 
   mat = sigma * numpy.outer(u, v)
-  print "Matrix 0: "
-  print mat
-  print "sigma: ", sigma
-  print "u: ", u
-  print "v: ", v
 
   for i in range(1, svd.ncv):
     (sigma, u, v) = svd.get_svd(i, return_vectors=True)
     (u, v) = (u.data.vector().array(), v.data.vector().array())
     sum_mat = sigma * numpy.outer(u, v)
-    print "sigma: ", sigma
-    print "Matrix ", i, ": "
-    print sum_mat
     mat += sum_mat
 
   return mat
