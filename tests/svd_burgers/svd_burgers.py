@@ -71,5 +71,8 @@ if __name__ == "__main__":
 
     mat = compute_propagator_matrix(svd)
     tlm_output = numpy.dot(mat, perturbation.vector().array())
+    norm = numpy.linalg.norm(final_tlm.vector().array() - tlm_output)
 
-    assert numpy.linalg.norm(final_tlm.vector().array() - tlm_output) < 1.0e-14
+    print "Error norm: ", norm
+
+    assert norm < 1.0e-13
