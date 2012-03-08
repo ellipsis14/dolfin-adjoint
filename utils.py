@@ -36,6 +36,8 @@ def adjoint_dolfin(functional, forget=True):
 
       if forget:
         adjointer.forget_adjoint_equation(i)
+      else:
+        adjointer.forget_adjoint_values(i)
 
   return output.data # return the last adjoint state
 
@@ -108,7 +110,7 @@ def test_initial_condition_adjoint(J, ic, final_adjoint, seed=0.01, perturbation
 
   return min(convergence_order(with_gradient))
 
-def tlm_dolfin(parameter, forget=True):
+def tlm_dolfin(parameter, forget=False):
   for i in range(adjointer.equation_count):
       (tlm_var, output) = adjointer.get_tlm_solution(i, parameter)
 
@@ -118,6 +120,9 @@ def tlm_dolfin(parameter, forget=True):
 
       if forget:
         adjointer.forget_tlm_equation(i)
+      else:
+        adjointer.forget_tlm_values(i)
+
   return output
 
 def test_initial_condition_tlm(J, dJ, ic, seed=0.01, perturbation_direction=None):
@@ -180,7 +185,7 @@ def test_initial_condition_tlm(J, dJ, ic, seed=0.01, perturbation_direction=None
   with_gradient = []
   for i in range(len(perturbations)):
     param = InitialConditionParameter(ic, perturbations[i])
-    final_tlm = tlm_dolfin(param).data
+    final_tlm = tlm_dolfin(param, forget=False).data
     remainder = abs(functional_values[i] - f_direct - final_tlm.vector().inner(dJ))
     with_gradient.append(remainder)
 

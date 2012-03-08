@@ -8,3 +8,4 @@ from functional import *
 from unimplemented import *
 from split_annotation import *
 from lusolver import *
+from svd import *
