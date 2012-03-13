@@ -1,0 +1,220 @@
+[1;37;34mRunning forward ... [0m
+Building sparsity pattern over cells [================================] 100.0%
+Assembling matrix over cells [===============>                        ] 39.1%
+Assembling matrix over cells [===============================>        ] 77.8%
+Assembling matrix over cells [========================================] 100.0%
+Building sparsity pattern over cells [================================] 100.0%
+Assembling matrix over cells [===============>                        ] 39.1%
+Assembling matrix over cells [===============================>        ] 77.8%
+Assembling matrix over cells [========================================] 100.0%
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Time-iteration [=====================>                                ] 40.0%
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Time-iteration [===========================================>          ] 80.0%
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Time-iteration [======================================================] 100.0%
+282.67user 10.93system 3:30.99elapsed 139%CPU (0avgtext+0avgdata 20893344maxresident)k
+0inputs+104outputs (2major+2327410minor)pagefaults 0swaps
+[1;37;34mRunning forward ... [0m
+Building sparsity pattern over cells [================================] 100.0%
+Assembling matrix over cells [===============>                        ] 39.1%
+Assembling matrix over cells [===============================>        ] 77.8%
+Assembling matrix over cells [========================================] 100.0%
+Building sparsity pattern over cells [================================] 100.0%
+Assembling matrix over cells [===============>                        ] 39.1%
+Assembling matrix over cells [===============================>        ] 77.8%
+Assembling matrix over cells [========================================] 100.0%
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Time-iteration [=====================>                                ] 40.0%
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Time-iteration [===========================================>          ] 80.0%
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Time-iteration [======================================================] 100.0%
+276.94user 11.42system 3:26.33elapsed 139%CPU (0avgtext+0avgdata 20893360maxresident)k
+0inputs+80outputs (2major+2327207minor)pagefaults 0swaps
+[1;37;34mRunning forward ... [0m
+Building sparsity pattern over cells [================================] 100.0%
+Assembling matrix over cells [===============>                        ] 39.1%
+Assembling matrix over cells [===============================>        ] 77.8%
+Assembling matrix over cells [========================================] 100.0%
+Building sparsity pattern over cells [================================] 100.0%
+Assembling matrix over cells [===============>                        ] 39.1%
+Assembling matrix over cells [===============================>        ] 77.8%
+Assembling matrix over cells [========================================] 100.0%
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Time-iteration [=====================>                                ] 40.0%
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Time-iteration [===========================================>          ] 80.0%
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Time-iteration [======================================================] 100.0%
+279.23user 10.77system 3:26.84elapsed 140%CPU (0avgtext+0avgdata 20893360maxresident)k
+0inputs+80outputs (2major+2327241minor)pagefaults 0swaps
+[1;37;34mRunning forward ... [0m
+Building sparsity pattern over cells [================================] 100.0%
+Assembling matrix over cells [===============>                        ] 39.1%
+Assembling matrix over cells [===============================>        ] 77.8%
+Assembling matrix over cells [========================================] 100.0%
+Building sparsity pattern over cells [================================] 100.0%
+Assembling matrix over cells [===============>                        ] 39.1%
+Assembling matrix over cells [===============================>        ] 77.8%
+Assembling matrix over cells [========================================] 100.0%
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Time-iteration [=====================>                                ] 40.0%
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Time-iteration [===========================================>          ] 80.0%
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Time-iteration [======================================================] 100.0%
+276.29user 11.27system 3:25.66elapsed 139%CPU (0avgtext+0avgdata 20893328maxresident)k
+0inputs+80outputs (2major+2327224minor)pagefaults 0swaps
+[1;37;34mRunning forward ... [0m
+Building sparsity pattern over cells [================================] 100.0%
+Assembling matrix over cells [===============>                        ] 39.1%
+Assembling matrix over cells [===============================>        ] 77.8%
+Assembling matrix over cells [========================================] 100.0%
+Building sparsity pattern over cells [================================] 100.0%
+Assembling matrix over cells [===============>                        ] 39.1%
+Assembling matrix over cells [===============================>        ] 77.8%
+Assembling matrix over cells [========================================] 100.0%
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Time-iteration [=====================>                                ] 40.0%
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Time-iteration [===========================================>          ] 80.0%
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Solving linear variational problem.
+  Building sparsity pattern over cells [==============================] 100.0%
+  Assembling matrix over cells [======================================] 100.0%
+  Solving linear system of size 118740 x 118740 (PETSc LU solver, umfpack).
+Time-iteration [======================================================] 100.0%
+282.38user 11.29system 3:30.20elapsed 139%CPU (0avgtext+0avgdata 20893360maxresident)k
+0inputs+80outputs (2major+2327232minor)pagefaults 0swaps
