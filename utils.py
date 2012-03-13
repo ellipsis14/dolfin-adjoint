@@ -41,6 +41,21 @@ def adjoint_dolfin(functional, forget=True):
 
   return output.data # return the last adjoint state
 
+def compute_adjoint(functional, forget=True):
+
+  for i in range(adjointer.equation_count)[::-1]:
+      (adj_var, output) = adjointer.get_adjoint_solution(i, functional)
+
+      storage = libadjoint.MemoryStorage(output)
+      adjointer.record_variable(adj_var, storage)
+
+      if forget:
+        adjointer.forget_adjoint_equation(i)
+      else:
+        adjointer.forget_adjoint_values(i)
+
+      yield (output.data, adj_var)
+
 def test_initial_condition_adjoint(J, ic, final_adjoint, seed=0.01, perturbation_direction=None):
   '''forward must be a function that takes in the initial condition (ic) as a dolfin.Function
      and returns the functional value by running the forward run:
