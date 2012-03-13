@@ -263,6 +263,7 @@ if __name__ == "__main__":
     set_log_level(PROGRESS)
 
     debugging["record_all"] = True
+    debugging["fussy_replay"] = False
     ic = Function(Z)
     ic_copy = Function(ic)
 
