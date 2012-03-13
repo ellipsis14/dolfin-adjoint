@@ -1,5 +1,6 @@
 import dolfin
-from solving import adjointer, adj_variables, debugging, solve, Vector, annotate as solving_annotate
+import ufl
+from solving import adjointer, adj_variables, debugging, solve, Vector, Matrix, annotate as solving_annotate
 import libadjoint
 
 dolfin_assign = dolfin.Function.assign
@@ -26,21 +27,48 @@ def dolfin_adjoint_assign(self, other, annotate=True):
     return dolfin_assign(self, other)
 
   # OK, so we have a variable we've seen before. Beautiful.
-  try:
-    fn_space = other.function_space().collapse()
-  except:
-    fn_space = other.function_space()
+  out = dolfin_assign(self, other)
+  register_assign(self, other)
+  return out
 
-  u, v = dolfin.TestFunction(fn_space), dolfin.TrialFunction(fn_space)
-  M = dolfin.inner(u, v)*dolfin.dx
-  if debugging["fussy_replay"]:
-    return solve(M == dolfin.action(M, other), self) # this takes care of all the annotation etc
-  else:
-    solving_annotate(M == dolfin.action(M, other), self)
-    out = dolfin_assign(self, other)
-    if debugging["record_all"]:
-      adjointer.record_variable(adj_variables[self], libadjoint.MemoryStorage(Vector(self)))
-    return out
+def register_assign(new, old):
+  fn_space = new.function_space()
+  block_name = "Identity: %s" % str(fn_space)
+  if len(block_name) > int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"]):
+    block_name = block_name[0:int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"])-1]
+  identity_block = libadjoint.Block(block_name)
+
+  def identity_assembly_cb(variables, dependencies, hermitian, coefficient, context):
+    assert coefficient == 1
+    return (Matrix(ufl.Identity(fn_space.dim())), Vector(dolfin.Function(fn_space)))
+
+  identity_block.assemble = identity_assembly_cb
+  dep = adj_variables.next(new)
+
+  if debugging["record_all"]:
+    adjointer.record_variable(dep, libadjoint.MemoryStorage(Vector(old)))
+
+  initial_eq = libadjoint.Equation(dep, blocks=[identity_block], targets=[dep], rhs=IdentityRHS(old))
+  adjointer.register_equation(initial_eq)
 
 dolfin.Function.assign = dolfin_adjoint_assign
 
+class IdentityRHS(libadjoint.RHS):
+  def __init__(self, var):
+    self.var = var
+    self.dep = adj_variables[var]
+
+  def __call__(self, dependencies, values):
+    return Vector(values[0].data)
+
+  def derivative_action(self, dependencies, values, variable, contraction_vector, hermitian):
+    return Vector(contraction_vector.data)
+
+  def dependencies(self):
+    return [self.dep]
+
+  def coefficients(self):
+    return [self.var]
+
+  def __str__(self):
+    return "AssignIdentity(%s)" % str(self.dep)

@@ -345,10 +345,7 @@ class Vector(libadjoint.Vector):
         # This occurs when adding a RHS derivative to an adjoint equation
         # corresponding to the initial conditions.
         self.data.vector().axpy(alpha, dolfin.assemble(x.data))
-    else:
-      # self is a non-empty form.
-      assert(isinstance(x.data, ufl.form.Form))
-      assert(isinstance(self.data, ufl.form.Form))
+    elif isinstance(x.data, ufl.form.Form) and isinstance(self.data, ufl.form.Form):
 
       # Let's do a bit of argument shuffling, shall we?
       xargs = ufl.algorithms.extract_arguments(x.data)
@@ -366,6 +363,19 @@ class Vector(libadjoint.Vector):
         x_form = x.data
 
       self.data+=alpha*x_form
+    elif isinstance(self.data, ufl.form.Form) and isinstance(x.data, dolfin.Function):
+      x_vec = x.data.vector().copy()
+      self_vec = dolfin.assemble(self.data)
+      self_vec.axpy(alpha, x_vec)
+      new_fn = dolfin.Function(x.data.function_space())
+      new_fn.vector()[:] = self_vec
+      self.data = new_fn
+      self.fn_space = self.data.function_space()
+
+    else:
+      print "self.data.__class__: ", self.data.__class__
+      print "x.data.__class__: ", x.data.__class__
+      assert False
 
     self.zero = False
 

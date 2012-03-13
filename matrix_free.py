@@ -48,7 +48,10 @@ class MatrixFree(solving.Matrix):
       dolfin.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
       return solving.Vector(x)
 
-    rhs = dolfin.assemble(b.data)
+    if isinstance(b.data, dolfin.Function):
+      rhs = b.data.vector().copy()
+    else:
+      rhs = dolfin.assemble(b.data)
 
     if var.type in ['ADJ_TLM', 'ADJ_ADJOINT']:
       self.bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.cpp.DirichletBC)]

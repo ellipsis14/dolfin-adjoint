@@ -36,7 +36,11 @@ def make_LUSolverMatrix(form, reuse_factorization):
         # functional is set up incorrectly.
         dolfin.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
       else:
-        b_vec = dolfin.assemble(b.data); [bc.apply(b_vec) for bc in bcs]
+        if isinstance(b.data, dolfin.Function):
+          b_vec = b.data.vector().copy()
+        else:
+          b_vec = dolfin.assemble(b.data)
+        [bc.apply(b_vec) for bc in bcs]
         solver.solve(x.data.vector(), b_vec, annotate=False)
 
       return x
