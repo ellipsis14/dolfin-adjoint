@@ -29,7 +29,7 @@ parameters["form_compiler"]["representation"] = "quadrature"
 parameters["std_out_all_processes"] = False;
 
 # Create mesh and define function spaces
-nodes = 10000
+nodes = 20000
 mesh = UnitSquare(int(sqrt(nodes)), int(sqrt(nodes)))
 V = FunctionSpace(mesh, "Lagrange", 1)
 ME = V*V
