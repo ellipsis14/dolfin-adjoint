@@ -1,6 +1,6 @@
 Number of degrees of freedom: 1603
 Solving linear variational problem.
-Wed Mar 14 15:09:22 GMT 2012
+Tue Mar 20 16:15:44 GMT 2012
 
 ------------------------------------------------------------
 t = 3e-05
@@ -8,7 +8,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:09:31 GMT 2012
+Tue Mar 20 16:15:54 GMT 2012
 
 ------------------------------------------------------------
 t = 6e-05
@@ -16,7 +16,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:09:41 GMT 2012
+Tue Mar 20 16:16:04 GMT 2012
 
 ------------------------------------------------------------
 t = 9e-05
@@ -24,7 +24,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:09:50 GMT 2012
+Tue Mar 20 16:16:13 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00012
@@ -32,7 +32,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:10:00 GMT 2012
+Tue Mar 20 16:16:23 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00015
@@ -40,7 +40,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:10:09 GMT 2012
+Tue Mar 20 16:16:32 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00018
@@ -48,7 +48,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:10:18 GMT 2012
+Tue Mar 20 16:16:42 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00021
@@ -56,7 +56,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:10:28 GMT 2012
+Tue Mar 20 16:16:52 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00024
@@ -64,7 +64,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:10:37 GMT 2012
+Tue Mar 20 16:17:01 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00027
@@ -72,7 +72,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:10:46 GMT 2012
+Tue Mar 20 16:17:11 GMT 2012
 
 ------------------------------------------------------------
 t = 0.0003
@@ -84,156 +84,22 @@ Timings of forward model:
 
 Summary of timings          |  Average time  Total time  Reps
 -------------------------------------------------------------
-Assemble cells              |     0.0014508       3.495  2409
-Assemble interior facets    |     0.0012775    0.038326    30
-Build sparsity              |    1.2796e-05    0.030825  2409
-Delete sparsity             |    1.0375e-06   0.0024993  2409
-DirichletBC apply           |    9.9685e-05     0.01276   128
-DirichletBC compute bc      |    3.2321e-05     0.30744  9512
-DirichletBC init facets     |    6.8072e-07    0.006475  9512
-Init dofmap                 |    6.0956e-05  0.00036573     6
-Init tensor                 |    2.8375e-05    0.068356  2409
-Krylov solver               |      0.026813    0.026813     1
-LU solver                   |     0.0037585     0.07517    20
-Matrix-free solver          |        4.5373      90.747    20
-compute connectivity 0 - 2  |    3.5048e-05  3.5048e-05     1
-compute connectivity 1 - 2  |    3.0041e-05  3.0041e-05     1
-compute connectivity 2 - 2  |    0.00025392  0.00025392     1
-compute entities dim = 1    |    0.00035715  0.00035715     1
-Solving linear variational problem.
-Calling FFC just-in-time (JIT) compiler, this may take some time.
-Calling FFC just-in-time (JIT) compiler, this may take some time.
-Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Timings of adjoint model: 
-
-Summary of timings        |  Average time  Total time  Reps
------------------------------------------------------------
-Assemble cells            |     0.0014783      3.1058  2101
-Assemble exterior facets  |    2.8849e-05  2.8849e-05     1
-Assemble interior facets  |     0.0009666    0.057029    59
-Build sparsity            |    3.1578e-05    0.066377  2102
-Delete sparsity           |    1.2312e-06    0.002588  2102
-DirichletBC apply         |    0.00020045    0.044902   224
-DirichletBC compute bc    |    3.5565e-05     0.29107  8184
-DirichletBC init facets   |    3.0424e-06    0.024899  8184
-Init tensor               |    3.0035e-05    0.063134  2102
-Krylov solver             |      0.031234    0.031234     1
-LU solver                 |     0.0034907    0.069814    20
-Matrix-free solver        |        3.8843      77.686    20
-Solving linear system     |     0.0036498    0.036498    10
-186.97user 0.77system 3:10.11elapsed 98%CPU (0avgtext+0avgdata 537120maxresident)k
-22736inputs+42080outputs (44major+266229minor)pagefaults 0swaps
-Number of degrees of freedom: 1603
-Solving linear variational problem.
-Wed Mar 14 15:12:32 GMT 2012
-
-------------------------------------------------------------
-t = 3e-05
-dt = 3e-05
-------------------------------------------------------------
-Solving linear variational problem.
-Solving linear variational problem.
-Wed Mar 14 15:12:42 GMT 2012
-
-------------------------------------------------------------
-t = 6e-05
-dt = 3e-05
-------------------------------------------------------------
-Solving linear variational problem.
-Solving linear variational problem.
-Wed Mar 14 15:12:51 GMT 2012
-
-------------------------------------------------------------
-t = 9e-05
-dt = 3e-05
-------------------------------------------------------------
-Solving linear variational problem.
-Solving linear variational problem.
-Wed Mar 14 15:13:00 GMT 2012
-
-------------------------------------------------------------
-t = 0.00012
-dt = 3e-05
-------------------------------------------------------------
-Solving linear variational problem.
-Solving linear variational problem.
-Wed Mar 14 15:13:10 GMT 2012
-
-------------------------------------------------------------
-t = 0.00015
-dt = 3e-05
-------------------------------------------------------------
-Solving linear variational problem.
-Solving linear variational problem.
-Wed Mar 14 15:13:19 GMT 2012
-
-------------------------------------------------------------
-t = 0.00018
-dt = 3e-05
-------------------------------------------------------------
-Solving linear variational problem.
-Solving linear variational problem.
-Wed Mar 14 15:13:29 GMT 2012
-
-------------------------------------------------------------
-t = 0.00021
-dt = 3e-05
-------------------------------------------------------------
-Solving linear variational problem.
-Solving linear variational problem.
-Wed Mar 14 15:13:38 GMT 2012
-
-------------------------------------------------------------
-t = 0.00024
-dt = 3e-05
-------------------------------------------------------------
-Solving linear variational problem.
-Solving linear variational problem.
-Wed Mar 14 15:13:47 GMT 2012
-
-------------------------------------------------------------
-t = 0.00027
-dt = 3e-05
-------------------------------------------------------------
-Solving linear variational problem.
-Solving linear variational problem.
-Wed Mar 14 15:13:57 GMT 2012
-
-------------------------------------------------------------
-t = 0.0003
-dt = 3e-05
-------------------------------------------------------------
-Solving linear variational problem.
-Solving linear variational problem.
-Timings of forward model: 
-
-Summary of timings          |  Average time  Total time  Reps
--------------------------------------------------------------
-Assemble cells              |     0.0014383      3.4648  2409
-Assemble interior facets    |     0.0012688    0.038064    30
-Build sparsity              |    1.2848e-05     0.03095  2409
-Delete sparsity             |     1.079e-06   0.0025992  2409
-DirichletBC apply           |    9.8938e-05    0.012664   128
-DirichletBC compute bc      |    3.2042e-05     0.30478  9512
-DirichletBC init facets     |    6.8936e-07   0.0065572  9512
-Init dofmap                 |    6.0678e-05  0.00036407     6
-Init tensor                 |    2.8328e-05    0.068242  2409
-Krylov solver               |      0.026848    0.026848     1
-LU solver                   |      0.003758    0.075159    20
-Matrix-free solver          |        4.5697      91.393    20
-compute connectivity 0 - 2  |    3.5763e-05  3.5763e-05     1
-compute connectivity 1 - 2  |    3.0041e-05  3.0041e-05     1
-compute connectivity 2 - 2  |    0.00025201  0.00025201     1
-compute entities dim = 1    |    0.00035286  0.00035286     1
+Assemble cells              |     0.0014361      3.4596  2409
+Assemble interior facets    |     0.0012714    0.038141    30
+Build sparsity              |     1.263e-05    0.030426  2409
+Delete sparsity             |    1.0475e-06   0.0025234  2409
+DirichletBC apply           |    9.9229e-05    0.012701   128
+DirichletBC compute bc      |     3.173e-05     0.30182  9512
+DirichletBC init facets     |    6.7748e-07   0.0064442  9512
+Init dofmap                 |    5.7975e-05  0.00034785     6
+Init tensor                 |    2.8196e-05    0.067924  2409
+Krylov solver               |      0.026789    0.026789     1
+LU solver                   |     0.0037256    0.074511    20
+Matrix-free solver          |          4.66      93.201    20
+compute connectivity 0 - 2  |    3.0994e-05  3.0994e-05     1
+compute connectivity 1 - 2  |    2.9087e-05  2.9087e-05     1
+compute connectivity 2 - 2  |    0.00024509  0.00024509     1
+compute entities dim = 1    |     0.0003531   0.0003531     1
 Solving linear variational problem.
 Solving linear variational problem.
 Solving linear variational problem.
@@ -249,24 +115,24 @@ Timings of adjoint model:
 
 Summary of timings        |  Average time  Total time  Reps
 -----------------------------------------------------------
-Assemble cells            |     0.0014343      3.0135  2101
+Assemble cells            |     0.0014352      3.0154  2101
 Assemble exterior facets  |    3.0041e-05  3.0041e-05     1
-Assemble interior facets  |    0.00096044    0.056666    59
-Build sparsity            |    3.1903e-05    0.067061  2102
-Delete sparsity           |    1.2994e-06   0.0027313  2102
-DirichletBC apply         |    0.00020052    0.044917   224
-DirichletBC compute bc    |    3.5424e-05     0.28991  8184
-DirichletBC init facets   |    3.0544e-06    0.024997  8184
-Init tensor               |    2.9946e-05    0.062947  2102
-Krylov solver             |      0.031301    0.031301     1
-LU solver                 |       0.00352      0.0704    20
-Matrix-free solver        |        3.8967      77.935    20
-Solving linear system     |     0.0036531    0.036531    10
-177.00user 0.41system 2:58.10elapsed 99%CPU (0avgtext+0avgdata 536432maxresident)k
-112inputs+712outputs (11major+124949minor)pagefaults 0swaps
+Assemble interior facets  |    0.00097767    0.057683    59
+Build sparsity            |    3.1362e-05    0.065923  2102
+Delete sparsity           |     1.247e-06   0.0026212  2102
+DirichletBC apply         |    0.00019701    0.044129   224
+DirichletBC compute bc    |    3.4884e-05     0.28549  8184
+DirichletBC init facets   |    2.9405e-06    0.024065  8184
+Init tensor               |    2.9568e-05    0.062152  2102
+Krylov solver             |      0.031131    0.031131     1
+LU solver                 |     0.0034896    0.069793    20
+Matrix-free solver        |         3.983       79.66    20
+Solving linear system     |      0.003642     0.03642    10
+180.26user 0.46system 3:03.34elapsed 98%CPU (0avgtext+0avgdata 536720maxresident)k
+0inputs+696outputs (11major+125163minor)pagefaults 0swaps
 Number of degrees of freedom: 1603
 Solving linear variational problem.
-Wed Mar 14 15:15:30 GMT 2012
+Tue Mar 20 16:18:47 GMT 2012
 
 ------------------------------------------------------------
 t = 3e-05
@@ -274,7 +140,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:15:40 GMT 2012
+Tue Mar 20 16:18:57 GMT 2012
 
 ------------------------------------------------------------
 t = 6e-05
@@ -282,7 +148,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:15:49 GMT 2012
+Tue Mar 20 16:19:06 GMT 2012
 
 ------------------------------------------------------------
 t = 9e-05
@@ -290,7 +156,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:15:58 GMT 2012
+Tue Mar 20 16:19:16 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00012
@@ -298,7 +164,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:16:08 GMT 2012
+Tue Mar 20 16:19:25 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00015
@@ -306,7 +172,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:16:17 GMT 2012
+Tue Mar 20 16:19:34 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00018
@@ -314,7 +180,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:16:27 GMT 2012
+Tue Mar 20 16:19:44 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00021
@@ -322,7 +188,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:16:36 GMT 2012
+Tue Mar 20 16:19:53 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00024
@@ -330,7 +196,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:16:45 GMT 2012
+Tue Mar 20 16:20:02 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00027
@@ -338,7 +204,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:16:55 GMT 2012
+Tue Mar 20 16:20:12 GMT 2012
 
 ------------------------------------------------------------
 t = 0.0003
@@ -350,22 +216,22 @@ Timings of forward model:
 
 Summary of timings          |  Average time  Total time  Reps
 -------------------------------------------------------------
-Assemble cells              |     0.0014398      3.4684  2409
-Assemble interior facets    |     0.0012551    0.037652    30
-Build sparsity              |     1.302e-05    0.031365  2409
-Delete sparsity             |    1.0931e-06   0.0026333  2409
-DirichletBC apply           |     9.978e-05    0.012772   128
-DirichletBC compute bc      |    3.2594e-05     0.31003  9512
-DirichletBC init facets     |    6.6768e-07    0.006351  9512
-Init dofmap                 |    6.0956e-05  0.00036573     6
-Init tensor                 |    2.8368e-05    0.068339  2409
-Krylov solver               |      0.026926    0.026926     1
-LU solver                   |     0.0037593    0.075186    20
-Matrix-free solver          |        4.5542      91.083    20
-compute connectivity 0 - 2  |    3.5048e-05  3.5048e-05     1
-compute connectivity 1 - 2  |    3.0041e-05  3.0041e-05     1
-compute connectivity 2 - 2  |    0.00025487  0.00025487     1
-compute entities dim = 1    |    0.00035381  0.00035381     1
+Assemble cells              |     0.0014385      3.4653  2409
+Assemble interior facets    |     0.0012611    0.037834    30
+Build sparsity              |    1.3073e-05    0.031492  2409
+Delete sparsity             |    1.0339e-06   0.0024908  2409
+DirichletBC apply           |        0.0001      0.0128   128
+DirichletBC compute bc      |    3.2152e-05     0.30583  9512
+DirichletBC init facets     |    6.9357e-07   0.0065973  9512
+Init dofmap                 |    5.7856e-05  0.00034714     6
+Init tensor                 |    2.8379e-05    0.068364  2409
+Krylov solver               |      0.026796    0.026796     1
+LU solver                   |     0.0037587    0.075175    20
+Matrix-free solver          |        4.5253      90.506    20
+compute connectivity 0 - 2  |    3.0041e-05  3.0041e-05     1
+compute connectivity 1 - 2  |    2.9087e-05  2.9087e-05     1
+compute connectivity 2 - 2  |    0.00024509  0.00024509     1
+compute entities dim = 1    |    0.00034904  0.00034904     1
 Solving linear variational problem.
 Solving linear variational problem.
 Solving linear variational problem.
@@ -381,24 +247,24 @@ Timings of adjoint model:
 
 Summary of timings        |  Average time  Total time  Reps
 -----------------------------------------------------------
-Assemble cells            |     0.0014602       3.068  2101
+Assemble cells            |     0.0014357      3.0164  2101
 Assemble exterior facets  |    2.8849e-05  2.8849e-05     1
-Assemble interior facets  |    0.00099326    0.058602    59
-Build sparsity            |    3.2023e-05    0.067312  2102
-Delete sparsity           |    1.2911e-06   0.0027139  2102
-DirichletBC apply         |    0.00019764     0.04427   224
-DirichletBC compute bc    |    3.6107e-05      0.2955  8184
-DirichletBC init facets   |    3.0179e-06    0.024698  8184
-Init tensor               |    3.0157e-05     0.06339  2102
-Krylov solver             |      0.031363    0.031363     1
-LU solver                 |     0.0034785    0.069569    20
-Matrix-free solver        |        3.8985       77.97    20
-Solving linear system     |       0.00365      0.0365    10
-176.71user 0.43system 2:57.76elapsed 99%CPU (0avgtext+0avgdata 535040maxresident)k
-16inputs+704outputs (11major+125015minor)pagefaults 0swaps
+Assemble interior facets  |    0.00095686    0.056455    59
+Build sparsity            |    3.1865e-05    0.066981  2102
+Delete sparsity           |    1.2631e-06    0.002655  2102
+DirichletBC apply         |    0.00020051    0.044914   224
+DirichletBC compute bc    |     3.536e-05     0.28938  8184
+DirichletBC init facets   |     3.027e-06    0.024773  8184
+Init tensor               |    3.0045e-05    0.063155  2102
+Krylov solver             |      0.031371    0.031371     1
+LU solver                 |     0.0034807    0.069614    20
+Matrix-free solver        |        3.8856      77.712    20
+Solving linear system     |     0.0036489    0.036489    10
+175.67user 0.43system 2:58.75elapsed 98%CPU (0avgtext+0avgdata 534544maxresident)k
+0inputs+704outputs (11major+125029minor)pagefaults 0swaps
 Number of degrees of freedom: 1603
 Solving linear variational problem.
-Wed Mar 14 15:18:28 GMT 2012
+Tue Mar 20 16:21:46 GMT 2012
 
 ------------------------------------------------------------
 t = 3e-05
@@ -406,7 +272,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:18:37 GMT 2012
+Tue Mar 20 16:21:56 GMT 2012
 
 ------------------------------------------------------------
 t = 6e-05
@@ -414,7 +280,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:18:47 GMT 2012
+Tue Mar 20 16:22:05 GMT 2012
 
 ------------------------------------------------------------
 t = 9e-05
@@ -422,7 +288,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:18:56 GMT 2012
+Tue Mar 20 16:22:15 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00012
@@ -430,7 +296,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:19:06 GMT 2012
+Tue Mar 20 16:22:24 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00015
@@ -438,7 +304,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:19:15 GMT 2012
+Tue Mar 20 16:22:33 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00018
@@ -446,7 +312,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:19:25 GMT 2012
+Tue Mar 20 16:22:43 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00021
@@ -454,7 +320,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:19:34 GMT 2012
+Tue Mar 20 16:22:52 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00024
@@ -462,7 +328,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:19:44 GMT 2012
+Tue Mar 20 16:23:01 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00027
@@ -470,7 +336,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:19:53 GMT 2012
+Tue Mar 20 16:23:11 GMT 2012
 
 ------------------------------------------------------------
 t = 0.0003
@@ -482,22 +348,22 @@ Timings of forward model:
 
 Summary of timings          |  Average time  Total time  Reps
 -------------------------------------------------------------
-Assemble cells              |     0.0014381      3.4643  2409
-Assemble interior facets    |     0.0012645    0.037934    30
-Build sparsity              |     1.302e-05    0.031364  2409
-Delete sparsity             |    1.1141e-06   0.0026839  2409
-DirichletBC apply           |    0.00010011    0.012814   128
-DirichletBC compute bc      |    3.2764e-05     0.31165  9512
-DirichletBC init facets     |    7.4716e-07    0.007107  9512
-Init dofmap                 |    6.0598e-05  0.00036359     6
-Init tensor                 |    2.8663e-05    0.069048  2409
-Krylov solver               |      0.026785    0.026785     1
-LU solver                   |     0.0037503    0.075006    20
-Matrix-free solver          |        4.5916      91.831    20
-compute connectivity 0 - 2  |    3.6001e-05  3.6001e-05     1
-compute connectivity 1 - 2  |    2.9802e-05  2.9802e-05     1
-compute connectivity 2 - 2  |    0.00025988  0.00025988     1
-compute entities dim = 1    |    0.00035977  0.00035977     1
+Assemble cells              |     0.0014191      3.4185  2409
+Assemble interior facets    |      0.001269    0.038071    30
+Build sparsity              |    1.2857e-05    0.030973  2409
+Delete sparsity             |    1.0738e-06   0.0025868  2409
+DirichletBC apply           |    9.9597e-05    0.012748   128
+DirichletBC compute bc      |    3.1973e-05     0.30413  9512
+DirichletBC init facets     |    6.7941e-07   0.0064626  9512
+Init dofmap                 |    5.8015e-05  0.00034809     6
+Init tensor                 |    2.8257e-05    0.068071  2409
+Krylov solver               |       0.02687     0.02687     1
+LU solver                   |     0.0037545    0.075089    20
+Matrix-free solver          |        4.5475       90.95    20
+compute connectivity 0 - 2  |    3.0041e-05  3.0041e-05     1
+compute connectivity 1 - 2  |    2.8849e-05  2.8849e-05     1
+compute connectivity 2 - 2  |    0.00023818  0.00023818     1
+compute entities dim = 1    |    0.00034904  0.00034904     1
 Solving linear variational problem.
 Solving linear variational problem.
 Solving linear variational problem.
@@ -513,24 +379,24 @@ Timings of adjoint model:
 
 Summary of timings        |  Average time  Total time  Reps
 -----------------------------------------------------------
-Assemble cells            |     0.0014405      3.0264  2101
-Assemble exterior facets  |    2.8849e-05  2.8849e-05     1
-Assemble interior facets  |    0.00097979    0.057808    59
-Build sparsity            |    3.1722e-05    0.066679  2102
-Delete sparsity           |    1.2892e-06   0.0027099  2102
-DirichletBC apply         |     0.0001992     0.04462   224
-DirichletBC compute bc    |    3.6197e-05     0.29623  8184
-DirichletBC init facets   |    3.0847e-06    0.025245  8184
-Init tensor               |     3.041e-05    0.063922  2102
-Krylov solver             |      0.031354    0.031354     1
-LU solver                 |     0.0034625     0.06925    20
-Matrix-free solver        |        3.9269      78.538    20
-Solving linear system     |     0.0036353    0.036353    10
-178.05user 0.40system 2:59.06elapsed 99%CPU (0avgtext+0avgdata 534976maxresident)k
-0inputs+704outputs (11major+124879minor)pagefaults 0swaps
+Assemble cells            |     0.0014348      3.0146  2101
+Assemble exterior facets  |    3.0994e-05  3.0994e-05     1
+Assemble interior facets  |    0.00097293    0.057403    59
+Build sparsity            |    3.1817e-05    0.066879  2102
+Delete sparsity           |    1.2724e-06   0.0026746  2102
+DirichletBC apply         |     0.0001983    0.044418   224
+DirichletBC compute bc    |    3.5131e-05     0.28751  8184
+DirichletBC init facets   |    3.0095e-06     0.02463  8184
+Init tensor               |     3.003e-05    0.063123  2102
+Krylov solver             |       0.03129     0.03129     1
+LU solver                 |     0.0034795     0.06959    20
+Matrix-free solver        |        3.9092      78.185    20
+Solving linear system     |      0.003648     0.03648    10
+176.59user 0.44system 2:59.69elapsed 98%CPU (0avgtext+0avgdata 534352maxresident)k
+0inputs+704outputs (11major+125024minor)pagefaults 0swaps
 Number of degrees of freedom: 1603
 Solving linear variational problem.
-Wed Mar 14 15:21:27 GMT 2012
+Tue Mar 20 16:24:46 GMT 2012
 
 ------------------------------------------------------------
 t = 3e-05
@@ -538,7 +404,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:21:36 GMT 2012
+Tue Mar 20 16:24:56 GMT 2012
 
 ------------------------------------------------------------
 t = 6e-05
@@ -546,7 +412,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:21:46 GMT 2012
+Tue Mar 20 16:25:05 GMT 2012
 
 ------------------------------------------------------------
 t = 9e-05
@@ -554,7 +420,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:21:55 GMT 2012
+Tue Mar 20 16:25:15 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00012
@@ -562,7 +428,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:22:04 GMT 2012
+Tue Mar 20 16:25:24 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00015
@@ -570,7 +436,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:22:14 GMT 2012
+Tue Mar 20 16:25:34 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00018
@@ -578,7 +444,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:22:23 GMT 2012
+Tue Mar 20 16:25:43 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00021
@@ -586,7 +452,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:22:32 GMT 2012
+Tue Mar 20 16:25:53 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00024
@@ -594,7 +460,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:22:41 GMT 2012
+Tue Mar 20 16:26:02 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00027
@@ -602,7 +468,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Wed Mar 14 15:22:51 GMT 2012
+Tue Mar 20 16:26:11 GMT 2012
 
 ------------------------------------------------------------
 t = 0.0003
@@ -614,22 +480,154 @@ Timings of forward model:
 
 Summary of timings          |  Average time  Total time  Reps
 -------------------------------------------------------------
-Assemble cells              |     0.0014422      3.4743  2409
-Assemble interior facets    |     0.0012699    0.038098    30
-Build sparsity              |     1.298e-05    0.031269  2409
-Delete sparsity             |     1.046e-06   0.0025198  2409
+Assemble cells              |      0.001437      3.4617  2409
+Assemble interior facets    |     0.0012617     0.03785    30
+Build sparsity              |    1.2763e-05    0.030746  2409
+Delete sparsity             |    1.0672e-06   0.0025709  2409
+DirichletBC apply           |     0.0001005    0.012864   128
+DirichletBC compute bc      |    3.2747e-05     0.31149  9512
+DirichletBC init facets     |    7.5223e-07   0.0071552  9512
+Init dofmap                 |    5.8373e-05  0.00035024     6
+Init tensor                 |     2.819e-05     0.06791  2409
+Krylov solver               |      0.026861    0.026861     1
+LU solver                   |     0.0037475    0.074949    20
+Matrix-free solver          |        4.5967      91.935    20
+compute connectivity 0 - 2  |    3.0041e-05  3.0041e-05     1
+compute connectivity 1 - 2  |    2.6941e-05  2.6941e-05     1
+compute connectivity 2 - 2  |     0.0002389   0.0002389     1
+compute entities dim = 1    |    0.00034595  0.00034595     1
+Solving linear variational problem.
+Solving linear variational problem.
+Solving linear variational problem.
+Solving linear variational problem.
+Solving linear variational problem.
+Solving linear variational problem.
+Solving linear variational problem.
+Solving linear variational problem.
+Solving linear variational problem.
+Solving linear variational problem.
+Solving linear variational problem.
+Timings of adjoint model: 
+
+Summary of timings        |  Average time  Total time  Reps
+-----------------------------------------------------------
+Assemble cells            |     0.0014353      3.0156  2101
+Assemble exterior facets  |    2.8849e-05  2.8849e-05     1
+Assemble interior facets  |    0.00097838    0.057725    59
+Build sparsity            |    3.1552e-05    0.066322  2102
+Delete sparsity           |    1.2547e-06   0.0026374  2102
+DirichletBC apply         |    0.00019943    0.044673   224
+DirichletBC compute bc    |    3.5948e-05      0.2942  8184
+DirichletBC init facets   |    3.0828e-06     0.02523  8184
+Init tensor               |    3.0008e-05    0.063078  2102
+Krylov solver             |      0.031322    0.031322     1
+LU solver                 |     0.0034702    0.069404    20
+Matrix-free solver        |        3.9317      78.634    20
+Solving linear system     |     0.0036475    0.036475    10
+178.00user 0.41system 3:01.08elapsed 98%CPU (0avgtext+0avgdata 534592maxresident)k
+0inputs+704outputs (11major+125032minor)pagefaults 0swaps
+Number of degrees of freedom: 1603
+Solving linear variational problem.
+Tue Mar 20 16:27:47 GMT 2012
+
+------------------------------------------------------------
+t = 3e-05
+dt = 3e-05
+------------------------------------------------------------
+Solving linear variational problem.
+Solving linear variational problem.
+Tue Mar 20 16:27:57 GMT 2012
+
+------------------------------------------------------------
+t = 6e-05
+dt = 3e-05
+------------------------------------------------------------
+Solving linear variational problem.
+Solving linear variational problem.
+Tue Mar 20 16:28:06 GMT 2012
+
+------------------------------------------------------------
+t = 9e-05
+dt = 3e-05
+------------------------------------------------------------
+Solving linear variational problem.
+Solving linear variational problem.
+Tue Mar 20 16:28:15 GMT 2012
+
+------------------------------------------------------------
+t = 0.00012
+dt = 3e-05
+------------------------------------------------------------
+Solving linear variational problem.
+Solving linear variational problem.
+Tue Mar 20 16:28:25 GMT 2012
+
+------------------------------------------------------------
+t = 0.00015
+dt = 3e-05
+------------------------------------------------------------
+Solving linear variational problem.
+Solving linear variational problem.
+Tue Mar 20 16:28:34 GMT 2012
+
+------------------------------------------------------------
+t = 0.00018
+dt = 3e-05
+------------------------------------------------------------
+Solving linear variational problem.
+Solving linear variational problem.
+Tue Mar 20 16:28:44 GMT 2012
+
+------------------------------------------------------------
+t = 0.00021
+dt = 3e-05
+------------------------------------------------------------
+Solving linear variational problem.
+Solving linear variational problem.
+Tue Mar 20 16:28:53 GMT 2012
+
+------------------------------------------------------------
+t = 0.00024
+dt = 3e-05
+------------------------------------------------------------
+Solving linear variational problem.
+Solving linear variational problem.
+Tue Mar 20 16:29:02 GMT 2012
+
+------------------------------------------------------------
+t = 0.00027
+dt = 3e-05
+------------------------------------------------------------
+Solving linear variational problem.
+Solving linear variational problem.
+Tue Mar 20 16:29:11 GMT 2012
+
+------------------------------------------------------------
+t = 0.0003
+dt = 3e-05
+------------------------------------------------------------
+Solving linear variational problem.
+Solving linear variational problem.
+Timings of forward model: 
+
+Summary of timings          |  Average time  Total time  Reps
+-------------------------------------------------------------
+Assemble cells              |     0.0014384       3.465  2409
+Assemble interior facets    |     0.0012694    0.038083    30
+Build sparsity              |    1.2684e-05    0.030555  2409
+Delete sparsity             |    1.0665e-06   0.0025692  2409
 DirichletBC apply           |    9.9348e-05    0.012717   128
-DirichletBC compute bc      |    3.2298e-05     0.30722  9512
-DirichletBC init facets     |    6.6821e-07    0.006356  9512
-Init dofmap                 |    6.1035e-05  0.00036621     6
-Init tensor                 |    2.8438e-05    0.068508  2409
-Krylov solver               |      0.026771    0.026771     1
-LU solver                   |     0.0037539    0.075078    20
-Matrix-free solver          |        4.5081      90.163    20
-compute connectivity 0 - 2  |    3.5048e-05  3.5048e-05     1
-compute connectivity 1 - 2  |    2.9802e-05  2.9802e-05     1
-compute connectivity 2 - 2  |    0.00025606  0.00025606     1
-compute entities dim = 1    |    0.00035906  0.00035906     1
+DirichletBC compute bc      |    3.2048e-05     0.30484  9512
+DirichletBC init facets     |    6.8683e-07   0.0065331  9512
+Init dofmap                 |    5.7856e-05  0.00034714     6
+Init tensor                 |    2.8256e-05    0.068068  2409
+Krylov solver               |      0.027034    0.027034     1
+LU solver                   |     0.0037533    0.075065    20
+Matrix-free solver          |        4.5486      90.973    20
+compute connectivity 0 - 2  |    3.0994e-05  3.0994e-05     1
+compute connectivity 1 - 2  |    2.8133e-05  2.8133e-05     1
+compute connectivity 2 - 2  |      0.000247    0.000247     1
+compute entities dim = 1    |    0.00034904  0.00034904     1
 Solving linear variational problem.
 Solving linear variational problem.
 Solving linear variational problem.
@@ -645,18 +643,18 @@ Timings of adjoint model:
 
 Summary of timings        |  Average time  Total time  Reps
 -----------------------------------------------------------
-Assemble cells            |     0.0014373      3.0197  2101
-Assemble exterior facets  |    2.8133e-05  2.8133e-05     1
-Assemble interior facets  |    0.00096244    0.056784    59
-Build sparsity            |    3.1982e-05    0.067226  2102
-Delete sparsity           |    1.2535e-06   0.0026348  2102
-DirichletBC apply         |     0.0002013    0.045092   224
-DirichletBC compute bc    |    3.5627e-05     0.29157  8184
-DirichletBC init facets   |    3.0488e-06    0.024952  8184
-Init tensor               |    3.0011e-05    0.063082  2102
-Krylov solver             |      0.031273    0.031273     1
-LU solver                 |     0.0035354    0.070708    20
-Matrix-free solver        |        3.8632      77.264    20
-Solving linear system     |     0.0036827    0.036827    10
-175.10user 0.40system 2:56.10elapsed 99%CPU (0avgtext+0avgdata 536416maxresident)k
-0inputs+688outputs (11major+125042minor)pagefaults 0swaps
+Assemble cells            |     0.0014341      3.0129  2101
+Assemble exterior facets  |    3.0041e-05  3.0041e-05     1
+Assemble interior facets  |    0.00097284    0.057398    59
+Build sparsity            |    3.1035e-05    0.065236  2102
+Delete sparsity           |    1.2234e-06   0.0025716  2102
+DirichletBC apply         |    0.00019807    0.044369   224
+DirichletBC compute bc    |    3.5102e-05     0.28728  8184
+DirichletBC init facets   |     3.003e-06    0.024576  8184
+Init tensor               |    2.9526e-05    0.062063  2102
+Krylov solver             |      0.031213    0.031213     1
+LU solver                 |     0.0035302    0.070603    20
+Matrix-free solver        |        3.9234      78.469    20
+Solving linear system     |     0.0036644    0.036644    10
+176.88user 0.42system 3:00.11elapsed 98%CPU (0avgtext+0avgdata 536768maxresident)k
+0inputs+704outputs (11major+125210minor)pagefaults 0swaps
