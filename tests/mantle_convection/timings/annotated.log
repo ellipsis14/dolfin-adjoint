@@ -1,6 +1,6 @@
 Number of degrees of freedom: 1603
 Solving linear variational problem.
-Thu Mar  1 20:02:43 GMT 2012
+Wed Mar 14 15:01:24 GMT 2012
 
 ------------------------------------------------------------
 t = 3e-05
@@ -8,9 +8,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:02:53 GMT 2012
+Wed Mar 14 15:01:33 GMT 2012
 
 ------------------------------------------------------------
 t = 6e-05
@@ -18,9 +16,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:03:03 GMT 2012
+Wed Mar 14 15:01:43 GMT 2012
 
 ------------------------------------------------------------
 t = 9e-05
@@ -28,9 +24,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:03:12 GMT 2012
+Wed Mar 14 15:01:52 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00012
@@ -38,9 +32,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:03:21 GMT 2012
+Wed Mar 14 15:02:01 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00015
@@ -48,9 +40,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:03:31 GMT 2012
+Wed Mar 14 15:02:11 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00018
@@ -58,9 +48,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:03:40 GMT 2012
+Wed Mar 14 15:02:20 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00021
@@ -68,9 +56,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:03:49 GMT 2012
+Wed Mar 14 15:02:29 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00024
@@ -78,9 +64,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:03:58 GMT 2012
+Wed Mar 14 15:02:39 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00027
@@ -88,9 +72,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:04:07 GMT 2012
+Wed Mar 14 15:02:48 GMT 2012
 
 ------------------------------------------------------------
 t = 0.0003
@@ -98,13 +80,11 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-93.79user 0.33system 1:36.68elapsed 97%CPU (0avgtext+0avgdata 547888maxresident)k
-0inputs+568outputs (7major+130434minor)pagefaults 0swaps
+94.54user 0.32system 1:35.28elapsed 99%CPU (0avgtext+0avgdata 496144maxresident)k
+0inputs+568outputs (7major+122302minor)pagefaults 0swaps
 Number of degrees of freedom: 1603
 Solving linear variational problem.
-Thu Mar  1 20:04:20 GMT 2012
+Wed Mar 14 15:02:59 GMT 2012
 
 ------------------------------------------------------------
 t = 3e-05
@@ -112,9 +92,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:04:30 GMT 2012
+Wed Mar 14 15:03:08 GMT 2012
 
 ------------------------------------------------------------
 t = 6e-05
@@ -122,9 +100,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:04:40 GMT 2012
+Wed Mar 14 15:03:18 GMT 2012
 
 ------------------------------------------------------------
 t = 9e-05
@@ -132,9 +108,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:04:49 GMT 2012
+Wed Mar 14 15:03:27 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00012
@@ -142,9 +116,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:04:59 GMT 2012
+Wed Mar 14 15:03:37 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00015
@@ -152,9 +124,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:05:08 GMT 2012
+Wed Mar 14 15:03:46 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00018
@@ -162,9 +132,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:05:18 GMT 2012
+Wed Mar 14 15:03:55 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00021
@@ -172,9 +140,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:05:27 GMT 2012
+Wed Mar 14 15:04:05 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00024
@@ -182,9 +148,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:05:36 GMT 2012
+Wed Mar 14 15:04:14 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00027
@@ -192,9 +156,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:05:46 GMT 2012
+Wed Mar 14 15:04:23 GMT 2012
 
 ------------------------------------------------------------
 t = 0.0003
@@ -202,13 +164,11 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-95.34user 0.43system 1:38.32elapsed 97%CPU (0avgtext+0avgdata 547904maxresident)k
-0inputs+568outputs (7major+130264minor)pagefaults 0swaps
+94.64user 0.35system 1:35.36elapsed 99%CPU (0avgtext+0avgdata 496160maxresident)k
+0inputs+568outputs (7major+122390minor)pagefaults 0swaps
 Number of degrees of freedom: 1603
 Solving linear variational problem.
-Thu Mar  1 20:05:58 GMT 2012
+Wed Mar 14 15:04:34 GMT 2012
 
 ------------------------------------------------------------
 t = 3e-05
@@ -216,9 +176,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:06:08 GMT 2012
+Wed Mar 14 15:04:44 GMT 2012
 
 ------------------------------------------------------------
 t = 6e-05
@@ -226,9 +184,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:06:18 GMT 2012
+Wed Mar 14 15:04:53 GMT 2012
 
 ------------------------------------------------------------
 t = 9e-05
@@ -236,9 +192,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:06:27 GMT 2012
+Wed Mar 14 15:05:03 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00012
@@ -246,9 +200,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:06:37 GMT 2012
+Wed Mar 14 15:05:13 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00015
@@ -256,9 +208,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:06:46 GMT 2012
+Wed Mar 14 15:05:22 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00018
@@ -266,9 +216,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:06:56 GMT 2012
+Wed Mar 14 15:05:31 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00021
@@ -276,9 +224,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:07:05 GMT 2012
+Wed Mar 14 15:05:41 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00024
@@ -286,9 +232,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:07:14 GMT 2012
+Wed Mar 14 15:05:50 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00027
@@ -296,9 +240,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:07:23 GMT 2012
+Wed Mar 14 15:06:00 GMT 2012
 
 ------------------------------------------------------------
 t = 0.0003
@@ -306,13 +248,11 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-94.71user 0.44system 1:37.67elapsed 97%CPU (0avgtext+0avgdata 547856maxresident)k
-0inputs+568outputs (7major+130273minor)pagefaults 0swaps
+95.90user 0.30system 1:36.58elapsed 99%CPU (0avgtext+0avgdata 496192maxresident)k
+0inputs+560outputs (7major+122284minor)pagefaults 0swaps
 Number of degrees of freedom: 1603
 Solving linear variational problem.
-Thu Mar  1 20:07:35 GMT 2012
+Wed Mar 14 15:06:11 GMT 2012
 
 ------------------------------------------------------------
 t = 3e-05
@@ -320,9 +260,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:07:46 GMT 2012
+Wed Mar 14 15:06:20 GMT 2012
 
 ------------------------------------------------------------
 t = 6e-05
@@ -330,9 +268,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:07:56 GMT 2012
+Wed Mar 14 15:06:30 GMT 2012
 
 ------------------------------------------------------------
 t = 9e-05
@@ -340,9 +276,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:08:05 GMT 2012
+Wed Mar 14 15:06:39 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00012
@@ -350,9 +284,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:08:14 GMT 2012
+Wed Mar 14 15:06:49 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00015
@@ -360,9 +292,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:08:24 GMT 2012
+Wed Mar 14 15:06:58 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00018
@@ -370,9 +300,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:08:33 GMT 2012
+Wed Mar 14 15:07:07 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00021
@@ -380,9 +308,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:08:42 GMT 2012
+Wed Mar 14 15:07:17 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00024
@@ -390,9 +316,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:08:51 GMT 2012
+Wed Mar 14 15:07:26 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00027
@@ -400,9 +324,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:09:01 GMT 2012
+Wed Mar 14 15:07:35 GMT 2012
 
 ------------------------------------------------------------
 t = 0.0003
@@ -410,13 +332,11 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-94.19user 0.42system 1:37.17elapsed 97%CPU (0avgtext+0avgdata 547840maxresident)k
-0inputs+568outputs (7major+130368minor)pagefaults 0swaps
+94.52user 0.38system 1:35.29elapsed 99%CPU (0avgtext+0avgdata 496320maxresident)k
+0inputs+568outputs (7major+122414minor)pagefaults 0swaps
 Number of degrees of freedom: 1603
 Solving linear variational problem.
-Thu Mar  1 20:09:13 GMT 2012
+Wed Mar 14 15:07:46 GMT 2012
 
 ------------------------------------------------------------
 t = 3e-05
@@ -424,9 +344,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:09:23 GMT 2012
+Wed Mar 14 15:07:56 GMT 2012
 
 ------------------------------------------------------------
 t = 6e-05
@@ -434,9 +352,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:09:33 GMT 2012
+Wed Mar 14 15:08:05 GMT 2012
 
 ------------------------------------------------------------
 t = 9e-05
@@ -444,9 +360,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:09:42 GMT 2012
+Wed Mar 14 15:08:15 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00012
@@ -454,9 +368,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:09:52 GMT 2012
+Wed Mar 14 15:08:24 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00015
@@ -464,9 +376,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:10:01 GMT 2012
+Wed Mar 14 15:08:33 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00018
@@ -474,9 +384,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:10:11 GMT 2012
+Wed Mar 14 15:08:43 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00021
@@ -484,9 +392,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:10:20 GMT 2012
+Wed Mar 14 15:08:52 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00024
@@ -494,9 +400,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:10:29 GMT 2012
+Wed Mar 14 15:09:02 GMT 2012
 
 ------------------------------------------------------------
 t = 0.00027
@@ -504,9 +408,7 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-Thu Mar  1 20:10:38 GMT 2012
+Wed Mar 14 15:09:11 GMT 2012
 
 ------------------------------------------------------------
 t = 0.0003
@@ -514,7 +416,5 @@ dt = 3e-05
 ------------------------------------------------------------
 Solving linear variational problem.
 Solving linear variational problem.
-Solving linear variational problem.
-Solving linear variational problem.
-94.93user 0.47system 1:38.05elapsed 97%CPU (0avgtext+0avgdata 547952maxresident)k
-0inputs+568outputs (7major+130487minor)pagefaults 0swaps
+94.93user 0.39system 1:35.71elapsed 99%CPU (0avgtext+0avgdata 496368maxresident)k
+0inputs+568outputs (7major+122341minor)pagefaults 0swaps
