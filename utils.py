@@ -56,6 +56,22 @@ def compute_adjoint(functional, forget=True):
 
       yield (output.data, adj_var)
 
+def compute_tlm(parameter, forget=False):
+
+  for i in range(adjointer.equation_count):
+      (tlm_var, output) = adjointer.get_tlm_solution(i, parameter)
+
+      storage = libadjoint.MemoryStorage(output)
+      storage.set_overwrite(True)
+      adjointer.record_variable(tlm_var, storage)
+
+      if forget:
+        adjointer.forget_tlm_equation(i)
+      else:
+        adjointer.forget_tlm_values(i)
+
+      yield (output.data, tlm_var)
+
 def test_initial_condition_adjoint(J, ic, final_adjoint, seed=0.01, perturbation_direction=None):
   '''forward must be a function that takes in the initial condition (ic) as a dolfin.Function
      and returns the functional value by running the forward run:

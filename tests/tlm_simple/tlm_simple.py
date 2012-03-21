@@ -31,8 +31,12 @@ if __name__ == "__main__":
     vec[i] = random.random()
 
   ICParam = InitialConditionParameter(ic, perturbation_direction)
-  dudm = tlm_dolfin(ICParam)
-  dudm_np = dudm.data.vector()
+
+  for (dudm, tlm_var) in compute_tlm(ICParam):
+    # just keep iterating until we get the last dudm
+    pass
+
+  dudm_np = dudm.vector()
 
   dJdu = derivative(soln*dx, soln)
   dJdu_np = assemble(dJdu)
