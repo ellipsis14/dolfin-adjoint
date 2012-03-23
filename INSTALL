@@ -1,0 +1,13 @@
+If you are using Ubuntu, installing dolfin-adjoint is as easy as:
+
+sudo apt-add-repository ppa:libadjoint/ppa
+sudo apt-get update
+sudo apt-get install python-dolfin-adjoint
+
+If you are building from source, you will need to install
+libadjoint and its python bindings first. The libadjoint
+source code is available from http://launchpad.net/libadjoint.
+
+See the INSTALL file of libadjoint for more details. In particular,
+the python bindings of libadjoint depend on gccxml (gccxml in Ubuntu,
+http://www.gccxml.org).
