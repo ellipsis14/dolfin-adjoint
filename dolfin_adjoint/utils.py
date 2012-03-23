@@ -1,5 +1,6 @@
 import libadjoint
 from solving import *
+from parameter import *
 from dolfin import info_red, info_blue, info
 
 def replay_dolfin(forget=False):

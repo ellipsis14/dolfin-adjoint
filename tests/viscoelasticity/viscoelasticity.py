@@ -288,16 +288,14 @@ if __name__ == "__main__":
     J = FinalFunctional(inner(sigma0[2], sigma0[2])*dx)
 
     info_blue("Running adjoint ... ")
-    for i in range(adjointer.equation_count)[::-1]:
-        (adj_var, output) = adjointer.get_adjoint_solution(i, J)
-
-        storage = libadjoint.MemoryStorage(output)
-        adjointer.record_variable(adj_var, storage)
+    i = adjointer.equation_count-1
+    for (output, adj_var) in compute_adjoint(J):
 
         file = File("%s/adjoint_%s_%d.xml" % (dirname, adj_var.name, i))
-        file << output.data
+        file << output
+        i = i - 1
 
-    adjoint = output.data
+    adjoint = output
 
     def Jfunc(ic):
       z = main(ic, T=T, dt=dt, annotate=False)

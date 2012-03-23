@@ -23,11 +23,12 @@ state = sw_lib.timeloop_theta(M,G,rhs_contr,ufl,ufr,state,divett.params)
 
 adj_html("sw_forward.html", "forward")
 adj_html("sw_adjoint.html", "adjoint")
-sw_lib.replay(state, divett.params)
+replay_dolfin()
 
 J = FinalFunctional(dot(state, state)*dx)
 f_direct = assemble(dot(state, state)*dx)
-adj_state = sw_lib.adjoint(state, divett.params, J)
+for (adj_state, var) in compute_adjoint(J):
+  pass
 
 ic = Function(W)
 ic.interpolate(divett.InitialConditions())

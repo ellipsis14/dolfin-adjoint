@@ -101,18 +101,6 @@ def main(ic, annotate=False):
 
     return T_
 
-def replay():
-    print "Replaying forward run"
-
-    for i in range(adjointer.equation_count):
-        (fwd_var, output) = adjointer.get_forward_solution(i)
-
-        s=libadjoint.MemoryStorage(output)
-        s.set_compare(0.0)
-        s.set_overwrite(True)
-
-        adjointer.record_variable(fwd_var, s)
-
 if __name__ == "__main__":
 
     from dolfin_adjoint import *
@@ -128,10 +116,12 @@ if __name__ == "__main__":
     adj_html("stokes_adjoint.html", "adjoint")
 
     # Replay model
-    replay()
+    replay_dolfin()
 
     print "Running adjoint ... "
-    adjoint = adjoint_dolfin(FinalFunctional(T*T*dx))
+    J = FinalFunctional(T*T*dx)
+    for (adjoint, var) in compute_adjoint(J, forget=False):
+      pass
 
     def J(ic):
       T = main(ic, annotate=False)

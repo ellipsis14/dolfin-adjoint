@@ -95,7 +95,9 @@ if __name__ == "__main__":
 
   print "Running adjoint model ..."
 
-  final_adjoint = run_adjoint()
+  for (adjoint, var) in compute_adjoint(functional, forget=False):
+    pass
+  final_adjoint = adjoint
 
   def J(ic):
     perturbed_u0 = run_forward(initial_condition=ic, annotate=False, dump=False)

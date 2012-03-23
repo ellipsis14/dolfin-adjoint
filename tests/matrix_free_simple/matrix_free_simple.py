@@ -37,7 +37,8 @@ if __name__ == "__main__":
   replay_dolfin()
 
   J = FinalFunctional(inner(final, final)*dx)
-  adjoint = adjoint_dolfin(J)
+  for (adjoint, var) in compute_adjoint(J, forget=False):
+    pass
 
   def J(ic):
     soln = main(ic)

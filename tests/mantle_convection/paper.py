@@ -197,10 +197,6 @@ def Nusselt():
 
     return (ds(2), Nu2)
 
-    # Define nusselt number
-    #Nu = - (1.0/Nu2)*grad(T)[1]*ds(2)
-    #return Nu
-
 if __name__ == "__main__":
   Tic = interpolate(InitialTemperature(Ra, length), Q)
   ic_copy = Function(Tic)
@@ -213,8 +209,8 @@ if __name__ == "__main__":
   adj_html("adjoint.html", "adjoint")
 
   J = FinalFunctional(-(1.0/Nu2)*grad(Tfinal)[1]*ds2)
-  #J = FinalFunctional(inner(Tfinal, Tfinal)*dx)
-  adjoint = adjoint_dolfin(J, forget=False)
+  for (adjoint, var) in compute_adjoint(J, forget=False):
+    pass
 
   adjoint_vtu = File("bin-final/adjoint.pvd", "compressed")
   adjoint_vtu << adjoint
@@ -222,7 +218,6 @@ if __name__ == "__main__":
   def J(ic):
     Tfinal = main(ic)
     return assemble(-(1.0/Nu2)*grad(Tfinal)[1]*ds2)
-    #return assemble(inner(Tfinal, Tfinal)*dx)
 
   perturbation_direction = Function(Q)
   perturbation_direction.vector()[:] = 1.0

@@ -141,7 +141,8 @@ if __name__ == "__main__":
   replay_dolfin(forget=False)
 
   J = FinalFunctional(inner(final_soln, final_soln)*dx)
-  final_adj = adjoint_dolfin(J, forget=False)
+  for (final_adj, var) in compute_adjoint(J, forget=False):
+    pass
 
   def J(ic):
     soln = main(ic)

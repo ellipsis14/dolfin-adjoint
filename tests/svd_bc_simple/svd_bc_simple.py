@@ -29,7 +29,7 @@ def propagator(ic): # a hand-coded tangent linear model, essentially
   mass = inner(u, v)*dx
   soln = Function(V)
 
-  solve(mass == action(mass, ic), soln, bc, annotate=annotate)
+  solve(mass == action(mass, ic), soln, bc, annotate=False)
   return soln
 
 if __name__ == "__main__":

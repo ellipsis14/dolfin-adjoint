@@ -104,7 +104,8 @@ if __name__ == "__main__":
   ic.vector()[:] = ic_copy.vector()
 
   J = FinalFunctional((1.0/(4*eps)) * (pow( (-1.0/eps) * forward[1], 2))*dx)
-  adjoint = adjoint_dolfin(J, forget=False)
+  for (adjoint, var) in compute_adjoint(J, forget=False):
+    pass
 
   def J(ic):
     u = main(ic, annotate=False)[0]

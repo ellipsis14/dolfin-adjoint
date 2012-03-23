@@ -100,4 +100,5 @@ if __name__ == "__main__":
   forward = main(ic)
 
   J = FinalFunctional((1.0/(4*eps)) * (pow( (-1.0/eps) * forward[1], 2))*dx)
-  adjoint = adjoint_dolfin(J)
+  for (adjoint, var) in compute_adjoint(J, forget=False):
+    pass

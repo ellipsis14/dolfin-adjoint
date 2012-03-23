@@ -5,6 +5,7 @@ timestep
 
 import sys
 import numpy
+import random
 
 from dolfin import *
 from dolfin_adjoint import *
@@ -61,7 +62,9 @@ if __name__ == "__main__":
 
     info_blue("Computing the TLM the direct way ... ")
     param = InitialConditionParameter(ic, perturbation)
-    final_tlm = tlm_dolfin(param, forget=False).data
+    for (tlm, var) in compute_tlm(param, forget=False):
+      pass
+    final_tlm = tlm
 
     ndof = V.dim()
     info_blue("Computing the TLM the SVD way ... ")
@@ -69,7 +72,7 @@ if __name__ == "__main__":
 
     assert svd.ncv == ndof
 
-    mat = compute_propagator_matrix(svd)
+    mat = adj_compute_propagator_matrix(svd)
     tlm_output = numpy.dot(mat, perturbation.vector().array())
     norm = numpy.linalg.norm(final_tlm.vector().array() - tlm_output)
 

@@ -277,4 +277,5 @@ if __name__ == "__main__":
     J = FinalFunctional(inner(sigma0[2], sigma0[2])*dx)
 
     info_blue("Running adjoint ... ")
-    adjoint = adjoint_dolfin(J)
+    for (adjoint, var) in compute_adjoint(J, forget=False):
+      pass

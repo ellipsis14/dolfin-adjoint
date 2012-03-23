@@ -214,7 +214,8 @@ if __name__ == "__main__":
 
   J = FinalFunctional(-(1.0/Nu2)*grad(Tfinal)[1]*ds2)
   #J = FinalFunctional(inner(Tfinal, Tfinal)*dx)
-  adjoint = adjoint_dolfin(J, forget=False)
+  for (adjoint, var) in compute_adjoint(J, forget=False):
+    pass
 
   print "Timings of adjoint model: "
   list_timings(True)

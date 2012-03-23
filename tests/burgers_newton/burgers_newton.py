@@ -58,7 +58,8 @@ if __name__ == "__main__":
     print "Running adjoint ... "
 
     J = FinalFunctional(forward*forward*dx)
-    adjoint = adjoint_dolfin(J, forget=False)
+    for (adjoint, var) in compute_adjoint(J, forget=False):
+      pass
 
     def Jfunc(ic):
       forward = main(ic, annotate=False)

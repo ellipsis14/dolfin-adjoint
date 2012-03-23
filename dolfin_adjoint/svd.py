@@ -5,7 +5,7 @@ def adj_compute_tlm_svd(ic, final, nsv):
   final_var = adj_variables[final]
   return adjointer.compute_tlm_svd(ic_var, final_var, nsv)
 
-def compute_propagator_matrix(svd):
+def adj_compute_propagator_matrix(svd):
   # Warning: for testing purposes only -- it's far too expensive to do on big models.
   # This also only works in serial.
 

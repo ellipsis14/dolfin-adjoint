@@ -206,7 +206,8 @@ if __name__ == "__main__":
   adj_html("adjoint.html", "adjoint")
 
   J = FinalFunctional(-(1.0/Nu2)*grad(Tfinal)[1]*ds2)
-  adjoint = adjoint_dolfin(J, forget=False)
+  for (adjoint, var) in compute_adjoint(J, forget=False):
+    pass
 
   def J(ic):
     Tfinal = main(ic)

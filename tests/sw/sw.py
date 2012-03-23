@@ -27,10 +27,11 @@ state = sw_lib.timeloop_theta(M,G,state,kelvin.params)
 adj_html("sw_forward.html", "forward")
 adj_html("sw_adjoint.html", "adjoint")
 
-sw_lib.replay(state, kelvin.params)
+replay_dolfin()
 J = FinalFunctional(dot(state, state)*dx)
 f_direct = assemble(dot(state, state)*dx)
-adj_state = sw_lib.adjoint(state, kelvin.params, J)
+for (adj_state, var) in compute_adjoint(J):
+  pass
 
 ic = Function(W)
 ic.interpolate(kelvin.InitialConditions())
