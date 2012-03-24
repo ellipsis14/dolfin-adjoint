@@ -28,6 +28,9 @@ import sys
 from dolfin import *
 from dolfin_adjoint import *
 
+import numpy; numpy.set_printoptions(threshold='nan')
+
+
 debugging["record_all"] = True
 debugging["fussy_replay"] = True
 
@@ -37,7 +40,7 @@ if not has_linear_algebra_backend("PETSc") and not has_linear_algebra_backend("E
     exit()
 
 # Load mesh
-mesh = UnitCube(8, 8, 8)
+mesh = UnitCube(4, 4, 4)
 
 # Define function spaces
 V = VectorFunctionSpace(mesh, "CG", 2)
@@ -89,8 +92,10 @@ solver.set_operators(A, P)
 
 # Solve
 U = Function(W)
+#solver.parameters["monitor_convergence"] = True
+solver.parameters["relative_tolerance"] = 1.0e-14
 solver.solve(U.vector(), bb)
 
-success = replay_dolfin()
-#if not success:
-#  sys.exit(1)
+success = replay_dolfin(tol=1.0e-14)
+if not success:
+  sys.exit(1)

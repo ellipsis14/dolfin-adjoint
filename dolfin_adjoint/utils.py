@@ -3,7 +3,7 @@ from solving import *
 from parameter import *
 from dolfin import info_red, info_blue, info
 
-def replay_dolfin(forget=False):
+def replay_dolfin(forget=False, tol=0.0):
   if "record_all" not in debugging or debugging["record_all"] is not True:
     info_red("Warning: your replay test will be much more effective with debugging['record_all'] = True.")
 
@@ -12,7 +12,7 @@ def replay_dolfin(forget=False):
       (fwd_var, output) = adjointer.get_forward_solution(i)
 
       storage = libadjoint.MemoryStorage(output)
-      storage.set_compare(tol=0.0)
+      storage.set_compare(tol=tol)
       storage.set_overwrite(True)
       out = adjointer.record_variable(fwd_var, storage)
       success = success and out

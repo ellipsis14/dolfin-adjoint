@@ -47,6 +47,7 @@ class KrylovSolver(dolfin.KrylovSolver):
         P = None
 
       solver_parameters = self.solver_parameters
+      parameters = self.parameters
       fn_space = u.function_space()
       has_preconditioner = P is not None
 
@@ -66,7 +67,7 @@ class KrylovSolver(dolfin.KrylovSolver):
             operators = self.operators
 
           solver = dolfin.KrylovSolver(*solver_parameters)
-          solver.parameters.update(self.solver_parameters)
+          solver.parameters.update(parameters)
 
           x = dolfin.Function(fn_space)
           if b.data is None:
