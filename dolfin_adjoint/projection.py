@@ -21,7 +21,7 @@ def project(v, V=None, bcs=None, mesh=None, solver_type="cg", preconditioner_typ
     a = dolfin.inner(w, Pv)*dolfin.dx
     L = dolfin.inner(w, v)*dolfin.dx
 
-    solving.annotate(a == L, out, bcs, solver_parameters={"linear_solver": solver_type, "preconditioner": preconditioner_type})
+    solving.annotate(a == L, out, bcs, solver_parameters={"linear_solver": solver_type, "preconditioner": preconditioner_type, "symmetric": True})
 
     if solving.debugging["record_all"]:
       solving.adjointer.record_variable(solving.adj_variables[out], libadjoint.MemoryStorage(solving.Vector(out)))
