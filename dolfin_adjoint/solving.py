@@ -182,9 +182,9 @@ def annotate(*args, **kwargs):
       # solution associated with the lifted discrete system that is actually solved.
       adjoint_bcs = [dolfin.homogenize(bc) for bc in eq_bcs if isinstance(bc, dolfin.DirichletBC)]
       if len(adjoint_bcs) == 0: adjoint_bcs = None
-      return (matrix_class(dolfin.adjoint(eq_l), bcs=adjoint_bcs, solver_parameters=solver_parameters), Vector(None, fn_space=u.function_space()))
+      return (matrix_class(dolfin.adjoint(eq_l), bcs=adjoint_bcs, solver_parameters=solver_parameters, adjoint=True), Vector(None, fn_space=u.function_space()))
     else:
-      return (matrix_class(eq_l, bcs=eq_bcs, solver_parameters=solver_parameters), Vector(None, fn_space=u.function_space()))
+      return (matrix_class(eq_l, bcs=eq_bcs, solver_parameters=solver_parameters, adjoint=False), Vector(None, fn_space=u.function_space()))
   diag_block.assemble = diag_assembly_cb
 
   def diag_action_cb(dependencies, values, hermitian, coefficient, input, context):
@@ -482,7 +482,7 @@ class Matrix(libadjoint.Matrix):
   together, duplicating matrices, etc., that occur in the process of constructing
   the adjoint equations.'''
 
-  def __init__(self, data, bcs=None, solver_parameters=None):
+  def __init__(self, data, bcs=None, solver_parameters=None, adjoint=None):
 
     if bcs is None:
       self.bcs = []

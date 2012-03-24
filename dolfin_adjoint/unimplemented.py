@@ -1,10 +1,5 @@
 import dolfin
 
-class KrylovSolver(dolfin.KrylovSolver):
-  def solve(self, *args, **kwargs):
-    dolfin.info_red("Warning: KrylovSolver.solve is not currently annotated.")
-    return dolfin.KrylovSolver.solve(self, *args, **kwargs)
-
 class NonlinearVariationalProblem(dolfin.NonlinearVariationalProblem):
   def __init__(self, *args, **kwargs):
     dolfin.info_red("Warning: NonlinearVariationalProblem is not currently annotated.")

@@ -8,6 +8,7 @@ def assemble(*args, **kwargs):
   output = dolfin_assemble(*args, **kwargs)
   if not isinstance(output, float):
     output.form = form
+    output.assemble_system = False
   return output
 
 bc_apply = dolfin.DirichletBC.apply
@@ -37,6 +38,8 @@ def assemble_system(*args, **kwargs):
   (lhs_out, rhs_out) = dolfin.assemble_system(*args, **kwargs)
   lhs_out.form = lhs
   lhs_out.bcs = bcs
+  lhs_out.assemble_system = True
   rhs_out.form = rhs
   rhs_out.bcs = bcs
+  rhs_out.assemble_system = True
   return (lhs_out, rhs_out)
