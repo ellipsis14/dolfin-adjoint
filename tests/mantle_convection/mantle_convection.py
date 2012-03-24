@@ -62,8 +62,8 @@ parameters["form_compiler"]["cpp_optimize"] = True
 # Define spatial domain
 height = 1.0
 length = 2.0
-nx = 10
-ny = 10
+nx = 5
+ny = 5
 mesh = Rectangle(0, 0, length, height, nx, ny)
 
 # Containers for storage
@@ -124,7 +124,7 @@ def main(T_, annotate=False):
   solver.parameters["relative_tolerance"] = 1.0e-14
   solver.parameters["monitor_convergence"] = False
 
-  while (t <= finish and n <= 3):
+  while (t <= finish and n <= 2):
     #message(t, dt)
 
     # Solve for predicted temperature in terms of previous velocity
@@ -213,7 +213,7 @@ if __name__ == "__main__":
     Tfinal = main(ic)
     return assemble(-(1.0/Nu2)*grad(Tfinal)[1]*ds2)
 
-  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=4.0e-1)
+  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=5.0e-1)
 
   if minconv < 1.9:
     sys.exit(1)
