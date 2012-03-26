@@ -3,6 +3,7 @@ from solving import *
 from parameter import *
 from dolfin import info_red, info_blue, info
 import dolfin
+import numpy
 
 def replay_dolfin(forget=False, tol=0.0):
   if "record_all" not in debugging or debugging["record_all"] is not True:
@@ -361,6 +362,38 @@ def test_scalar_parameter_adjoint(J, a, dJda):
 
   info("Gradients (finite differencing): " + str(gradient_fd))
   info("Gradient (adjoint): " + str(dJda))
+
+  return min(convergence_order(with_gradient))
+
+def test_scalar_parameters_adjoint(J, a, dJda, seed=0.1):
+  info_blue("Running Taylor remainder convergence analysis for the adjoint model ... ")
+
+  functional_values = []
+  f_direct = J(a)
+
+  a = numpy.array([float(x) for x in a])
+  dJda = numpy.array(dJda)
+
+  perturbation_direction = a/5.0
+  perturbation_sizes = [seed / (2**i) for i in range(5)]
+  perturbations = [a * i for i in perturbation_sizes]
+  for x in perturbations:
+    da = [dolfin.Constant(a[i] + x[i]) for i in range(len(a))]
+    functional_values.append(J(da))
+
+  # First-order Taylor remainders (not using adjoint)
+  no_gradient = [abs(perturbed_f - f_direct) for perturbed_f in functional_values]
+
+  info("Taylor remainder without adjoint information: " + str(no_gradient))
+  info("Convergence orders for Taylor remainder without adjoint information (should all be 1): " + str(convergence_order(no_gradient)))
+
+  with_gradient = []
+  for i in range(len(perturbations)):
+    remainder = abs(functional_values[i] - f_direct - numpy.dot(dJda, perturbations[i]))
+    with_gradient.append(remainder)
+
+  info("Taylor remainder with adjoint information: " + str(with_gradient))
+  info("Convergence orders for Taylor remainder with adjoint information (should all be 2): " + str(convergence_order(with_gradient)))
 
   return min(convergence_order(with_gradient))
 
