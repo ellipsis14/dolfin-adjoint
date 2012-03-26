@@ -54,17 +54,17 @@ def skw(tau):
     return as_vector((s[0][1], s[0][2], s[1][2]))
 
 # Compliance tensors (Semi-arbitrarily chosen values and units)
-def A00(tau, mu, lamda):
+def A00_tensor(tau, mu, lamda):
     "Maxwell dashpot (eta)"
     foo = 1.0/(2*mu)*(tau - lamda/(2*mu + 3*lamda)*tr(tau)*Identity(3))
     return foo
 
-def A10(tau, mu, lamda):
+def A10_tensor(tau, mu, lamda):
     "Maxwell spring (A2)"
     foo = 1.0/(2*mu)*(tau - lamda/(2*mu + 3*lamda)*tr(tau)*Identity(3))
     return foo
 
-def A11(tau, mu, lamda):
+def A11_tensor(tau, mu, lamda):
     "Elastic spring (A1)"
     foo = 1.0/(2*mu)*(tau - lamda/(2*mu + 3*lamda)*tr(tau)*Identity(3))
     return foo
@@ -116,11 +116,16 @@ def crank_nicolson_step(Z, z_, k_n, g, v_D_mid, ds, params):
     v_mid = avg(v, v_)
     gamma_mid = avg(gamma, gamma_)
 
+    # Define short-hand for compliance tensors to increase readability
+    A00 = lambda sigma: A00_tensor(sigma, params[0], params[1])
+    A10 = lambda sigma: A10_tensor(sigma, params[2], params[3])
+    A11 = lambda sigma: A11_tensor(sigma, params[4], params[5])
+
     # Define form
     n = FacetNormal(Z.mesh())
-    F = (inner(inv(k_n)*A10(sigma0 - sigma0_, params[2], params[3]), tau0)*dx
-         + inner(A00(sigma0_mid, params[0], params[1]), tau0)*dx
-         + inner(inv(k_n)*A11(sigma1 - sigma1_, params[4], params[5]), tau1)*dx
+    F = (inner(inv(k_n)*A10(sigma0 - sigma0_), tau0)*dx
+         + inner(A00(sigma0_mid), tau0)*dx
+         + inner(inv(k_n)*A11(sigma1 - sigma1_), tau1)*dx
          + inner(div(tau0 + tau1), v_mid)*dx
          + inner(skw(tau0 + tau1), gamma_mid)*dx
          + inner(div(sigma0_mid + sigma1_mid), w)*dx
@@ -150,11 +155,16 @@ def bdf2_step(Z, z_, z__, k_n, g, v_D, ds, params):
     (sigma0_, sigma1_, v_, gamma_) = split(z_)
     (sigma0__, sigma1__, v__, gamma__) = split(z__)
 
+    # Define short-hand for compliance tensors to increase readability
+    A00 = lambda sigma: A00_tensor(sigma, params[0], params[1])
+    A10 = lambda sigma: A10_tensor(sigma, params[2], params[3])
+    A11 = lambda sigma: A11_tensor(sigma, params[4], params[5])
+
     # Define complete form
     n = FacetNormal(Z.mesh())
-    F = (inner(inv(k_n)*A10(1.5*sigma0 - 2.*sigma0_ + 0.5*sigma0__, params[2], params[3]), tau0)*dx
-         + inner(A00(sigma0, params[0], params[1]), tau0)*dx
-         + inner(inv(k_n)*A11(1.5*sigma1 - 2.*sigma1_ + 0.5*sigma1__, params[4], params[5]), tau1)*dx
+    F = (inner(inv(k_n)*A10(1.5*sigma0 - 2.*sigma0_ + 0.5*sigma0__), tau0)*dx
+         + inner(A00(sigma0), tau0)*dx
+         + inner(inv(k_n)*A11(1.5*sigma1 - 2.*sigma1_ + 0.5*sigma1__), tau1)*dx
          + inner(div(tau0 + tau1), v)*dx
          + inner(skw(tau0 + tau1), gamma)*dx
          + inner(div(sigma0 + sigma1), w)*dx
