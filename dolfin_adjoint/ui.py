@@ -9,5 +9,6 @@ from utils import replay_dolfin, convergence_order, compute_adjoint, compute_tlm
 from utils import test_initial_condition_adjoint, test_initial_condition_adjoint_cdiff, test_initial_condition_tlm, test_scalar_parameter_adjoint, test_scalar_parameters_adjoint
 from newton_solver import NewtonSolver
 from krylov_solver import KrylovSolver
+from variational_solver import NonlinearVariationalSolver, NonlinearVariationalProblem, LinearVariationalSolver, LinearVariationalProblem
 from projection import project
 from unimplemented import *
