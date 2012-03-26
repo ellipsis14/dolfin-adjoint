@@ -36,6 +36,14 @@ from dolfin_adjoint import *
 penalty_beta = 10**8 # NB: Sensitive to this for values less than 10^6
 dirname = "test-results"
 
+mu00 = Constant(3.7466 * 10)
+lamda00 = Constant(10**4)
+mu10 = Constant(4.158)
+lamda10 = Constant(10**3) # kPa
+mu11 = Constant(2.39) # kPa
+lamda11 = Constant(10**3) # kPa
+params = [mu00, lamda00, mu10, lamda10, mu11, lamda11]
+
 # Vectorized div
 def div(v):
     return as_vector((d(v[0]), d(v[1]), d(v[2])))
@@ -46,24 +54,18 @@ def skw(tau):
     return as_vector((s[0][1], s[0][2], s[1][2]))
 
 # Compliance tensors (Semi-arbitrarily chosen values and units)
-def A00(tau):
+def A00(tau, mu, lamda):
     "Maxwell dashpot (eta)"
-    mu = Constant(3.7466 * 10) # kPa
-    lamda = Constant(10**4) # kPa
     foo = 1.0/(2*mu)*(tau - lamda/(2*mu + 3*lamda)*tr(tau)*Identity(3))
     return foo
 
-def A10(tau):
+def A10(tau, mu, lamda):
     "Maxwell spring (A2)"
-    mu = Constant(4.158)
-    lamda = Constant(10**3) # kPa
     foo = 1.0/(2*mu)*(tau - lamda/(2*mu + 3*lamda)*tr(tau)*Identity(3))
     return foo
 
-def A11(tau):
+def A11(tau, mu, lamda):
     "Elastic spring (A1)"
-    mu = Constant(2.39) # kPa
-    lamda = Constant(10**3) # kPa
     foo = 1.0/(2*mu)*(tau - lamda/(2*mu + 3*lamda)*tr(tau)*Identity(3))
     return foo
 
@@ -97,7 +99,7 @@ def get_spinal_cord():
             boundaries.array()[i] = 2
     return (mesh, boundaries)
 
-def crank_nicolson_step(Z, z_, k_n, g, v_D_mid, ds):
+def crank_nicolson_step(Z, z_, k_n, g, v_D_mid, ds, params):
 
     # Define trial and test functions
     (sigma0, sigma1, v, gamma) = TrialFunctions(Z)
@@ -116,9 +118,9 @@ def crank_nicolson_step(Z, z_, k_n, g, v_D_mid, ds):
 
     # Define form
     n = FacetNormal(Z.mesh())
-    F = (inner(inv(k_n)*A10(sigma0 - sigma0_), tau0)*dx
-         + inner(A00(sigma0_mid), tau0)*dx
-         + inner(inv(k_n)*A11(sigma1 - sigma1_), tau1)*dx
+    F = (inner(inv(k_n)*A10(sigma0 - sigma0_, params[2], params[3]), tau0)*dx
+         + inner(A00(sigma0_mid, params[0], params[1]), tau0)*dx
+         + inner(inv(k_n)*A11(sigma1 - sigma1_, params[4], params[5]), tau1)*dx
          + inner(div(tau0 + tau1), v_mid)*dx
          + inner(skw(tau0 + tau1), gamma_mid)*dx
          + inner(div(sigma0_mid + sigma1_mid), w)*dx
@@ -138,7 +140,7 @@ def crank_nicolson_step(Z, z_, k_n, g, v_D_mid, ds):
 
     return F
 
-def bdf2_step(Z, z_, z__, k_n, g, v_D, ds):
+def bdf2_step(Z, z_, z__, k_n, g, v_D, ds, params):
 
     # Define trial and test functions
     (sigma0, sigma1, v, gamma) = TrialFunctions(Z)
@@ -150,9 +152,9 @@ def bdf2_step(Z, z_, z__, k_n, g, v_D, ds):
 
     # Define complete form
     n = FacetNormal(Z.mesh())
-    F = (inner(inv(k_n)*A10(1.5*sigma0 - 2.*sigma0_ + 0.5*sigma0__), tau0)*dx
-         + inner(A00(sigma0), tau0)*dx
-         + inner(inv(k_n)*A11(1.5*sigma1 - 2.*sigma1_ + 0.5*sigma1__), tau1)*dx
+    F = (inner(inv(k_n)*A10(1.5*sigma0 - 2.*sigma0_ + 0.5*sigma0__, params[2], params[3]), tau0)*dx
+         + inner(A00(sigma0, params[0], params[1]), tau0)*dx
+         + inner(inv(k_n)*A11(1.5*sigma1 - 2.*sigma1_ + 0.5*sigma1__, params[4], params[5]), tau1)*dx
          + inner(div(tau0 + tau1), v)*dx
          + inner(skw(tau0 + tau1), gamma)*dx
          + inner(div(sigma0 + sigma1), w)*dx
@@ -183,7 +185,7 @@ Q = VectorFunctionSpace(mesh, "DG", 0)
 CG1 = VectorFunctionSpace(mesh, "CG", 1)
 Z = MixedFunctionSpace([S, S, V, Q])
 
-def main(ic, T=1.0, dt=0.01, annotate=False):
+def main(ic, params, T=1.0, dt=0.01, annotate=False):
     # dk = half the timestep
     dk = dt/2.0
 
@@ -206,13 +208,13 @@ def main(ic, T=1.0, dt=0.01, annotate=False):
     n = FacetNormal(mesh)
     g = - p*n
 
-    F_cn = crank_nicolson_step(Z, z_, Constant(dk), g, v_D_mid, ds)
+    F_cn = crank_nicolson_step(Z, z_, Constant(dk), g, v_D_mid, ds, params)
     (a_cn, L_cn) = system(F_cn)
     A_cn = assemble(a_cn)
     cn_solver = LUSolver(A_cn)
     cn_solver.parameters["reuse_factorization"] = True
 
-    F_bdf = bdf2_step(Z, z_star, z_, Constant(dk), g, v_D, ds)
+    F_bdf = bdf2_step(Z, z_star, z_, Constant(dk), g, v_D, ds, params)
     (a_bdf, L_bdf) = system(F_bdf)
     A_bdf = assemble(a_bdf)
     bdf_solver = LUSolver(A_bdf)
@@ -275,7 +277,7 @@ if __name__ == "__main__":
 
     # Play forward run
     info_blue("Running forward ... ")
-    z = main(ic, T=T, dt=dt, annotate=True)
+    z = main(ic, params, T=T, dt=dt, annotate=True)
 
     # Replay forward
     info_blue("Replaying forward run ... ")
@@ -286,30 +288,20 @@ if __name__ == "__main__":
     (sigma0, sigma1, v, gamma) = split(z)
     sigma = sigma0 + sigma1
     J = FinalFunctional(inner(sigma0[2], sigma0[2])*dx)
+    dJdp = compute_gradient(J, ScalarParameters(params))
 
-    info_blue("Running adjoint ... ")
-    i = adjointer.equation_count-1
-    for (output, adj_var) in compute_adjoint(J):
-
-        file = File("%s/adjoint_%s_%d.xml" % (dirname, adj_var.name, i))
-        file << output
-        i = i - 1
-
-    adjoint = output
-
-    def Jfunc(ic):
-      z = main(ic, T=T, dt=dt, annotate=False)
+    def Jfunc(params):
+      ic.vector()[:] = ic_copy.vector()
+      z = main(ic, params, T=T, dt=dt, annotate=False)
       (sigma0, sigma1, v, gamma) = split(z)
       sigma = sigma0 + sigma1
       J = assemble(inner(sigma0[2], sigma0[2])*dx)
       print "J(.): ", J
       return J
 
-    ic.vector()[:] = ic_copy.vector()
     info_blue("Checking adjoint correctness ... ")
-    minconv = test_initial_condition_adjoint(Jfunc, ic, adjoint, seed=1.0e-3)
+    minconv = test_scalar_parameters_adjoint(Jfunc, params, dJdp, seed=0.1)
 
-    if minconv < 1.9:
+    if minconv < 1.8:
       sys.exit(1)
-
 
