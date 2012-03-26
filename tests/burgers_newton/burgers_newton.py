@@ -49,23 +49,25 @@ if __name__ == "__main__":
     ic_copy = Function(ic)
     forward = main(ic, annotate=True)
     forward_copy = Function(forward)
+    ic = forward
+    ic.vector()[:] = ic_copy.vector()
 
     adj_html("burgers_newton_forward.html", "forward")
     adj_html("burgers_newton_adjoint.html", "adjoint")
 
     print "Running forward replay .... "
     replay_dolfin(forget=False)
+
     print "Running adjoint ... "
 
     J = FinalFunctional(forward*forward*dx)
-    for (adjoint, var) in compute_adjoint(J, forget=False):
-      pass
+    dJdic = compute_gradient(J, InitialConditionParameter(ic), forget=False)
 
     def Jfunc(ic):
       forward = main(ic, annotate=False)
       return assemble(forward*forward*dx)
 
-    minconv = test_initial_condition_adjoint(Jfunc, ic, adjoint, seed=1.0e-5)
+    minconv = test_initial_condition_adjoint(Jfunc, ic, dJdic, seed=1.0e-5)
     if minconv < 1.9:
       sys.exit(1)
 

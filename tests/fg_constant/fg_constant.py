@@ -29,9 +29,7 @@ if __name__ == "__main__":
   soln = main(ic, a, annotate=True)
 
   J = FinalFunctional(soln*soln*dx)
-  dJda = compute_gradient(J, a)
-
-  print "dJda: ", dJda
+  dJda = compute_gradient(J, ScalarParameter(a))
 
   def J(a):
     soln = main(ic, a, annotate=False)

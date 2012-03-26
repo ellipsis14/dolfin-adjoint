@@ -2,8 +2,6 @@ import libadjoint
 from solving import *
 from parameter import *
 from dolfin import info_red, info_blue, info
-import ufl
-import ufl.algorithms
 import dolfin
 
 def replay_dolfin(forget=False, tol=0.0):
@@ -319,41 +317,13 @@ def compute_gradient(J, param, forget=True):
 
     storage = libadjoint.MemoryStorage(output)
     adjointer.record_variable(adj_var, storage)
+    fwd_var = libadjoint.Variable(adj_var.name, adj_var.timestep, adj_var.iteration)
 
-    (fwd_var, lhs, rhs) = adjointer.get_forward_equation(i)
-    lhs = lhs.data; rhs = rhs.data; adjoint = output.data
-
-    if not isinstance(lhs, ufl.Identity):
-      fn_space = ufl.algorithms.extract_arguments(rhs)[0].function_space()
-      x = dolfin.Function(fn_space)
-      form = rhs - dolfin.action(lhs, x)
-
-      if isinstance(param, dolfin.Constant):
-        dparam = dolfin.Function(dolfin.FunctionSpace(fn_space.mesh(), "R", 0))
-        dparam.vector()[:] = 1.0
-      else:
-        dparam = None
-
-      diff_form = dolfin.derivative(form, param, dparam)
-
-      if x in ufl.algorithms.extract_coefficients(diff_form):
-        #raise libadjoint.exceptions.LibadjointErrorNotImplemented("Sorry, the dF/dm term can't depend on the solution (yet!)")
-        info_red("Warning: assuming dF/dm does not actually depend on the forward solution.")
-
-      dFdm = dolfin.assemble(diff_form) # actually - dF/dm
-      print "dFdm: ", list(dFdm)
-      if isinstance(dFdm, dolfin.GenericVector):
-        if dJdparam is None:
-          dJdparam = dFdm.inner(adjoint.vector())
-        else:
-          dJdparam += dFdm.inner(adjoint.vector())
-      elif isinstance(dFdm, dolfin.GenericMatrix):
-        if dJdparam is None:
-          dJdparam = dFdm.mult(adjoint.vector())
-        else:
-          dJdparam += dFdm.mult(adjoint.vector())
-      else:
-        raise libadjoint.exceptions.LibadjointErrorNotImplemented("Sorry, don't know how to handle anything else!")
+    out = param.inner_adjoint(adjointer, output.data, i, fwd_var)
+    if dJdparam is None:
+      dJdparam = out
+    elif dJdparam is not None and out is not None:
+      dJdparam += out
 
     if forget:
       adjointer.forget_adjoint_equation(i)
