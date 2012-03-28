@@ -291,11 +291,6 @@ if __name__ == "__main__":
     info_blue("Running forward ... ")
     z = main(ic, params, amplitude, T=T, dt=dt, annotate=True)
 
-    # Replay forward
-    info_blue("Replaying forward run ... ")
-    adj_html("forward.html", "forward")
-    replay_dolfin(forget=False)
-
     # Use elastic/viscous traction on vertical plane as goal
     (sigma0, sigma1, v, gamma) = split(z)
     sigma = sigma0 + sigma1
