@@ -182,11 +182,13 @@ def bdf2_step(Z, z_, z__, k_n, g, v_D, ds, params):
 
 # Quick testing for box:
 #(mesh, boundaries) = get_box()
-#p = Expression("0.05*sin(2*pi*t)*1.0/(100)*x[2]", t=0)
+#p = Expression("sin(2*pi*t)*1.0/(100)*x[2]", t=0)
+#amplitude = Constant(0.05)
 
 # Semi-realistic stuff:
 (mesh, boundaries) = get_spinal_cord()
 p = Expression("0.05*sin(2*pi*t)*(1.0/(171 - 78)*(x[2] - 78))", t=0)  # kPa
+amplitude = Constant(0.05)
 
 # Define function spaces
 S = VectorFunctionSpace(mesh, "BDM", 1)
@@ -195,7 +197,7 @@ Q = VectorFunctionSpace(mesh, "DG", 0)
 CG1 = VectorFunctionSpace(mesh, "CG", 1)
 Z = MixedFunctionSpace([S, S, V, Q])
 
-def main(ic, params, T=1.0, dt=0.01, annotate=False):
+def main(ic, params, amplitude, T=1.0, dt=0.01, annotate=False):
     # dk = half the timestep
     dk = dt/2.0
 
@@ -216,7 +218,7 @@ def main(ic, params, T=1.0, dt=0.01, annotate=False):
 
     # Boundary traction (pressure originating from CSF flow)
     n = FacetNormal(mesh)
-    g = - p*n
+    g = - amplitude*p*n
 
     F_cn = crank_nicolson_step(Z, z_, Constant(dk), g, v_D_mid, ds, params)
     (a_cn, L_cn) = system(F_cn)
@@ -287,7 +289,7 @@ if __name__ == "__main__":
 
     # Play forward run
     info_blue("Running forward ... ")
-    z = main(ic, params, T=T, dt=dt, annotate=True)
+    z = main(ic, params, amplitude, T=T, dt=dt, annotate=True)
 
     # Replay forward
     info_blue("Replaying forward run ... ")
@@ -298,11 +300,13 @@ if __name__ == "__main__":
     (sigma0, sigma1, v, gamma) = split(z)
     sigma = sigma0 + sigma1
     J = FinalFunctional(inner(sigma0[2], sigma0[2])*dx)
-    dJdp = compute_gradient(J, ScalarParameters(params))
+    dJdp = compute_gradient(J, ScalarParameter(amplitude))
 
-    def Jfunc(params):
+    print "dJ/dp: ", dJdp
+
+    def Jfunc(amplitude):
       ic.vector()[:] = ic_copy.vector()
-      z = main(ic, params, T=T, dt=dt, annotate=False)
+      z = main(ic, params, amplitude, T=T, dt=dt, annotate=False)
       (sigma0, sigma1, v, gamma) = split(z)
       sigma = sigma0 + sigma1
       J = assemble(inner(sigma0[2], sigma0[2])*dx)
@@ -310,7 +314,7 @@ if __name__ == "__main__":
       return J
 
     info_blue("Checking adjoint correctness ... ")
-    minconv = test_scalar_parameters_adjoint(Jfunc, params, dJdp, seed=0.1)
+    minconv = test_scalar_parameter_adjoint(Jfunc, amplitude, dJdp)
 
     if minconv < 1.8:
       sys.exit(1)

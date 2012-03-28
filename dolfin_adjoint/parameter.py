@@ -59,8 +59,14 @@ class ScalarParameter(libadjoint.Parameter):
       diff_form = dolfin.derivative(form, self.a, dparam)
 
       if x in ufl.algorithms.extract_coefficients(diff_form):
-        #raise libadjoint.exceptions.LibadjointErrorNotImplemented("Sorry, the dF/dm term can't depend on the solution (yet!)")
-        info_red("Warning: assuming dF/dm does not actually depend on the forward solution.")
+        # We really need the forward solution to compute dF/dm.
+        try:
+          y = adjointer.get_variable_value(fwd_var).data
+        except libadjoint.exceptions.LibadjointErrorNeedValue:
+          info_red("Warning: recomputing forward solution to compute -dF/dm")
+          y = adjointer.get_forward_solution(i)[1].data
+
+        diff_form = dolfin.replace(diff_form, {x: y})
 
       return solving.Vector(diff_form)
     else:
@@ -84,8 +90,14 @@ class ScalarParameter(libadjoint.Parameter):
       diff_form = dolfin.derivative(form, self.a, dparam)
 
       if x in ufl.algorithms.extract_coefficients(diff_form):
-        #raise libadjoint.exceptions.LibadjointErrorNotImplemented("Sorry, the dF/dm term can't depend on the solution (yet!)")
-        info_red("Warning: assuming dF/dm does not actually depend on the forward solution.")
+        # We really need the forward solution to compute dF/dm.
+        try:
+          y = adjointer.get_variable_value(fwd_var).data
+        except libadjoint.exceptions.LibadjointErrorNeedValue:
+          info_red("Warning: recomputing forward solution to compute -dF/dm")
+          y = adjointer.get_forward_solution(i)[1].data
+
+        diff_form = dolfin.replace(diff_form, {x: y})
 
       dFdm = dolfin.assemble(diff_form) # actually - dF/dm
       assert isinstance(dFdm, dolfin.GenericVector)
@@ -124,9 +136,15 @@ class ScalarParameters(libadjoint.Parameter):
         else:
           out_form += diff_form
 
-      if x in ufl.algorithms.extract_coefficients(diff_form):
-        #raise libadjoint.exceptions.LibadjointErrorNotImplemented("Sorry, the dF/dm term can't depend on the solution (yet!)")
-        info_red("Warning: assuming dF/dm does not actually depend on the forward solution.")
+        if x in ufl.algorithms.extract_coefficients(diff_form):
+          # We really need the forward solution to compute dF/dm.
+          try:
+            y = adjointer.get_variable_value(fwd_var).data
+          except libadjoint.exceptions.LibadjointErrorNeedValue:
+            info_red("Warning: recomputing forward solution to compute -dF/dm")
+            y = adjointer.get_forward_solution(i)[1].data
+
+          diff_form = dolfin.replace(diff_form, {x: y})
 
       return solving.Vector(diff_form)
     else:

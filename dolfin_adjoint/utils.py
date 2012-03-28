@@ -333,13 +333,16 @@ def compute_gradient(J, param, forget=True):
 
   return dJdparam
 
-def test_scalar_parameter_adjoint(J, a, dJda):
+def test_scalar_parameter_adjoint(J, a, dJda, seed=None):
   info_blue("Running Taylor remainder convergence analysis for the adjoint model ... ")
 
   functional_values = []
   f_direct = J(a)
 
-  perturbations = [(float(a)/5.0) / (2**i) for i in range(5)]
+  if seed is None:
+    seed = float(a)/5.0
+
+  perturbations = [seed / (2**i) for i in range(5)]
   for da in (dolfin.Constant(float(a) + x) for x in perturbations):
     functional_values.append(J(da))
 
