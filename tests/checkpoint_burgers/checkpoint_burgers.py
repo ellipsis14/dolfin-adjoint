@@ -49,7 +49,12 @@ def main(ic, annotate=False):
         u_.assign(u, annotate=annotate)
 
         t += float(timestep)
-        j += float(timestep)*assemble(u_*u_*dx)
+
+        if t == float(timestep) or t>end: 
+          quad_weight = 0.5
+        else:
+          quad_weight = 1.0
+        j += quad_weight*float(timestep)*assemble(u_*u_*dx)
         adj_inc_timestep()
         #plot(u)
 

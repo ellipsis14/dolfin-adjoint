@@ -15,7 +15,7 @@ class FinalFunctional(libadjoint.Functional):
     self.form = form
     self.activated = False
 
-  def __call__(self, dependencies, values):
+  def __call__(self, adjointer, dependencies, values):
 
     dolfin_dependencies=[dep for dep in ufl.algorithms.extract_coefficients(self.form) if hasattr(dep, "function_space")]
 
@@ -23,7 +23,7 @@ class FinalFunctional(libadjoint.Functional):
 
     return dolfin.assemble(dolfin.replace(self.form, dict(zip(dolfin_dependencies, dolfin_values))))
 
-  def derivative(self, variable, dependencies, values):
+  def derivative(self, adjointer, variable, dependencies, values):
 
     # Find the dolfin Function corresponding to variable.
     dolfin_variable = values[dependencies.index(variable)].data
@@ -68,17 +68,19 @@ class TimeFunctional(libadjoint.Functional):
     if finalform is not None:
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("finalform is not supported yet.")
 
-  def __call__(self, timestep, dependencies, values):
+  def __call__(self, adjointer, timestep, dependencies, values):
 
     dolfin_dependencies_form = [dep for dep in ufl.algorithms.extract_coefficients(self.form) if (hasattr(dep, "function_space") and dep not in self.staticvariables)]
     dolfin_values = [val.data for val in values]
 
-    # Check if the functional is to be evaluated at the last timestep
-    # TODO
-    quad_weight = 1.0
+    # The quadrature weight for the midpoint rule is 1.0 for interiour points and 0.5 at the end points.
+    if timestep==0 or timestep==adjointer.timestep_count-1: 
+      quad_weight = 0.5
+    else: 
+      quad_weight = 1.0
     return dolfin.assemble(dolfin.replace(quad_weight*self.dt*self.form, dict(zip(dolfin_dependencies, dolfin_values))))
 
-  def derivative(self, variable, dependencies, values):
+  def derivative(self, adjointer, variable, dependencies, values):
 
     # Find the dolfin Function corresponding to variable.
     dolfin_variable = values[dependencies.index(variable)].data
@@ -89,8 +91,11 @@ class TimeFunctional(libadjoint.Functional):
     test = dolfin.TestFunction(dolfin_variable.function_space())
     current_form = dolfin.replace(self.form, dict(zip(dolfin_dependencies_form, dolfin_values)))
 
-    #print "Computing the functional derivative with respect to variable", str(variable)
-    quad_weight = 1.0
+    # The quadrature weight for the midpoint rule is 1.0 for interiour points and 0.5 at the end points.
+    if variable.timestep==0 or variable.timestep==adjointer.timestep_count-1: 
+      quad_weight = 0.5
+    else: 
+      quad_weight = 1.0
     return solving.Vector(dolfin.derivative(quad_weight*self.dt*current_form, dolfin_variable, test))
 
   def dependencies(self, adjointer, timestep):
@@ -100,7 +105,6 @@ class TimeFunctional(libadjoint.Functional):
       deps[i].var.timestep = timestep
       deps[i].var.iteration = deps[i].iteration_count(adjointer) - 1 
 
-    #print "The dependencies for timestep ", timestep, " are: ", [str(dep) for dep in deps]
     return deps
 
   def __str__(self):
