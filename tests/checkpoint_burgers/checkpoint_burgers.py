@@ -49,7 +49,7 @@ def main(ic, annotate=False):
         u_.assign(u, annotate=annotate)
 
         t += float(timestep)
-        j += assemble(u_*u_*dx)
+        j += float(timestep)*assemble(u_*u_*dx)
         adj_inc_timestep()
         #plot(u)
 
@@ -67,7 +67,8 @@ if __name__ == "__main__":
     #replay_dolfin()
     print "Running adjoint ... "
 
-    J = TimeFunctional(forward*forward*dx)
+    timestep = Constant(1.0/n)
+    J = TimeFunctional(forward*forward*dx, float(timestep))
     for (adjoint, var) in compute_adjoint(J, forget=False):
       pass
 

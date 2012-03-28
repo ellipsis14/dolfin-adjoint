@@ -54,45 +54,53 @@ class FinalFunctional(libadjoint.Functional):
 
 class TimeFunctional(libadjoint.Functional):
   '''This class implements the libadjoint.Functional abstract base class for the Dolfin adjoint for implementing functionals of the form:
-      \sum_{t=0..T} form(t)  + finalform(T)
-  The two forms, form and finalform, may only use variables of the same timelevel. 
-  If finalform is not provided, the second term is neglected.'''
+      \int_{t=0..T} form(t) + finalform(T).
+    The integration of the time integral is performed using the midpoint quadrature rule (i.e. exact if the solution is piecewise linear in time) assuming that a constant timestep dt is employed.
+    The two forms, form and finalform, may only use UFL coefficients of the same timelevel, except the UFL coefficients that are listed in the optional parameter staticvariables. 
+    If finalform is not provided, the second term is neglected.'''
 
-  def __init__(self, form, finalform=None):
+  def __init__(self, form, dt, finalform=None, staticvariables = []):
 
     self.form = form
+    self.staticvariables = staticvariables
+    self.dt = dt
 
     if finalform is not None:
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("finalform is not supported yet.")
 
   def __call__(self, timestep, dependencies, values):
 
-    dolfin_dependencies_form = [dep for dep in ufl.algorithms.extract_coefficients(self.form) if hasattr(dep, "function_space")]
+    dolfin_dependencies_form = [dep for dep in ufl.algorithms.extract_coefficients(self.form) if (hasattr(dep, "function_space") and dep not in self.staticvariables)]
     dolfin_values = [val.data for val in values]
 
     # Check if the functional is to be evaluated at the last timestep
-    return dolfin.assemble(dolfin.replace(self.form, dict(zip(dolfin_dependencies, dolfin_values))))
+    # TODO
+    quad_weight = 1.0
+    return dolfin.assemble(dolfin.replace(quad_weight*self.dt*self.form, dict(zip(dolfin_dependencies, dolfin_values))))
 
   def derivative(self, variable, dependencies, values):
 
     # Find the dolfin Function corresponding to variable.
     dolfin_variable = values[dependencies.index(variable)].data
 
-    dolfin_dependencies_form = [dep for dep in ufl.algorithms.extract_coefficients(self.form) if hasattr(dep, "function_space")]
+    dolfin_dependencies_form = [dep for dep in ufl.algorithms.extract_coefficients(self.form) if (hasattr(dep, "function_space") and dep not in self.staticvariables)]
     dolfin_values = [val.data for val in values]
 
     test = dolfin.TestFunction(dolfin_variable.function_space())
     current_form = dolfin.replace(self.form, dict(zip(dolfin_dependencies_form, dolfin_values)))
 
-    return solving.Vector(dolfin.derivative(current_form, dolfin_variable, test))
+    #print "Computing the functional derivative with respect to variable", str(variable)
+    quad_weight = 1.0
+    return solving.Vector(dolfin.derivative(quad_weight*self.dt*current_form, dolfin_variable, test))
 
   def dependencies(self, adjointer, timestep):
-    deps = [solving.adj_variables[coeff] for coeff in ufl.algorithms.extract_coefficients(self.form) if hasattr(coeff, "function_space")]
+    deps = [solving.adj_variables[coeff] for coeff in ufl.algorithms.extract_coefficients(self.form) if (hasattr(coeff, "function_space") and coeff not in self.staticvariables)]
     # Set the time level of the dependencies:
     for i in range(len(deps)):
       deps[i].var.timestep = timestep
       deps[i].var.iteration = deps[i].iteration_count(adjointer) - 1 
 
+    #print "The dependencies for timestep ", timestep, " are: ", [str(dep) for dep in deps]
     return deps
 
   def __str__(self):
