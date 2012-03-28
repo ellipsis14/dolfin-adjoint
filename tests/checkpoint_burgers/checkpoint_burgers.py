@@ -67,7 +67,8 @@ if __name__ == "__main__":
     #replay_dolfin()
     print "Running adjoint ... "
 
-    J = TimeFunctional(forward*forward*dx)
+    timestep = Constant(1.0/n)
+    J = TimeFunctional(forward*forward*dx, float(timestep))
     adjoint = adjoint_dolfin(J)
 
     def Jfunc(ic):
