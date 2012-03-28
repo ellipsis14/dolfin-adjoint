@@ -146,6 +146,7 @@ def timeloop_theta(M, G, rhs_contr, ufl, ufr, state, params, annotate=True):
 
     tmpstate=Function(state.function_space())
 
+    j = 0
     while (t < params["finish_time"]):
         t+=dt
 
@@ -171,8 +172,12 @@ def timeloop_theta(M, G, rhs_contr, ufl, ufr, state, params, annotate=True):
             
             u_out << u_out_state
             p_out << p_out_state
+        j += assemble(dot(state, state)*dx)
 
-    return state # return the state at the final time
+        # Tell libadjoint about the next timestep
+        adj_inc_timestep()
+
+    return j, state # return the state and the functional's time integral contribution at the final time
 
 def replay(state,params):
 

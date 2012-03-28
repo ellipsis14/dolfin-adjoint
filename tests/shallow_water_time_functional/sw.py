@@ -17,25 +17,24 @@ divett.params["dt"]=divett.params["finish_time"]/5
 divett.params["period"]=60*60*1.24
 divett.params["dump_period"]=1
 
-M,G,rhs_contr,ufl,ufr=sw_lib.construct_shallow_water(W,divett.ds,divett.params)
+M, G, rhs_contr, ufl,ufr=sw_lib.construct_shallow_water(W, divett.ds, divett.params)
 
-state = sw_lib.timeloop_theta(M,G,rhs_contr,ufl,ufr,state,divett.params)
+j, state = sw_lib.timeloop_theta(M, G, rhs_contr, ufl, ufr, state, divett.params)
 
 adj_html("sw_forward.html", "forward")
 adj_html("sw_adjoint.html", "adjoint")
 sw_lib.replay(state, divett.params)
 
-J = FinalFunctional(dot(state, state)*dx)
-f_direct = assemble(dot(state, state)*dx)
+J = TimeFunctional(dot(state, state)*dx, dt=divett.params["dt"])
 adj_state = sw_lib.adjoint(state, divett.params, J)
+
+def compute_J(ic):
+  j, state = sw_lib.timeloop_theta(M, G, rhs_contr, ufl, ufr, ic, divett.params, annotate=False)
+  return j
 
 ic = Function(W)
 ic.interpolate(divett.InitialConditions())
-def J(ic):
-  state = sw_lib.timeloop_theta(M, G, rhs_contr,ufl,ufr,ic, divett.params, annotate=False)
-  return assemble(dot(state, state)*dx)
-
-minconv = test_initial_condition_adjoint(J, ic, adj_state, seed=0.001)
+minconv = test_initial_condition_adjoint(compute_J, ic, adj_state, seed=0.001)
 if minconv < 1.9:
   exit_code = 1
 else:
