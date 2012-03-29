@@ -20,8 +20,8 @@ def Dt(u, u_, timestep):
 
 def main(ic, annotate=False):
 
-    u_ = Function(ic)
-    u = Function(V)
+    u_ = Function(ic, name="Velocity")
+    u = Function(V, name="VelocityNext")
     v = TestFunction(V)
 
     nu = Constant(0.0001)
