@@ -8,4 +8,5 @@ import functional
 import split_annotation
 import lusolver
 import svd
+import function
 from ui import *

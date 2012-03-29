@@ -11,4 +11,5 @@ from newton_solver import NewtonSolver
 from krylov_solver import KrylovSolver
 from variational_solver import NonlinearVariationalSolver, NonlinearVariationalProblem, LinearVariationalSolver, LinearVariationalProblem
 from projection import project
+from function import Function
 from unimplemented import *
