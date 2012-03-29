@@ -147,7 +147,8 @@ def timeloop_theta(M, G, rhs_contr, ufl, ufr, state, params, annotate=True):
     tmpstate=Function(state.function_space())
 
     j = 0
-    j += 0.5*dt*assemble(dot(state[0], state[0])*dx)
+    (u_j, p_j) = split(state)
+    j += 0.5*dt*assemble(dot(u_j, u_j)*dx)
     while (t < params["finish_time"]):
         t+=dt
 
@@ -183,7 +184,8 @@ def timeloop_theta(M, G, rhs_contr, ufl, ufr, state, params, annotate=True):
           quad_weight = 0.5
         else:
           quad_weight = 1.0
-        j += quad_weight*dt*assemble(dot(state[0], state[0])*dx)
+        (u_j, p_j) = split(state)
+        j += quad_weight*dt*assemble(dot(u_j, u_j)*dx)
 
         # Tell libadjoint about the next timestep
         adj_inc_timestep()
