@@ -320,7 +320,11 @@ class Vector(libadjoint.Vector):
       # The data type will be determined by the first addto.
       data = None
     elif isinstance(self.data, dolfin.Function):
-      data = dolfin.Function(self.data.function_space())
+      try:
+        fn_space = self.data.function_space().collapse()
+      except:
+        fn_space = self.data.function_space()
+      data = dolfin.Function(fn_space)
     else:
       data = None
 
@@ -777,6 +781,14 @@ def register_initial_conditions(coeffdeps, linear, var=None):
       if not linear: # don't register initial conditions for the first nonlinear solve.
         if dep == var:
           continue
+
+      if hasattr(coeff, "split"):
+        if coeff.split is True:
+          errmsg = '''Cannot use Function.split() (yet). To adjoint this, we need functionality
+          not yet present in DOLFIN. See https://bugs.launchpad.net/dolfin/+bug/891127 .
+
+          Your model may well work if you use split(func) instead of func.split().'''
+          raise libadjoint.exceptions.LibadjointErrorNotImplemented(errmsg)
 
       register_initial_condition(coeff, dep)
 

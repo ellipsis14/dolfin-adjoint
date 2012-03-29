@@ -5,6 +5,7 @@ import libadjoint
 import assign
 
 dolfin_assign = dolfin.Function.assign
+dolfin_split  = dolfin.Function.split
 
 def dolfin_adjoint_assign(self, other, annotate=True):
   '''We also need to monkeypatch the Function.assign method, as it is often used inside 
@@ -33,6 +34,17 @@ def dolfin_adjoint_assign(self, other, annotate=True):
   assign.register_assign(self, other)
   return out
 
+def dolfin_adjoint_split(self, *args, **kwargs):
+  out = dolfin_split(self, *args, **kwargs)
+  for i, fn in enumerate(out):
+    fn.split = True
+    fn.split_fn = self
+    fn.split_i  = i
+    fn.split_args = args
+    fn.split_kwargs = kwargs
+
+  return out
+
 class Function(dolfin.Function):
   def __init__(self, *args, **kwargs):
     if "name" in kwargs:
@@ -43,6 +55,9 @@ class Function(dolfin.Function):
   def assign(self, other, annotate=True):
     return dolfin_adjoint_assign(self, other, annotate=annotate)
 
+  def split(self, *args, **kwargs):
+    return dolfin_adjoint_split(self, *args, **kwargs)
+
   def __str__(self):
     if hasattr(self, "adj_name"):
       return self.adj_name
@@ -50,4 +65,5 @@ class Function(dolfin.Function):
       return dolfin.Function.__str__(self)
 
 dolfin.Function.assign = dolfin_adjoint_assign # so that Functions produced inside Expression etc. get it too
+dolfin.Function.split  = dolfin_adjoint_split
 

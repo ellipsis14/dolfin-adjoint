@@ -9,28 +9,6 @@ import expressions
 import hashlib
 import time
 
-Function_split = dolfin.Function.split
-def adjoint_split(self, **kwargs):
-  annotate = False
-  if "annotate" in kwargs:
-    annotate = kwargs["annotate"]
-    del kwargs["annotate"]
-
-  bcs = []
-  if "bcs" in kwargs:
-    bcs = kwargs["bcs"]
-    del kwargs["bcs"]
-
-  out = Function_split(self, **kwargs)
-
-  if annotate:
-    dolfin.info_red("Warning: function.split() is not annotated; use ufl.split(function) instead")
-    for idx, fn in enumerate(out):
-      annotate_split(self, idx, fn, bcs)
-
-  return out
-dolfin.Function.split = adjoint_split
-
 def annotate_split(bigfn, idx, smallfn, bcs):
   fn_space = smallfn.function_space().collapse()
   test = dolfin.TestFunction(fn_space)
