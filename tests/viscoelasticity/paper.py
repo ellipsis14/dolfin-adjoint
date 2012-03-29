@@ -280,7 +280,7 @@ def main(ic, params, amplitude, T=1.0, dt=0.01, annotate=False):
 if __name__ == "__main__":
 
     # Adjust behaviour at will:
-    T = 2.0
+    T = 1.25
     dt = 0.01
     set_log_level(PROGRESS)
 
