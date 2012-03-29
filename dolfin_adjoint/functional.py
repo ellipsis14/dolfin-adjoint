@@ -111,7 +111,7 @@ class TimeFunctional(libadjoint.Functional):
 
   def dependencies(self, adjointer, timestep):
 
-    if solving.adj_variables.libadjoint_timestep == 0:
+    if solving.adj_variables.libadjoint_timestep <= 1:
       dolfin.info_red("Warning: instantiating a TimeFunctional without having called adj_inc_timestep. This probably won't work.")
 
     deps = [solving.adj_variables[coeff] for coeff in ufl.algorithms.extract_coefficients(self.form) if (hasattr(coeff, "function_space") and coeff not in self.staticvariables)]

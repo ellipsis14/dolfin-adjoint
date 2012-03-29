@@ -37,6 +37,8 @@ debugging["test_derivative"] = None
 debugging["fussy_replay"] = True
 debugging["stop_annotating"] = False
 
+first_solve = True
+
 # Create the adjointer, the central object that records the forward solve
 # as it happens.
 adjointer = libadjoint.Adjointer()
@@ -147,7 +149,13 @@ def annotate(*args, **kwargs):
   # These equations are necessary so that libadjoint can assemble the
   # relevant adjoint equations for the adjoint variables associated with
   # the initial conditions.
-  register_initial_conditions(zip(rhs.coefficients(),rhs.dependencies()) + zip(diag_coeffs, diag_deps), linear=linear, var=var)
+  no_registered = register_initial_conditions(zip(rhs.coefficients(),rhs.dependencies()) + zip(diag_coeffs, diag_deps), linear=linear, var=var)
+
+  global first_solve
+  if first_solve is True:
+    first_solve = False
+    if no_registered > 0 and linear:
+      adj_inc_timestep()
 
   # c.f. the discussion above. In the linear case, we want to bump the
   # timestep number /after/ all of the dependencies' timesteps have been
@@ -774,6 +782,7 @@ def adj_checkpointing(strategy, steps, snaps_on_disk, snaps_in_ram, verbose=Fals
   adjointer.set_revolve_options(steps, snaps_on_disk, snaps_in_ram, verbose)
 
 def register_initial_conditions(coeffdeps, linear, var=None):
+  i = 0
   for coeff, dep in coeffdeps:
     # If coeff is not known, it must be an initial condition.
     if not adjointer.variable_known(dep):
@@ -791,6 +800,9 @@ def register_initial_conditions(coeffdeps, linear, var=None):
           raise libadjoint.exceptions.LibadjointErrorNotImplemented(errmsg)
 
       register_initial_condition(coeff, dep)
+      i = i + 1
+
+  return i
 
 def register_initial_condition(coeff, dep):
   fn_space = coeff.function_space()

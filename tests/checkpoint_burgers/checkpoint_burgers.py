@@ -39,10 +39,11 @@ def main(ic, annotate=False):
     t = 0.0
     end = 0.5
     if annotate: 
-      adj_checkpointing('multistage', int(ceil(end/float(timestep))), 5, 10, verbose=True)
+      adj_checkpointing('multistage', int(ceil(end/float(timestep)))+1, 5, 10, verbose=True)
 
     u = Function(V)
     j = 0
+    j += 0.5*float(timestep)*assemble(u_*u_*dx)
     while (t <= end):
         solve(a == L, u, bc, annotate=annotate)
 
@@ -50,7 +51,7 @@ def main(ic, annotate=False):
 
         t += float(timestep)
 
-        if t == float(timestep) or t>end: 
+        if t>end: 
           quad_weight = 0.5
         else:
           quad_weight = 1.0

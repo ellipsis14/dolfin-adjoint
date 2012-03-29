@@ -103,6 +103,8 @@ if __name__ == "__main__":
   forward_copy = Function(forward)
   ic.vector()[:] = ic_copy.vector()
 
+  adj_html("forward.html", "forward")
+
   J = FinalFunctional((1.0/(4*eps)) * (pow( (-1.0/eps) * forward[1], 2))*dx)
   for (adjoint, var) in compute_adjoint(J, forget=False):
     pass

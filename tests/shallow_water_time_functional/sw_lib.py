@@ -147,6 +147,7 @@ def timeloop_theta(M, G, rhs_contr, ufl, ufr, state, params, annotate=True):
     tmpstate=Function(state.function_space())
 
     j = 0
+    j += 0.5*dt*assemble(dot(state, state)*dx)
     while (t < params["finish_time"]):
         t+=dt
 
@@ -173,7 +174,7 @@ def timeloop_theta(M, G, rhs_contr, ufl, ufr, state, params, annotate=True):
             u_out << u_out_state
             p_out << p_out_state
 
-        if t==dt or t>=params["finish_time"]:
+        if t>=params["finish_time"]:
           quad_weight = 0.5
         else:
           quad_weight = 1.0
