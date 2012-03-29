@@ -32,6 +32,7 @@ from dolfin import div as d
 
 # Adjoint stuff
 from dolfin_adjoint import *
+import libadjoint
 
 penalty_beta = 10**8 # NB: Sensitive to this for values less than 10^6
 dirname = "fine-spinal-results"
@@ -295,9 +296,42 @@ if __name__ == "__main__":
     (sigma0, sigma1, v, gamma) = split(z)
     sigma = sigma0 + sigma1
     J = FinalFunctional(inner(sigma0[2], sigma0[2])*dx)
-    dJdp = compute_gradient(J, ScalarParameter(amplitude))
+    param = ScalarParameter(amplitude)
+    adjointer = solving.adjointer
+
+# Copy the code from compute_gradient:
+    #dJdp = compute_gradient(J, ScalarParameter(amplitude))
+# as we want to also dump out norms of the adjoint solution.
+#   --------------------------------------------------------------
+    norm0s = []
+    norm1s = []
+    dJdparam = None
+
+    for i in range(adjointer.equation_count)[::-1]:
+      (adj_var, output) = adjointer.get_adjoint_solution(i, J)
+
+      storage = libadjoint.MemoryStorage(output)
+      adjointer.record_variable(adj_var, storage)
+      fwd_var = libadjoint.Variable(adj_var.name, adj_var.timestep, adj_var.iteration)
+
+      out = param.inner_adjoint(adjointer, output.data, i, fwd_var)
+      if dJdparam is None:
+        dJdparam = out
+      elif dJdparam is not None and out is not None:
+        dJdparam += out
+
+      if adj_var.name == "w_{10}":
+        (adj_sigma0, adj_sigma1, adj_v, adj_gamma) = output.data.split()
+        norm0s += [norm(adj_sigma0)]
+        norm1s += [norm(adj_sigma1)]
+
+      adjointer.forget_adjoint_equation(i)
+    dJdp = dJdparam
+#   --------------------------------------------------------------
 
     print "dJ/dp: ", dJdp
+    print "norm0s: ", norm0s
+    print "norm1s: ", norm1s
 
     def Jfunc(amplitude):
       ic.vector()[:] = ic_copy.vector()
