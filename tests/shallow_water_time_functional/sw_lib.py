@@ -157,6 +157,11 @@ def timeloop_theta(M, G, rhs_contr, ufl, ufr, state, params, annotate=True):
         
         # Solve the shallow water equations.
         solve(A==rhs, tmpstate, annotate=annotate)
+
+        state.assign(tmpstate, annotate=annotate)
+
+        # We solve twice, to make sure that TimeFunctional handles multiple-solves-per-timestep correctly
+        solve(A==rhs, tmpstate, annotate=annotate)
         #solve(A, state.vector(), rhs, "preonly", "lu")
 
         state.assign(tmpstate, annotate=annotate)
