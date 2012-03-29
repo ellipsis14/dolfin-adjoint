@@ -215,5 +215,5 @@ if __name__ == "__main__":
 
   minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=5.0e-1)
 
-  if minconv < 1.9:
+  if minconv < 1.8:
     sys.exit(1)
