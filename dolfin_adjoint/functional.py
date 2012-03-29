@@ -96,7 +96,7 @@ class TimeFunctional(libadjoint.Functional):
     current_form = dolfin.replace(self.form, dict(zip(dolfin_dependencies_form, dolfin_values)))
 
     # The quadrature weight for the midpoint rule is 1.0 for interiour points and 0.5 at the end points.
-    if variable.timestep==0 or variable.timestep==adjointer.timestep_count-1: 
+    if (variable.timestep == 0) or variable.timestep==adjointer.timestep_count-1: 
       quad_weight = 0.5
     else: 
       quad_weight = 1.0
@@ -110,6 +110,10 @@ class TimeFunctional(libadjoint.Functional):
     return solving.Vector(functional_deriv_value)
 
   def dependencies(self, adjointer, timestep):
+
+    if solving.adj_variables.libadjoint_timestep == 0:
+      dolfin.info_red("Warning: instantiating a TimeFunctional without having called adj_inc_timestep. This probably won't work.")
+
     deps = [solving.adj_variables[coeff] for coeff in ufl.algorithms.extract_coefficients(self.form) if (hasattr(coeff, "function_space") and coeff not in self.staticvariables)]
 
     # Add the dependencies for the finalform
