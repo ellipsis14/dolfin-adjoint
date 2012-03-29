@@ -25,13 +25,13 @@ adj_html("sw_forward.html", "forward")
 adj_html("sw_adjoint.html", "adjoint")
 replay_dolfin()
 
-J = TimeFunctional(dot(state, state)*dx, divett.params["dt"])
+J = TimeFunctional(dot(state, state)*dx, divett.params["dt"], finalform=3.14*dot(state, state)*dx)
 for (adj_state, var) in compute_adjoint(J):
   pass
 
 def compute_J(ic):
   j, state = sw_lib.timeloop_theta(M, G, rhs_contr, ufl, ufr, ic, divett.params, annotate=False)
-  return j
+  return j + assemble(3.14*dot(state, state)*dx)
 
 ic = Function(W)
 ic.interpolate(divett.InitialConditions())

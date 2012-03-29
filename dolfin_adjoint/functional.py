@@ -64,9 +64,7 @@ class TimeFunctional(libadjoint.Functional):
     self.form = form
     self.staticvariables = staticvariables
     self.dt = dt
-
-    if finalform is not None:
-      raise libadjoint.exceptions.LibadjointErrorNotImplemented("finalform is not supported yet.")
+    self.finalform = finalform
 
   def __call__(self, adjointer, timestep, dependencies, values):
 
@@ -78,7 +76,13 @@ class TimeFunctional(libadjoint.Functional):
       quad_weight = 0.5
     else: 
       quad_weight = 1.0
-    return dolfin.assemble(dolfin.replace(quad_weight*self.dt*self.form, dict(zip(dolfin_dependencies, dolfin_values))))
+    functional_value = dolfin.replace(quad_weight*self.dt*self.form, dict(zip(dolfin_dependencies, dolfin_values)))
+
+    # Add the contribution of the integral at the last timestep
+    if self.finalform != None and timestep==adjointer.timestep_count-1:
+      functional_value += dolfin.replace(self.finalform, dict(zip(dolfin_dependencies, dolfin_values)))
+
+    return dolfin.assemble(functional_value)
 
   def derivative(self, adjointer, variable, dependencies, values):
 
@@ -96,10 +100,24 @@ class TimeFunctional(libadjoint.Functional):
       quad_weight = 0.5
     else: 
       quad_weight = 1.0
-    return solving.Vector(dolfin.derivative(quad_weight*self.dt*current_form, dolfin_variable, test))
+    functional_deriv_value = dolfin.derivative(quad_weight*self.dt*current_form, dolfin_variable, test)
+
+    # Add the contribution of the integral at the last timestep
+    if self.finalform != None and variable.timestep==adjointer.timestep_count-1:
+      finalform = dolfin.replace(self.finalform, dict(zip(dolfin_dependencies_form, dolfin_values)))
+      functional_deriv_value += dolfin.derivative(finalform, dolfin_variable, test)
+
+    return solving.Vector(functional_deriv_value)
 
   def dependencies(self, adjointer, timestep):
     deps = [solving.adj_variables[coeff] for coeff in ufl.algorithms.extract_coefficients(self.form) if (hasattr(coeff, "function_space") and coeff not in self.staticvariables)]
+
+    # Add the dependencies for the finalform
+    if self.finalform != None and timestep==adjointer.timestep_count-1:
+      deps += [solving.adj_variables[coeff] for coeff in ufl.algorithms.extract_coefficients(self.finalform) if (hasattr(coeff, "function_space") and coeff not in self.staticvariables)]
+      # Remove duplicates
+      deps = list(set(deps))
+
     # Set the time level of the dependencies:
     for i in range(len(deps)):
       deps[i].var.timestep = timestep
