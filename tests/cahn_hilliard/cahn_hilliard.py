@@ -43,8 +43,8 @@ def main(ic, annotate=False):
   q, v  = TestFunctions(ME)
 
   # Define functions
-  u   = Function(ME)  # current solution
-  u0  = Function(ME)  # solution from previous converged step
+  u   = Function(ME, name="NextSolution")  # current solution
+  u0  = Function(ME, name="Solution")  # solution from previous converged step
 
   # Split mixed functions
   dc, dmu = split(du)
@@ -84,14 +84,22 @@ def main(ic, annotate=False):
   t = 0.0
   T = steps*dt
   import os
+  j = 0.5 * dt * assemble((1.0/(4*eps)) * (pow( (-1.0/eps) * u0[1], 2))*dx)
   while (t < T):
       t += dt
-      u0.assign(u, annotate=annotate)
       solve(L == 0, u, J=a, solver_parameters=parameters, annotate=annotate)
-      file << (u.split()[0], t)
       adj_inc_timestep()
 
-  return (u, u0)
+      u0.assign(u, annotate=annotate)
+
+      file << (u.split()[0], t)
+      if t >= T:
+        quad_weight = 0.5
+      else:
+        quad_weight = 1.0
+      j += quad_weight * dt * assemble((1.0/(4*eps)) * (pow( (-1.0/eps) * u0[1], 2))*dx)
+
+  return u0, j
 
 if __name__ == "__main__":
   ic = Function(ME)
@@ -99,25 +107,20 @@ if __name__ == "__main__":
   ic.interpolate(init)
   ic_copy = Function(ic)
 
-  (forward, ic) = main(ic, annotate=True)
+  forward, j = main(ic, annotate=True)
   forward_copy = Function(forward)
+  ic = forward
   ic.vector()[:] = ic_copy.vector()
 
   adj_html("forward.html", "forward")
 
-  J = FinalFunctional((1.0/(4*eps)) * (pow( (-1.0/eps) * forward[1], 2))*dx)
-  for (adjoint, var) in compute_adjoint(J, forget=False):
-    pass
+  J = TimeFunctional((1.0/(4*eps)) * (pow( (-1.0/eps) * forward[1], 2))*dx, dt=dt, verbose=True)
+  dJdic = compute_gradient(J, InitialConditionParameter(ic))
 
   def J(ic):
-    u = main(ic, annotate=False)[0]
-    return assemble((1.0/(4*eps)) * (pow( (-1.0/eps) * u[1], 2))*dx)
+    u, j = main(ic, annotate=False)
+    return j
 
-  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=1.0e-5)
-  if minconv < 1.9:
-    sys.exit(1)
-
-  dJ = assemble(derivative((1.0/(4*eps)) * (pow( (-1.0/eps) * forward_copy[1], 2))*dx, forward_copy))
-  minconv = test_initial_condition_tlm(J, dJ, ic, seed=1.0e-5)
+  minconv = test_initial_condition_adjoint(J, ic_copy, dJdic, seed=1.0e-5)
   if minconv < 1.9:
     sys.exit(1)
