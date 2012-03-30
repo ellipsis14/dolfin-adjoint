@@ -37,11 +37,10 @@ debugging["test_derivative"] = None
 debugging["fussy_replay"] = True
 debugging["stop_annotating"] = False
 
-first_solve = True
-
 # Create the adjointer, the central object that records the forward solve
 # as it happens.
 adjointer = libadjoint.Adjointer()
+adjointer.first_solve = True
 
 # A dictionary that saves the functionspaces of all checkpoint variables that have been saved to disk
 checkpoint_fs = {}
@@ -151,9 +150,8 @@ def annotate(*args, **kwargs):
   # the initial conditions.
   no_registered = register_initial_conditions(zip(rhs.coefficients(),rhs.dependencies()) + zip(diag_coeffs, diag_deps), linear=linear, var=var)
 
-  global first_solve
-  if first_solve is True:
-    first_solve = False
+  if adjointer.first_solve:
+    adjointer.first_solve = False
     if no_registered > 0 and linear:
       adj_inc_timestep()
 
@@ -298,6 +296,11 @@ def adj_html(*args, **kwargs):
   '''
   return adjointer.to_html(*args, **kwargs)
 
+def adj_reset():
+  adjointer.reset()
+  adjointer.first_solve = True
+  adj_variables.__init__()
+  
 
 class Vector(libadjoint.Vector):
   '''This class implements the libadjoint.Vector abstract base class for the Dolfin adjoint.
