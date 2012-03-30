@@ -1,6 +1,6 @@
 import dolfin
 import ufl
-from solving import adjointer, adj_variables, debugging, solve, Vector, Matrix, annotate as solving_annotate
+from solving import adjointer, adj_variables, debugging, solve, Vector, Matrix, annotate as solving_annotate, do_checkpoint
 import libadjoint
 
 def register_assign(new, old):
@@ -21,7 +21,9 @@ def register_assign(new, old):
     adjointer.record_variable(dep, libadjoint.MemoryStorage(Vector(old)))
 
   initial_eq = libadjoint.Equation(dep, blocks=[identity_block], targets=[dep], rhs=IdentityRHS(old))
-  adjointer.register_equation(initial_eq)
+  cs = adjointer.register_equation(initial_eq)
+
+  do_checkpoint(cs, dep)
 
 class IdentityRHS(libadjoint.RHS):
   def __init__(self, var):

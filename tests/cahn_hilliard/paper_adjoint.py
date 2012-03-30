@@ -6,7 +6,6 @@ from dolfin_adjoint import *
 from math import sqrt
 
 debugging["fussy_replay"] = False
-debugging["record_all"] = True
 
 # Class representing the intial conditions
 class InitialConditions(Expression):
@@ -31,14 +30,15 @@ parameters["form_compiler"]["representation"] = "quadrature"
 parameters["std_out_all_processes"] = False;
 
 # Create mesh and define function spaces
-nodes = 500000
-#nodes = 1000
+#nodes = 500000
+nodes = 1000
 mesh = UnitSquare(int(sqrt(nodes)), int(sqrt(nodes)))
 V = FunctionSpace(mesh, "Lagrange", 1)
 ME = V*V
 
-steps = 50
-adj_checkpointing('multistage', steps=steps, snaps_on_disk=10, snaps_in_ram=5, verbose=True)
+#steps = 50
+steps = 5
+adj_checkpointing('multistage', steps=steps+1, snaps_on_disk=10, snaps_in_ram=5, verbose=True)
 
 def main(ic, annotate=False):
 
@@ -47,8 +47,8 @@ def main(ic, annotate=False):
   q, v  = TestFunctions(ME)
 
   # Define functions
-  u   = Function(ME)  # current solution
-  u0  = Function(ME)  # solution from previous converged step
+  u   = Function(ME, name="NextSolution")  # current solution
+  u0  = Function(ME, name="Solution")  # solution from previous converged step
 
   # Split mixed functions
   dc, dmu = split(du)
@@ -88,9 +88,9 @@ def main(ic, annotate=False):
   t = 0.0
   T = steps*dt
   import os
+  j = 0.5 * dt * assemble((1.0/(4*eps)) * (pow( (-1.0/eps) * u0[1], 2))*dx)
   while (t < T):
       t += dt
-      u0.assign(u, annotate=annotate)
       print "Starting solve at t=%s: " % t, os.popen("date").read()
       solve(L == 0, u, J=a, solver_parameters=parameters, annotate=annotate)
       print "Finished solve at t=%s: " % t, os.popen("date").read()
@@ -98,7 +98,15 @@ def main(ic, annotate=False):
         file << (u.split()[0], t)
       adj_inc_timestep()
 
-  return u
+      u0.assign(u, annotate=annotate)
+
+      if t >= T:
+        quad_weight = 0.5
+      else:
+        quad_weight = 1.0
+      j += quad_weight * dt * assemble((1.0/(4*eps)) * (pow( (-1.0/eps) * u0[1], 2))*dx)
+
+  return u0, j
 
 if __name__ == "__main__":
   ic = Function(ME)
@@ -108,18 +116,21 @@ if __name__ == "__main__":
   tlm_copy = Function(ic)
 
   timer = Timer("Original forward run")
-  forward = main(ic, annotate=True)
+  forward, j = main(ic, annotate=True)
+  ic = forward
+  ic.vector()[:] = ic_copy.vector()
   timer.stop()
   forward_copy = Function(forward)
 
-  J = FinalFunctional((1.0/(4*eps)) * (pow( (-1.0/eps) * forward[1], 2))*dx)
-  for (adjoint, var) in compute_adjoint(J, forget=False):
-    pass
+  adj_html("forward.html", "forward")
 
-  #def J(ic):
-  #  u = main(ic, annotate=False)
-  #  return assemble((1.0/(4*eps)) * (pow( (-1.0/eps) * u[1], 2))*dx)
+  J = TimeFunctional((1.0/(4*eps)) * (pow( (-1.0/eps) * forward[1], 2))*dx, dt=dt, verbose=True)
+  dJdic = compute_gradient(J, InitialConditionParameter(ic))
 
-  #minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=1.0e-5)
-  #if minconv < 1.9:
-  #  sys.exit(1)
+  def J(ic):
+    u, j = main(ic, annotate=False)
+    return j
+
+  minconv = test_initial_condition_adjoint(J, ic_copy, dJdic, seed=1.0e-5)
+  if minconv < 1.9:
+    sys.exit(1)
