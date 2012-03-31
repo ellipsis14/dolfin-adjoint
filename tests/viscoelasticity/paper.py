@@ -314,6 +314,9 @@ if __name__ == "__main__":
       adjointer.record_variable(adj_var, storage)
       fwd_var = libadjoint.Variable(adj_var.name, adj_var.timestep, adj_var.iteration)
 
+      afile = File("%s/adjoint_%s_%d.xml" % (dirname, adj_var.name, i))
+      afile << output.data
+
       out = param.inner_adjoint(adjointer, output.data, i, fwd_var)
       if dJdparam is None:
         dJdparam = out
@@ -343,7 +346,7 @@ if __name__ == "__main__":
       return J
 
     info_blue("Checking adjoint correctness ... ")
-    minconv = test_scalar_parameter_adjoint(Jfunc, amplitude, dJdp)
+    minconv = test_scalar_parameter_adjoint(Jfunc, amplitude, dJdp, seed=0.05)
 
     if minconv < 1.8:
       sys.exit(1)
