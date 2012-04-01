@@ -11,9 +11,8 @@ class InitialConditionParameter(libadjoint.Parameter):
   def __init__(self, coeff, perturbation=None):
     '''coeff: the variable whose initial condition you wish to perturb.
        perturbation: the perturbation direction in which you wish to compute the gradient. Must be a Function.'''
-    self.var = adj_variables[coeff]
-    self.var.c_object.timestep = 0 # we want to put in the source term only at the initial condition.
-    self.var.c_object.iteration = 0 # we want to put in the source term only at the initial condition.
+
+    self.var = libadjoint.Variable(str(coeff), 0, 0)
 
     if perturbation:
       self.perturbation = Vector(perturbation).duplicate()
