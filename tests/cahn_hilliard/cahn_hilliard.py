@@ -88,7 +88,6 @@ def main(ic, annotate=False):
   while (t < T):
       t += dt
       solve(L == 0, u, J=a, solver_parameters=parameters, annotate=annotate)
-      adj_inc_timestep()
 
       u0.assign(u, annotate=annotate)
 
@@ -98,6 +97,8 @@ def main(ic, annotate=False):
       else:
         quad_weight = 1.0
       j += quad_weight * dt * assemble((1.0/(4*eps)) * (pow( (-1.0/eps) * u0[1], 2))*dx)
+
+      adj_inc_timestep()
 
   return u0, j
 

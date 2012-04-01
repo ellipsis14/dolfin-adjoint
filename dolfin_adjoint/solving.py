@@ -152,7 +152,7 @@ def annotate(*args, **kwargs):
 
   if adjointer.first_solve:
     adjointer.first_solve = False
-    if no_registered > 0 and linear:
+    if no_registered > 0:
       adj_inc_timestep()
 
   # c.f. the discussion above. In the linear case, we want to bump the
@@ -667,16 +667,21 @@ class NonlinearRHS(RHS):
     # the previous value of u, as that's what we need to initialise
     # the nonlinear solver.
     var = adj_variables[self.u]
-    if var.timestep > 0 and debugging["fussy_replay"]:
-      var.c_object.timestep = var.c_object.timestep - 1
-      self.deps.append(var)
-      self.ic_var = var
-    elif var.timestep == 0 and debugging["fussy_replay"]:
-      self.ic_copy = dolfin.Function(u) # we can't record a value for this anywhere .. so we just store it.
-                                        # it only happens in the fussy replay, which is debugging-only, anyway.
-      self.ic_var = None
-    else:
-      self.ic_var = None
+    self.ic_var = None
+
+    if debugging["fussy_replay"]:
+      can_depend = False
+      if var.timestep > 0:
+        prev_var = libadjoint.Variable(var.name, var.timestep-1, var.iteration)
+        if adjointer.variable_known(prev_var):
+          can_depend = True
+
+      if can_depend:
+        self.deps.append(prev_var)
+        self.ic_var = prev_var
+      else:
+        self.ic_copy = dolfin.Function(u)
+        self.ic_var = None
 
   def __call__(self, dependencies, values):
     assert isinstance(self.form, ufl.form.Form)
