@@ -130,6 +130,6 @@ if __name__ == "__main__":
     u, j = main(ic, annotate=False)
     return j
 
-  minconv = test_initial_condition_adjoint(J, ic_copy, dJdic, seed=1.0e-5)
+  minconv = test_initial_condition_adjoint(J, ic_copy, dJdic, seed=1.0e-7)
   if minconv < 1.9:
     sys.exit(1)

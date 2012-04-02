@@ -12,4 +12,5 @@ from krylov_solver import KrylovSolver
 from variational_solver import NonlinearVariationalSolver, NonlinearVariationalProblem, LinearVariationalSolver, LinearVariationalProblem
 from projection import project
 from function import Function
+from interpolation import interpolate
 from unimplemented import *
