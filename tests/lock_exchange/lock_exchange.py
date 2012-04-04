@@ -21,7 +21,7 @@ nu = Constant(10**-6)
 
 dt = 0.025
 start = 0
-end = 0.5
+end = 5.0
 theta = 0.5
 
 temp_pvd = File("results/temperature.pvd")
@@ -76,7 +76,7 @@ def main(ic):
   un = abs(dot(u('+'), n('+')))
 
   L = inner(Dt(u_old, u_new), u_test)*dx + inner(grad(u_cn)*u, u_test)*dx + \
-      nu*inner(grad(u_cn), grad(u_test))*dx + inner(rho(temp_cn)*g, u_test)*dx + \
+      nu*inner(grad(u_cn), grad(u_test))*dx - inner((rho(temp_cn)/rho0)*g, u_test)*dx + \
       -div(u_test)*p_cn*dx + p_test*div(u_cn)*dx + \
       inner(Dt(temp_old, temp_new), temp_test)*dx - dot(u*temp_new, grad(temp_test))*dx + (dot(u('+'), jump(temp_test, n))*avg(temp_new) + 0.5*un*dot(jump(temp_new, n), jump(temp_test, n)))*dS
 #      inner(temp_test, temp_new)*dx - inner(temp_test, temp_old)*dx
