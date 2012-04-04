@@ -1,9 +1,10 @@
 from dolfin import *
-import numpy
+import random
+import sys
 
 H = 0.1
 L = 0.8
-n = 81
+n = 121
 
 mesh = Rectangle(0, 0, L, H, n, int(n/(L/H)))
 
@@ -30,6 +31,7 @@ p_pvd = File("results/pressure.pvd")
 parameters["num_threads"] = 8
 
 def store(z, t):
+  t = float(t)
   print "Storing variables at t=%s" % t
   (u, p, temp) = z.split()
 
@@ -48,6 +50,7 @@ def cn(u_old, u_new): # Crank-Nicolson
 
 def main(ic):
 
+  store(ic, t=start)
   z_old = ic
   (u_old, p_old, temp_old) = split(z_old)
 
@@ -94,14 +97,24 @@ def main(ic):
 
 if __name__ == "__main__":
   class ICExpression(Expression):
-    def __init__(self):
+    def __init__(self, delta=0.03):
+      self.delta = delta
       pass
 
     def eval(self, values, x):
-      if x[0] < 0.4:
+      delta = self.delta
+
+      if x[0] >= (0.4 + delta):
+        values[-1] = +0.5
+      elif x[0] <= (0.4 - delta):
         values[-1] = -0.5
       else:
-        values[-1] = +0.5
+        xdash = x[0] - (0.4 - delta)
+        m = -H / (2*delta)
+        if x[1] <= m*xdash+H:
+          values[-1] = -0.5
+        else:
+          values[-1] = +0.5
 
     def value_shape(self):
       return (4,)
