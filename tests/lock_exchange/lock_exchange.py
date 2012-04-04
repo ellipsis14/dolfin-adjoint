@@ -22,6 +22,17 @@ start = 0
 end = 0.5
 theta = 0.5
 
+temp_pvd = File("results/temperature.pvd")
+u_pvd = File("results/velocity.pvd")
+p_pvd = File("results/pressure.pvd")
+
+def store(z, t):
+  (u, p, temp) = z.split()
+
+  temp_pvd << (temp, t)
+  u_pvd << (u, t)
+  p_pvd << (p, t)
+
 def rho(T):
   return rho_0*(1 - alpha * T)
 
@@ -49,13 +60,10 @@ def main(ic):
   temp_cn = cn(temp_old, temp_new)
 
   no_slip = DirichletBC(Z.sub(0), (0.0, 0.0), "on_boundary && x[1] < DOLFIN_EPS")
-  free_left = DirichletBC(Z.sub(0).sub(1), 0.0, "on_boundary && x[0] < DOLFIN_EPS")
-  free_right = DirichletBC(Z.sub(0).sub(1), 0.0, "on_boundary && x[0] > 0.8 - DOLFIN_EPS")
-  free_top = DirichletBC(Z.sub(0).sub(0), 0.0, "on_boundary && x[1] > 0.1 - DOLFIN_EPS")
+  free_left = DirichletBC(Z.sub(0).sub(0), 0.0, "on_boundary && x[0] < DOLFIN_EPS")
+  free_right = DirichletBC(Z.sub(0).sub(0), 0.0, "on_boundary && x[0] > 0.8 - DOLFIN_EPS")
+  free_top = DirichletBC(Z.sub(0).sub(1), 0.0, "on_boundary && x[1] > 0.1 - DOLFIN_EPS")
   u_bcs = [no_slip, free_left, free_right, free_top]
-
-  fix_p = DirichletBC(Z.sub(1), 0.0, "on_boundary && x[0] < DOLFIN_EPS && x[1] < DOLFIN_EPS")
-  p_bcs = [fix_p]
 
   L = inner(Dt(u_old, u_new), u_test)*dx + inner(grad(u_cn)*u, u_test)*dx + \
       nu*inner(grad(u_cn), grad(u_test))*dx + inner(rho(temp_cn)*g, u_test)*dx + \
@@ -66,7 +74,7 @@ def main(ic):
   while t < end:
     t += dt
     F = replace(L, {z_new: z})
-    solve(F == 0, z, bcs=u_bcs + p_bcs)
+    solve(F == 0, z, bcs=u_bcs)
     z_old.assign(z)
 
     return z_old # indented to only do one timestep
@@ -88,3 +96,4 @@ if __name__ == "__main__":
   ic = interpolate(ICExpression(), Z)
 
   soln = main(ic)
+  store(soln, t=dt)
