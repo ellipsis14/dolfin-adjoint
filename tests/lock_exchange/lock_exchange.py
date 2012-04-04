@@ -4,9 +4,8 @@ import sys
 
 H = 0.1
 L = 0.8
-n = 121
 
-mesh = Rectangle(0, 0, L, H, n, int(n/(L/H)))
+mesh = Rectangle(0, 0, L, H, 200, 50)
 
 V = VectorFunctionSpace(mesh, "CG", 2)
 Q = FunctionSpace(mesh, "CG", 1)
@@ -19,7 +18,7 @@ alpha = Constant(10**-3)
 kappa = 0
 nu = Constant(10**-6)
 
-dt = 0.025
+dt = 0.015
 start = 0
 end = 5.0
 theta = 0.5
@@ -76,7 +75,7 @@ def main(ic):
   un = abs(dot(u('+'), n('+')))
 
   L = inner(Dt(u_old, u_new), u_test)*dx + inner(grad(u_cn)*u, u_test)*dx + \
-      nu*inner(grad(u_cn), grad(u_test))*dx - inner((rho(temp_cn)/rho0)*g, u_test)*dx + \
+      nu*inner(grad(u_cn), grad(u_test))*dx - inner((rho(temp_cn)/rho_0)*g, u_test)*dx + \
       -div(u_test)*p_cn*dx + p_test*div(u_cn)*dx + \
       inner(Dt(temp_old, temp_new), temp_test)*dx - dot(u*temp_new, grad(temp_test))*dx + (dot(u('+'), jump(temp_test, n))*avg(temp_new) + 0.5*un*dot(jump(temp_new, n), jump(temp_test, n)))*dS
 #      inner(temp_test, temp_new)*dx - inner(temp_test, temp_old)*dx
