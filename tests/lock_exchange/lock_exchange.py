@@ -1,10 +1,11 @@
 from dolfin import *
+import numpy
 
 H = 0.1
 L = 0.8
-n = 10
+n = 81
 
-mesh = Rectangle(0, 0, L, H, n, n)
+mesh = Rectangle(0, 0, L, H, n, int(n/(L/H)))
 
 V = VectorFunctionSpace(mesh, "CG", 2)
 Q = FunctionSpace(mesh, "CG", 1)
@@ -26,7 +27,10 @@ temp_pvd = File("results/temperature.pvd")
 u_pvd = File("results/velocity.pvd")
 p_pvd = File("results/pressure.pvd")
 
+parameters["num_threads"] = 8
+
 def store(z, t):
+  print "Storing variables at t=%s" % t
   (u, p, temp) = z.split()
 
   temp_pvd << (temp, t)
@@ -65,19 +69,28 @@ def main(ic):
   free_top = DirichletBC(Z.sub(0).sub(1), 0.0, "on_boundary && x[1] > 0.1 - DOLFIN_EPS")
   u_bcs = [no_slip, free_left, free_right, free_top]
 
+  n = FacetNormal(mesh)
+  un = abs(dot(u('+'), n('+')))
+
   L = inner(Dt(u_old, u_new), u_test)*dx + inner(grad(u_cn)*u, u_test)*dx + \
       nu*inner(grad(u_cn), grad(u_test))*dx + inner(rho(temp_cn)*g, u_test)*dx + \
       -div(u_test)*p_cn*dx + p_test*div(u_cn)*dx + \
-      inner(temp_test, temp_new)*dx - inner(temp_test, temp_old)*dx
+      inner(Dt(temp_old, temp_new), temp_test)*dx - dot(u*temp_new, grad(temp_test))*dx + (dot(u('+'), jump(temp_test, n))*avg(temp_new) + 0.5*un*dot(jump(temp_new, n), jump(temp_test, n)))*dS
+#      inner(temp_test, temp_new)*dx - inner(temp_test, temp_old)*dx
+
+  progress = Progress("Timeloop", int((end-start)/dt))
 
   t = start
   while t < end:
     t += dt
     F = replace(L, {z_new: z})
-    solve(F == 0, z, bcs=u_bcs)
+    J = derivative(F, z)
+    solve(F == 0, z, bcs=u_bcs, J=J)
     z_old.assign(z)
+    store(z_old, t=t)
+    progress += 1
 
-    return z_old # indented to only do one timestep
+  return z_old # indented to only do one timestep
 
 if __name__ == "__main__":
   class ICExpression(Expression):
@@ -96,4 +109,3 @@ if __name__ == "__main__":
   ic = interpolate(ICExpression(), Z)
 
   soln = main(ic)
-  store(soln, t=dt)
