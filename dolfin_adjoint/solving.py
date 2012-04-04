@@ -456,7 +456,11 @@ class Vector(libadjoint.Vector):
   def get_values(self, array):
     if isinstance(self.data, dolfin.Function):
       vec = self.data.vector()
-      vec.get_local(array)
+      try:
+        vec.get_local(array)
+      except NotImplementedError:
+        array[:] = vec.get_local()
+
     else:
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to get values.")
   
