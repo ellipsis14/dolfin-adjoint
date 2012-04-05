@@ -99,7 +99,7 @@ def main(ic, start, end, dt, bcs):
 
     F = replace(L, {z_new: z})
     J = derivative(F, z)
-    solve(F == 0, z, bcs=bcs, J=J, solver_parameters={"linear_solver": "mumps"})
+    solve(F == 0, z, bcs=bcs, J=J)
     z_old.assign(z)
     store(z_old, t=t)
     dts.append(dt)

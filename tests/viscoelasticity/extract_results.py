@@ -1,5 +1,5 @@
 from dolfin import *
-from viscoelasticity import Z
+from paper import Z
 import glob
 
 def look_at_adjoints(dirname, var_name):
