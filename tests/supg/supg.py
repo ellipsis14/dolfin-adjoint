@@ -51,19 +51,18 @@ V = VectorFunctionSpace(mesh, "CG", 2)
 velocity = Function(V);
 File("velocity.xml.gz") >> velocity
 
-# Initialise source function and previous solution function
-f  = Constant(0.0)
 
-def main(u0):
+def main(u0, f):
 
   # Parameters
-  T = 5.0
+  T = 1.0
   dt = 0.1
   t = dt
   c = 0.00005
 
   # Test and trial functions
   u, v = TrialFunction(Q), TestFunction(Q)
+  u_new = Function(Q)
 
   # Mid-point solution
   u_mid = 0.5*(u0 + u)
@@ -98,7 +97,7 @@ def main(u0):
   out_file = File("results/temperature.pvd")
 
   # Set intial condition
-  u = u0
+  u_new.assign(u0)
 
   # Time-stepping
   while t < T:
@@ -108,28 +107,49 @@ def main(u0):
     bc.apply(b)
 
     # Solve the linear system (re-use the already factorized matrix A)
-    solver.solve(u.vector(), b)
+    solver.solve(u_new.vector(), b)
 
     # Copy solution from previous interval
-    u0 = u
+    u0.assign(u_new)
 
     # Save the solution to file
-    out_file << (u, t)
+    out_file << (u_new, t)
 
     # Move to next interval and adjust boundary condition
     t += dt
     g.b = boundary_value(int(t/dt))
 
-  return u
+  return u0
 
 if __name__ == "__main__":
   u0 = Function(Q, name="Tracer")
-  u = main(u0)
+  f  = Constant(0.0)
+  u = main(u0, f=f)
 
   adj_html("forward.html", "forward")
+  adj_html("adjoint.html", "adjoint")
+
   info_blue("Replaying forward model .. ")
 
   success = replay_dolfin()
 
   if not success:
+    sys.exit(1)
+
+  info_blue("Running adjoint ... ")
+
+  J = FinalFunctional(u*u*dx)
+  param = ScalarParameter(f)
+  dJdf = compute_gradient(J, param)
+
+  def J(param):
+    u0 = Function(Q)
+    u = main(u0, f=param)
+    return assemble(u*u*dx)
+
+  info_blue("Verifying adjoint ... ")
+
+  minconv = test_scalar_parameter_adjoint(J, f, dJdf)
+
+  if minconv < 1.9:
     sys.exit(1)

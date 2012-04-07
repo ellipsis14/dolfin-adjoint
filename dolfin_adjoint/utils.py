@@ -341,8 +341,11 @@ def test_scalar_parameter_adjoint(J, a, dJda, seed=None):
 
   if seed is None:
     seed = float(a)/5.0
+    if seed == 0.0:
+      seed = 0.1
 
   perturbations = [seed / (2**i) for i in range(5)]
+
   for da in (dolfin.Constant(float(a) + x) for x in perturbations):
     functional_values.append(J(da))
 
