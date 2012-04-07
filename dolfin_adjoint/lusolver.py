@@ -40,6 +40,7 @@ def make_LUSolverMatrix(form, reuse_factorization):
           b_vec = b.data.vector().copy()
         else:
           b_vec = dolfin.assemble(b.data)
+
         [bc.apply(b_vec) for bc in bcs]
         solver.solve(x.data.vector(), b_vec, annotate=False)
 
@@ -52,6 +53,11 @@ class LUSolver(dolfin.LUSolver):
       self.operator = args[0].form
     except AttributeError:
       raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your matrix A has to have the .form attribute: was it assembled after from dolfin_adjoint import *?")
+
+    try:
+      self.op_bcs = args[0].bcs
+    except AttributeError:
+      self.op_bcs = []
 
     dolfin.LUSolver.__init__(self, *args)
 
@@ -79,10 +85,9 @@ class LUSolver(dolfin.LUSolver):
         raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your RHS b has to have the .form attribute: was it assembled after from dolfin_adjoint import *?")
 
       try:
-        eq_bcs = list(set(A.bcs + b.bcs))
+        eq_bcs = list(set(self.op_bcs + args[1].bcs))
       except AttributeError:
-        assert not hasattr(A, 'bcs') and not hasattr(b, 'bcs')
-        eq_bcs = []
+        eq_bcs = self.op_bcs
 
       if self.parameters["reuse_factorization"]:
         lu_solvers[A] = self
