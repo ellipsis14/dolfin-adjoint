@@ -17,7 +17,7 @@ def interpolate(v, V, annotate=True):
 
       def identity_assembly_cb(variables, dependencies, hermitian, coefficient, context):
         assert coefficient == 1
-        return (solving.Matrix(ufl.Identity(V.dim())), solving.Vector(dolfin.Function(V)))
+        return (solving.Matrix(solving.IdentityMatrix()), solving.Vector(dolfin.Function(V)))
 
       identity_block.assemble = identity_assembly_cb
 

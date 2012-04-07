@@ -1,5 +1,5 @@
 import libadjoint
-from solving import adj_variables, Vector
+from solving import adj_variables, Vector, IdentityMatrix
 import ufl
 import dolfin
 from dolfin import info, info_blue, info_red
@@ -47,7 +47,7 @@ class ScalarParameter(libadjoint.Parameter):
     (fwd_var, lhs, rhs) = adjointer.get_forward_equation(i)
     lhs = lhs.data; rhs = rhs.data
 
-    if not isinstance(lhs, ufl.Identity):
+    if not isinstance(lhs, IdentityMatrix):
       fn_space = ufl.algorithms.extract_arguments(rhs)[0].function_space()
       x = dolfin.Function(fn_space)
       form = rhs - dolfin.action(lhs, x)
@@ -78,7 +78,7 @@ class ScalarParameter(libadjoint.Parameter):
     (fwd_var, lhs, rhs) = adjointer.get_forward_equation(i)
     lhs = lhs.data; rhs = rhs.data
 
-    if not isinstance(lhs, ufl.Identity):
+    if not isinstance(lhs, IdentityMatrix):
       fn_space = ufl.algorithms.extract_arguments(rhs)[0].function_space()
       x = dolfin.Function(fn_space)
       form = rhs - dolfin.action(lhs, x)
@@ -120,7 +120,7 @@ class ScalarParameters(libadjoint.Parameter):
 
     assert self.dv is not None, "Need a perturbation direction to use in the TLM."
 
-    if not isinstance(lhs, ufl.Identity):
+    if not isinstance(lhs, IdentityMatrix):
       fn_space = ufl.algorithms.extract_arguments(rhs)[0].function_space()
       x = dolfin.Function(fn_space)
       form = rhs - dolfin.action(lhs, x)
@@ -158,7 +158,7 @@ class ScalarParameters(libadjoint.Parameter):
 
     dJdv = numpy.zeros(len(self.v))
 
-    if not isinstance(lhs, ufl.Identity):
+    if not isinstance(lhs, IdentityMatrix):
       fn_space = ufl.algorithms.extract_arguments(rhs)[0].function_space()
       x = dolfin.Function(fn_space)
       form = rhs - dolfin.action(lhs, x)

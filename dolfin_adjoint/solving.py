@@ -45,6 +45,10 @@ adjointer.first_solve = True
 # A dictionary that saves the functionspaces of all checkpoint variables that have been saved to disk
 checkpoint_fs = {}
 
+class IdentityMatrix(object):
+  '''Placeholder object for identity matrices'''
+  pass
+
 def annotate(*args, **kwargs):
   '''This routine handles all of the annotation, recording the solves as they
   happen so that libadjoint can rewind them later.'''
@@ -517,7 +521,7 @@ class Matrix(libadjoint.Matrix):
 
   def solve(self, var, b):
 
-    if isinstance(self.data, ufl.Identity):
+    if isinstance(self.data, IdentityMatrix):
       x=b.duplicate()
       x.axpy(1.0, b)
     else:
@@ -828,7 +832,7 @@ def register_initial_condition(coeff, dep):
 
   def identity_assembly_cb(variables, dependencies, hermitian, coefficient, context):
     assert coefficient == 1
-    return (Matrix(ufl.Identity(fn_space.dim())), Vector(dolfin.Function(fn_space)))
+    return (Matrix(IdentityMatrix()), Vector(dolfin.Function(fn_space)))
 
   identity_block.assemble=identity_assembly_cb
 

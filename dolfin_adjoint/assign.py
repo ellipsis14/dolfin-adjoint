@@ -1,6 +1,6 @@
 import dolfin
 import ufl
-from solving import adjointer, adj_variables, debugging, solve, Vector, Matrix, annotate as solving_annotate, do_checkpoint
+from solving import adjointer, adj_variables, debugging, solve, Vector, Matrix, annotate as solving_annotate, do_checkpoint, IdentityMatrix
 import libadjoint
 
 def register_assign(new, old):
@@ -12,7 +12,7 @@ def register_assign(new, old):
 
   def identity_assembly_cb(variables, dependencies, hermitian, coefficient, context):
     assert coefficient == 1
-    return (Matrix(ufl.Identity(fn_space.dim())), Vector(dolfin.Function(fn_space)))
+    return (Matrix(IdentityMatrix()), Vector(dolfin.Function(fn_space)))
 
   identity_block.assemble = identity_assembly_cb
   dep = adj_variables.next(new)
