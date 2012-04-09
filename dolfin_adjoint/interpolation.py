@@ -7,6 +7,9 @@ def interpolate(v, V, annotate=True):
 
   out = dolfin.interpolate(v, V)
 
+  if solving.debugging["stop_annotating"]:
+    annotate = False
+
   if isinstance(v, dolfin.Function) and annotate:
     rhsdep = solving.adj_variables[v]
     if solving.adjointer.variable_known(rhsdep):

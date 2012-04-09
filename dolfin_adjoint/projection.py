@@ -4,6 +4,9 @@ import libadjoint
 
 def project(v, V=None, bcs=None, mesh=None, solver_type="cg", preconditioner_type="default", form_compiler_parameters=None, annotate=True):
 
+  if solving.debugging["stop_annotating"]:
+    annotate = False
+
   if isinstance(v, dolfin.Expression):
     annotate = False
 

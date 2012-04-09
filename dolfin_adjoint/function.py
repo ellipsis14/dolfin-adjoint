@@ -55,6 +55,8 @@ class Function(dolfin.Function):
     if 'annotate' in kwargs:
       annotate = kwargs['annotate']
       del kwargs['annotate']
+    if debugging["stop_annotating"]:
+      annotate = False
 
     dolfin.Function.__init__(self, *args, **kwargs)
 

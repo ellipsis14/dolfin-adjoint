@@ -16,6 +16,9 @@ class NonlinearVariationalSolver(dolfin.NonlinearVariationalSolver):
     self.problem = problem
 
   def solve(self, annotate=True):
+    if solving.debugging["stop_annotating"]:
+      annotate = False
+
     if annotate:
       problem = self.problem
       solving.annotate(problem.F == 0, problem.u, problem.bcs, J=problem.J, solver_parameters=self.parameters.to_dict())
@@ -41,6 +44,9 @@ class LinearVariationalSolver(dolfin.LinearVariationalSolver):
     self.problem = problem
 
   def solve(self, annotate=True):
+    if solving.debugging["stop_annotating"]:
+      annotate = False
+
     if annotate:
       problem = self.problem
       solving.annotate(problem.a == problem.L, problem.u, problem.bcs, solver_parameters=self.parameters.to_dict())

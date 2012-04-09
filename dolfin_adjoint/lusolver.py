@@ -68,6 +68,9 @@ class LUSolver(dolfin.LUSolver):
       annotate = kwargs["annotate"]
       del kwargs["annotate"]
 
+    if solving.debugging["stop_annotating"]:
+      annotate = False
+
     if annotate:
       if len(args) != 2:
         raise libadjoint.exceptions.LibadjointErrorInvalidInputs("The annotated LUSolver.solve must be called like solve(x, b).")
