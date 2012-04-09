@@ -58,7 +58,7 @@ def compute_initial_conditions(T_, W, Q, bcs, annotate):
     P = PETScMatrix()
     assemble(pre, tensor=P); [bc.apply(P) for bc in bcs]
 
-    solve(a == L, w, bcs=bcs, solver_parameters={"linear_solver": "tfqmr", "preconditioner": "amg"}, annotate=annotate)
+    solve(a == L, w, bcs=bcs, solver_parameters={"linear_solver": "default", "preconditioner": "default"}, annotate=annotate)
     return (w, P)
 
 parameters["form_compiler"]["cpp_optimize"] = True

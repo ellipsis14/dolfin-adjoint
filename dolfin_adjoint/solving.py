@@ -277,7 +277,14 @@ def annotate(*args, **kwargs):
 
       action = coefficient * dolfin.action(deriv, input.data)
 
-      return Vector(action)
+      output = dolfin.Function(dolfin_variable.function_space())
+      vec = dolfin.assemble(action)
+      #bcs = [dolfin.homogenize(bc) for bc in eq_bcs if isinstance(bc, dolfin.DirichletBC)]
+      #[bc.apply(vec) for bc in bcs]
+      output.vector()[:] = vec
+
+      return Vector(output)
+      #return Vector(action)
     diag_block.derivative_action = derivative_action
 
   eqn = libadjoint.Equation(var, blocks=[diag_block], targets=[var], rhs=rhs)
@@ -398,7 +405,11 @@ class Vector(libadjoint.Vector):
 
     if (self.data is None):
       # self is an empty form.
-      self.data=alpha*x.data
+      if isinstance(x.data, dolfin.Function):
+        self.data = dolfin.Function(x.data)
+        self.data.vector()._scale(alpha)
+      else:
+        self.data=alpha*x.data
     elif isinstance(self.data, dolfin.Coefficient):
       if isinstance(x.data, dolfin.Coefficient):
         self.data.vector().axpy(alpha, x.data.vector())
@@ -583,11 +594,15 @@ class Matrix(libadjoint.Matrix):
         # functional is set up incorrectly.
         dolfin.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
       elif isinstance(b.data, dolfin.Function):
+
         assembled_lhs = dolfin.assemble(self.data)
         [bc.apply(assembled_lhs) for bc in bcs]
         assembled_rhs = dolfin.Function(b.data).vector()
         [bc.apply(assembled_rhs) for bc in bcs]
-        dolfin.fem.solving.solve(assembled_lhs, x.data.vector(), assembled_rhs, solver_parameters=self.solver_parameters)
+
+        pc = self.solver_parameters.get("preconditioner", "default")
+        ksp = self.solver_parameters.get("linear_solver", "default")
+        dolfin.fem.solving.solve(assembled_lhs, x.data.vector(), assembled_rhs, ksp, pc)
       else:
         dolfin.fem.solving.solve(self.data==b.data, x.data, bcs, solver_parameters=self.solver_parameters)
 

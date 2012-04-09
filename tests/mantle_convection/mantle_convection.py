@@ -8,6 +8,8 @@ import time
 import numpy
 import sys
 
+numpy.set_printoptions(threshold='nan')
+
 from stokes import *
 from composition import *
 from temperature import *
@@ -54,7 +56,7 @@ def compute_initial_conditions(T_, W, Q, bcs, annotate):
     P = PETScMatrix()
     assemble(pre, tensor=P); [bc.apply(P) for bc in bcs]
 
-    solve(a == L, w, bcs=bcs, solver_parameters={"linear_solver": "tfqmr", "preconditioner": "amg"}, annotate=annotate)
+    solve(a == L, w, bcs=bcs, solver_parameters={"linear_solver": "default", "preconditioner": "default"}, annotate=annotate)
     return (w, P)
 
 parameters["form_compiler"]["cpp_optimize"] = True
@@ -100,11 +102,11 @@ def main(T_, annotate=False):
   (w_, P) = compute_initial_conditions(T_, W, Q, bcs, annotate=annotate)
 
   # Predictor functions
-  T_pr = Function(Q)      # Tentative temperature (T)
+  T_pr = Function(Q, name="TentativeTemperature")      # Tentative temperature (T)
 
   # Functions at this timestep
-  T = Function(Q)         # Temperature (T) at this time step
-  w = Function(W)
+  T = Function(Q, name="Temperature")         # Temperature (T) at this time step
+  w = Function(W, name="VelocityPressure")
 
   # Store initial data
   store(T_, w_, 0.0)
@@ -115,7 +117,7 @@ def main(T_, annotate=False):
   t += dt
   n = 1
 
-  w_pr = Function(W)
+  w_pr = Function(W, name="TentativeVelocityPressure")
   (u_pr, p_pr) = split(w_pr)
   (u_, p_) = split(w_)
 
@@ -213,7 +215,10 @@ if __name__ == "__main__":
     Tfinal = main(ic)
     return assemble(-(1.0/Nu2)*grad(Tfinal)[1]*ds2)
 
-  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=5.0e-1)
+  direction = Function(ic_copy)
+  direction.vector()[:] = 1.0
+
+  minconv = test_initial_condition_adjoint(J, ic_copy, adjoint, seed=5.0e-1, perturbation_direction=direction)
 
   if minconv < 1.8:
     sys.exit(1)
