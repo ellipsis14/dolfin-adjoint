@@ -13,4 +13,5 @@ from variational_solver import NonlinearVariationalSolver, NonlinearVariationalP
 from projection import project
 from function import Function
 from interpolation import interpolate
+from constant import Constant
 from unimplemented import *

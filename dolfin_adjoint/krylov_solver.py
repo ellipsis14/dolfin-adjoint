@@ -90,10 +90,29 @@ class KrylovSolver(dolfin.KrylovSolver):
           if var.type in ['ADJ_TLM', 'ADJ_ADJOINT']:
             self.bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
 
+          # This is really hideous. Sorry.
           if isinstance(b.data, dolfin.Function):
             rhs = b.data.vector().copy()
+            [bc.apply(rhs) for bc in self.bcs]
+
+            if assemble_system: # if we called assemble_system, rather than assemble
+              v = dolfin.TestFunction(fn_space)
+              (A, rhstmp) = dolfin.assemble_system(operators[0], dolfin.inner(b.data, v)*dolfin.dx, self.bcs)
+              if has_preconditioner:
+                (P, rhstmp) = dolfin.assemble_system(operators[1], dolfin.inner(b.data, v)*dolfin.dx, self.bcs)
+                solver.set_operators(A, P)
+              else:
+                solver.set_operator(A)
+            else: # we called assemble
+              A = dolfin.assemble(operators[0])
+              [bc.apply(A) for bc in self.bcs]
+              if has_preconditioner:
+                P = dolfin.assemble(operators[1])
+                [bc.apply(P) for bc in self.bcs]
+                solver.set_operators(A, P)
+              else:
+                solver.set_operator(A)
           else:
-            # This is really hideous. Sorry.
 
             if assemble_system: # if we called assemble_system, rather than assemble
               (A, rhs) = dolfin.assemble_system(operators[0], b.data, self.bcs)

@@ -273,16 +273,25 @@ def transpose_operators(operators):
 
   for i in range(2):
     op = operators[i]
+
     if op is None: 
       out[i] = None
     elif isinstance(op, dolfin.cpp.GenericMatrix):
       out[i] = op.__class__()
       dolfin.assemble(dolfin.adjoint(op.form), tensor=out[i])
-      adjoint_bcs = [dolfin.homogenize(bc) for bc in op.bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
-      [bc.apply(out[i]) for bc in adjoint_bcs]
 
-    elif isinstance(op, dolfin.Form):
+      if hasattr(op, 'bcs'):
+        adjoint_bcs = [dolfin.homogenize(bc) for bc in op.bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
+        [bc.apply(out[i]) for bc in adjoint_bcs]
+
+    elif isinstance(op, dolfin.Form) or isinstance(op, ufl.form.Form):
       out[i] = dolfin.adjoint(op)
-      out[i].bcs = [dolfin.homogenize(bc) for bc in op.bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
+
+      if hasattr(op, 'bcs'):
+        out[i].bcs = [dolfin.homogenize(bc) for bc in op.bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
+
+    else:
+      print "op.__class__: ", op.__class__
+      raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to transpose anything else!")
 
   return out

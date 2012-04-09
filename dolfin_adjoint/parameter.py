@@ -55,7 +55,21 @@ class ScalarParameter(libadjoint.Parameter):
       dparam = dolfin.Function(dolfin.FunctionSpace(fn_space.mesh(), "R", 0))
       dparam.vector()[:] = 1.0
 
-      diff_form = dolfin.derivative(form, self.a, dparam)
+      if isinstance(self.a, dolfin.Constant):
+        diff_form = dolfin.derivative(form, self.a, dparam)
+      elif isinstance(self.a, str):
+        diff_form = None
+        for coeff in ufl.algorithms.extract_coefficients(form):
+          if hasattr(coeff, "adj_name"):
+            if coeff.adj_name == self.a:
+              diff_form = dolfin.derivative(form, coeff, dparam)
+              break
+
+        if diff_form is None:
+          return None
+
+      else:
+        raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to handle any other types!")
 
       if x in ufl.algorithms.extract_coefficients(diff_form):
         # We really need the forward solution to compute dF/dm.
@@ -86,7 +100,21 @@ class ScalarParameter(libadjoint.Parameter):
       dparam = dolfin.Function(dolfin.FunctionSpace(fn_space.mesh(), "R", 0))
       dparam.vector()[:] = 1.0
 
-      diff_form = dolfin.derivative(form, self.a, dparam)
+      if isinstance(self.a, dolfin.Constant):
+        diff_form = dolfin.derivative(form, self.a, dparam)
+      elif isinstance(self.a, str):
+        diff_form = None
+        for coeff in ufl.algorithms.extract_coefficients(form):
+          if hasattr(coeff, "adj_name"):
+            if coeff.adj_name == self.a:
+              diff_form = dolfin.derivative(form, coeff, dparam)
+              break
+
+        if diff_form is None:
+          return None
+
+      else:
+        raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to handle any other types!")
 
       if x in ufl.algorithms.extract_coefficients(diff_form):
         # We really need the forward solution to compute dF/dm.

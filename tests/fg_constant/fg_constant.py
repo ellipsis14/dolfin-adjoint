@@ -7,7 +7,7 @@ import sys
 mesh = UnitSquare(4, 4)
 V = FunctionSpace(mesh, "CG", 3)
 debugging["record_all"] = True
-a = Constant(2.0)
+a = Constant(2.0, name="a")
 
 def main(ic, a, annotate=False):
   u = TrialFunction(V)
@@ -29,7 +29,7 @@ if __name__ == "__main__":
   soln = main(ic, a, annotate=True)
 
   J = FinalFunctional(soln*soln*dx)
-  dJda = compute_gradient(J, ScalarParameter(a))
+  dJda = compute_gradient(J, ScalarParameter("a"))
 
   def J(a):
     soln = main(ic, a, annotate=False)
