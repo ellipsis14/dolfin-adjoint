@@ -290,6 +290,9 @@ def transpose_operators(operators):
       if hasattr(op, 'bcs'):
         out[i].bcs = [dolfin.homogenize(bc) for bc in op.bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
 
+    elif isinstance(op, AdjointKrylovMatrix):
+      pass
+
     else:
       print "op.__class__: ", op.__class__
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to transpose anything else!")
