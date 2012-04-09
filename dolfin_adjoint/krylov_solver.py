@@ -115,8 +115,6 @@ class KrylovSolver(dolfin.KrylovSolver):
                 solver.set_operator(A)
 
           solver.solve(x.vector(), rhs)
-          print "KrylovSolver solution: "
-          print x.vector().array()
           return solving.Vector(x)
 
       solving.annotate(A == b, u, bcs, matrix_class=KrylovSolverMatrix, initial_guess=parameters['nonzero_initial_guess'], replace_map=True)
