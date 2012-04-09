@@ -22,7 +22,7 @@ class NewtonSolver(dolfin.NewtonSolver):
       u = vec.function
       var = solving.adj_variables[u]
 
-      solving.annotate(F == 0, u, bcs, solver_parameters={"newton_solver": dict(self.parameters)})
+      solving.annotate(F == 0, u, bcs, solver_parameters={"newton_solver": self.parameters.to_dict()})
 
     newargs = [self] + list(args)
     out = dolfin.NewtonSolver.solve(*newargs, **kwargs)

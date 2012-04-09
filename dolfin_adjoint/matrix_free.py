@@ -138,7 +138,7 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
       var = solving.adj_variables.next(x.function)
 
       frozen_expressions_dict = expressions.freeze_dict()
-      frozen_parameters = copy.copy(self.parameters)
+      frozen_parameters = self.parameters.to_dict()
 
       def diag_assembly_cb(dependencies, values, hermitian, coefficient, context):
         '''This callback must conform to the libadjoint Python block assembly
