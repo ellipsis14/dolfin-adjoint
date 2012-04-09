@@ -59,9 +59,13 @@ class KrylovSolver(dolfin.KrylovSolver):
           else:
             self.initial_guess = None
 
+          replace_map = kwargs['replace_map']
+          del kwargs['replace_map']
+
           solving.Matrix.__init__(self, *args, **kwargs)
+
           self.adjoint = kwargs['adjoint']
-          self.operators = (A, P)
+          self.operators = (dolfin.replace(A, replace_map), dolfin.replace(P, replace_map))
 
         def axpy(self, alpha, x):
           raise libadjoint.exceptions.LibadjointErrorNotImplemented("Shouldn't ever get here")
@@ -111,9 +115,11 @@ class KrylovSolver(dolfin.KrylovSolver):
                 solver.set_operator(A)
 
           solver.solve(x.vector(), rhs)
+          print "KrylovSolver solution: "
+          print x.vector().array()
           return solving.Vector(x)
 
-      solving.annotate(A == b, u, bcs, matrix_class=KrylovSolverMatrix, initial_guess=parameters['nonzero_initial_guess'])
+      solving.annotate(A == b, u, bcs, matrix_class=KrylovSolverMatrix, initial_guess=parameters['nonzero_initial_guess'], replace_map=True)
 
     out = dolfin.KrylovSolver.solve(self, *args, **kwargs)
 

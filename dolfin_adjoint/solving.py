@@ -65,6 +65,11 @@ def annotate(*args, **kwargs):
   else:
     initial_guess = False
 
+  replace_map = False
+  if 'replace_map' in kwargs:
+    replace_map = kwargs['replace_map']
+    del kwargs['replace_map']
+
   if isinstance(args[0], ufl.classes.Equation):
     # annotate !
 
@@ -214,6 +219,9 @@ def annotate(*args, **kwargs):
       if initial_guess:
         kwargs['initial_guess'] = value_coeffs[dependencies.index(initial_guess_var)]
 
+      if replace_map:
+        kwargs['replace_map'] = dict(zip(diag_coeffs, value_coeffs))
+
       return (matrix_class(dolfin.adjoint(eq_l), **kwargs), Vector(None, fn_space=u.function_space()))
     else:
 
@@ -224,6 +232,9 @@ def annotate(*args, **kwargs):
 
       if initial_guess:
         kwargs['initial_guess'] = value_coeffs[dependencies.index(initial_guess_var)]
+
+      if replace_map:
+        kwargs['replace_map'] = dict(zip(diag_coeffs, value_coeffs))
 
       return (matrix_class(eq_l, **kwargs), Vector(None, fn_space=u.function_space()))
   diag_block.assemble = diag_assembly_cb
