@@ -29,7 +29,10 @@ def convergence_order(errors):
 
   orders = [0.0] * (len(errors)-1)
   for i in range(len(errors)-1):
-    orders[i] = math.log(errors[i]/errors[i+1], 2)
+    try:
+      orders[i] = math.log(errors[i]/errors[i+1], 2)
+    except ZeroDivisionError:
+      orders[i] = numpy.nan
 
   return orders
 
