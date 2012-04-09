@@ -59,6 +59,12 @@ def annotate(*args, **kwargs):
   else:
     matrix_class = Matrix
 
+  if 'initial_guess' in kwargs:
+    initial_guess = kwargs['initial_guess']
+    del kwargs['initial_guess']
+  else:
+    initial_guess = False
+
   if isinstance(args[0], ufl.classes.Equation):
     # annotate !
 
@@ -139,6 +145,12 @@ def annotate(*args, **kwargs):
   diag_name = hashlib.md5(str(eq_lhs) + str(eq_rhs) + str(u) + str(time.time())).hexdigest() # we don't have a useful human-readable name, so take the md5sum of the string representation of the forms
   diag_deps = [adj_variables[coeff] for coeff in ufl.algorithms.extract_coefficients(eq_lhs) if hasattr(coeff, "function_space")]
   diag_coeffs = [coeff for coeff in ufl.algorithms.extract_coefficients(eq_lhs) if hasattr(coeff, "function_space")]
+
+  if initial_guess and linear: # if the initial guess matters, we're going to have to add this in as a dependency of the system
+    initial_guess_var = adj_variables[u]
+    diag_deps.append(initial_guess_var)
+    diag_coeffs.append(u)
+
   diag_block = libadjoint.Block(diag_name, dependencies=diag_deps, test_hermitian=debugging["test_hermitian"], test_derivative=debugging["test_derivative"])
 
   # Similarly, create the object associated with the right-hand side data.
@@ -146,6 +158,7 @@ def annotate(*args, **kwargs):
     rhs = RHS(eq_rhs)
   else:
     rhs = NonlinearRHS(eq_rhs, F, u, bcs, mass=eq_lhs, solver_parameters=solver_parameters, J=J)
+
 
   # We need to check if this is the first equation,
   # so that we can register the appropriate initial conditions.
@@ -192,9 +205,27 @@ def annotate(*args, **kwargs):
       # solution associated with the lifted discrete system that is actually solved.
       adjoint_bcs = [dolfin.homogenize(bc) for bc in eq_bcs if isinstance(bc, dolfin.DirichletBC)]
       if len(adjoint_bcs) == 0: adjoint_bcs = None
-      return (matrix_class(dolfin.adjoint(eq_l), bcs=adjoint_bcs, solver_parameters=solver_parameters, adjoint=True), Vector(None, fn_space=u.function_space()))
+
+      kwargs = {}
+      kwargs['bcs'] = adjoint_bcs
+      kwargs['solver_parameters'] = solver_parameters
+      kwargs['adjoint'] = True
+
+      if initial_guess:
+        kwargs['initial_guess'] = value_coeffs[dependencies.index(initial_guess_var)]
+
+      return (matrix_class(dolfin.adjoint(eq_l), **kwargs), Vector(None, fn_space=u.function_space()))
     else:
-      return (matrix_class(eq_l, bcs=eq_bcs, solver_parameters=solver_parameters, adjoint=False), Vector(None, fn_space=u.function_space()))
+
+      kwargs = {}
+      kwargs['bcs'] = eq_bcs
+      kwargs['solver_parameters'] = solver_parameters
+      kwargs['adjoint'] = False
+
+      if initial_guess:
+        kwargs['initial_guess'] = value_coeffs[dependencies.index(initial_guess_var)]
+
+      return (matrix_class(eq_l, **kwargs), Vector(None, fn_space=u.function_space()))
   diag_block.assemble = diag_assembly_cb
 
   def diag_action_cb(dependencies, values, hermitian, coefficient, input, context):

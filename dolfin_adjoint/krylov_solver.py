@@ -53,6 +53,12 @@ class KrylovSolver(dolfin.KrylovSolver):
 
       class KrylovSolverMatrix(solving.Matrix):
         def __init__(self, *args, **kwargs):
+          if 'initial_guess' in kwargs:
+            self.initial_guess = kwargs['initial_guess']
+            del kwargs['initial_guess']
+          else:
+            self.initial_guess = None
+
           solving.Matrix.__init__(self, *args, **kwargs)
           self.adjoint = kwargs['adjoint']
           self.operators = (A, P)
@@ -70,6 +76,9 @@ class KrylovSolver(dolfin.KrylovSolver):
           solver.parameters.update(parameters)
 
           x = dolfin.Function(fn_space)
+          if self.initial_guess is not None:
+            x.vector()[:] = self.initial_guess.vector()
+
           if b.data is None:
             dolfin.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
             return solving.Vector(x)
@@ -82,14 +91,14 @@ class KrylovSolver(dolfin.KrylovSolver):
           else:
             # This is really hideous. Sorry.
 
-            if assemble_system:
+            if assemble_system: # if we called assemble_system, rather than assemble
               (A, rhs) = dolfin.assemble_system(operators[0], b.data, self.bcs)
               if has_preconditioner:
                 (P, rhstmp) = dolfin.assemble_system(operators[1], b.data, self.bcs)
                 solver.set_operators(A, P)
               else:
                 solver.set_operator(A)
-            else:
+            else: # we called assemble
               A = dolfin.assemble(operators[0])
               rhs = dolfin.assemble(b.data)
               [bc.apply(A) for bc in self.bcs]
@@ -104,7 +113,7 @@ class KrylovSolver(dolfin.KrylovSolver):
           solver.solve(x.vector(), rhs)
           return solving.Vector(x)
 
-      solving.annotate(A == b, u, bcs, matrix_class=KrylovSolverMatrix)
+      solving.annotate(A == b, u, bcs, matrix_class=KrylovSolverMatrix, initial_guess=parameters['nonzero_initial_guess'])
 
     out = dolfin.KrylovSolver.solve(self, *args, **kwargs)
 

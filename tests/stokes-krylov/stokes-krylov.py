@@ -92,8 +92,10 @@ solver.set_operators(A, P)
 
 # Solve
 U = Function(W)
+U.vector()[:] = 1.0
 #solver.parameters["monitor_convergence"] = True
 solver.parameters["relative_tolerance"] = 1.0e-14
+solver.parameters["nonzero_initial_guess"] = True
 solver.solve(U.vector(), bb)
 
 success = replay_dolfin(tol=1.0e-14)
