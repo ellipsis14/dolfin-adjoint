@@ -51,9 +51,14 @@ class Function(dolfin.Function):
       self.adj_name = kwargs["name"]
       del kwargs["name"]
 
+    annotate = False
+    if 'annotate' in kwargs:
+      annotate = kwargs['annotate']
+      del kwargs['annotate']
+
     dolfin.Function.__init__(self, *args, **kwargs)
 
-    if isinstance(args[0], dolfin.Function):
+    if isinstance(args[0], dolfin.Function) and annotate:
       other_var = adj_variables[args[0]]
       if adjointer.variable_known(other_var):
         assign.register_assign(self, args[0])
