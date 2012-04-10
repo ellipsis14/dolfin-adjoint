@@ -14,7 +14,7 @@ def dolfin_adjoint_assign(self, other, annotate=True):
   in advance.'''
 
   # ignore anything not a dolfin.Function
-  if not isinstance(other, dolfin.Function) or annotate is False:
+  if not isinstance(other, dolfin.Function) or annotate is False or debugging["stop_annotating"]:
     return dolfin_assign(self, other)
 
   # ignore anything that is an interpolation, rather than a straight assignment

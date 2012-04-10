@@ -292,6 +292,9 @@ def annotate(*args, **kwargs):
       deriv = dolfin.replace(deriv, {args[1]: contraction_vector.data}) # contract over the middle index
 
       # Assemble the G-matrix now, so that we can apply the Dirichlet BCs to it
+      if len(ufl.algorithms.extract_arguments(ufl.algorithms.expand_derivatives(coefficient*deriv))) == 0:
+        return Vector(None)
+
       G = dolfin.assemble(coefficient * deriv)
       # Zero the rows of G corresponding to Dirichlet rows of the form
       bcs = [bc for bc in eq_bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
@@ -432,6 +435,8 @@ class Vector(libadjoint.Vector):
         self.data.vector()._scale(alpha)
       else:
         self.data=alpha*x.data
+    elif x.data is None:
+      pass
     elif isinstance(self.data, dolfin.Coefficient):
       if isinstance(x.data, dolfin.Coefficient):
         self.data.vector().axpy(alpha, x.data.vector())

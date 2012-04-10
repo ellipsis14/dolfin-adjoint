@@ -80,7 +80,7 @@ class KrylovSolver(dolfin.KrylovSolver):
           solver.parameters.update(parameters)
 
           x = dolfin.Function(fn_space)
-          if self.initial_guess is not None:
+          if self.initial_guess is not None and var.type == 'ADJ_FORWARD':
             x.vector()[:] = self.initial_guess.vector()
 
           if b.data is None:
