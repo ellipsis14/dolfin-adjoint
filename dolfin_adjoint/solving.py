@@ -244,16 +244,35 @@ def annotate(*args, **kwargs):
     expressions.update_expressions(frozen_expressions_dict)
     eq_l = dolfin.replace(eq_lhs, dict(zip(diag_coeffs, value_coeffs)))
 
-    if hermitian:
-      eq_l = dolfin.adjoint(eq_l)
+    if debugging["test_derivative"] is None:
+      if hermitian:
+        eq_l = dolfin.adjoint(eq_l)
 
-    output_vec = dolfin.assemble(coefficient * dolfin.action(eq_l, input.data))
-    output_fn = dolfin.Function(input.data.function_space())
-    vec = output_fn.vector()
-    for i in range(len(vec)):
-      vec[i] = output_vec[i]
+      output_vec = dolfin.assemble(coefficient * dolfin.action(eq_l, input.data))
+      output_fn = dolfin.Function(input.data.function_space())
+      vec = output_fn.vector()
+      for i in range(len(vec)):
+        vec[i] = output_vec[i]
 
-    return Vector(output_fn)
+      return Vector(output_fn)
+    else:
+      # Let's do things the proper way. We're testing the order of convergence of the
+      # derivative against this action, so we need to apply the boundary conditions
+      # here too.
+      G = dolfin.assemble(eq_l)
+      [bc.apply(G) for bc in eq_bcs]
+
+      if hermitian:
+        fn_space = ufl.algorithms.extract_arguments(eq_l)[-1].function_space()
+        output = dolfin.Function(fn_space)
+        G.transpmult(input.data.vector(), output.vector())
+      else:
+        fn_space = ufl.algorithms.extract_arguments(eq_l)[-2].function_space()
+        output = dolfin.Function(fn_space)
+        G.mult(input.data.vector(), output.vector())
+
+      return Vector(output)
+
   diag_block.action = diag_action_cb
 
   if len(diag_deps) > 0:
