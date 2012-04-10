@@ -27,6 +27,7 @@ from dolfin_adjoint import *
 import sys
 
 debugging["record_all"] = True
+debugging["test_derivative"] = 5
 
 class DirichletBoundary(SubDomain):
     def inside(self, x, on_boundary):
