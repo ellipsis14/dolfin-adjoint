@@ -11,8 +11,7 @@ import time
 
 test_cmds = {'tlm_simple': 'mpirun -n 2 python tlm_simple.py',
              'navier_stokes': 'mpirun -n 2 python navier_stokes.py',
-             'lock_exchange': None,
-             'matrix_summation': None}
+             'lock_exchange': None}
 
 chdirlock = threading.Lock()
 appendlock = threading.Lock()

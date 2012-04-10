@@ -1,6 +1,5 @@
 import dolfin
 import copy
-import collections
 
 dolfin_assemble = dolfin.assemble
 def assemble(*args, **kwargs):
@@ -9,6 +8,7 @@ def assemble(*args, **kwargs):
   if not isinstance(output, float):
     output.form = form
     output.assemble_system = False
+
   return output
 
 bc_apply = dolfin.DirichletBC.apply

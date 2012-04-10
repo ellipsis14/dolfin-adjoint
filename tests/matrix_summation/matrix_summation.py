@@ -1,7 +1,3 @@
-"""
-Naive implementation of Burgers' equation, goes oscillatory later
-"""
-
 import sys
 
 from dolfin import *
@@ -11,11 +7,7 @@ n = 100
 mesh = UnitInterval(n)
 V = FunctionSpace(mesh, "CG", 2)
 
-parameters["num_threads"] = 2
-
 debugging["record_all"] = True
-#debugging["test_hermitian"] = (100, 1.0e-14)
-debugging["test_derivative"] = 6
 
 def Dt(u, u_, timestep):
     return (u - u_)/timestep
@@ -28,10 +20,12 @@ def main(ic, annotate=False):
 
     mass = assemble(inner(u, v) * dx)
     advec = assemble(u_*grad(u)*v * dx)
-    rhs = inner(ic, v) * dx
+    rhs = assemble(inner(ic, v) * dx)
 
     L = mass + advec
-    solve(L == rhs, u_, annotate=annotate)
+
+    assert hasattr(L, 'form')
+    solve(L, u_.vector(), rhs, annotate=annotate)
 
     return u_
 

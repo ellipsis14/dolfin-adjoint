@@ -9,4 +9,5 @@ import split_annotation
 import lusolver
 import svd
 import function
+import genericmatrix
 from ui import *
