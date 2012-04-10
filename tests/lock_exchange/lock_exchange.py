@@ -5,7 +5,7 @@ import sys
 H = 0.1
 L = 0.8
 
-mesh = Rectangle(0, 0, L, H, 200, 50)
+mesh = Rectangle(0, 0, L, H, 250, 75)
 
 V = VectorFunctionSpace(mesh, "CG", 2)
 Q = FunctionSpace(mesh, "CG", 1)
@@ -53,7 +53,7 @@ def print_cfl(z, mesh, dt):
   CFL = umax * dt/hmin
   info_blue("CFL number: %s" % CFL)
 
-  new_dt = min(1.0 * hmin/umax, 0.5)
+  new_dt = min(2.0 * hmin/umax, 0.5)
   info_blue("New dt: %s" % new_dt)
   return new_dt
 
@@ -85,7 +85,12 @@ def main(ic, start, end, dt, bcs):
   temp_cn = cn(temp_old, temp_new)
 
   n = FacetNormal(mesh)
-  un = abs(dot(u('+'), n('+')))
+  h = CellSize(mesh)
+  h_avg = (h('+') + h('-'))/2
+  un = (dot(u, n) + abs(dot(u, n)))/2.0
+
+  alpha = Constant(5.0)
+  kappa = Constant(10**-6) # diffusivity
 
   dts = []
 
@@ -95,7 +100,11 @@ def main(ic, start, end, dt, bcs):
     L = inner(Dt(u_old, u_new, dt), u_test)*dx + inner(grad(u_cn)*u, u_test)*dx + \
         nu*inner(grad(u_cn), grad(u_test))*dx - inner((rho(temp_cn)/rho_0)*g, u_test)*dx + \
         -div(u_test)*p_cn*dx + p_test*div(u_cn)*dx + \
-        inner(Dt(temp_old, temp_new, dt), temp_test)*dx - dot(u*temp_new, grad(temp_test))*dx + (dot(u('+'), jump(temp_test, n))*avg(temp_new) + 0.5*un*dot(jump(temp_new, n), jump(temp_test, n)))*dS
+        inner(Dt(temp_old, temp_new, dt), temp_test)*dx + dot(grad(temp_test), kappa*grad(temp_cn) - u*temp_cn)*dx + \
+        kappa('+')*(alpha('+')/h('+'))*dot(jump(temp_test, n), jump(temp_cn, n))*dS \
+        - kappa('+')*dot(avg(grad(temp_test)), jump(temp_cn, n))*dS \
+        - kappa('+')*dot(jump(temp_test, n), avg(grad(temp_cn)))*dS \
+        + dot(jump(temp_test), un('+')*temp_cn('+') - un('-')*temp_cn('-') )*dS  + dot(temp_test, un*temp_cn)*ds
 
     F = replace(L, {z_new: z})
     J = derivative(F, z)
