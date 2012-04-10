@@ -272,19 +272,22 @@ def annotate(*args, **kwargs):
       args = ufl.algorithms.extract_arguments(deriv)
       deriv = dolfin.replace(deriv, {args[1]: contraction_vector.data}) # contract over the middle index
 
+      # Assemble the G-matrix now, so that we can apply the Dirichlet BCs to it
+      G = dolfin.assemble(coefficient * deriv)
+      # Zero the rows of G corresponding to Dirichlet rows of the form
+      bcs = [bc for bc in eq_bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
+      for bc in bcs:
+        bcvals = bc.get_boundary_values()
+        G.zero(numpy.array(bcvals.keys(), dtype='I'))
+
       if hermitian:
-        deriv = dolfin.adjoint(deriv)
-
-      action = coefficient * dolfin.action(deriv, input.data)
-
-      output = dolfin.Function(dolfin_variable.function_space())
-      vec = dolfin.assemble(action)
-      #bcs = [dolfin.homogenize(bc) for bc in eq_bcs if isinstance(bc, dolfin.DirichletBC)]
-      #[bc.apply(vec) for bc in bcs]
-      output.vector()[:] = vec
+        output = dolfin.Function(dolfin_variable.function_space()) # output lives in the function space of the differentiating variable
+        G.transpmult(input.data.vector(), output.vector())
+      else:
+        output = dolfin.Function(ufl.algorithms.extract_arguments(eq_lhs)[-1].function_space()) # output lives in the function space of the TestFunction
+        G.mult(input.data.vector(), output.vector())
 
       return Vector(output)
-      #return Vector(action)
     diag_block.derivative_action = derivative_action
 
   eqn = libadjoint.Equation(var, blocks=[diag_block], targets=[var], rhs=rhs)
