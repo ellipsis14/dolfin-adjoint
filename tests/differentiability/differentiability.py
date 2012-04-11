@@ -1,3 +1,18 @@
+"""This script implements the Taylor remainder convergence test
+for an individual form.
+
+Imagine we have an expression F(u) that is a function of velocity. We
+can check the correctness of the derivative dF/du by noting that
+
+||F(u + du) - F(u)|| converges at first order
+
+but that
+
+||F(u + du) - F(u) - dF/du . du|| converges at second order.
+
+In this example, F(u) is the action of the advection operator
+on a supplied temperature field."""
+
 from numpy import random
 from dolfin import *
 
@@ -29,10 +44,12 @@ def form(w):
   return F
 
 def form_action(w):
+  """This function computes F(u)."""
   F = form(w)
   return assemble(action(F, T))
 
 def derivative_action(w, dw):
+  """This function computes dF/du . du."""
   F = action(form(w), T)
   deriv = derivative(F, w, dw)
   return assemble(deriv)
@@ -50,17 +67,29 @@ def convergence_order(errors):
   return orders
 
 if __name__ == "__main__":
+  # We're going to choose a random perturbation direction, and then use that
+  # direction 5 times, making the perturbation smaller each time.
   dw_dir = Function(W)
   dw_dir.vector()[:] = random.random((W.dim(),))
 
+  # We need the unperturbed F(u) to compare against.
   unperturbed = form_action(w)
+
+  # fd_errors will contain
+  # ||F(u+du) - F(u)||
   fd_errors = []
+
+  # grad_errors will contain
+  # ||F(u+du) - F(u) - dF/du . du||
   grad_errors = []
 
+  # h is the perturbation size
   for h in [0.1/2**i for i in range(5)]:
+    # Build the perturbation
     dw = Function(W)
     dw.vector()[:] = h * dw_dir.vector()
 
+    # Compute the perturbed result
     wdw = Function(w) # w + dw
     wdw.vector()[:] += dw.vector()
     perturbed = form_action(wdw)
@@ -68,7 +97,8 @@ if __name__ == "__main__":
     fd_errors.append((perturbed - unperturbed).norm("l2"))
     grad_errors.append((perturbed - unperturbed - derivative_action(w, dw)).norm("l2"))
 
+  # Now print the orders of convergence:
   print "Finite differencing errors: ", fd_errors
-  print "Finite difference convergence order: ", convergence_order(fd_errors)
+  print "Finite difference convergence order (should be 1): ", convergence_order(fd_errors)
   print "Gradient errors: ", grad_errors
   print "Gradient convergence order: ", convergence_order(grad_errors)
