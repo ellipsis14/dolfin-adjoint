@@ -11,7 +11,11 @@ but that
 ||F(u + du) - F(u) - dF/du . du|| converges at second order.
 
 In this example, F(u) is the action of the advection operator
-on a supplied temperature field."""
+on a supplied temperature field:
+
+F(u) = action(advection(u), T).
+
+"""
 
 from numpy import random
 from dolfin import *
