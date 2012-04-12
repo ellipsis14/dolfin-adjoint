@@ -1,9 +1,9 @@
 from solving import adjointer, adj_variables
 
-def adj_compute_tlm_svd(ic, final, nsv):
+def adj_compute_propagator_svd(ic, final, nsv):
   ic_var = adj_variables[ic]; ic_var.c_object.timestep = 0; ic_var.c_object.iteration = 0
   final_var = adj_variables[final]
-  return adjointer.compute_tlm_svd(ic_var, final_var, nsv)
+  return adjointer.compute_propagator_svd(ic_var, final_var, nsv)
 
 def adj_compute_propagator_matrix(svd):
   # Warning: for testing purposes only -- it's far too expensive to do on big models.

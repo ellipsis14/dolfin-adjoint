@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
     ndof = V.dim()
     info_blue("Computing the TLM the SVD way ... ")
-    svd = adj_compute_tlm_svd(ic, forward, nsv=ndof)
+    svd = adj_compute_propagator_svd(ic, forward, nsv=ndof)
 
     assert svd.ncv == ndof
 

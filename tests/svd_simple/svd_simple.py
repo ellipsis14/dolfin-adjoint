@@ -23,7 +23,7 @@ if __name__ == "__main__":
   ic = project(Expression("x[0]*(x[0]-1)*x[1]*(x[1]-1)"), V)
   soln = main(ic, annotate=True)
 
-  svd = adj_compute_tlm_svd(ic, soln, 1)
+  svd = adj_compute_propagator_svd(ic, soln, 1)
   (sigma, error) = svd.get_svd(0, return_error=True)
 
   print "Maximal singular value: ", (sigma, error)
