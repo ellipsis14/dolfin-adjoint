@@ -11,14 +11,23 @@ def assemble(*args, **kwargs):
 
   return output
 
-bc_apply = dolfin.DirichletBC.apply
-def adjoint_bc_apply(self, *args, **kwargs):
+periodic_bc_apply = dolfin.PeriodicBC.apply
+def adjoint_periodic_bc_apply(self, *args, **kwargs):
   for arg in args:
     if not hasattr(arg, 'bcs'):
       arg.bcs = []
     arg.bcs.append(self)
-  return bc_apply(self, *args, **kwargs)
-dolfin.DirichletBC.apply = adjoint_bc_apply
+  return periodic_bc_apply(self, *args, **kwargs)
+dolfin.PeriodicBC.apply = adjoint_periodic_bc_apply
+
+dirichlet_bc_apply = dolfin.DirichletBC.apply
+def adjoint_dirichlet_bc_apply(self, *args, **kwargs):
+  for arg in args:
+    if not hasattr(arg, 'bcs'):
+      arg.bcs = []
+    arg.bcs.append(self)
+  return dirichlet_bc_apply(self, *args, **kwargs)
+dolfin.DirichletBC.apply = adjoint_dirichlet_bc_apply
 
 function_vector = dolfin.Function.vector
 def adjoint_function_vector(self):

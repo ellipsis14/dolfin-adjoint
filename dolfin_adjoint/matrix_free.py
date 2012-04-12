@@ -54,7 +54,7 @@ class MatrixFree(solving.Matrix):
       rhs = dolfin.assemble(b.data)
 
     if var.type in ['ADJ_TLM', 'ADJ_ADJOINT']:
-      self.bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
+      self.bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.cpp.DirichletBC)] + [bc for bc in self.bcs if not isinstance(bc, dolfin.DirichletBC)]
 
     for bc in self.bcs:
       bc.apply(rhs)
@@ -253,7 +253,7 @@ class AdjointKrylovMatrix(dolfin.PETScKrylovMatrix):
     self.current_form = dolfin.replace(self.original_form, replace_dict)
 
   def hermitian(self):
-    adjoint_bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
+    adjoint_bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.cpp.DirichletBC)] + [bc for bc in self.bcs if not isinstance(bc, dolfin.DirichletBC)]
     return AdjointKrylovMatrix(dolfin.adjoint(self.original_form), bcs=adjoint_bcs)
 
   def derivative_action(self, variable, contraction_vector, hermitian, input, coefficient):
@@ -281,14 +281,14 @@ def transpose_operators(operators):
       dolfin.assemble(dolfin.adjoint(op.form), tensor=out[i])
 
       if hasattr(op, 'bcs'):
-        adjoint_bcs = [dolfin.homogenize(bc) for bc in op.bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
+        adjoint_bcs = [dolfin.homogenize(bc) for bc in op.bcs if isinstance(bc, dolfin.cpp.DirichletBC)] + [bc for bc in op.bcs if not isinstance(bc, dolfin.DirichletBC)]
         [bc.apply(out[i]) for bc in adjoint_bcs]
 
     elif isinstance(op, dolfin.Form) or isinstance(op, ufl.form.Form):
       out[i] = dolfin.adjoint(op)
 
       if hasattr(op, 'bcs'):
-        out[i].bcs = [dolfin.homogenize(bc) for bc in op.bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
+        out[i].bcs = [dolfin.homogenize(bc) for bc in op.bcs if isinstance(bc, dolfin.cpp.DirichletBC)] + [bc for bc in op.bcs if not isinstance(bc, dolfin.DirichletBC)]
 
     elif isinstance(op, AdjointKrylovMatrix):
       pass

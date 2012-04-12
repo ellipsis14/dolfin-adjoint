@@ -88,7 +88,7 @@ class KrylovSolver(dolfin.KrylovSolver):
             return solving.Vector(x)
 
           if var.type in ['ADJ_TLM', 'ADJ_ADJOINT']:
-            self.bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
+            self.bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.cpp.DirichletBC)] + [bc for bc in self.bcs if not isinstance(bc, dolfin.cpp.DirichletBC)]
 
           # This is really hideous. Sorry.
           if isinstance(b.data, dolfin.Function):

@@ -37,7 +37,7 @@ def annotate_split(bigfn, idx, smallfn, bcs):
     eq_l = eq_lhs
 
     if hermitian:
-      adjoint_bcs = [dolfin.homogenize(bc) for bc in bcs if isinstance(bc, dolfin.DirichletBC)]
+      adjoint_bcs = [dolfin.homogenize(bc) for bc in bcs if isinstance(bc, dolfin.DirichletBC)] + [bc for bc in bcs if not isinstance(bc, dolfin.DirichletBC)]
       if len(adjoint_bcs) == 0: adjoint_bcs = None
       return (solving.Matrix(dolfin.adjoint(eq_l), bcs=adjoint_bcs), solving.Vector(None, fn_space=fn_space))
     else:

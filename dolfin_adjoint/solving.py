@@ -208,7 +208,7 @@ def annotate(*args, **kwargs):
     if hermitian:
       # Homogenise the adjoint boundary conditions. This creates the adjoint
       # solution associated with the lifted discrete system that is actually solved.
-      adjoint_bcs = [dolfin.homogenize(bc) for bc in eq_bcs if isinstance(bc, dolfin.DirichletBC)]
+      adjoint_bcs = [dolfin.homogenize(bc) for bc in eq_bcs if isinstance(bc, dolfin.DirichletBC)] + [bc for bc in eq_bcs if not isinstance(bc, dolfin.DirichletBC)]
       if len(adjoint_bcs) == 0: adjoint_bcs = None
 
       kwargs = {}
@@ -857,7 +857,7 @@ class NonlinearRHS(RHS):
 
     if hermitian:
       deriv = dolfin.adjoint(deriv)
-      bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.DirichletBC)]
+      bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.DirichletBC)] + [bc for bc in self.bcs if not isinstance(bc, dolfin.DirichletBC)]
     else:
       bcs = self.bcs
 
