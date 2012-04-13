@@ -58,6 +58,21 @@ class InterpolateRHS(libadjoint.RHS):
     if not hermitian:
       return solving.Vector(dolfin.interpolate(contraction_vector.data, self.V))
     else:
+#      For future reference, the transpose action of the interpolation operator
+#      is (in pseudocode!):
+#
+#      for target_dof in target:
+#        figure out what element it lives in, to compute src_dofs
+#        for src_dof in src_dofs:
+#          basis = the value of the basis function of src_dof at the node of target_dof
+#
+#          # all of the above is exactly the same as the forward interpolation.
+#          # forward interpolation would do:
+#          # target_coefficients[target_dof] += basis * src_coefficients[src_dof]
+#
+#          # but the adjoint action is:
+#          src_coefficients[src_dof] += basis * target_coefficients[target_dof]
+
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Can't transpose an interpolation operator yet, sorry!")
 
   def dependencies(self):

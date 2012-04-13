@@ -11,7 +11,7 @@ import copy
 expressions_dict = collections.defaultdict(dict)
 
 # A rant:
-# This has to be one of the most ridiculously difficult things in the whole
+# This had to be one of the most ridiculously difficult things in the whole
 # library, largely caused by the black magic associated with Expressions generally.
 # __new__, fecking metaclasses, the works --
 # I just want to subclass one of your classes, for heaven's sake!
@@ -29,7 +29,7 @@ dolfin.Expression.__init__ = __init__
 expression_setattr = dolfin.Expression.__setattr__
 def __setattr__(self, k, v):
   expression_setattr(self, k, v)
-  if k not in ["_ufl_element", "_count", "_countedclass", "_repr", "_element", "this", "_value_shape"]:
+  if k not in ["_ufl_element", "_count", "_countedclass", "_repr", "_element", "this", "_value_shape"]: # <-- you may need to add more here as dolfin changes
     expr_dict = expressions_dict[self]
     expr_dict[k] = v
 dolfin.Expression.__setattr__ = __setattr__
