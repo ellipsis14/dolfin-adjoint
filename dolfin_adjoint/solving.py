@@ -263,20 +263,6 @@ def annotate(*args, **kwargs):
       import os
       import os.path
 
-      if not os.path.isfile("/tmp/mesh.xml.gz"):
-        print "Dumping mesh ... "
-        mfile = dolfin.File("/tmp/mesh.xml.gz")
-        mfile << ufl.algorithms.extract_arguments(eq_l)[-1].function_space().mesh()
-        for dependency, value in zip(dependencies, values):
-          print "Dumping ", dependency
-          print "(%s dofs)" % len(value.data.vector())
-          dfile = dolfin.File("/tmp/%s.xml.gz" % dependency)
-          dfile << value.data
-        print "Dumping temperature"
-        print "(%s dofs)" % len(input.data.vector())
-        tfile = dolfin.File("/tmp/temperature.xml.gz")
-        tfile << input.data
-
       G = dolfin.assemble(eq_l)
       [bc.apply(G) for bc in eq_bcs]
 
