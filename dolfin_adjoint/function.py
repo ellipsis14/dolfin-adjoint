@@ -27,6 +27,14 @@ def dolfin_adjoint_assign(self, other, annotate=True):
   # in the main solve wrapper.
   if not adjointer.variable_known(other_var):
     adj_variables.forget(other)
+    if hasattr(other, "split"):
+      if other.split is True:
+        errmsg = '''Cannot use Function.split() (yet). To adjoint this, we need functionality
+        not yet present in DOLFIN. See https://bugs.launchpad.net/dolfin/+bug/891127 .
+
+        Your model may well work if you use split(func) instead of func.split().'''
+        raise libadjoint.exceptions.LibadjointErrorNotImplemented(errmsg)
+
     return dolfin_assign(self, other)
 
   # OK, so we have a variable we've seen before. Beautiful.
