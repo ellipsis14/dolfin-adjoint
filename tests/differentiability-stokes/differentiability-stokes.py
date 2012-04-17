@@ -1,7 +1,7 @@
 """This script implements the Taylor remainder convergence test
 for an individual form.
 
-Imagine we have an expression F(T) that is a function of T. We
+Suppose we have an expression F(T) that is a function of T. We
 can check the correctness of the derivative dF/dT by noting that
 
 ||F(T + dT) - F(T)|| converges at first order
@@ -21,8 +21,11 @@ from numpy import random
 from dolfin import *
 from math import log
 from logging import INFO
+import sys
 
-#parameters["form_compiler"]["quadrature_degree"] = 1
+# Uncomment the line below to make this script work.
+# Any positive value works (but -1 does not).
+#parameters["form_compiler"]["quadrature_degree"] = 5
 parameters["form_compiler"]["log_level"] = INFO
 parameters["form_compiler"]["representation"] = "quadrature"
 
@@ -32,11 +35,6 @@ W = VectorFunctionSpace(mesh, "CG", 2) * FunctionSpace(mesh, "CG", 1)
 
 T = Function(V, "temperature.xml.gz")
 w = Function(W, "velocity.xml.gz")
-
-t_pvd = File("temperature.pvd")
-t_pvd << T
-u_pvd = File("velocity.pvd")
-u_pvd << w.split()[0]
 
 def form(T):
   eta = exp(-log(1000)*T)
@@ -82,7 +80,7 @@ def convergence_order(errors):
   return orders
 
 if __name__ == "__main__":
-  # We're going to choose a random perturbation direction, and then use that
+  # We're going to choose a perturbation direction, and then use that
   # direction 5 times, making the perturbation smaller each time.
   dT_dir = Function(V)
   dT_dir.vector()[:] = 1.0
