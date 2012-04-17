@@ -20,6 +20,11 @@ F(T) = action(momentum(T), u).
 from numpy import random
 from dolfin import *
 from math import log
+from logging import INFO
+
+#parameters["form_compiler"]["quadrature_degree"] = 1
+parameters["form_compiler"]["log_level"] = INFO
+parameters["form_compiler"]["representation"] = "quadrature"
 
 mesh = Mesh("mesh.xml.gz")
 V = FunctionSpace(mesh, "CG", 1)
@@ -80,7 +85,7 @@ if __name__ == "__main__":
   # We're going to choose a random perturbation direction, and then use that
   # direction 5 times, making the perturbation smaller each time.
   dT_dir = Function(V)
-  dT_dir.vector()[:] = random.random((V.dim(),))
+  dT_dir.vector()[:] = 1.0
 
   # We need the unperturbed F(T) to compare against.
   unperturbed = form_action(T)
@@ -94,7 +99,7 @@ if __name__ == "__main__":
   grad_errors = []
 
   # h is the perturbation size
-  for h in [1.0e-7/2**i for i in range(5)]:
+  for h in [1.0e-5/2**i for i in range(5)]:
     # Build the perturbation
     dT = Function(V)
     dT.vector()[:] = h * dT_dir.vector()
