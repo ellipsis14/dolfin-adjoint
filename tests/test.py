@@ -17,14 +17,19 @@ test_cmds = {'tlm_simple': 'mpirun -n 2 python tlm_simple.py',
 chdirlock = threading.Lock()
 appendlock = threading.Lock()
 
-try:
+num_procs = 1
+if len(sys.argv) > 1:
   if sys.argv[1] == "-n":
     if len(sys.argv) > 2:
       num_procs = int(sys.argv[2])
     else:
       num_procs = None
-except:
-  num_procs = 1
+  else:
+    print "Usage: test.py [-n THREADS]"
+    print "Run the dolfin-adjoint test suite."
+    print "To run on N cores, use -n N; to use all"
+    print "processors available, just run test.py -n."
+    sys.exit(0)
 
 pool = multiprocessing.pool.ThreadPool(num_procs)
 fails = []
