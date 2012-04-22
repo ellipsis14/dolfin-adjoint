@@ -10,10 +10,11 @@ class FinalFunctional(libadjoint.Functional):
   It takes in a form that evaluates the functional at the final timestep, and implements the 
   necessary routines such as calling the functional  and taking its derivative.'''
 
-  def __init__(self, form):
+  def __init__(self, form, name=None):
 
     self.form = form
     self.activated = False
+    self.name = name
 
   def __call__(self, adjointer, dependencies, values):
 
@@ -48,8 +49,10 @@ class FinalFunctional(libadjoint.Functional):
     return deps
 
   def __str__(self):
-    
-    return hashlib.md5(str(self.form)).hexdigest()
+    if self.name is not None:
+      return self.name
+    else:
+      return hashlib.md5(str(self.form)).hexdigest()
 
 
 class TimeFunctional(libadjoint.Functional):
@@ -59,7 +62,7 @@ class TimeFunctional(libadjoint.Functional):
     The two forms, form and final_form, may only use UFL coefficients of the same timelevel, except the UFL coefficients that are listed in the optional parameter static_variables. 
     If final_form is not provided, the second term is neglected.'''
 
-  def __init__(self, form, dt, final_form=None, static_variables=None, verbose=False):
+  def __init__(self, form, dt, final_form=None, static_variables=None, verbose=False, name=None):
 
     self.form = form
     if static_variables is None:
@@ -70,6 +73,7 @@ class TimeFunctional(libadjoint.Functional):
     self.dt = dt
     self.final_form = final_form
     self.verbose = verbose
+    self.name = name
 
   def __call__(self, adjointer, timestep, dependencies, values):
 
@@ -138,5 +142,7 @@ class TimeFunctional(libadjoint.Functional):
     return deps
 
   def __str__(self):
-    
-    return hashlib.md5(str(self.form)).hexdigest()
+    if self.name is not None:
+      return self.name
+    else:
+      return hashlib.md5(str(self.form)).hexdigest()
