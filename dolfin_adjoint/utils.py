@@ -36,21 +36,6 @@ def convergence_order(errors):
 
   return orders
 
-def adjoint_dolfin(functional, forget=True):
-
-  for i in range(adjointer.equation_count)[::-1]:
-      (adj_var, output) = adjointer.get_adjoint_solution(i, functional)
-      
-      storage = libadjoint.MemoryStorage(output)
-      adjointer.record_variable(adj_var, storage)
-
-      if forget:
-        adjointer.forget_adjoint_equation(i)
-      else:
-        adjointer.forget_adjoint_values(i)
-
-  return output.data # return the last adjoint state
-
 def compute_adjoint(functional, forget=True):
 
   for i in range(adjointer.equation_count)[::-1]:
@@ -59,7 +44,12 @@ def compute_adjoint(functional, forget=True):
       storage = libadjoint.MemoryStorage(output)
       adjointer.record_variable(adj_var, storage)
 
-      if forget:
+      # forget is None: forget *nothing*.
+      # forget is True: forget everything we can, forward and adjoint
+      # forget is False: forget only unnecessary adjoint values
+      if forget is None:
+        pass
+      elif forget:
         adjointer.forget_adjoint_equation(i)
       else:
         adjointer.forget_adjoint_values(i)
@@ -75,7 +65,12 @@ def compute_tlm(parameter, forget=False):
       storage.set_overwrite(True)
       adjointer.record_variable(tlm_var, storage)
 
-      if forget:
+      # forget is None: forget *nothing*.
+      # forget is True: forget everything we can, forward and adjoint
+      # forget is False: forget only unnecessary adjoint values
+      if forget is None:
+        pass
+      elif forget:
         adjointer.forget_tlm_equation(i)
       else:
         adjointer.forget_tlm_values(i)
@@ -159,7 +154,9 @@ def tlm_dolfin(parameter, forget=False):
       storage.set_overwrite(True)
       adjointer.record_variable(tlm_var, storage)
 
-      if forget:
+      if forget is None:
+        pass
+      elif forget:
         adjointer.forget_tlm_equation(i)
       else:
         adjointer.forget_tlm_values(i)
@@ -329,7 +326,9 @@ def compute_gradient(J, param, forget=True):
     elif dJdparam is not None and out is not None:
       dJdparam += out
 
-    if forget:
+    if forget is None:
+      pass
+    elif forget:
       adjointer.forget_adjoint_equation(i)
     else:
       adjointer.forget_adjoint_values(i)
