@@ -115,22 +115,16 @@ if __name__ == "__main__":
     adj_html("stokes_forward.html", "forward")
     adj_html("stokes_adjoint.html", "adjoint")
 
-    # Replay model
-    replay_dolfin()
-
     print "Running adjoint ... "
     J = FinalFunctional(T*T*dx)
-    for (adjoint, var) in compute_adjoint(J, forget=False):
-      pass
+    Jic = assemble(T*T*dx)
+    dJdic = compute_gradient(J, InitialConditionParameter(T), forget=False)
 
     def J(ic):
       T = main(ic, annotate=False)
       return assemble(T*T*dx)
 
-    minconv = test_initial_condition_adjoint(J, ic, adjoint)
+    minconv = taylor_test(J, InitialConditionParameter(T), Jic, dJdic)
     if minconv < 1.9:
-      exit_code = 1
-    else:
-      exit_code = 0
-    sys.exit(exit_code)
+      sys.exit(1)
 
