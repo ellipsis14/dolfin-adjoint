@@ -53,6 +53,7 @@ class ScalarParameter(libadjoint.Parameter):
       x = dolfin.Function(fn_space)
       if rhs == 0:
         form = -lhs
+        x = fwd_var.nonlinear_u
       else:
         form = rhs - dolfin.action(lhs, x)
 
@@ -100,6 +101,7 @@ class ScalarParameter(libadjoint.Parameter):
       x = dolfin.Function(fn_space)
       if rhs == 0:
         form = -lhs
+        x = fwd_var.nonlinear_u
       else:
         form = rhs - dolfin.action(lhs, x)
 
@@ -158,6 +160,7 @@ class ScalarParameters(libadjoint.Parameter):
       x = dolfin.Function(fn_space)
       if rhs == 0:
         form = -lhs
+        x = fwd_var.nonlinear_u
       else:
         form = rhs - dolfin.action(lhs, x)
 
@@ -198,6 +201,7 @@ class ScalarParameters(libadjoint.Parameter):
       x = dolfin.Function(fn_space)
       if rhs == 0:
         form = -lhs
+        x = fwd_var.nonlinear_u
       else:
         form = rhs - dolfin.action(lhs, x)
 

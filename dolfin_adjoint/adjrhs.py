@@ -138,20 +138,6 @@ class NonlinearRHS(RHS):
     u = dolfin.Function(ic)
     current_F    = dolfin.replace(current_F, {self.u: u})
 
-    try:
-      if self.J is not None:
-        J = dolfin.replace(self.J, replace_map)
-        J = dolfin.replace(J, {self.u: u})
-      else:
-        J = self.J
-    except ufl.log.UFLException:
-      J = None
-
-    # OK, here goes nothing:
-    dolfin.solve(current_F == 0, u, self.bcs, solver_parameters=self.solver_parameters, J=J)
-
-    act = dolfin.action(self.mass, u)
-
     vec = adjlinalg.Vector(None)
     vec.nonlinear_form = current_F
     vec.nonlinear_u = u
@@ -202,6 +188,7 @@ def adj_get_forward_equation(i):
   # the real F(u) = 0 back again. So let's fetch it here:
   if hasattr(rhs, 'nonlinear_form'):
     lhs = rhs.nonlinear_form
+    fwd_var.nonlinear_u = rhs.nonlinear_u
     rhs = 0
   else:
     lhs = lhs.data
