@@ -12,8 +12,7 @@ import time
 test_cmds = {'tlm_simple': 'mpirun -n 2 python tlm_simple.py',
              'navier_stokes': 'mpirun -n 2 python navier_stokes.py',
              'differentiability-dg-upwind': None,
-             'differentiability-stokes': None,
-             "newton_constant": None}
+             'differentiability-stokes': None}
 
 chdirlock = threading.Lock()
 appendlock = threading.Lock()

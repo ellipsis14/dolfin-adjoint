@@ -150,7 +150,11 @@ class NonlinearRHS(RHS):
     # OK, here goes nothing:
     dolfin.solve(current_F == 0, u, self.bcs, solver_parameters=self.solver_parameters, J=J)
 
-    return adjlinalg.Vector(dolfin.action(self.mass, u))
+    act = dolfin.action(self.mass, u)
+    vec = adjlinalg.Vector(act)
+    vec.nonlinear_form = current_F
+
+    return vec
 
   def derivative_action(self, dependencies, values, variable, contraction_vector, hermitian):
     '''If variable is the variable for the initial condition, we want to ignore it,
@@ -185,3 +189,19 @@ class NonlinearRHS(RHS):
       bcs = self.bcs
 
     return adjlinalg.Matrix(deriv, bcs=bcs)
+
+def adj_get_forward_equation(i):
+  (fwd_var, lhs, rhs) = adjglobals.adjointer.get_forward_equation(i)
+
+  # We needed to cheat the annotation when we registered a nonlinear solve.
+  # However, if we want to actually differentiate the form (e.g. to compute
+  # the dependency of the form on a ScalarParameter) we're going to need
+  # the real F(u) = 0 back again. So let's fetch it here:
+  if hasattr(rhs, 'nonlinear_form'):
+    lhs = rhs.nonlinear_form
+    rhs = 0
+  else:
+    lhs = lhs.data
+    rhs = rhs.data
+
+  return (fwd_var, lhs, rhs)

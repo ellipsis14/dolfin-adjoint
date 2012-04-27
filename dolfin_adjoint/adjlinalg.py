@@ -60,6 +60,10 @@ class Vector(libadjoint.Vector):
         self.data.vector()._scale(alpha)
       else:
         self.data=alpha*x.data
+
+      if hasattr(x, 'nonlinear_form'):
+        self.nonlinear_form = x.nonlinear_form
+
     elif x.data is None:
       pass
     elif isinstance(self.data, dolfin.Coefficient):

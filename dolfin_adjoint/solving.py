@@ -454,3 +454,4 @@ def do_checkpoint(cs, var):
     for coeff in adjglobals.adj_variables.coeffs.keys(): 
       if adjglobals.adj_variables[coeff] == var: continue
       adjglobals.adjointer.record_variable(adjglobals.adj_variables[coeff], libadjoint.DiskStorage(adjlinalg.Vector(coeff), cs=True))
+

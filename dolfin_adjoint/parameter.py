@@ -5,6 +5,7 @@ from dolfin import info, info_blue, info_red
 import numpy
 import adjlinalg
 import adjglobals
+from adjrhs import adj_get_forward_equation
 
 class InitialConditionParameter(libadjoint.Parameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
@@ -45,13 +46,15 @@ class ScalarParameter(libadjoint.Parameter):
     self.a = a
 
   def __call__(self, adjointer, i, dependencies, values, variable):
-    (fwd_var, lhs, rhs) = adjointer.get_forward_equation(i)
-    lhs = lhs.data; rhs = rhs.data
+    (fwd_var, lhs, rhs) = adj_get_forward_equation(i)
 
     if not isinstance(lhs, adjlinalg.IdentityMatrix):
-      fn_space = ufl.algorithms.extract_arguments(rhs)[0].function_space()
+      fn_space = ufl.algorithms.extract_arguments(lhs)[0].function_space()
       x = dolfin.Function(fn_space)
-      form = rhs - dolfin.action(lhs, x)
+      if rhs == 0:
+        form = -lhs
+      else:
+        form = rhs - dolfin.action(lhs, x)
 
       dparam = dolfin.Function(dolfin.FunctionSpace(fn_space.mesh(), "R", 0))
       dparam.vector()[:] = 1.0
@@ -90,13 +93,15 @@ class ScalarParameter(libadjoint.Parameter):
     return str(self.a) + ':ScalarParameter'
 
   def inner_adjoint(self, adjointer, adjoint, i, variable):
-    (fwd_var, lhs, rhs) = adjointer.get_forward_equation(i)
-    lhs = lhs.data; rhs = rhs.data
+    (fwd_var, lhs, rhs) = adj_get_forward_equation(i)
 
     if not isinstance(lhs, adjlinalg.IdentityMatrix):
-      fn_space = ufl.algorithms.extract_arguments(rhs)[0].function_space()
+      fn_space = ufl.algorithms.extract_arguments(lhs)[0].function_space()
       x = dolfin.Function(fn_space)
-      form = rhs - dolfin.action(lhs, x)
+      if rhs == 0:
+        form = -lhs
+      else:
+        form = rhs - dolfin.action(lhs, x)
 
       dparam = dolfin.Function(dolfin.FunctionSpace(fn_space.mesh(), "R", 0))
       dparam.vector()[:] = 1.0
@@ -142,17 +147,19 @@ class ScalarParameters(libadjoint.Parameter):
       self.dv = dv
 
   def __call__(self, adjointer, i, dependencies, values, variable):
-    (fwd_var, lhs, rhs) = adjointer.get_forward_equation(i)
-    lhs = lhs.data; rhs = rhs.data
+    (fwd_var, lhs, rhs) = adj_get_forward_equation(i)
 
     diff_form = None
 
     assert self.dv is not None, "Need a perturbation direction to use in the TLM."
 
     if not isinstance(lhs, adjlinalg.IdentityMatrix):
-      fn_space = ufl.algorithms.extract_arguments(rhs)[0].function_space()
+      fn_space = ufl.algorithms.extract_arguments(lhs)[0].function_space()
       x = dolfin.Function(fn_space)
-      form = rhs - dolfin.action(lhs, x)
+      if rhs == 0:
+        form = -lhs
+      else:
+        form = rhs - dolfin.action(lhs, x)
 
       dparam = dolfin.Function(dolfin.FunctionSpace(fn_space.mesh(), "R", 0))
       dparam.vector()[:] = 1.0
@@ -182,15 +189,17 @@ class ScalarParameters(libadjoint.Parameter):
     return str(self.v) + ':ScalarParameters'
 
   def inner_adjoint(self, adjointer, adjoint, i, variable):
-    (fwd_var, lhs, rhs) = adjointer.get_forward_equation(i)
-    lhs = lhs.data; rhs = rhs.data
+    (fwd_var, lhs, rhs) = adj_get_forward_equation(i)
 
     dJdv = numpy.zeros(len(self.v))
 
     if not isinstance(lhs, adjlinalg.IdentityMatrix):
-      fn_space = ufl.algorithms.extract_arguments(rhs)[0].function_space()
+      fn_space = ufl.algorithms.extract_arguments(lhs)[0].function_space()
       x = dolfin.Function(fn_space)
-      form = rhs - dolfin.action(lhs, x)
+      if rhs == 0:
+        form = -lhs
+      else:
+        form = rhs - dolfin.action(lhs, x)
 
       dparam = dolfin.Function(dolfin.FunctionSpace(fn_space.mesh(), "R", 0))
       dparam.vector()[:] = 1.0

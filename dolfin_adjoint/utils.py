@@ -404,4 +404,3 @@ def test_scalar_parameters_adjoint(J, a, dJda, seed=0.1):
   info("Convergence orders for Taylor remainder with adjoint information (should all be 2): " + str(convergence_order(with_gradient)))
 
   return min(convergence_order(with_gradient))
-
