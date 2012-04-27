@@ -31,11 +31,12 @@ if __name__ == "__main__":
   soln = main(ic, (a, b), annotate=True)
 
   J = FinalFunctional(soln*soln*dx)
+  Ja = assemble(soln*soln*dx)
   dJda = compute_gradient(J, ScalarParameters((a, b)))
 
   def J(params):
     soln = main(ic, params, annotate=False)
     return assemble(soln*soln*dx)
 
-  minconv = test_scalar_parameters_adjoint(J, (a, b), dJda)
+  minconv = taylor_test(J, ScalarParameters((a, b)), Ja, dJda)
 

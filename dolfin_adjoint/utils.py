@@ -404,3 +404,104 @@ def test_scalar_parameters_adjoint(J, a, dJda, seed=0.1):
   info("Convergence orders for Taylor remainder with adjoint information (should all be 2): " + str(convergence_order(with_gradient)))
 
   return min(convergence_order(with_gradient))
+
+def taylor_test(J, m, Jm, dJdm, seed=None, perturbation_direction=None):
+  '''J must be a function that takes in a parameter value m and returns the value
+     of the functional:
+
+       func = J(m)
+
+     Jm is the value of the function J at the parameter m. 
+     dJdm is the gradient of J evaluated at m, to be tested for correctness.
+
+     This function returns the order of convergence of the Taylor
+     series remainder, which should be 2 if the adjoint is working
+     correctly.'''
+
+  info_blue("Running Taylor remainder convergence test ... ")
+  import random
+
+  # First, compute perturbation sizes.
+  if seed is None:
+    if isinstance(m, ScalarParameter):
+      seed = float(m)/5.0
+      if seed == 0.0: seed = 0.1
+    else:
+      seed = 0.01
+
+  perturbation_sizes = [seed/(2**i) for i in range(5)]
+
+  # Next, compute the perturbation direction.
+  if perturbation_direction is None:
+    if isinstance(m, ScalarParameter):
+      perturbation_direction = 1
+    elif isinstance(m, ScalarParameters):
+      perturbation_direction = numpy.array([float(x)/5.0 for x in m.v])
+    elif isinstance(m, InitialConditionParameter):
+      ic = adjglobals.adjointer.get_variable_value(m.var).data
+      perturbation_direction = dolfin.Function(ic)
+      vec = perturbation_direction.vector()
+      for i in range(len(vec)):
+        vec[i] = random.random()
+    else:
+      raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to compute a perturbation direction")
+
+  # So now compute the perturbations:
+  if not isinstance(perturbation_direction, dolfin.Function):
+    perturbations = [x*perturbation_direction for x in perturbation_sizes]
+  else:
+    perturbations = []
+    for x in perturbation_sizes:
+      perturbation = dolfin.Function(perturbation_direction)
+      vec = perturbation.vector()
+      vec *= x
+      perturbations.append(perturbation)
+
+  # And now the perturbed inputs:
+  if isinstance(m, ScalarParameter):
+    pinputs = [dolfin.Constant(float(m.a) + x) for x in perturbations]
+  elif isinstance(m, ScalarParameters):
+    a = numpy.array([float(x) for x in m.v])
+
+    def make_const(arr):
+      return [dolfin.Constant(x) for x in arr]
+
+    pinputs = [make_const(a + x) for x in perturbations]
+  elif isinstance(m, InitialConditionParameter):
+    pinputs = []
+    for x in perturbations:
+      pinput = dolfin.Function(x)
+      pinput.vector()[:] += ic.vector()
+      pinputs.append(pinput)
+
+  # At last: the common bit!
+  functional_values = []
+  for pinput in pinputs:
+    Jp = J(pinput)
+    functional_values.append(Jp)
+
+  # First-order Taylor remainders (not using adjoint)
+  no_gradient = [abs(perturbed_J - Jm) for perturbed_J in functional_values]
+
+  info("Taylor remainder without adjoint information: " + str(no_gradient))
+  info("Convergence orders for Taylor remainder without adjoint information (should all be 1): " + str(convergence_order(no_gradient)))
+
+  with_gradient = []
+  if isinstance(m, ScalarParameter):
+    for i in range(len(perturbations)):
+      remainder = abs(functional_values[i] - Jm - dJdm*perturbations[i])
+      with_gradient.append(remainder)
+  elif isinstance(m, ScalarParameters):
+    for i in range(len(perturbations)):
+      remainder = abs(functional_values[i] - Jm - numpy.dot(dJdm, perturbations[i]))
+      with_gradient.append(remainder)
+  elif isinstance(m, InitialConditionParameter):
+    for i in range(len(perturbations)):
+      remainder = abs(functional_values[i] - Jm - dJdm.vector().inner(perturbations[i].vector()))
+      with_gradient.append(remainder)
+
+  info("Taylor remainder with adjoint information: " + str(with_gradient))
+  info("Convergence orders for Taylor remainder with adjoint information (should all be 2): " + str(convergence_order(with_gradient)))
+
+  return min(convergence_order(with_gradient))
+
