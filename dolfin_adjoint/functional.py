@@ -4,6 +4,8 @@ import dolfin
 import hashlib
 
 import solving
+import adjglobals
+import adjlinalg
 
 class FinalFunctional(libadjoint.Functional):
   '''This class implements the libadjoint.Functional abstract base class for the Dolfin adjoint.
@@ -36,12 +38,12 @@ class FinalFunctional(libadjoint.Functional):
     current_form = dolfin.replace(self.form, dict(zip(dolfin_dependencies, dolfin_values)))
     test = dolfin.TestFunction(dolfin_variable.function_space())
 
-    return solving.Vector(dolfin.derivative(current_form, dolfin_variable, test))
+    return adjlinalg.Vector(dolfin.derivative(current_form, dolfin_variable, test))
 
   def dependencies(self, adjointer, timestep):
 
     if self.activated is False:
-      deps = [solving.adj_variables[coeff] for coeff in ufl.algorithms.extract_coefficients(self.form) if hasattr(coeff, "function_space")]      
+      deps = [adjglobals.adj_variables[coeff] for coeff in ufl.algorithms.extract_coefficients(self.form) if hasattr(coeff, "function_space")]      
       self.activated = True
     else:
       deps = []
@@ -119,18 +121,18 @@ class TimeFunctional(libadjoint.Functional):
     if self.verbose:
       dolfin.info("Returning dJ/du term for %s" % str(variable))
 
-    return solving.Vector(functional_deriv_value)
+    return adjlinalg.Vector(functional_deriv_value)
 
   def dependencies(self, adjointer, timestep):
 
-    if solving.adj_variables.libadjoint_timestep <= 1:
+    if adjglobals.adj_variables.libadjoint_timestep <= 1:
       dolfin.info_red("Warning: instantiating a TimeFunctional without having called adj_inc_timestep. This probably won't work.")
 
-    deps = [solving.adj_variables[coeff] for coeff in ufl.algorithms.extract_coefficients(self.form) if (hasattr(coeff, "function_space") and coeff not in self.static_variables)]
+    deps = [adjglobals.adj_variables[coeff] for coeff in ufl.algorithms.extract_coefficients(self.form) if (hasattr(coeff, "function_space") and coeff not in self.static_variables)]
 
     # Add the dependencies for the final_form
     if self.final_form != None and timestep==adjointer.timestep_count-1:
-      deps += [solving.adj_variables[coeff] for coeff in ufl.algorithms.extract_coefficients(self.final_form) if (hasattr(coeff, "function_space") and coeff not in self.static_variables)]
+      deps += [adjglobals.adj_variables[coeff] for coeff in ufl.algorithms.extract_coefficients(self.final_form) if (hasattr(coeff, "function_space") and coeff not in self.static_variables)]
       # Remove duplicates
       deps = list(set(deps))
 

@@ -1,6 +1,8 @@
 import dolfin
 import solving
 import libadjoint
+import adjglobals
+import adjlinalg
 
 class NewtonSolver(dolfin.NewtonSolver):
   def solve(self, *args, **kwargs):
@@ -20,7 +22,7 @@ class NewtonSolver(dolfin.NewtonSolver):
       bcs = b.bcs
 
       u = vec.function
-      var = solving.adj_variables[u]
+      var = adjglobals.adj_variables[u]
 
       solving.annotate(F == 0, u, bcs, solver_parameters={"newton_solver": self.parameters.to_dict()})
 
@@ -28,6 +30,6 @@ class NewtonSolver(dolfin.NewtonSolver):
     out = dolfin.NewtonSolver.solve(*newargs, **kwargs)
 
     if to_annotate and dolfin.parameters["adjoint"]["record_all"]:
-      solving.adjointer.record_variable(solving.adj_variables[u], libadjoint.MemoryStorage(solving.Vector(u)))
+      adjglobals.adjointer.record_variable(adjglobals.adj_variables[u], libadjoint.MemoryStorage(adjlinalg.Vector(u)))
 
     return out

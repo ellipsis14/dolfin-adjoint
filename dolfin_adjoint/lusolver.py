@@ -2,16 +2,18 @@ import dolfin
 import solving
 import assembly
 import libadjoint
+import adjglobals
+import adjlinalg
 
 lu_solvers = {}
 adj_lu_solvers = {}
 
 def make_LUSolverMatrix(form, reuse_factorization):
-  class LUSolverMatrix(solving.Matrix):
+  class LUSolverMatrix(adjlinalg.Matrix):
     def solve(self, var, b):
 
       if reuse_factorization is False:
-        return solving.Matrix.solve(self, var, b)
+        return adjlinalg.Matrix.solve(self, var, b)
 
       if var.type in ['ADJ_TLM', 'ADJ_ADJOINT']:
         bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.DirichletBC)] + [bc for bc in self.bcs if not isinstance(bc, dolfin.DirichletBC)]
@@ -28,7 +30,7 @@ def make_LUSolverMatrix(form, reuse_factorization):
 
         solver = adj_lu_solvers[form]
 
-      x = solving.Vector(dolfin.Function(self.test_function().function_space()))
+      x = adjlinalg.Vector(dolfin.Function(self.test_function().function_space()))
 
       if b.data is None:
         # This means we didn't get any contribution on the RHS of the adjoint system. This could be that the
@@ -102,6 +104,6 @@ class LUSolver(dolfin.LUSolver):
 
     if annotate:
       if dolfin.parameters["adjoint"]["record_all"]:
-        solving.adjointer.record_variable(solving.adj_variables[x], libadjoint.MemoryStorage(solving.Vector(x)))
+        adjglobals.adjointer.record_variable(adjglobals.adj_variables[x], libadjoint.MemoryStorage(adjlinalg.Vector(x)))
 
     return out

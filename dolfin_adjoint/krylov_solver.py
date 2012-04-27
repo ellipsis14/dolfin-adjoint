@@ -2,6 +2,8 @@ import dolfin
 import solving
 import libadjoint
 from matrix_free import transpose_operators
+import adjlinalg
+import adjglobals
 
 class KrylovSolver(dolfin.KrylovSolver):
   def __init__(self, *args):
@@ -51,7 +53,7 @@ class KrylovSolver(dolfin.KrylovSolver):
       fn_space = u.function_space()
       has_preconditioner = P is not None
 
-      class KrylovSolverMatrix(solving.Matrix):
+      class KrylovSolverMatrix(adjlinalg.Matrix):
         def __init__(self, *args, **kwargs):
           if 'initial_guess' in kwargs:
             self.initial_guess = kwargs['initial_guess']
@@ -62,7 +64,7 @@ class KrylovSolver(dolfin.KrylovSolver):
           replace_map = kwargs['replace_map']
           del kwargs['replace_map']
 
-          solving.Matrix.__init__(self, *args, **kwargs)
+          adjlinalg.Matrix.__init__(self, *args, **kwargs)
 
           self.adjoint = kwargs['adjoint']
           self.operators = (dolfin.replace(A, replace_map), dolfin.replace(P, replace_map))
@@ -85,7 +87,7 @@ class KrylovSolver(dolfin.KrylovSolver):
 
           if b.data is None:
             dolfin.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
-            return solving.Vector(x)
+            return adjlinalg.Vector(x)
 
           if var.type in ['ADJ_TLM', 'ADJ_ADJOINT']:
             self.bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.cpp.DirichletBC)] + [bc for bc in self.bcs if not isinstance(bc, dolfin.cpp.DirichletBC)]
@@ -134,13 +136,13 @@ class KrylovSolver(dolfin.KrylovSolver):
                 solver.set_operator(A)
 
           solver.solve(x.vector(), rhs)
-          return solving.Vector(x)
+          return adjlinalg.Vector(x)
 
       solving.annotate(A == b, u, bcs, matrix_class=KrylovSolverMatrix, initial_guess=parameters['nonzero_initial_guess'], replace_map=True)
 
     out = dolfin.KrylovSolver.solve(self, *args, **kwargs)
 
     if to_annotate and dolfin.parameters["adjoint"]["record_all"]:
-      solving.adjointer.record_variable(solving.adj_variables[u], libadjoint.MemoryStorage(solving.Vector(u)))
+      adjglobals.adjointer.record_variable(adjglobals.adj_variables[u], libadjoint.MemoryStorage(adjlinalg.Vector(u)))
 
     return out

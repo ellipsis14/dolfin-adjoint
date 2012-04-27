@@ -1,7 +1,7 @@
 import libadjoint
-from solving import *
 from parameter import *
 from dolfin import info_red, info_blue, info
+import adjglobals
 import dolfin
 import numpy
 
@@ -10,17 +10,17 @@ def replay_dolfin(forget=False, tol=0.0):
     info_red("Warning: your replay test will be much more effective with dolfin.parameters['adjoint']['record_all'] = True.")
 
   success = True
-  for i in range(adjointer.equation_count):
-      (fwd_var, output) = adjointer.get_forward_solution(i)
+  for i in range(adjglobals.adjointer.equation_count):
+      (fwd_var, output) = adjglobals.adjointer.get_forward_solution(i)
 
       storage = libadjoint.MemoryStorage(output)
       storage.set_compare(tol=tol)
       storage.set_overwrite(True)
-      out = adjointer.record_variable(fwd_var, storage)
+      out = adjglobals.adjointer.record_variable(fwd_var, storage)
       success = success and out
 
       if forget:
-        adjointer.forget_forward_equation(i)
+        adjglobals.adjointer.forget_forward_equation(i)
 
   return success
 
@@ -38,11 +38,11 @@ def convergence_order(errors):
 
 def compute_adjoint(functional, forget=True):
 
-  for i in range(adjointer.equation_count)[::-1]:
-      (adj_var, output) = adjointer.get_adjoint_solution(i, functional)
+  for i in range(adjglobals.adjointer.equation_count)[::-1]:
+      (adj_var, output) = adjglobals.adjointer.get_adjoint_solution(i, functional)
 
       storage = libadjoint.MemoryStorage(output)
-      adjointer.record_variable(adj_var, storage)
+      adjglobals.adjointer.record_variable(adj_var, storage)
 
       # forget is None: forget *nothing*.
       # forget is True: forget everything we can, forward and adjoint
@@ -50,20 +50,20 @@ def compute_adjoint(functional, forget=True):
       if forget is None:
         pass
       elif forget:
-        adjointer.forget_adjoint_equation(i)
+        adjglobals.adjointer.forget_adjoint_equation(i)
       else:
-        adjointer.forget_adjoint_values(i)
+        adjglobals.adjointer.forget_adjoint_values(i)
 
       yield (output.data, adj_var)
 
 def compute_tlm(parameter, forget=False):
 
-  for i in range(adjointer.equation_count):
-      (tlm_var, output) = adjointer.get_tlm_solution(i, parameter)
+  for i in range(adjglobals.adjointer.equation_count):
+      (tlm_var, output) = adjglobals.adjointer.get_tlm_solution(i, parameter)
 
       storage = libadjoint.MemoryStorage(output)
       storage.set_overwrite(True)
-      adjointer.record_variable(tlm_var, storage)
+      adjglobals.adjointer.record_variable(tlm_var, storage)
 
       # forget is None: forget *nothing*.
       # forget is True: forget everything we can, forward and adjoint
@@ -71,9 +71,9 @@ def compute_tlm(parameter, forget=False):
       if forget is None:
         pass
       elif forget:
-        adjointer.forget_tlm_equation(i)
+        adjglobals.adjointer.forget_tlm_equation(i)
       else:
-        adjointer.forget_tlm_values(i)
+        adjglobals.adjointer.forget_tlm_values(i)
 
       yield (output.data, tlm_var)
 
@@ -147,19 +147,19 @@ def test_initial_condition_adjoint(J, ic, final_adjoint, seed=0.01, perturbation
   return min(convergence_order(with_gradient))
 
 def tlm_dolfin(parameter, forget=False):
-  for i in range(adjointer.equation_count):
-      (tlm_var, output) = adjointer.get_tlm_solution(i, parameter)
+  for i in range(adjglobals.adjointer.equation_count):
+      (tlm_var, output) = adjglobals.adjointer.get_tlm_solution(i, parameter)
 
       storage = libadjoint.MemoryStorage(output)
       storage.set_overwrite(True)
-      adjointer.record_variable(tlm_var, storage)
+      adjglobals.adjointer.record_variable(tlm_var, storage)
 
       if forget is None:
         pass
       elif forget:
-        adjointer.forget_tlm_equation(i)
+        adjglobals.adjointer.forget_tlm_equation(i)
       else:
-        adjointer.forget_tlm_values(i)
+        adjglobals.adjointer.forget_tlm_values(i)
 
   return output
 
@@ -184,8 +184,8 @@ def test_initial_condition_tlm(J, dJ, ic, seed=0.01, perturbation_direction=None
   info_blue("Running Taylor remainder convergence analysis for the tangent linear model... ")
   import random
 
-  adj_var = adj_variables[ic]; adj_var.timestep = 0
-  if not adjointer.variable_known(adj_var):
+  adj_var = adjglobals.adj_variables[ic]; adj_var.timestep = 0
+  if not adjglobals.adjointer.variable_known(adj_var):
     raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your initial condition must be the /exact same Function/ as the initial condition used in the forward model.")
 
   # First run the problem unperturbed
@@ -313,14 +313,14 @@ def test_initial_condition_adjoint_cdiff(J, ic, final_adjoint, seed=0.01, pertur
 def compute_gradient(J, param, forget=True):
   dJdparam = None
 
-  for i in range(adjointer.equation_count)[::-1]:
-    (adj_var, output) = adjointer.get_adjoint_solution(i, J)
+  for i in range(adjglobals.adjointer.equation_count)[::-1]:
+    (adj_var, output) = adjglobals.adjointer.get_adjoint_solution(i, J)
 
     storage = libadjoint.MemoryStorage(output)
-    adjointer.record_variable(adj_var, storage)
+    adjglobals.adjointer.record_variable(adj_var, storage)
     fwd_var = libadjoint.Variable(adj_var.name, adj_var.timestep, adj_var.iteration)
 
-    out = param.inner_adjoint(adjointer, output.data, i, fwd_var)
+    out = param.inner_adjoint(adjglobals.adjointer, output.data, i, fwd_var)
     if dJdparam is None:
       dJdparam = out
     elif dJdparam is not None and out is not None:
@@ -329,9 +329,9 @@ def compute_gradient(J, param, forget=True):
     if forget is None:
       pass
     elif forget:
-      adjointer.forget_adjoint_equation(i)
+      adjglobals.adjointer.forget_adjoint_equation(i)
     else:
-      adjointer.forget_adjoint_values(i)
+      adjglobals.adjointer.forget_adjoint_values(i)
 
   return dJdparam
 

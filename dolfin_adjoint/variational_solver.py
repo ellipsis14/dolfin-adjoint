@@ -1,6 +1,8 @@
 import dolfin
 import solving
 import libadjoint
+import adjglobals
+import adjlinalg
 
 class NonlinearVariationalProblem(dolfin.NonlinearVariationalProblem):
   def __init__(self, F, u, bcs=None, J=None, *args, **kwargs):
@@ -26,7 +28,7 @@ class NonlinearVariationalSolver(dolfin.NonlinearVariationalSolver):
     out = dolfin.NonlinearVariationalSolver.solve(self)
 
     if annotate and dolfin.parameters["adjoint"]["record_all"]:
-      solving.adjointer.record_variable(solving.adj_variables[self.problem.u], libadjoint.MemoryStorage(solving.Vector(self.problem.u)))
+      adjglobals.adjointer.record_variable(adjglobals.adj_variables[self.problem.u], libadjoint.MemoryStorage(adjlinalg.Vector(self.problem.u)))
 
     return out
 
@@ -54,7 +56,7 @@ class LinearVariationalSolver(dolfin.LinearVariationalSolver):
     out = dolfin.LinearVariationalSolver.solve(self)
 
     if annotate and dolfin.parameters["adjoint"]["record_all"]:
-      solving.adjointer.record_variable(solving.adj_variables[self.problem.u], libadjoint.MemoryStorage(solving.Vector(self.problem.u)))
+      adjglobals.adjointer.record_variable(adjglobals.adj_variables[self.problem.u], libadjoint.MemoryStorage(adjlinalg.Vector(self.problem.u)))
 
     return out
 

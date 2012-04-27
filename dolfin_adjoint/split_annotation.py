@@ -5,6 +5,7 @@ import libadjoint
 import solving
 import assign
 import expressions
+import adjrhs
 
 import hashlib
 import time
@@ -20,9 +21,9 @@ def annotate_split(bigfn, idx, smallfn, bcs):
   diag_deps = []
   diag_block = libadjoint.Block(diag_name, dependencies=diag_deps, test_hermitian=dolfin.parameters["adjoint"]["test_hermitian"], test_derivative=dolfin.parameters["adjoint"]["test_derivative"])
 
-  solving.register_initial_conditions([(bigfn, solving.adj_variables[bigfn])], linear=True, var=None)
+  solving.register_initial_conditions([(bigfn, adjglobals.adj_variables[bigfn])], linear=True, var=None)
 
-  var = solving.adj_variables.next(smallfn)
+  var = adjglobals.adj_variables.next(smallfn)
   frozen_expressions_dict = expressions.freeze_dict()
 
   def diag_assembly_cb(dependencies, values, hermitian, coefficient, context):
@@ -39,16 +40,16 @@ def annotate_split(bigfn, idx, smallfn, bcs):
     if hermitian:
       adjoint_bcs = [dolfin.homogenize(bc) for bc in bcs if isinstance(bc, dolfin.DirichletBC)] + [bc for bc in bcs if not isinstance(bc, dolfin.DirichletBC)]
       if len(adjoint_bcs) == 0: adjoint_bcs = None
-      return (solving.Matrix(dolfin.adjoint(eq_l), bcs=adjoint_bcs), solving.Vector(None, fn_space=fn_space))
+      return (adjlinalg.Matrix(dolfin.adjoint(eq_l), bcs=adjoint_bcs), adjlinalg.Vector(None, fn_space=fn_space))
     else:
-      return (solving.Matrix(eq_l, bcs=bcs), solving.Vector(None, fn_space=fn_space))
+      return (adjlinalg.Matrix(eq_l, bcs=bcs), adjlinalg.Vector(None, fn_space=fn_space))
   diag_block.assemble = diag_assembly_cb
 
   rhs = SplitRHS(test, bigfn, idx)
 
   eqn = libadjoint.Equation(var, blocks=[diag_block], targets=[var], rhs=rhs)
 
-  cs = solving.adjointer.register_equation(eqn)
+  cs = adjglobals.adjointer.register_equation(eqn)
   solving.do_checkpoint(cs, var)
 
   if dolfin.parameters["adjoint"]["fussy_replay"]:
@@ -61,19 +62,19 @@ def annotate_split(bigfn, idx, smallfn, bcs):
   if dolfin.parameters["adjoint"]["record_all"]:
     smallfn_record = dolfin.Function(fn_space)
     assign.dolfin_assign(smallfn_record, smallfn)
-    solving.adjointer.record_variable(var, libadjoint.MemoryStorage(solving.Vector(smallfn_record)))
+    adjglobals.adjointer.record_variable(var, libadjoint.MemoryStorage(adjlinalg.Vector(smallfn_record)))
 
-class SplitRHS(solving.RHS):
+class SplitRHS(adjrhs.RHS):
   def __init__(self, test, function, index):
     self.test = test
     self.function = function
     self.idx = index
-    self.deps = [solving.adj_variables[function]]
+    self.deps = [adjglobals.adj_variables[function]]
     self.coeffs = [function]
 
   def __call__(self, dependencies, values):
     fn = Function_split(values[0].data, deepcopy=True)[self.idx]
-    return solving.Vector(dolfin.inner(self.test, fn)*dolfin.dx)
+    return adjlinalg.Vector(dolfin.inner(self.test, fn)*dolfin.dx)
 
   def derivative_action(self, dependencies, values, variable, contraction_vector, hermitian):
     if not hermitian:
@@ -94,5 +95,5 @@ class SplitRHS(solving.RHS):
 
       action = dolfin.inner(bigtest, outfn)*dolfin.dx
 
-    return solving.Vector(action)
+    return adjlinalg.Vector(action)
 

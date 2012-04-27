@@ -1,8 +1,10 @@
 import dolfin
 import ufl
-from solving import adjointer, adj_variables, solve, Vector, Matrix, annotate as solving_annotate
+from solving import solve, annotate as solving_annotate
 import libadjoint
 import assign
+import adjlinalg
+import adjglobals
 
 dolfin_assign = dolfin.Function.assign
 dolfin_split  = dolfin.Function.split
@@ -21,12 +23,12 @@ def dolfin_adjoint_assign(self, other, annotate=True):
   if str(self.function_space()) != str(other.function_space()):
     return dolfin_assign(self, other)
 
-  other_var = adj_variables[other]
+  other_var = adjglobals.adj_variables[other]
   # ignore any functions we haven't seen before -- we DON'T want to
   # annotate the assignment of initial conditions here. That happens
   # in the main solve wrapper.
-  if not adjointer.variable_known(other_var):
-    adj_variables.forget(other)
+  if not adjglobals.adjointer.variable_known(other_var):
+    adjglobals.adj_variables.forget(other)
     if hasattr(other, "split"):
       if other.split is True:
         errmsg = '''Cannot use Function.split() (yet). To adjoint this, we need functionality
@@ -69,8 +71,8 @@ class Function(dolfin.Function):
     dolfin.Function.__init__(self, *args, **kwargs)
 
     if isinstance(args[0], dolfin.Function) and annotate:
-      other_var = adj_variables[args[0]]
-      if adjointer.variable_known(other_var):
+      other_var = adjglobals.adj_variables[args[0]]
+      if adjglobals.adjointer.variable_known(other_var):
         assign.register_assign(self, args[0])
 
   def assign(self, other, annotate=True):

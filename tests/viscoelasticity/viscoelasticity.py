@@ -302,7 +302,7 @@ if __name__ == "__main__":
     sigma = sigma0 + sigma1
     J = FinalFunctional(inner(sigma0[2], sigma0[2])*dx)
     param = ScalarParameter(amplitude)
-    adjointer = solving.adjointer
+    adjointer = adjglobals.adjointer
 
 # Copy the code from compute_gradient:
     #dJdp = compute_gradient(J, ScalarParameter(amplitude))

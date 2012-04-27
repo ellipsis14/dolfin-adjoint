@@ -1,9 +1,10 @@
 import libadjoint
-from solving import adj_variables, Vector, IdentityMatrix
 import ufl
 import dolfin
 from dolfin import info, info_blue, info_red
 import numpy
+import adjlinalg
+import adjglobals
 
 class InitialConditionParameter(libadjoint.Parameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
@@ -15,8 +16,8 @@ class InitialConditionParameter(libadjoint.Parameter):
     self.var = libadjoint.Variable(str(coeff), 0, 0)
 
     if perturbation:
-      self.perturbation = Vector(perturbation).duplicate()
-      self.perturbation.axpy(1.0, Vector(perturbation))
+      self.perturbation = adjlinalg.Vector(perturbation).duplicate()
+      self.perturbation.axpy(1.0, adjlinalg.Vector(perturbation))
     else:
       self.perturbation = None
 
@@ -47,7 +48,7 @@ class ScalarParameter(libadjoint.Parameter):
     (fwd_var, lhs, rhs) = adjointer.get_forward_equation(i)
     lhs = lhs.data; rhs = rhs.data
 
-    if not isinstance(lhs, IdentityMatrix):
+    if not isinstance(lhs, adjlinalg.IdentityMatrix):
       fn_space = ufl.algorithms.extract_arguments(rhs)[0].function_space()
       x = dolfin.Function(fn_space)
       form = rhs - dolfin.action(lhs, x)
@@ -81,7 +82,7 @@ class ScalarParameter(libadjoint.Parameter):
 
         diff_form = dolfin.replace(diff_form, {x: y})
 
-      return solving.Vector(diff_form)
+      return adjlinalg.adjlinalg.Vector(diff_form)
     else:
       return None
 
@@ -92,7 +93,7 @@ class ScalarParameter(libadjoint.Parameter):
     (fwd_var, lhs, rhs) = adjointer.get_forward_equation(i)
     lhs = lhs.data; rhs = rhs.data
 
-    if not isinstance(lhs, IdentityMatrix):
+    if not isinstance(lhs, adjlinalg.IdentityMatrix):
       fn_space = ufl.algorithms.extract_arguments(rhs)[0].function_space()
       x = dolfin.Function(fn_space)
       form = rhs - dolfin.action(lhs, x)
@@ -148,7 +149,7 @@ class ScalarParameters(libadjoint.Parameter):
 
     assert self.dv is not None, "Need a perturbation direction to use in the TLM."
 
-    if not isinstance(lhs, IdentityMatrix):
+    if not isinstance(lhs, adjlinalg.IdentityMatrix):
       fn_space = ufl.algorithms.extract_arguments(rhs)[0].function_space()
       x = dolfin.Function(fn_space)
       form = rhs - dolfin.action(lhs, x)
@@ -173,7 +174,7 @@ class ScalarParameters(libadjoint.Parameter):
 
           diff_form = dolfin.replace(diff_form, {x: y})
 
-      return solving.Vector(diff_form)
+      return adjlinalg.adjlinalg.Vector(diff_form)
     else:
       return None
 
@@ -186,7 +187,7 @@ class ScalarParameters(libadjoint.Parameter):
 
     dJdv = numpy.zeros(len(self.v))
 
-    if not isinstance(lhs, IdentityMatrix):
+    if not isinstance(lhs, adjlinalg.IdentityMatrix):
       fn_space = ufl.algorithms.extract_arguments(rhs)[0].function_space()
       x = dolfin.Function(fn_space)
       form = rhs - dolfin.action(lhs, x)

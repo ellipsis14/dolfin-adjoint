@@ -1,6 +1,8 @@
 import solving
 import dolfin
 import libadjoint
+import adjglobals
+import adjlinalg
 
 def project(v, V=None, bcs=None, mesh=None, solver_type="cg", preconditioner_type="default", form_compiler_parameters=None, annotate=True):
 
@@ -27,7 +29,7 @@ def project(v, V=None, bcs=None, mesh=None, solver_type="cg", preconditioner_typ
     solving.annotate(a == L, out, bcs, solver_parameters={"linear_solver": solver_type, "preconditioner": preconditioner_type, "symmetric": True})
 
     if dolfin.parameters["adjoint"]["record_all"]:
-      solving.adjointer.record_variable(solving.adj_variables[out], libadjoint.MemoryStorage(solving.Vector(out)))
+      adjglobals.adjointer.record_variable(adjglobals.adj_variables[out], libadjoint.MemoryStorage(adjlinalg.Vector(out)))
 
   return out
 

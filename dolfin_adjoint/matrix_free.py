@@ -6,8 +6,12 @@ import numpy
 import libadjoint
 
 import solving
-import hashlib
 import expressions
+import adjrhs
+import adjlinalg
+import adjglobals
+
+import hashlib
 import copy
 import time
 
@@ -25,7 +29,7 @@ def down_cast(*args, **kwargs):
 
   return dc
 
-class MatrixFree(solving.Matrix):
+class MatrixFree(adjlinalg.Matrix):
   def __init__(self, *args, **kwargs):
     self.fn_space = kwargs['fn_space']
     del kwargs['fn_space']
@@ -36,7 +40,7 @@ class MatrixFree(solving.Matrix):
     self.parameters = kwargs['parameters']
     del kwargs['parameters']
 
-    solving.Matrix.__init__(self, *args, **kwargs)
+    adjlinalg.Matrix.__init__(self, *args, **kwargs)
 
   def solve(self, var, b):
     timer = dolfin.Timer("Matrix-free solver")
@@ -46,7 +50,7 @@ class MatrixFree(solving.Matrix):
     x = dolfin.Function(self.fn_space)
     if b.data is None:
       dolfin.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
-      return solving.Vector(x)
+      return adjlinalg.Vector(x)
 
     if isinstance(b.data, dolfin.Function):
       rhs = b.data.vector().copy()
@@ -66,7 +70,7 @@ class MatrixFree(solving.Matrix):
       solver.solve(self.data, dolfin.down_cast(x.vector()), dolfin.down_cast(rhs))
 
     timer.stop()
-    return solving.Vector(x)
+    return adjlinalg.Vector(x)
 
   def axpy(self, alpha, x):
     raise libadjoint.exceptions.LibadjointErrorNotImplemented("Can't add to a matrix-free matrix .. ")
@@ -123,19 +127,19 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
         dependencies = []
       else:
         coeffs = [coeff for coeff in A.dependencies() if hasattr(coeff, 'function_space')]
-        dependencies = [solving.adj_variables[coeff] for coeff in coeffs]
+        dependencies = [adjglobals.adj_variables[coeff] for coeff in coeffs]
 
       if len(dependencies) > 0:
         assert hasattr(A, "set_dependencies"), "Need a set_dependencies method to replace your values, if you have nonlinear dependencies ... "
 
-      rhs = solving.RHS(b.form)
+      rhs = adjrhs.RHS(b.form)
 
       diag_name = hashlib.md5(str(hash(A)) + str(time.time())).hexdigest()
       diag_block = libadjoint.Block(diag_name, dependencies=dependencies, test_hermitian=dolfin.parameters["adjoint"]["test_hermitian"], test_derivative=dolfin.parameters["adjoint"]["test_derivative"])
 
       solving.register_initial_conditions(zip(rhs.coefficients(),rhs.dependencies()) + zip(coeffs, dependencies), linear=False, var=None)
 
-      var = solving.adj_variables.next(x.function)
+      var = adjglobals.adj_variables.next(x.function)
 
       frozen_expressions_dict = expressions.freeze_dict()
       frozen_parameters = self.parameters.to_dict()
@@ -157,12 +161,12 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
           return (MatrixFree(A_transpose, fn_space=x.function.function_space(), bcs=A_transpose.bcs, 
                              solver_parameters=self.solver_parameters, 
                              operators=transpose_operators(self.operators),
-                             parameters=frozen_parameters), solving.Vector(None, fn_space=x.function.function_space()))
+                             parameters=frozen_parameters), adjlinalg.Vector(None, fn_space=x.function.function_space()))
         else:
           return (MatrixFree(A, fn_space=x.function.function_space(), bcs=b.bcs, 
                              solver_parameters=self.solver_parameters, 
                              operators=self.operators,
-                             parameters=frozen_parameters), solving.Vector(None, fn_space=x.function.function_space()))
+                             parameters=frozen_parameters), adjlinalg.Vector(None, fn_space=x.function.function_space()))
       diag_block.assemble = diag_assembly_cb
 
       def diag_action_cb(dependencies, values, hermitian, coefficient, input, context):
@@ -180,7 +184,7 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
         for i in range(len(vec)):
           vec[i] = coefficient * vec[i]
 
-        return solving.Vector(output_fn)
+        return adjlinalg.Vector(output_fn)
       diag_block.action = diag_action_cb
 
       if len(dependencies) > 0:
@@ -189,18 +193,18 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
           A.set_dependencies(dependencies, [val.data for val in values])
 
           action = A.derivative_action(values[dependencies.index(variable)].data, contraction_vector.data, hermitian, input.data, coefficient)
-          return solving.Vector(action)
+          return adjlinalg.Vector(action)
         diag_block.derivative_action = derivative_action
 
       eqn = libadjoint.Equation(var, blocks=[diag_block], targets=[var], rhs=rhs)
-      cs = solving.adjointer.register_equation(eqn)
+      cs = adjglobals.adjointer.register_equation(eqn)
       solving.do_checkpoint(cs, var)
 
     out = dolfin.PETScKrylovSolver.solve(self, *args)
 
     if annotate:
       if dolfin.parameters["adjoint"]["record_all"]:
-        solving.adjointer.record_variable(var, libadjoint.MemoryStorage(solving.Vector(x.function)))
+        adjglobals.adjointer.record_variable(var, libadjoint.MemoryStorage(adjlinalg.Vector(x.function)))
 
     timer.stop()
 
