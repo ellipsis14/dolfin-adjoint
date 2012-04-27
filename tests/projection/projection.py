@@ -23,14 +23,14 @@ if __name__ == "__main__":
   replay_dolfin()
 
   J = FinalFunctional(soln*soln*dx)
-  for (adjoint, var) in compute_adjoint(J):
-    pass
+  Jic = assemble(soln*soln*dx)
+  dJdic = compute_gradient(J, InitialConditionParameter(ic), forget=False)
 
   def J(ic):
     soln = main(ic, annotate=False)
     return assemble(soln*soln*dx)
 
-  minconv = test_initial_condition_adjoint(J, ic, adjoint)
+  minconv = taylor_test(J, InitialConditionParameter(ic), Jic, dJdic)
   if minconv < 1.9:
     sys.exit(1)
 
