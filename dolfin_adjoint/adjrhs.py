@@ -151,7 +151,8 @@ class NonlinearRHS(RHS):
     dolfin.solve(current_F == 0, u, self.bcs, solver_parameters=self.solver_parameters, J=J)
 
     act = dolfin.action(self.mass, u)
-    vec = adjlinalg.Vector(act)
+
+    vec = adjlinalg.Vector(None)
     vec.nonlinear_form = current_F
     vec.nonlinear_u = u
     vec.nonlinear_bcs = self.bcs

@@ -50,6 +50,11 @@ class Vector(libadjoint.Vector):
 
   def axpy(self, alpha, x):
 
+    if hasattr(x, 'nonlinear_form'):
+      self.nonlinear_form = x.nonlinear_form
+      self.nonlinear_u = x.nonlinear_u
+      self.nonlinear_bcs = x.nonlinear_bcs
+
     if x.zero:
       return
 
@@ -60,11 +65,6 @@ class Vector(libadjoint.Vector):
         self.data.vector()._scale(alpha)
       else:
         self.data=alpha*x.data
-
-      if hasattr(x, 'nonlinear_form'):
-        self.nonlinear_form = x.nonlinear_form
-        self.nonlinear_u = x.nonlinear_u
-        self.nonlinear_bcs = x.nonlinear_bcs
 
     elif x.data is None:
       pass
@@ -244,11 +244,12 @@ class Matrix(libadjoint.Matrix):
 
       x = Vector(dolfin.Function(self.test_function().function_space()))
 
-      if b.data is None:
+      if b.data is None and not hasattr(b, 'nonlinear_form'):
         # This means we didn't get any contribution on the RHS of the adjoint system. This could be that the
         # simulation ran further ahead than when the functional was evaluated, or it could be that the
         # functional is set up incorrectly.
         dolfin.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
+        dolfin.info_red("hasattr(b, 'nonlinear_form'): %s" % hasattr(b, 'nonlinear_form'))
       elif isinstance(b.data, dolfin.Function):
 
         assembled_lhs = dolfin.assemble(self.data)
@@ -264,7 +265,10 @@ class Matrix(libadjoint.Matrix):
           F = dolfin.replace(b.nonlinear_form, {b.nonlinear_u: x.data})
           dolfin.fem.solving.solve(F == 0, x.data, b.nonlinear_bcs, solver_parameters=self.solver_parameters)
         else:
-          dolfin.fem.solving.solve(self.data==b.data, x.data, bcs, solver_parameters=self.solver_parameters)
+          solver_params = dict(self.solver_parameters) # take a copy
+          if 'newton_solver' in solver_params:
+            del solver_params['newton_solver']
+          dolfin.fem.solving.solve(self.data==b.data, x.data, bcs, solver_parameters=solver_params)
 
     return x
 
