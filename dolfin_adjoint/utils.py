@@ -6,8 +6,8 @@ import dolfin
 import numpy
 
 def replay_dolfin(forget=False, tol=0.0):
-  if "record_all" not in debugging or debugging["record_all"] is not True:
-    info_red("Warning: your replay test will be much more effective with debugging['record_all'] = True.")
+  if not dolfin.parameters["adjoint"]["record_all"]:
+    info_red("Warning: your replay test will be much more effective with dolfin.parameters['adjoint']['record_all'] = True.")
 
   success = True
   for i in range(adjointer.equation_count):

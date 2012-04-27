@@ -28,15 +28,6 @@ adj_variables = coeffstore.CoeffStore()
 def adj_inc_timestep():
   adj_variables.increment_timestep()
 
-# Set record_all to true to enable recording all variables in the forward
-# run. This is primarily useful for debugging.
-debugging={}
-debugging["record_all"] = False
-debugging["test_hermitian"] = None
-debugging["test_derivative"] = None
-debugging["fussy_replay"] = True
-debugging["stop_annotating"] = False
-
 # Create the adjointer, the central object that records the forward solve
 # as it happens.
 adjointer = libadjoint.Adjointer()
@@ -156,7 +147,7 @@ def annotate(*args, **kwargs):
     diag_deps.append(initial_guess_var)
     diag_coeffs.append(u)
 
-  diag_block = libadjoint.Block(diag_name, dependencies=diag_deps, test_hermitian=debugging["test_hermitian"], test_derivative=debugging["test_derivative"])
+  diag_block = libadjoint.Block(diag_name, dependencies=diag_deps, test_hermitian=dolfin.parameters["adjoint"]["test_hermitian"], test_derivative=dolfin.parameters["adjoint"]["test_derivative"])
 
   # Similarly, create the object associated with the right-hand side data.
   if linear:
@@ -244,7 +235,7 @@ def annotate(*args, **kwargs):
     expressions.update_expressions(frozen_expressions_dict)
     eq_l = dolfin.replace(eq_lhs, dict(zip(diag_coeffs, value_coeffs)))
 
-    if debugging["test_derivative"] is None:
+    if dolfin.parameters["adjoint"]["test_derivative"] is None:
       if hermitian:
         eq_l = dolfin.adjoint(eq_l)
 
@@ -338,7 +329,7 @@ def solve(*args, **kwargs):
   if "annotate" in kwargs:
     to_annotate = kwargs["annotate"]
     del kwargs["annotate"] # so we don't pass it on to the real solver
-  if debugging["stop_annotating"]:
+  if dolfin.parameters["adjoint"]["stop_annotating"]:
     to_annotate = False
 
   if to_annotate:
@@ -347,7 +338,7 @@ def solve(*args, **kwargs):
   ret = dolfin.fem.solving.solve(*args, **kwargs)
 
   if to_annotate:
-    if not linear and debugging["fussy_replay"]:
+    if not linear and dolfin.parameters["adjoint"]["fussy_replay"]:
       # we have annotated M.u = M.u - F(u),
       # but actually solved F(u) = 0.
       # so we need to do the mass solve too, so that the
@@ -357,7 +348,7 @@ def solve(*args, **kwargs):
     # Finally, if we want to record all of the solutions of the real forward model
     # (for comparison with a libadjoint replay later),
     # then we should record the value of the variable we just solved for.
-    if debugging["record_all"]:
+    if dolfin.parameters["adjoint"]["record_all"]:
       if isinstance(args[0], ufl.classes.Equation):
         unpacked_args = dolfin.fem.solving._extract_args(*args, **kwargs)
         u  = unpacked_args[1]
@@ -765,7 +756,7 @@ class NonlinearRHS(RHS):
     var = adj_variables[self.u]
     self.ic_var = None
 
-    if debugging["fussy_replay"]:
+    if dolfin.parameters["adjoint"]["fussy_replay"]:
       can_depend = False
       if var.timestep > 0:
         prev_var = libadjoint.Variable(var.name, var.timestep-1, var.iteration)
@@ -882,6 +873,7 @@ def nonlinear_post_solve_projection(*args, **kwargs):
   dolfin.fem.solving.solve(mass == dolfin.action(mass, u), u)
 
 def adj_checkpointing(strategy, steps, snaps_on_disk, snaps_in_ram, verbose=False):
+  dolfin.parameters["adjoint"]["record_all"] = False
   adjointer.set_checkpoint_strategy(strategy)
   adjointer.set_revolve_options(steps, snaps_on_disk, snaps_in_ram, verbose)
 
@@ -924,7 +916,7 @@ def register_initial_condition(coeff, dep):
 
   identity_block.assemble=identity_assembly_cb
 
-  if debugging["record_all"]:
+  if dolfin.parameters["adjoint"]["record_all"]:
     adjointer.record_variable(dep, libadjoint.MemoryStorage(Vector(coeff)))
 
   initial_eq = libadjoint.Equation(dep, blocks=[identity_block], targets=[dep], rhs=RHS(init_rhs))

@@ -7,7 +7,7 @@ import sys
 mesh = UnitSquare(4, 4)
 V3 = FunctionSpace(mesh, "CG", 3)
 V2 = FunctionSpace(mesh, "CG", 2)
-debugging["record_all"] = True
+dolfin.parameters["adjoint"]["record_all"] = True
 
 def main(ic, annotate=False):
   bc = DirichletBC(V2, "-1.0", "on_boundary")

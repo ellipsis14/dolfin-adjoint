@@ -29,7 +29,7 @@ from dolfin import *
 from dolfin_adjoint import *
 
 # Record all variables solved for
-debugging["record_all"] = True
+dolfin.parameters["adjoint"]["record_all"] = True
 
 # Print log messages only from the root process in parallel
 parameters["std_out_all_processes"] = False;

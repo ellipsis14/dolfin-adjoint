@@ -3,7 +3,7 @@ import sys
 from dolfin import *
 from dolfin_adjoint import *
 
-debugging["record_all"] = True
+dolfin.parameters["adjoint"]["record_all"] = True
 
 f = Expression("x[0]*(x[0]-1)*x[1]*(x[1]-1)")
 mesh = UnitSquare(4, 4)

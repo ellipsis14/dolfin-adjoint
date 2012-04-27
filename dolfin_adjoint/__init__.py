@@ -1,3 +1,4 @@
+import options
 import solving 
 import assembly
 import expressions

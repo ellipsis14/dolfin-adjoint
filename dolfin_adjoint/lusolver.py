@@ -68,7 +68,7 @@ class LUSolver(dolfin.LUSolver):
       annotate = kwargs["annotate"]
       del kwargs["annotate"]
 
-    if solving.debugging["stop_annotating"]:
+    if dolfin.parameters["adjoint"]["stop_annotating"]:
       annotate = False
 
     if annotate:
@@ -101,7 +101,7 @@ class LUSolver(dolfin.LUSolver):
     out = dolfin.LUSolver.solve(self, *args, **kwargs)
 
     if annotate:
-      if solving.debugging["record_all"]:
+      if dolfin.parameters["adjoint"]["record_all"]:
         solving.adjointer.record_variable(solving.adj_variables[x], libadjoint.MemoryStorage(solving.Vector(x)))
 
     return out

@@ -6,7 +6,7 @@ import sys
 
 mesh = UnitSquare(4, 4)
 V = FunctionSpace(mesh, "CG", 1)
-debugging["record_all"] = True
+dolfin.parameters["adjoint"]["record_all"] = True
 
 def main(ic, annotate=False):
   u = TrialFunction(V)

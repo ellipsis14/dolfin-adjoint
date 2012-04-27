@@ -10,8 +10,8 @@ import random
 from dolfin import *
 from dolfin_adjoint import *
 
-debugging["record_all"] = True
-debugging["fussy_replay"] = False
+dolfin.parameters["adjoint"]["record_all"] = True
+dolfin.parameters["adjoint"]["fussy_replay"] = False
 
 n = 10
 mesh = UnitInterval(n)

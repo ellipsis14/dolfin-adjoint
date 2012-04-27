@@ -1,6 +1,6 @@
 import dolfin
 import ufl
-from solving import adjointer, adj_variables, debugging, solve, Vector, Matrix, annotate as solving_annotate
+from solving import adjointer, adj_variables, solve, Vector, Matrix, annotate as solving_annotate
 import libadjoint
 import assign
 
@@ -14,7 +14,7 @@ def dolfin_adjoint_assign(self, other, annotate=True):
   in advance.'''
 
   # ignore anything not a dolfin.Function
-  if not isinstance(other, dolfin.Function) or annotate is False or debugging["stop_annotating"]:
+  if not isinstance(other, dolfin.Function) or annotate is False or dolfin.parameters["adjoint"]["stop_annotating"]:
     return dolfin_assign(self, other)
 
   # ignore anything that is an interpolation, rather than a straight assignment
@@ -63,7 +63,7 @@ class Function(dolfin.Function):
     if 'annotate' in kwargs:
       annotate = kwargs['annotate']
       del kwargs['annotate']
-    if debugging["stop_annotating"]:
+    if dolfin.parameters["adjoint"]["stop_annotating"]:
       annotate = False
 
     dolfin.Function.__init__(self, *args, **kwargs)

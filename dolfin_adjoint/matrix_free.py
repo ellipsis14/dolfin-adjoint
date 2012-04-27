@@ -131,7 +131,7 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
       rhs = solving.RHS(b.form)
 
       diag_name = hashlib.md5(str(hash(A)) + str(time.time())).hexdigest()
-      diag_block = libadjoint.Block(diag_name, dependencies=dependencies, test_hermitian=solving.debugging["test_hermitian"], test_derivative=solving.debugging["test_derivative"])
+      diag_block = libadjoint.Block(diag_name, dependencies=dependencies, test_hermitian=dolfin.parameters["adjoint"]["test_hermitian"], test_derivative=dolfin.parameters["adjoint"]["test_derivative"])
 
       solving.register_initial_conditions(zip(rhs.coefficients(),rhs.dependencies()) + zip(coeffs, dependencies), linear=False, var=None)
 
@@ -199,7 +199,7 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
     out = dolfin.PETScKrylovSolver.solve(self, *args)
 
     if annotate:
-      if solving.debugging["record_all"]:
+      if dolfin.parameters["adjoint"]["record_all"]:
         solving.adjointer.record_variable(var, libadjoint.MemoryStorage(solving.Vector(x.function)))
 
     timer.stop()

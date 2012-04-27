@@ -13,7 +13,7 @@ V = FunctionSpace(mesh, "CG", 2)
 
 #parameters["num_threads"] = 2
 
-debugging["record_all"] = True
+dolfin.parameters["adjoint"]["record_all"] = True
 
 def Dt(u, u_, timestep):
     return (u - u_)/timestep
@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
     ic.vector()[:] = ic_copy.vector()
     minconv = test_initial_condition_adjoint(Jfunc, ic, adjoint, seed=1.0e-1)
-    if minconv < 1.9:
+    if minconv < 1.8:
       sys.exit(1)
 #
 #    ic.vector()[:] = ic_copy.vector()

@@ -30,7 +30,7 @@ from dolfin import *
 from dolfin_adjoint import *
 import sys
 
-debugging["record_all"] = True
+dolfin.parameters["adjoint"]["record_all"] = True
 
 def boundary_value(n):
     if n < 10:

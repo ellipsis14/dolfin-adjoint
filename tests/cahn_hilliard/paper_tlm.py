@@ -4,7 +4,7 @@ from dolfin import *
 from dolfin_adjoint import *
 from math import sqrt
 
-debugging["record_all"] = True
+dolfin.parameters["adjoint"]["record_all"] = True
 
 # Class representing the intial conditions
 class InitialConditions(Expression):

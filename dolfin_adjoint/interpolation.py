@@ -7,7 +7,7 @@ def interpolate(v, V, annotate=True):
 
   out = dolfin.interpolate(v, V)
 
-  if solving.debugging["stop_annotating"]:
+  if dolfin.parameters["adjoint"]["stop_annotating"]:
     annotate = False
 
   if isinstance(v, dolfin.Function) and annotate:
@@ -35,7 +35,7 @@ def interpolate(v, V, annotate=True):
 
       dep = solving.adj_variables.next(out)
 
-      if solving.debugging["record_all"]:
+      if dolfin.parameters["adjoint"]["record_all"]:
         solving.adjointer.record_variable(dep, libadjoint.MemoryStorage(solving.Vector(out)))
 
       initial_eq = libadjoint.Equation(dep, blocks=[identity_block], targets=[dep], rhs=rhs)

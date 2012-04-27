@@ -7,7 +7,7 @@ n = 100
 mesh = UnitInterval(n)
 V = FunctionSpace(mesh, "CG", 2)
 
-debugging["record_all"] = True
+dolfin.parameters["adjoint"]["record_all"] = True
 
 def Dt(u, u_, timestep):
     return (u - u_)/timestep

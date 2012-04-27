@@ -2,7 +2,7 @@ from dolfin import *
 from dolfin_adjoint import *
 import sys
 
-debugging["record_all"] = True
+dolfin.parameters["adjoint"]["record_all"] = True
 
 mesh = UnitSquare(4, 4)
 V = FunctionSpace(mesh, "CG", 1)

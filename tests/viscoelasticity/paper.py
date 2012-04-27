@@ -284,7 +284,7 @@ if __name__ == "__main__":
     dt = 0.01
     set_log_level(PROGRESS)
 
-    debugging["record_all"] = True
+    dolfin.parameters["adjoint"]["record_all"] = True
     ic = Function(Z)
     ic_copy = Function(ic)
 

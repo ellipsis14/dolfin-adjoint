@@ -262,8 +262,8 @@ if __name__ == "__main__":
     dt = 0.01
     set_log_level(PROGRESS)
 
-    debugging["record_all"] = True
-    debugging["fussy_replay"] = False
+    dolfin.parameters["adjoint"]["record_all"] = True
+    dolfin.parameters["adjoint"]["fussy_replay"] = False
     ic = Function(Z)
     ic_copy = Function(ic)
 

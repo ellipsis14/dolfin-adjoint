@@ -4,7 +4,7 @@ import libadjoint
 
 def project(v, V=None, bcs=None, mesh=None, solver_type="cg", preconditioner_type="default", form_compiler_parameters=None, annotate=True):
 
-  if solving.debugging["stop_annotating"]:
+  if dolfin.parameters["adjoint"]["stop_annotating"]:
     annotate = False
 
   if isinstance(v, dolfin.Expression):
@@ -26,7 +26,7 @@ def project(v, V=None, bcs=None, mesh=None, solver_type="cg", preconditioner_typ
 
     solving.annotate(a == L, out, bcs, solver_parameters={"linear_solver": solver_type, "preconditioner": preconditioner_type, "symmetric": True})
 
-    if solving.debugging["record_all"]:
+    if dolfin.parameters["adjoint"]["record_all"]:
       solving.adjointer.record_variable(solving.adj_variables[out], libadjoint.MemoryStorage(solving.Vector(out)))
 
   return out

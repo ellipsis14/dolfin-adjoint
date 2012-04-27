@@ -5,7 +5,7 @@ from dolfin import *
 from dolfin_adjoint import *
 
 W=sw_lib.p1dgp2(divett.mesh)
-debugging["record_all"]=True
+dolfin.parameters["adjoint"]["record_all"]=True
 
 state=Function(W)
 

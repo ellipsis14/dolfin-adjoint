@@ -31,8 +31,8 @@ from dolfin_adjoint import *
 import numpy; numpy.set_printoptions(threshold='nan')
 
 
-debugging["record_all"] = True
-debugging["fussy_replay"] = True
+dolfin.parameters["adjoint"]["record_all"] = True
+dolfin.parameters["adjoint"]["fussy_replay"] = True
 
 # Test for PETSc or Epetra
 if not has_linear_algebra_backend("PETSc") and not has_linear_algebra_backend("Epetra"):

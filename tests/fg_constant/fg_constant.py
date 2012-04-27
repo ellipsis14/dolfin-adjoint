@@ -6,7 +6,7 @@ import sys
 
 mesh = UnitSquare(4, 4)
 V = FunctionSpace(mesh, "CG", 3)
-debugging["record_all"] = True
+dolfin.parameters["adjoint"]["record_all"] = True
 a = Constant(2.0, name="a")
 
 def main(ic, a, annotate=False):

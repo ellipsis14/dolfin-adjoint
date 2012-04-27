@@ -16,7 +16,7 @@ class NonlinearVariationalSolver(dolfin.NonlinearVariationalSolver):
     self.problem = problem
 
   def solve(self, annotate=True):
-    if solving.debugging["stop_annotating"]:
+    if dolfin.parameters["adjoint"]["stop_annotating"]:
       annotate = False
 
     if annotate:
@@ -25,7 +25,7 @@ class NonlinearVariationalSolver(dolfin.NonlinearVariationalSolver):
 
     out = dolfin.NonlinearVariationalSolver.solve(self)
 
-    if annotate and solving.debugging["record_all"]:
+    if annotate and dolfin.parameters["adjoint"]["record_all"]:
       solving.adjointer.record_variable(solving.adj_variables[self.problem.u], libadjoint.MemoryStorage(solving.Vector(self.problem.u)))
 
     return out
@@ -44,7 +44,7 @@ class LinearVariationalSolver(dolfin.LinearVariationalSolver):
     self.problem = problem
 
   def solve(self, annotate=True):
-    if solving.debugging["stop_annotating"]:
+    if dolfin.parameters["adjoint"]["stop_annotating"]:
       annotate = False
 
     if annotate:
@@ -53,7 +53,7 @@ class LinearVariationalSolver(dolfin.LinearVariationalSolver):
 
     out = dolfin.LinearVariationalSolver.solve(self)
 
-    if annotate and solving.debugging["record_all"]:
+    if annotate and dolfin.parameters["adjoint"]["record_all"]:
       solving.adjointer.record_variable(solving.adj_variables[self.problem.u], libadjoint.MemoryStorage(solving.Vector(self.problem.u)))
 
     return out

@@ -1,7 +1,7 @@
 from dolfin import *
 from dolfin_adjoint import *
 
-debugging["record_all"] = True
+dolfin.parameters["adjoint"]["record_all"] = True
 
 import random
 import sys

@@ -18,7 +18,7 @@ def annotate_split(bigfn, idx, smallfn, bcs):
   diag_name = "Split:%s:" % idx + hashlib.md5(str(eq_lhs) + "split" + str(smallfn) + str(bigfn) + str(idx) + str(time.time())).hexdigest()
 
   diag_deps = []
-  diag_block = libadjoint.Block(diag_name, dependencies=diag_deps, test_hermitian=solving.debugging["test_hermitian"], test_derivative=solving.debugging["test_derivative"])
+  diag_block = libadjoint.Block(diag_name, dependencies=diag_deps, test_hermitian=dolfin.parameters["adjoint"]["test_hermitian"], test_derivative=dolfin.parameters["adjoint"]["test_derivative"])
 
   solving.register_initial_conditions([(bigfn, solving.adj_variables[bigfn])], linear=True, var=None)
 
@@ -51,14 +51,14 @@ def annotate_split(bigfn, idx, smallfn, bcs):
   cs = solving.adjointer.register_equation(eqn)
   solving.do_checkpoint(cs, var)
 
-  if solving.debugging["fussy_replay"]:
+  if dolfin.parameters["adjoint"]["fussy_replay"]:
     mass = eq_lhs
     smallfn_massed = dolfin.Function(fn_space)
     dolfin.solve(mass == dolfin.action(mass, smallfn), smallfn_massed)
     assert False, "No idea how to assign to a subfunction yet .. "
     #assign.dolfin_assign(bigfn, smallfn_massed)
 
-  if solving.debugging["record_all"]:
+  if dolfin.parameters["adjoint"]["record_all"]:
     smallfn_record = dolfin.Function(fn_space)
     assign.dolfin_assign(smallfn_record, smallfn)
     solving.adjointer.record_variable(var, libadjoint.MemoryStorage(solving.Vector(smallfn_record)))

@@ -3,8 +3,8 @@ from dolfin import *
 from dolfin_adjoint import *
 from math import sqrt
 
-debugging["fussy_replay"] = False
-debugging["record_all"] = True
+dolfin.parameters["adjoint"]["fussy_replay"] = False
+dolfin.parameters["adjoint"]["record_all"] = True
 
 # Class representing the intial conditions
 class InitialConditions(Expression):

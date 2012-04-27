@@ -140,7 +140,7 @@ class KrylovSolver(dolfin.KrylovSolver):
 
     out = dolfin.KrylovSolver.solve(self, *args, **kwargs)
 
-    if to_annotate and solving.debugging["record_all"]:
+    if to_annotate and dolfin.parameters["adjoint"]["record_all"]:
       solving.adjointer.record_variable(solving.adj_variables[u], libadjoint.MemoryStorage(solving.Vector(u)))
 
     return out

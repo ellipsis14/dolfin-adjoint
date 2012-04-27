@@ -104,7 +104,7 @@ def main(ic, annotate=False):
 if __name__ == "__main__":
 
     from dolfin_adjoint import *
-    debugging["record_all"] = True
+    dolfin.parameters["adjoint"]["record_all"] = True
 
     # Run model
     T0_expr = "0.5*(1.0 - x[1]*x[1]) + 0.01*cos(pi*x[0]/l)*sin(pi*x[1]/h)"
