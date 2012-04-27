@@ -325,13 +325,6 @@ def solve(*args, **kwargs):
   ret = dolfin.fem.solving.solve(*args, **kwargs)
 
   if to_annotate:
-    if not linear and dolfin.parameters["adjoint"]["fussy_replay"]:
-      # we have annotated M.u = M.u - F(u),
-      # but actually solved F(u) = 0.
-      # so we need to do the mass solve too, so that the
-      # replay is exact.
-      nonlinear_post_solve_projection(*args, **kwargs)
-
     # Finally, if we want to record all of the solutions of the real forward model
     # (for comparison with a libadjoint replay later),
     # then we should record the value of the variable we just solved for.
@@ -374,24 +367,6 @@ def define_nonlinear_equation(F, u):
   mass = dolfin.inner(test, trial)*dolfin.dx
 
   return (mass, dolfin.action(mass, u) - F)
-
-def nonlinear_post_solve_projection(*args, **kwargs):
-  '''we have annotated M.u = M.u - F(u),
-  but actually solved F(u) = 0.
-  so we need to do the mass solve too, so that the
-  replay is exact.'''
-
-  # Unpack the arguments, using the same routine as the real Dolfin solve call
-  unpacked_args = dolfin.fem.solving._extract_args(*args, **kwargs)
-  u  = unpacked_args[1]
-
-  fn_space = u.function_space()
-  test = dolfin.TestFunction(fn_space)
-  trial = dolfin.TrialFunction(fn_space)
-
-  mass = dolfin.inner(test, trial)*dolfin.dx
-
-  dolfin.fem.solving.solve(mass == dolfin.action(mass, u), u)
 
 def adj_checkpointing(strategy, steps, snaps_on_disk, snaps_in_ram, verbose=False):
   dolfin.parameters["adjoint"]["record_all"] = False

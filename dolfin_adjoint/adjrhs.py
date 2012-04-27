@@ -153,6 +153,8 @@ class NonlinearRHS(RHS):
     act = dolfin.action(self.mass, u)
     vec = adjlinalg.Vector(act)
     vec.nonlinear_form = current_F
+    vec.nonlinear_u = u
+    vec.nonlinear_bcs = self.bcs
 
     return vec
 

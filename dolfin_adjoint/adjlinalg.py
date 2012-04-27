@@ -63,6 +63,8 @@ class Vector(libadjoint.Vector):
 
       if hasattr(x, 'nonlinear_form'):
         self.nonlinear_form = x.nonlinear_form
+        self.nonlinear_u = x.nonlinear_u
+        self.nonlinear_bcs = x.nonlinear_bcs
 
     elif x.data is None:
       pass
@@ -242,9 +244,6 @@ class Matrix(libadjoint.Matrix):
 
       x = Vector(dolfin.Function(self.test_function().function_space()))
 
-      if "newton_solver" in self.solver_parameters:
-        del self.solver_parameters["newton_solver"]
-
       if b.data is None:
         # This means we didn't get any contribution on the RHS of the adjoint system. This could be that the
         # simulation ran further ahead than when the functional was evaluated, or it could be that the
@@ -261,7 +260,11 @@ class Matrix(libadjoint.Matrix):
         ksp = self.solver_parameters.get("linear_solver", "default")
         dolfin.fem.solving.solve(assembled_lhs, x.data.vector(), assembled_rhs, ksp, pc)
       else:
-        dolfin.fem.solving.solve(self.data==b.data, x.data, bcs, solver_parameters=self.solver_parameters)
+        if hasattr(b, 'nonlinear_form'): # was a nonlinear solve
+          F = dolfin.replace(b.nonlinear_form, {b.nonlinear_u: x.data})
+          dolfin.fem.solving.solve(F == 0, x.data, b.nonlinear_bcs, solver_parameters=self.solver_parameters)
+        else:
+          dolfin.fem.solving.solve(self.data==b.data, x.data, bcs, solver_parameters=self.solver_parameters)
 
     return x
 
