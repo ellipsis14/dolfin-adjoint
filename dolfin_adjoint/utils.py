@@ -424,7 +424,7 @@ def taylor_test(J, m, Jm, dJdm, seed=None, perturbation_direction=None):
   # First, compute perturbation sizes.
   if seed is None:
     if isinstance(m, ScalarParameter):
-      seed = float(m)/5.0
+      seed = float(m.a)/5.0
       if seed == 0.0: seed = 0.1
     else:
       seed = 0.01
