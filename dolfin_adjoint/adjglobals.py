@@ -13,3 +13,5 @@ adjointer.first_solve = True
 # A dictionary that saves the functionspaces of all checkpoint variables that have been saved to disk
 checkpoint_fs = {}
 
+def adj_check_checkpoints():
+  adjointer.check_checkpoints()
