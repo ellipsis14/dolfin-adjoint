@@ -5,7 +5,7 @@ import adjglobals
 import dolfin
 import numpy
 
-def replay_dolfin(forget=False, tol=0.0):
+def replay_dolfin(forget=False, tol=0.0, stop=False):
   if not dolfin.parameters["adjoint"]["record_all"]:
     info_red("Warning: your replay test will be much more effective with dolfin.parameters['adjoint']['record_all'] = True.")
 
@@ -21,6 +21,9 @@ def replay_dolfin(forget=False, tol=0.0):
 
       if forget:
         adjglobals.adjointer.forget_forward_equation(i)
+
+      if not out and stop:
+        return success
 
   return success
 

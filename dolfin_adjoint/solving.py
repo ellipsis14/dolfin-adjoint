@@ -420,11 +420,8 @@ def register_initial_condition(coeff, dep):
   assert adjglobals.adjointer.variable_known(dep)
 
 def do_checkpoint(cs, var, rhs):
-  dolfin.info_red("Checkpointing the equation for %s" % var)
-
   if cs == int(libadjoint.constants.adj_constants["ADJ_CHECKPOINT_STORAGE_MEMORY"]):
     for coeff in adjglobals.adj_variables.coeffs.keys(): 
-      dolfin.info_red("  Considering variable (%s, %s)" % (coeff, adjglobals.adj_variables[coeff]))
       dep = adjglobals.adj_variables[coeff]
 
       if dep == var:
@@ -435,12 +432,10 @@ def do_checkpoint(cs, var, rhs):
         else:
           continue
 
-      dolfin.info_red("  Recording variable (%s, %s)" % (coeff, dep))
       adjglobals.adjointer.record_variable(dep, libadjoint.MemoryStorage(adjlinalg.Vector(coeff), cs=True))
 
   elif cs == int(libadjoint.constants.adj_constants["ADJ_CHECKPOINT_STORAGE_DISK"]):
     for coeff in adjglobals.adj_variables.coeffs.keys(): 
-      dolfin.info_red("  Considering variable (%s, %s)" % (coeff, adjglobals.adj_variables[coeff]))
       dep = adjglobals.adj_variables[coeff]
 
       if dep == var:
@@ -451,6 +446,5 @@ def do_checkpoint(cs, var, rhs):
         else:
           continue
 
-      dolfin.info_red("  Recording variable (%s, %s)" % (coeff, dep))
       adjglobals.adjointer.record_variable(dep, libadjoint.DiskStorage(adjlinalg.Vector(coeff), cs=True))
 
