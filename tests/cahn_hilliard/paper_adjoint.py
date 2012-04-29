@@ -1,5 +1,6 @@
 import random
 import sys
+from datetime import datetime
 
 from dolfin import *
 from dolfin_adjoint import *
@@ -90,12 +91,12 @@ def main(ic, annotate=False):
   j = 0.5 * dt * assemble((1.0/(4*eps)) * (pow( (-1.0/eps) * u0[1], 2))*dx)
   while (t < T):
       t += dt
-      print "Starting solve at t=%s: " % t, os.popen("date").read()
+      print "Starting solve at t=%s: " % t, datetime.now().isoformat()
       solve(L == 0, u, J=a, solver_parameters=parameters, annotate=annotate)
-      print "Finished solve at t=%s: " % t, os.popen("date").read()
+      print "Finished solve at t=%s: " % t, datetime.now().isoformat()
+
       if annotate:
         file << (u.split()[0], t)
-      adj_inc_timestep()
 
       u0.assign(u, annotate=annotate)
 
@@ -104,6 +105,7 @@ def main(ic, annotate=False):
       else:
         quad_weight = 1.0
       j += quad_weight * dt * assemble((1.0/(4*eps)) * (pow( (-1.0/eps) * u0[1], 2))*dx)
+      adj_inc_timestep()
 
   return u0, j
 
