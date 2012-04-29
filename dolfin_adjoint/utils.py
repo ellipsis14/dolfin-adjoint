@@ -4,6 +4,7 @@ from dolfin import info_red, info_blue, info
 import adjglobals
 import dolfin
 import numpy
+import constant
 
 def replay_dolfin(forget=False, tol=0.0, stop=False):
   if not dolfin.parameters["adjoint"]["record_all"]:
@@ -424,10 +425,17 @@ def taylor_test(J, m, Jm, dJdm, seed=None, perturbation_direction=None):
   info_blue("Running Taylor remainder convergence test ... ")
   import random
 
+  def get_const(val):
+    if isinstance(val, str):
+      return float(constant.constants[val])
+    else:
+      return float(val)
+
   # First, compute perturbation sizes.
   if seed is None:
     if isinstance(m, ScalarParameter):
-      seed = float(m.a)/5.0
+      seed = get_const(m.a)/5.0
+
       if seed == 0.0: seed = 0.1
     else:
       seed = 0.01
@@ -439,7 +447,7 @@ def taylor_test(J, m, Jm, dJdm, seed=None, perturbation_direction=None):
     if isinstance(m, ScalarParameter):
       perturbation_direction = 1
     elif isinstance(m, ScalarParameters):
-      perturbation_direction = numpy.array([float(x)/5.0 for x in m.v])
+      perturbation_direction = numpy.array([get_const(x)/5.0 for x in m.v])
     elif isinstance(m, InitialConditionParameter):
       ic = adjglobals.adjointer.get_variable_value(m.var).data
       perturbation_direction = dolfin.Function(ic)
@@ -462,9 +470,9 @@ def taylor_test(J, m, Jm, dJdm, seed=None, perturbation_direction=None):
 
   # And now the perturbed inputs:
   if isinstance(m, ScalarParameter):
-    pinputs = [dolfin.Constant(float(m.a) + x) for x in perturbations]
+    pinputs = [dolfin.Constant(get_const(m.a) + x) for x in perturbations]
   elif isinstance(m, ScalarParameters):
-    a = numpy.array([float(x) for x in m.v])
+    a = numpy.array([get_const(x) for x in m.v])
 
     def make_const(arr):
       return [dolfin.Constant(x) for x in arr]
