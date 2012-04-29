@@ -409,7 +409,7 @@ def test_scalar_parameters_adjoint(J, a, dJda, seed=0.1):
 
   return min(convergence_order(with_gradient))
 
-def taylor_test(J, m, Jm, dJdm, seed=None, perturbation_direction=None):
+def taylor_test(J, m, Jm, dJdm, seed=None, perturbation_direction=None, value=None):
   '''J must be a function that takes in a parameter value m and returns the value
      of the functional:
 
@@ -431,6 +431,12 @@ def taylor_test(J, m, Jm, dJdm, seed=None, perturbation_direction=None):
     else:
       return float(val)
 
+  def get_value(param, value):
+    if value is not None:
+      return value
+    else:
+      return adjglobals.adjointer.get_variable_value(param.var).data
+
   # First, compute perturbation sizes.
   if seed is None:
     if isinstance(m, ScalarParameter):
@@ -449,7 +455,7 @@ def taylor_test(J, m, Jm, dJdm, seed=None, perturbation_direction=None):
     elif isinstance(m, ScalarParameters):
       perturbation_direction = numpy.array([get_const(x)/5.0 for x in m.v])
     elif isinstance(m, InitialConditionParameter):
-      ic = adjglobals.adjointer.get_variable_value(m.var).data
+      ic = get_value(m, value)
       perturbation_direction = dolfin.Function(ic)
       vec = perturbation_direction.vector()
       for i in range(len(vec)):
