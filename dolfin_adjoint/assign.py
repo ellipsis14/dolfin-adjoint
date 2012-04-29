@@ -22,10 +22,11 @@ def register_assign(new, old):
   if dolfin.parameters["adjoint"]["record_all"]:
     adjglobals.adjointer.record_variable(dep, libadjoint.MemoryStorage(adjlinalg.Vector(old)))
 
-  initial_eq = libadjoint.Equation(dep, blocks=[identity_block], targets=[dep], rhs=IdentityRHS(old))
+  rhs = IdentityRHS(old)
+  initial_eq = libadjoint.Equation(dep, blocks=[identity_block], targets=[dep], rhs=rhs)
   cs = adjglobals.adjointer.register_equation(initial_eq)
 
-  do_checkpoint(cs, dep)
+  do_checkpoint(cs, dep, rhs)
 
 class IdentityRHS(libadjoint.RHS):
   def __init__(self, var):

@@ -43,7 +43,7 @@ def interpolate(v, V, annotate=True):
       initial_eq = libadjoint.Equation(dep, blocks=[identity_block], targets=[dep], rhs=rhs)
       cs = adjglobals.adjointer.register_equation(initial_eq)
 
-      solving.do_checkpoint(cs, dep)
+      solving.do_checkpoint(cs, dep, rhs)
 
   return out
 

@@ -198,7 +198,7 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
 
       eqn = libadjoint.Equation(var, blocks=[diag_block], targets=[var], rhs=rhs)
       cs = adjglobals.adjointer.register_equation(eqn)
-      solving.do_checkpoint(cs, var)
+      solving.do_checkpoint(cs, var, rhs)
 
     out = dolfin.PETScKrylovSolver.solve(self, *args)
 

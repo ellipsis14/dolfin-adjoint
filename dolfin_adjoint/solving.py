@@ -297,7 +297,7 @@ def annotate(*args, **kwargs):
   eqn = libadjoint.Equation(var, blocks=[diag_block], targets=[var], rhs=rhs)
 
   cs = adjglobals.adjointer.register_equation(eqn)
-  do_checkpoint(cs, var)
+  do_checkpoint(cs, var, rhs)
 
   return linear
 
@@ -419,14 +419,38 @@ def register_initial_condition(coeff, dep):
   adjglobals.adjointer.register_equation(initial_eq)
   assert adjglobals.adjointer.variable_known(dep)
 
-def do_checkpoint(cs, var):
+def do_checkpoint(cs, var, rhs):
+  dolfin.info_red("Checkpointing the equation for %s" % var)
+
   if cs == int(libadjoint.constants.adj_constants["ADJ_CHECKPOINT_STORAGE_MEMORY"]):
     for coeff in adjglobals.adj_variables.coeffs.keys(): 
-      if adjglobals.adj_variables[coeff] == var: continue
-      adjglobals.adjointer.record_variable(adjglobals.adj_variables[coeff], libadjoint.MemoryStorage(adjlinalg.Vector(coeff), cs=True))
+      dolfin.info_red("  Considering variable (%s, %s)" % (coeff, adjglobals.adj_variables[coeff]))
+      dep = adjglobals.adj_variables[coeff]
+
+      if dep == var:
+        # We may need to checkpoint another variable if rhs is a NonlinearRHS and we need
+        # to store the initial condition in order to replay the solve.
+        if hasattr(rhs, 'ic_var') and rhs.ic_var is not None:
+          dep = rhs.ic_var
+        else:
+          continue
+
+      dolfin.info_red("  Recording variable (%s, %s)" % (coeff, dep))
+      adjglobals.adjointer.record_variable(dep, libadjoint.MemoryStorage(adjlinalg.Vector(coeff), cs=True))
 
   elif cs == int(libadjoint.constants.adj_constants["ADJ_CHECKPOINT_STORAGE_DISK"]):
     for coeff in adjglobals.adj_variables.coeffs.keys(): 
-      if adjglobals.adj_variables[coeff] == var: continue
-      adjglobals.adjointer.record_variable(adjglobals.adj_variables[coeff], libadjoint.DiskStorage(adjlinalg.Vector(coeff), cs=True))
+      dolfin.info_red("  Considering variable (%s, %s)" % (coeff, adjglobals.adj_variables[coeff]))
+      dep = adjglobals.adj_variables[coeff]
+
+      if dep == var:
+        # We may need to checkpoint another variable if rhs is a NonlinearRHS and we need
+        # to store the initial condition in order to replay the solve.
+        if hasattr(rhs, 'ic_var') and rhs.ic_var is not None:
+          dep = rhs.ic_var
+        else:
+          continue
+
+      dolfin.info_red("  Recording variable (%s, %s)" % (coeff, dep))
+      adjglobals.adjointer.record_variable(dep, libadjoint.DiskStorage(adjlinalg.Vector(coeff), cs=True))
 

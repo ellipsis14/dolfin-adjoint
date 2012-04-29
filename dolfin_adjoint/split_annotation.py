@@ -50,7 +50,7 @@ def annotate_split(bigfn, idx, smallfn, bcs):
   eqn = libadjoint.Equation(var, blocks=[diag_block], targets=[var], rhs=rhs)
 
   cs = adjglobals.adjointer.register_equation(eqn)
-  solving.do_checkpoint(cs, var)
+  solving.do_checkpoint(cs, var, rhs)
 
   if dolfin.parameters["adjoint"]["fussy_replay"]:
     mass = eq_lhs
