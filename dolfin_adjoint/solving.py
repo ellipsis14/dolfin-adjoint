@@ -148,12 +148,7 @@ def annotate(*args, **kwargs):
   # These equations are necessary so that libadjoint can assemble the
   # relevant adjoint equations for the adjoint variables associated with
   # the initial conditions.
-  no_registered = register_initial_conditions(zip(rhs.coefficients(),rhs.dependencies()) + zip(diag_coeffs, diag_deps), linear=linear, var=var)
-
-  if adjglobals.adjointer.first_solve:
-    adjglobals.adjointer.first_solve = False
-    if no_registered > 0:
-      adjglobals.adj_inc_timestep()
+  register_initial_conditions(zip(rhs.coefficients(),rhs.dependencies()) + zip(diag_coeffs, diag_deps), linear=linear, var=var)
 
   # c.f. the discussion above. In the linear case, we want to bump the
   # timestep number /after/ all of the dependencies' timesteps have been
@@ -351,7 +346,6 @@ def adj_html(*args, **kwargs):
 
 def adj_reset():
   adjglobals.adjointer.reset()
-  adjglobals.adjointer.first_solve = True
   adjglobals.adj_variables.__init__()
   
 def define_nonlinear_equation(F, u):
@@ -374,7 +368,6 @@ def adj_checkpointing(strategy, steps, snaps_on_disk, snaps_in_ram, verbose=Fals
   adjglobals.adjointer.set_revolve_options(steps, snaps_on_disk, snaps_in_ram, verbose)
 
 def register_initial_conditions(coeffdeps, linear, var=None):
-  i = 0
   for coeff, dep in coeffdeps:
     # If coeff is not known, it must be an initial condition.
     if not adjglobals.adjointer.variable_known(dep):
@@ -392,9 +385,6 @@ def register_initial_conditions(coeffdeps, linear, var=None):
           raise libadjoint.exceptions.LibadjointErrorNotImplemented(errmsg)
 
       register_initial_condition(coeff, dep)
-      i = i + 1
-
-  return i
 
 def register_initial_condition(coeff, dep):
   fn_space = coeff.function_space()

@@ -80,10 +80,18 @@ class TimeFunctional(libadjoint.Functional):
   def __call__(self, adjointer, timestep, dependencies, values):
 
     dolfin_dependencies_form = [dep for dep in ufl.algorithms.extract_coefficients(self.form) if (hasattr(dep, "function_space") and dep not in self.static_variables)]
-    dolfin_values = [val.data for val in values]
+    # Select the correct value for the first timestep, as it has dependencies both at the end 
+    # and, for the initial conditions, at the beginning.
+    if variable.timestep == 0:
+      if variable.iteration == 0:
+        dolfin_values = [val.data for val in values[:len(values)/2]]
+      else:
+        dolfin_values = [val.data for val in values[len(values)/2:]]
+    else:            
+      dolfin_values = [val.data for val in values]
 
     # The quadrature weight for the midpoint rule is 1.0 for interiour points and 0.5 at the end points.
-    if timestep==0 or timestep==adjointer.timestep_count-1: 
+    if (timestep==0 and variable.iteration == 0) or timestep==adjointer.timestep_count-1: 
       quad_weight = 0.5
     else: 
       quad_weight = 1.0
@@ -101,13 +109,21 @@ class TimeFunctional(libadjoint.Functional):
     dolfin_variable = values[dependencies.index(variable)].data
 
     dolfin_dependencies_form = [dep for dep in ufl.algorithms.extract_coefficients(self.form) if (hasattr(dep, "function_space") and dep not in self.static_variables)]
-    dolfin_values = [val.data for val in values]
+    # Select the correct value for the first timestep, as it has dependencies both at the end 
+    # and, for the initial conditions, at the beginning.
+    if variable.timestep == 0:
+      if variable.iteration == 0:
+        dolfin_values = [val.data for val in values[:len(values)/2]]
+      else:
+        dolfin_values = [val.data for val in values[len(values)/2:]]
+    else:            
+      dolfin_values = [val.data for val in values]
 
     test = dolfin.TestFunction(dolfin_variable.function_space())
     current_form = dolfin.replace(self.form, dict(zip(dolfin_dependencies_form, dolfin_values)))
 
     # The quadrature weight for the midpoint rule is 1.0 for interiour points and 0.5 at the end points.
-    if (variable.timestep == 0) or variable.timestep==adjointer.timestep_count-1: 
+    if (variable.timestep == 0 and variable.iteration == 0) or variable.timestep==adjointer.timestep_count-1: 
       quad_weight = 0.5
     else: 
       quad_weight = 1.0
@@ -140,6 +156,14 @@ class TimeFunctional(libadjoint.Functional):
     for i in range(len(deps)):
       deps[i].var.timestep = timestep
       deps[i].var.iteration = deps[i].iteration_count(adjointer) - 1 
+
+    # The first timestep has dependencies both at the end and, for the initial conditions,
+    # at the beginning.
+    if timestep == 0:
+        deps *= 2
+        for i in range(len(deps)/2):
+          deps[i] = deps[i].copy()
+          deps[i].var.iteration = 0 
 
     return deps
 

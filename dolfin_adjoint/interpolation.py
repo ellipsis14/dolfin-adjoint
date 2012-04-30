@@ -28,12 +28,7 @@ def interpolate(v, V, annotate=True):
 
       rhs = InterpolateRHS(v, V)
 
-      no_registered = solving.register_initial_conditions(zip(rhs.coefficients(),rhs.dependencies()), linear=True)
-
-      if adjglobals.adjointer.first_solve:
-        adjglobals.adjointer.first_solve = False
-        if no_registered > 0:
-          solving.adj_inc_timestep()
+      solving.register_initial_conditions(zip(rhs.coefficients(),rhs.dependencies()), linear=True)
 
       dep = adjglobals.adj_variables.next(out)
 

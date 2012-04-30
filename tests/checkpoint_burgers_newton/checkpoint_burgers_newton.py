@@ -4,7 +4,7 @@ import sys
 
 parameters["adjoint"]["fussy_replay"] = True
 
-adj_checkpointing(strategy='multistage', steps=5, 
+adj_checkpointing(strategy='multistage', steps=4, 
                   snaps_on_disk=5, snaps_in_ram=10, verbose=True)
 
 n = 30
