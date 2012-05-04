@@ -5,6 +5,13 @@ import adjglobals
 import adjlinalg
 
 def project(v, V=None, bcs=None, mesh=None, solver_type="cg", preconditioner_type="default", form_compiler_parameters=None, annotate=True):
+  '''The project call performs an equation solve, and so it too must be annotated so that the
+  adjoint and tangent linear models may be constructed automatically by libadjoint.
+
+  To disable the annotation of this function, just pass :py:data:`annotate=False`. This is useful in
+  cases where the solve is known to be irrelevant or diagnostic for the purposes of the adjoint
+  computation (such as projecting fields to other function spaces for the purposes of
+  visualisation).'''
 
   if dolfin.parameters["adjoint"]["stop_annotating"]:
     annotate = False

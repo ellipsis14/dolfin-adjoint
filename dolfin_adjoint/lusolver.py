@@ -50,6 +50,8 @@ def make_LUSolverMatrix(form, reuse_factorization):
   return LUSolverMatrix
 
 class LUSolver(dolfin.LUSolver):
+  '''This object is overloaded so that solves using this class are automatically annotated,
+  so that libadjoint can automatically derive the adjoint and tangent linear models.'''
   def __init__(self, *args):
     try:
       self.operator = args[0].form
@@ -64,6 +66,10 @@ class LUSolver(dolfin.LUSolver):
     dolfin.LUSolver.__init__(self, *args)
 
   def solve(self, *args, **kwargs):
+    '''To disable the annotation, just pass :py:data:`annotate=False` to this routine, and it acts exactly like the
+    Dolfin solve call. This is useful in cases where the solve is known to be irrelevant or diagnostic
+    for the purposes of the adjoint computation (such as projecting fields to other function spaces
+    for the purposes of visualisation).'''
 
     annotate = True
     if "annotate" in kwargs:

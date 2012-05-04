@@ -3,6 +3,11 @@ import copy
 
 dolfin_assemble = dolfin.assemble
 def assemble(*args, **kwargs):
+  """When a form is assembled, the information about its nonlinear dependencies is lost,
+  and it is no longer easy to manipulate. Therefore, dolfin_adjoint overloads the :py:func:`dolfin.assemble`
+  function to *attach the form to the assembled object*. This lets the automatic annotation work,
+  even when the user calls the lower-level :py:data:`solve(A, x, b)`.
+  """
   form = args[0]
   output = dolfin_assemble(*args, **kwargs)
   if not isinstance(output, float):
@@ -37,6 +42,11 @@ def adjoint_function_vector(self):
 dolfin.Function.vector = adjoint_function_vector
 
 def assemble_system(*args, **kwargs):
+  """When a form is assembled, the information about its nonlinear dependencies is lost,
+  and it is no longer easy to manipulate. Therefore, dolfin_adjoint overloads the :py:func:`dolfin.assemble_system`
+  function to *attach the form to the assembled object*. This lets the automatic annotation work,
+  even when the user calls the lower-level :py:data:`solve(A, x, b)`.
+  """
   lhs = args[0]
   rhs = args[1]
   bcs = args[2]

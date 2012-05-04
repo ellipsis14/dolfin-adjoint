@@ -6,6 +6,8 @@ import adjlinalg
 import adjglobals
 
 class KrylovSolver(dolfin.KrylovSolver):
+  '''This object is overloaded so that solves using this class are automatically annotated,
+  so that libadjoint can automatically derive the adjoint and tangent linear models.'''
   def __init__(self, *args):
     dolfin.KrylovSolver.__init__(self, *args)
     self.solver_parameters = args
@@ -21,6 +23,11 @@ class KrylovSolver(dolfin.KrylovSolver):
     self.operators = (A, self.operators[1])
 
   def solve(self, *args, **kwargs):
+    '''To disable the annotation, just pass :py:data:`annotate=False` to this routine, and it acts exactly like the
+    Dolfin solve call. This is useful in cases where the solve is known to be irrelevant or diagnostic
+    for the purposes of the adjoint computation (such as projecting fields to other function spaces
+    for the purposes of visualisation).'''
+
     to_annotate = True
     if "annotate" in kwargs:
       to_annotate = kwargs["annotate"]

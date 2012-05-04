@@ -16,6 +16,11 @@ import copy
 import time
 
 def down_cast(*args, **kwargs):
+  """When a form is assembled, the information about its nonlinear dependencies is lost,
+  and it is no longer easy to manipulate. Therefore, dolfin_adjoint overloads the :py:func:`dolfin.down_cast`
+  function to *attach the form to the returned object*. This lets the automatic annotation work,
+  even when the user calls the lower-level :py:data:`solve(A, x, b)`.
+  """
   dc = dolfin.down_cast(*args, **kwargs)
 
   if hasattr(args[0], 'form'):

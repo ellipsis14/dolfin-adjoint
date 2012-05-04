@@ -6,6 +6,13 @@ import adjglobals
 import adjlinalg
 
 def interpolate(v, V, annotate=True):
+  '''The interpolate call changes Function data, and so it too must be annotated so that the
+  adjoint and tangent linear models may be constructed automatically by libadjoint.
+
+  To disable the annotation of this function, just pass :py:data:`annotate=False`. This is useful in
+  cases where the interpolation is known to be irrelevant or diagnostic for the purposes of the adjoint
+  computation (such as interpolating fields to other function spaces for the purposes of
+  visualisation).'''
 
   out = dolfin.interpolate(v, V)
 

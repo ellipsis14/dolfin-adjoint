@@ -56,6 +56,17 @@ def dolfin_adjoint_split(self, *args, **kwargs):
   return out
 
 class Function(dolfin.Function):
+  '''The Function class is overloaded so that you can give :py:class:`Functions` *names*. For example,
+
+    .. code-block:: python
+
+      u = Function(V, name="Velocity")
+
+    This allows you to refer to the :py:class:`Function` by name throughout dolfin-adjoint, rather than
+    needing to have the specific :py:class:`Function` instance available.
+
+    For more details, see :doc:`the dolfin-adjoint documentation </documentation/misc>`.'''
+
   def __init__(self, *args, **kwargs):
     if "name" in kwargs:
       self.adj_name = kwargs["name"]
@@ -76,6 +87,9 @@ class Function(dolfin.Function):
         assign.register_assign(self, args[0])
 
   def assign(self, other, annotate=True):
+    '''To disable the annotation, just pass :py:data:`annotate=False` to this routine, and it acts exactly like the
+    Dolfin assign call.'''
+
     return dolfin_adjoint_assign(self, other, annotate=annotate)
 
   def split(self, *args, **kwargs):

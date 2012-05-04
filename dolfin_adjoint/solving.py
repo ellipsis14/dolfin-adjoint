@@ -297,14 +297,14 @@ def annotate(*args, **kwargs):
   return linear
 
 def solve(*args, **kwargs):
-  '''This solve routine comes from the dolfin_adjoint package, and wraps the real Dolfin
-  solve call. Its purpose is to annotate the model, recording what solves occur and what
-  forms are involved, so that the adjoint model may be constructed automatically by libadjoint. 
+  '''This solve routine wraps the real Dolfin solve call. Its purpose is to annotate the model,
+  recording what solves occur and what forms are involved, so that the adjoint and tangent linear models may be
+  constructed automatically by libadjoint. 
 
-  To disable the annotation, just pass annotate=False to this routine, and it acts exactly
-  like the Dolfin solve call. This is useful in cases where the solve is known to be irrelevant
-  or diagnostic for the purposes of the adjoint computation (such as projecting fields to
-  other function spaces for the purposes of visualisation).'''
+  To disable the annotation, just pass :py:data:`annotate=False` to this routine, and it acts exactly like the
+  Dolfin solve call. This is useful in cases where the solve is known to be irrelevant or diagnostic
+  for the purposes of the adjoint computation (such as projecting fields to other function spaces
+  for the purposes of visualisation).'''
 
   # First, decide if we should annotate or not.
   to_annotate = True
