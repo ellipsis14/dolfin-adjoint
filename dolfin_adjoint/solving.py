@@ -411,7 +411,7 @@ def register_initial_condition(coeff, dep):
 
 def do_checkpoint(cs, var, rhs):
   if cs == int(libadjoint.constants.adj_constants["ADJ_CHECKPOINT_STORAGE_MEMORY"]):
-    for coeff in adjglobals.adj_variables.coeffs.keys(): 
+    for coeff in adjglobals.adj_variables.keys(): 
       dep = adjglobals.adj_variables[coeff]
 
       if dep == var:
@@ -425,7 +425,7 @@ def do_checkpoint(cs, var, rhs):
       adjglobals.adjointer.record_variable(dep, libadjoint.MemoryStorage(adjlinalg.Vector(coeff), cs=True))
 
   elif cs == int(libadjoint.constants.adj_constants["ADJ_CHECKPOINT_STORAGE_DISK"]):
-    for coeff in adjglobals.adj_variables.coeffs.keys(): 
+    for coeff in adjglobals.adj_variables.keys(): 
       dep = adjglobals.adj_variables[coeff]
 
       if dep == var:
