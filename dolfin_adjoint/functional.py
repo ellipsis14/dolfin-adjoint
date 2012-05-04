@@ -141,7 +141,7 @@ class TimeFunctional(libadjoint.Functional):
 
     # Add the contribution of the integral at the last timestep
     if self.final_form != None and variable.timestep==adjointer.timestep_count-1:
-      dolfin_dependencies_final_form = [dep for dep in ufl.algorithms.extract_coefficients(final_form) if (hasattr(dep, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[dep])]
+      dolfin_dependencies_final_form = [dep for dep in ufl.algorithms.extract_coefficients(self.final_form) if (hasattr(dep, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[dep])]
       final_form = dolfin.replace(self.final_form, dict(zip(dolfin_dependencies_final_form, dolfin_values)))
       functional_deriv_value += dolfin.derivative(final_form, dolfin_variable, test)
 
