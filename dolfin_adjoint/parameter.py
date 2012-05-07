@@ -6,6 +6,7 @@ import numpy
 import adjlinalg
 import adjglobals
 from adjrhs import adj_get_forward_equation
+import adjresidual
 
 class InitialConditionParameter(libadjoint.Parameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
@@ -46,17 +47,11 @@ class ScalarParameter(libadjoint.Parameter):
     self.a = a
 
   def __call__(self, adjointer, i, dependencies, values, variable):
-    (fwd_var, lhs, rhs) = adj_get_forward_equation(i)
+    form = adjresidual.get_residual(i)
+    if form is not None:
+      form = -form
 
-    if not isinstance(lhs, adjlinalg.IdentityMatrix):
-      fn_space = ufl.algorithms.extract_arguments(lhs)[0].function_space()
-      x = dolfin.Function(fn_space)
-      if rhs == 0:
-        form = -lhs
-        x = fwd_var.nonlinear_u
-      else:
-        form = rhs - dolfin.action(lhs, x)
-
+      fn_space = ufl.algorithms.extract_arguments(form)[0].function_space()
       dparam = dolfin.Function(dolfin.FunctionSpace(fn_space.mesh(), "R", 0))
       dparam.vector()[:] = 1.0
 
@@ -75,16 +70,6 @@ class ScalarParameter(libadjoint.Parameter):
 
       else:
         raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to handle any other types!")
-
-      if x in ufl.algorithms.extract_coefficients(diff_form):
-        # We really need the forward solution to compute dF/dm.
-        try:
-          y = adjointer.get_variable_value(fwd_var).data
-        except libadjoint.exceptions.LibadjointErrorNeedValue:
-          info_red("Warning: recomputing forward solution to compute -dF/dm")
-          y = adjointer.get_forward_solution(i)[1].data
-
-        diff_form = dolfin.replace(diff_form, {x: y})
 
       return adjlinalg.adjlinalg.Vector(diff_form)
     else:
@@ -94,17 +79,11 @@ class ScalarParameter(libadjoint.Parameter):
     return str(self.a) + ':ScalarParameter'
 
   def inner_adjoint(self, adjointer, adjoint, i, variable):
-    (fwd_var, lhs, rhs) = adj_get_forward_equation(i)
+    form = adjresidual.get_residual(i)
+    if form is not None:
+      form = -form
 
-    if not isinstance(lhs, adjlinalg.IdentityMatrix):
-      fn_space = ufl.algorithms.extract_arguments(lhs)[0].function_space()
-      x = dolfin.Function(fn_space)
-      if rhs == 0:
-        form = -lhs
-        x = fwd_var.nonlinear_u
-      else:
-        form = rhs - dolfin.action(lhs, x)
-
+      fn_space = ufl.algorithms.extract_arguments(form)[0].function_space()
       dparam = dolfin.Function(dolfin.FunctionSpace(fn_space.mesh(), "R", 0))
       dparam.vector()[:] = 1.0
 
@@ -123,16 +102,6 @@ class ScalarParameter(libadjoint.Parameter):
 
       else:
         raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to handle any other types!")
-
-      if x in ufl.algorithms.extract_coefficients(diff_form):
-        # We really need the forward solution to compute dF/dm.
-        try:
-          y = adjointer.get_variable_value(fwd_var).data
-        except libadjoint.exceptions.LibadjointErrorNeedValue:
-          info_red("Warning: recomputing forward solution to compute -dF/dm")
-          y = adjointer.get_forward_solution(i)[1].data
-
-        diff_form = dolfin.replace(diff_form, {x: y})
 
       dFdm = dolfin.assemble(diff_form) # actually - dF/dm
       assert isinstance(dFdm, dolfin.GenericVector)

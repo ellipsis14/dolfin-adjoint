@@ -521,4 +521,3 @@ def taylor_test(J, m, Jm, dJdm, seed=None, perturbation_direction=None, value=No
   info("Convergence orders for Taylor remainder with adjoint information (should all be 2): " + str(convergence_order(with_gradient)))
 
   return min(convergence_order(with_gradient))
-

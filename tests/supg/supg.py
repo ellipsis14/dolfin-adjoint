@@ -140,7 +140,7 @@ if __name__ == "__main__":
 
   J = FinalFunctional(u*u*dx)
   param = ScalarParameter(f)
-  dJdf = compute_gradient(J, param)
+  dJdf = compute_gradient(J, param, forget=False)
 
   def J(param):
     u0 = Function(Q)
