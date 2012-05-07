@@ -144,6 +144,12 @@ if __name__ == "__main__":
   for (final_adj, var) in compute_adjoint(J, forget=False):
     pass
 
+  j = assemble(inner(final_soln, final_soln)*dx)
+  Jerr = estimate_error(J, forget=None)
+
+  print "Functional value: ", j
+  print "Error estimate  : ", Jerr
+
   def J(ic):
     soln = main(ic)
     return assemble(inner(soln, soln)*dx)
