@@ -118,82 +118,52 @@ class ScalarParameters(libadjoint.Parameter):
       self.dv = dv
 
   def __call__(self, adjointer, i, dependencies, values, variable):
-    (fwd_var, lhs, rhs) = adj_get_forward_equation(i)
-
     diff_form = None
-
     assert self.dv is not None, "Need a perturbation direction to use in the TLM."
 
-    if not isinstance(lhs, adjlinalg.IdentityMatrix):
-      fn_space = ufl.algorithms.extract_arguments(lhs)[0].function_space()
-      x = dolfin.Function(fn_space)
-      if rhs == 0:
-        form = -lhs
-        x = fwd_var.nonlinear_u
-      else:
-        form = rhs - dolfin.action(lhs, x)
+    form = adjresidual.get_residual(i)
 
-      dparam = dolfin.Function(dolfin.FunctionSpace(fn_space.mesh(), "R", 0))
-      dparam.vector()[:] = 1.0
-
-      for (a, da) in zip(self.v, self.dv):
-        out_form = da * dolfin.derivative(form, a, dparam)
-        if diff_form is None:
-          out_form = diff_form
-        else:
-          out_form += diff_form
-
-        if x in ufl.algorithms.extract_coefficients(diff_form):
-          # We really need the forward solution to compute dF/dm.
-          try:
-            y = adjointer.get_variable_value(fwd_var).data
-          except libadjoint.exceptions.LibadjointErrorNeedValue:
-            info_red("Warning: recomputing forward solution to compute -dF/dm")
-            y = adjointer.get_forward_solution(i)[1].data
-
-          diff_form = dolfin.replace(diff_form, {x: y})
-
-      return adjlinalg.adjlinalg.Vector(diff_form)
-    else:
+    if form is None:
       return None
+    else:
+      form = -form
+
+    fn_space = ufl.algorithms.extract_arguments(form)[0].function_space()
+    dparam = dolfin.Function(dolfin.FunctionSpace(fn_space.mesh(), "R", 0))
+    dparam.vector()[:] = 1.0
+
+    for (a, da) in zip(self.v, self.dv):
+      out_form = da * dolfin.derivative(form, a, dparam)
+      if diff_form is None:
+        diff_form = out_form
+      else:
+        diff_form += out_form
+
+    return adjlinalg.adjlinalg.Vector(diff_form)
 
   def __str__(self):
     return str(self.v) + ':ScalarParameters'
 
   def inner_adjoint(self, adjointer, adjoint, i, variable):
-    (fwd_var, lhs, rhs) = adj_get_forward_equation(i)
+    form = adjresidual.get_residual(i)
+
+    if form is None:
+      return None
+    else:
+      form = -form
+
+    fn_space = ufl.algorithms.extract_arguments(form)[0].function_space()
+    dparam = dolfin.Function(dolfin.FunctionSpace(fn_space.mesh(), "R", 0))
+    dparam.vector()[:] = 1.0
 
     dJdv = numpy.zeros(len(self.v))
+    for (i, a) in enumerate(self.v):
+      diff_form = ufl.algorithms.expand_derivatives(dolfin.derivative(form, a, dparam))
 
-    if not isinstance(lhs, adjlinalg.IdentityMatrix):
-      fn_space = ufl.algorithms.extract_arguments(lhs)[0].function_space()
-      x = dolfin.Function(fn_space)
-      if rhs == 0:
-        form = -lhs
-        x = fwd_var.nonlinear_u
-      else:
-        form = rhs - dolfin.action(lhs, x)
+      dFdm = dolfin.assemble(diff_form) # actually - dF/dm
+      assert isinstance(dFdm, dolfin.GenericVector)
 
-      dparam = dolfin.Function(dolfin.FunctionSpace(fn_space.mesh(), "R", 0))
-      dparam.vector()[:] = 1.0
+      out = dFdm.inner(adjoint.vector())
+      dJdv[i] = out
 
-      for (i, a) in enumerate(self.v):
-        diff_form = ufl.algorithms.expand_derivatives(dolfin.derivative(form, a, dparam))
-
-        if x in ufl.algorithms.extract_coefficients(diff_form):
-          # We really need the forward solution to compute dF/dm.
-          try:
-            y = adjointer.get_variable_value(fwd_var).data
-          except libadjoint.exceptions.LibadjointErrorNeedValue:
-            info_red("Warning: recomputing forward solution to compute -dF/dm")
-            y = adjointer.get_forward_solution(i)[1].data
-
-          diff_form = dolfin.replace(diff_form, {x: y})
-
-        dFdm = dolfin.assemble(diff_form) # actually - dF/dm
-        assert isinstance(dFdm, dolfin.GenericVector)
-
-        out = dFdm.inner(adjoint.vector())
-        dJdv[i] = out
-
-      return dJdv
+    return dJdv
