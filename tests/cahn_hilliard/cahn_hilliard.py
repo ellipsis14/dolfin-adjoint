@@ -116,7 +116,11 @@ if __name__ == "__main__":
   adj_html("forward.html", "forward")
 
   J = TimeFunctional((1.0/(4*eps)) * (pow( (-1.0/eps) * forward[1], 2))*dx, dt=dt, verbose=True)
-  dJdic = compute_gradient(J, InitialConditionParameter(ic))
+  dJdic = compute_gradient(J, InitialConditionParameter(ic), forget=False)
+  Jerr = estimate_error(J)
+
+  print "Functional value: ", j
+  print "Error estimate  : ", Jerr
 
   def J(ic):
     u, j = main(ic, annotate=False)

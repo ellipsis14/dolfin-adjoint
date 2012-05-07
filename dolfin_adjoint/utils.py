@@ -5,6 +5,8 @@ import adjglobals
 import dolfin
 import numpy
 import constant
+import adjresidual
+import ufl.algorithms
 
 def replay_dolfin(forget=False, tol=0.0, stop=False):
   if not dolfin.parameters["adjoint"]["record_all"]:
@@ -521,3 +523,23 @@ def taylor_test(J, m, Jm, dJdm, seed=None, perturbation_direction=None, value=No
   info("Convergence orders for Taylor remainder with adjoint information (should all be 2): " + str(convergence_order(with_gradient)))
 
   return min(convergence_order(with_gradient))
+
+def estimate_error(J, forget=True):
+  err = 0.0
+  i = adjglobals.adjointer.equation_count - 1
+
+  for (adj, var) in compute_adjoint(J, forget=forget):
+    form = adjresidual.get_residual(i)
+    if form is not None:
+      Vplus = dolfin.increase_order(adj.function_space())
+      adj_h = dolfin.Function(Vplus)
+      adj_h.extrapolate(adj)
+
+      args = ufl.algorithms.extract_arguments(form)
+      assert len(args) == 1
+      estimator = dolfin.replace(form, {args[0]: adj_h})
+      err += dolfin.assemble(estimator)
+
+    i = i - 1
+
+  return err
