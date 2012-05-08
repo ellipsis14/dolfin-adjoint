@@ -145,10 +145,8 @@ if __name__ == "__main__":
     pass
 
   j = assemble(inner(final_soln, final_soln)*dx)
-  Jerr = estimate_error(J, forget=None)
 
   print "Functional value: ", j
-  print "Error estimate  : ", Jerr
 
   def J(ic):
     soln = main(ic)

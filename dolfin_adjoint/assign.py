@@ -1,6 +1,6 @@
 import dolfin
 import ufl
-from solving import solve, annotate as solving_annotate, do_checkpoint
+from solving import solve, annotate as solving_annotate, do_checkpoint, register_initial_conditions
 import libadjoint
 import adjlinalg
 import adjglobals
@@ -23,6 +23,7 @@ def register_assign(new, old):
     adjglobals.adjointer.record_variable(dep, libadjoint.MemoryStorage(adjlinalg.Vector(old)))
 
   rhs = IdentityRHS(old)
+  register_initial_conditions(zip(rhs.coefficients(),rhs.dependencies()), linear=True)
   initial_eq = libadjoint.Equation(dep, blocks=[identity_block], targets=[dep], rhs=rhs)
   cs = adjglobals.adjointer.register_equation(initial_eq)
 

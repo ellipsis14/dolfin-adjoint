@@ -24,11 +24,13 @@ def dolfin_adjoint_assign(self, other, annotate=True):
     return dolfin_assign(self, other)
 
   other_var = adjglobals.adj_variables[other]
+  self_var = adjglobals.adj_variables[self]
   # ignore any functions we haven't seen before -- we DON'T want to
   # annotate the assignment of initial conditions here. That happens
   # in the main solve wrapper.
-  if not adjglobals.adjointer.variable_known(other_var):
+  if not adjglobals.adjointer.variable_known(other_var) and not adjglobals.adjointer.variable_known(self_var):
     adjglobals.adj_variables.forget(other)
+    adjglobals.adj_variables.forget(self)
     if hasattr(other, "split"):
       if other.split is True:
         errmsg = '''Cannot use Function.split() (yet). To adjoint this, we need functionality
