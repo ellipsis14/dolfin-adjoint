@@ -11,6 +11,7 @@ import time
 
 test_cmds = {'tlm_simple': 'mpirun -n 2 python tlm_simple.py',
              'navier_stokes': 'mpirun -n 2 python navier_stokes.py',
+             'svd_simple': 'mpirun -n 2 python svd_simple.py',
              'differentiability-dg-upwind': None,
              'differentiability-stokes': None,
              'checkpoint_online': None}
