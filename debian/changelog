@@ -1,3 +1,9 @@
+dolfin-adjoint (0.6.1) unstable; urgency=low
+
+  * I should really start maintaing a changelog.
+
+ -- Patrick Farrell <patrick.farrell06@imperial.ac.uk>  Wed, 09 May 2012 14:45:53 +0100
+
 dolfin-adjoint (0.6) unstable; urgency=low
 
   * Initial release.
