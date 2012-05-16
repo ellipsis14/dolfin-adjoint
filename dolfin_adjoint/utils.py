@@ -311,7 +311,15 @@ def test_initial_condition_adjoint_cdiff(J, ic, final_adjoint, seed=0.01, pertur
   return min(convergence_order(with_gradient))
 
 def compute_gradient(J, param, forget=True):
-  dJdparam = None
+
+  try:
+    scalar = False
+    dJdparam = [None for i in range(len(param))]
+    lparam = param
+  except TypeError:
+    scalar = True
+    dJdparam = [None]
+    lparam = [param]
 
   for i in range(adjointer.equation_count)[::-1]:
     (adj_var, output) = adjointer.get_adjoint_solution(i, J)
@@ -320,11 +328,12 @@ def compute_gradient(J, param, forget=True):
     adjointer.record_variable(adj_var, storage)
     fwd_var = libadjoint.Variable(adj_var.name, adj_var.timestep, adj_var.iteration)
 
-    out = param.inner_adjoint(adjointer, output.data, i, fwd_var)
-    if dJdparam is None:
-      dJdparam = out
-    elif dJdparam is not None and out is not None:
-      dJdparam += out
+    for j in range(len(lparam)):
+      out = lparam[j].inner_adjoint(adjointer, output.data, i, fwd_var)
+      if dJdparam[j] is None:
+        dJdparam[j] = out
+      elif dJdparam[j] is not None and out is not None:
+        dJdparam[j] += out
 
     if forget is None:
       pass
@@ -333,7 +342,10 @@ def compute_gradient(J, param, forget=True):
     else:
       adjointer.forget_adjoint_values(i)
 
-  return dJdparam
+  if scalar:
+    return dJdparam[0]
+  else:
+    return dJdparam
 
 def test_scalar_parameter_adjoint(J, a, dJda, seed=None):
   info_blue("Running Taylor remainder convergence analysis for the adjoint model ... ")
