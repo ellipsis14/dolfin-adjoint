@@ -25,7 +25,6 @@ in mm/s, stresses in kPa
 """
 
 import sys
-import pylab
 
 from dolfin import *
 from dolfin import div as d
