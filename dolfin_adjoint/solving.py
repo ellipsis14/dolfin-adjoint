@@ -70,7 +70,7 @@ def annotate(*args, **kwargs):
       eq_bcs = []
       linear = False
 
-  elif isinstance(args[0], dolfin.cpp.Matrix):
+  elif isinstance(args[0], (dolfin.cpp.Matrix, dolfin.GenericMatrix)):
     linear = True
     try:
       eq_lhs = args[0].form
@@ -83,7 +83,6 @@ def annotate(*args, **kwargs):
       raise libadjoint.exceptions.LibadjointErrorInvalidInputs("dolfin_adjoint did not assemble your form, and so does not recognise your right-hand side. Did you from dolfin_adjoint import *?")
 
     u = args[1]
-    assert isinstance(u, dolfin.cpp.GenericVector)
     u = u.function
 
     solver_parameters = {}
@@ -104,6 +103,7 @@ def annotate(*args, **kwargs):
       assert not hasattr(args[0], 'bcs') and not hasattr(args[2], 'bcs')
       eq_bcs = []
   else:
+    print "args[0].__class__: ", args[0].__class__
     raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to annotate your equation, sorry!")
 
   # Suppose we are solving for a variable w, and that variable shows up in the
@@ -328,7 +328,7 @@ def solve(*args, **kwargs):
         unpacked_args = dolfin.fem.solving._extract_args(*args, **kwargs)
         u  = unpacked_args[1]
         adjglobals.adjointer.record_variable(adjglobals.adj_variables[u], libadjoint.MemoryStorage(adjlinalg.Vector(u)))
-      elif isinstance(args[0], dolfin.cpp.Matrix):
+      elif isinstance(args[0], (dolfin.cpp.Matrix, dolfin.GenericMatrix)):
         u = args[1].function
         adjglobals.adjointer.record_variable(adjglobals.adj_variables[u], libadjoint.MemoryStorage(adjlinalg.Vector(u)))
       else:
