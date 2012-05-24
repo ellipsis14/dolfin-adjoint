@@ -68,3 +68,4 @@ pool.map(f, sorted(subdirs))
 
 if len(fails) > 0:
   print "Failures: ", set(fails)
+  sys.exit(1)
