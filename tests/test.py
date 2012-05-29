@@ -39,7 +39,12 @@ fails = []
 basedir = os.path.dirname(os.path.abspath(sys.argv[0]))
 subdirs = [x for x in os.listdir(basedir) if os.path.isdir(os.path.join(basedir, x))]
 
-os.putenv('PYTHONPATH', os.path.abspath(os.path.join(basedir, os.path.pardir)))
+# Keep path variables (for buildbot's sake for instance)
+orig_pythonpath = os.getenv('PYTHONPATH', '')
+pythonpath = os.pathsep.join([os.path.abspath(os.path.join(basedir,
+                                                           os.path.pardir)),
+                              orig_pythonpath])
+os.putenv('PYTHONPATH', pythonpath)
 
 def f(subdir):
   test_cmd = test_cmds.get(subdir, 'python %s.py' % subdir)
