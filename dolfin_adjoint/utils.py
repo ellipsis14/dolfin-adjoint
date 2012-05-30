@@ -437,7 +437,11 @@ def taylor_test(J, m, Jm, dJdm, seed=None, perturbation_direction=None, value=No
     if value is not None:
       return value
     else:
-      return adjglobals.adjointer.get_variable_value(param.var).data
+      try:
+        return adjglobals.adjointer.get_variable_value(param.var).data
+      except libadjoint.exceptions.LibadjointErrorNeedValue:
+        info_red("Do you need to pass forget=False to compute_gradient?")
+        raise
 
   # First, compute perturbation sizes.
   if seed is None:
