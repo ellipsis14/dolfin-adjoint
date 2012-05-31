@@ -4,9 +4,8 @@ from dolfin import *
 from dolfin_adjoint import *
 import sys
 
-mesh = UnitSquare(4, 4)
+mesh = UnitSquare(10, 10)
 V = FunctionSpace(mesh, "CG", 1)
-dolfin.parameters["adjoint"]["record_all"] = True
 
 def main(ic, annotate=False):
   u = TrialFunction(V)
@@ -38,12 +37,13 @@ if __name__ == "__main__":
   soln = main(ic, annotate=True)
 
   svd = adj_compute_propagator_svd(ic, soln, 1)
+  assert svd.ncv >= 1
   (sigma, u, v, error) = svd.get_svd(0, return_vectors=True, return_error=True)
 
   print "Maximal singular value: ", sigma
 
-  Lv = propagator(v.data)
-  residual = (Lv.vector() - sigma*u.data.vector()).norm("l2")
+  Lv = propagator(v)
+  residual = (Lv.vector() - sigma*u.vector()).norm("l2")
   print "Residual: ", residual
 
   assert residual < 1.0e-14
