@@ -19,6 +19,7 @@ def main(f, annotate=False):
   bcs = None
 
   problem = LinearVariationalProblem(a, L, u, bcs)
+  problem = LinearVariationalProblem(a, L, u)
   solver = LinearVariationalSolver(problem)
   solver.solve(annotate=annotate)
 
