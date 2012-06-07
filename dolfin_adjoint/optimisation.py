@@ -14,7 +14,10 @@ def minimise_scipy_fmin_l_bfgs_b(J, dJ, m0, bounds = None, **kwargs):
                 
         bounds = numpy.array(bounds_arr).T
 
-    fmin_l_bfgs_b(J, m0, fprime = dJ, disp = 1, bounds = bounds, **kwargs)
+    try:
+      fmin_l_bfgs_b(J, m0, fprime = dJ, disp = 1, bounds = bounds, **kwargs)
+    except TypeError:
+      fmin_l_bfgs_b(J, m0, fprime = dJ, iprint = 1, bounds = bounds, **kwargs)
 
 optimisation_algorithms_dict = {'scipy.l_bfgs_b': ('The L-BFGS-B implementation in scipy.', minimise_scipy_fmin_l_bfgs_b)}
 
