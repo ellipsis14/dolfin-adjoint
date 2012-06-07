@@ -49,7 +49,9 @@ if __name__ == "__main__":
 
     # Run the optimisation 
     lb = project(Expression("-1"),  V)
-    optimisation.minimise(Jfunc, J, InitialConditionParameter(u), ic, pgtol=1e-6, factr=1e5, bounds = (lb, 1))
+    optimisation.minimise(Jfunc, J, InitialConditionParameter(u), ic, algorithm = 'scipy.l_bfgs_b', pgtol=1e-6, factr=1e5, bounds = (lb, 1), iprint = 1)
+    ic = project(Expression("sin(2*pi*x[0])"),  V)
+    optimisation.minimise(Jfunc, J, InitialConditionParameter(u), ic, algorithm = 'scipy.slsqp', bounds = (lb, 1), iprint = 2, acc = 1e-10)
 
     tol = 1e-9
     if Jfunc(ic) > tol:
