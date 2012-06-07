@@ -7,7 +7,7 @@ from dolfin_adjoint import *
 
 dolfin.set_log_level(ERROR)
 
-n = 5
+n = 10
 mesh = UnitInterval(n)
 V = FunctionSpace(mesh, "CG", 2)
 
@@ -47,9 +47,11 @@ if __name__ == "__main__":
       main(u, annotate=True)
       return assemble(u*u*dx)
 
-    # Start the optimisation 
-    optimisation.minimise(Jfunc, J, InitialConditionParameter(u), ic)
+    # Run the optimisation 
+    lb = project(Expression("-1"),  V)
+    optimisation.minimise(Jfunc, J, InitialConditionParameter(u), ic, pgtol=1e-6, factr=1e5, bounds = (lb, 1))
 
-    if Jfunc(ic) > 1e-9:
-        print 'Test failed: Optimised functional value exceeds tolerance.' 
+    tol = 1e-9
+    if Jfunc(ic) > tol:
+        print 'Test failed: Optimised functional value exceeds tolerance: ' , Jfunc(ic), ' > ', tol, '.'
         sys.exit(1)

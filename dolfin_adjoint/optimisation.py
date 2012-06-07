@@ -1,9 +1,20 @@
 from dolfin_adjoint import * 
 
-def minimise_scipy_fmin_l_bfgs_b(J, dJ, m0):
-
+def minimise_scipy_fmin_l_bfgs_b(J, dJ, m0, bounds = None, **kwargs):
     from scipy.optimize import fmin_l_bfgs_b
-    fmin_l_bfgs_b(J, m0, fprime = dJ, disp = 1)
+    import numpy
+
+    if bounds:
+        bounds_arr = []
+        for i in range(2):
+            if type(bounds[i]) == int or type(bounds[i]) == float:
+                bounds_arr.append(bounds[i]*numpy.ones(m0.size()))
+            else:
+                bounds_arr.append(bounds[i].vector().array())
+                
+        bounds = numpy.array(bounds_arr).T
+
+    fmin_l_bfgs_b(J, m0, fprime = dJ, disp = 1, bounds = bounds, **kwargs)
 
 optimisation_algorithms_dict = {'scipy.l_bfgs_b': ('The L-BFGS-B implementation in scipy.', minimise_scipy_fmin_l_bfgs_b)}
 
@@ -14,7 +25,7 @@ def print_optimisation_algorithms():
     for function_name, (description, func) in optimisation_algorithms_dict.iteritems():
         print function_name, ': ', description
 
-def minimise(Jfunc, J, m, m_init, solver = 'scipy.l_bfgs_b'):
+def minimise(Jfunc, J, m, m_init, solver = 'scipy.l_bfgs_b', **kwargs):
     ''' Solves the minimisation problem:
            min_m J 
         with the specified optimisation algorithm,
@@ -43,5 +54,5 @@ def minimise(Jfunc, J, m, m_init, solver = 'scipy.l_bfgs_b'):
     if solver not in optimisation_algorithms_dict.keys():
         raise ValueError, 'Unknown optimisation algorithm ' + solver + '. Use the print_optimisation_algorithms to get a list of the available algorithms.'
 
-    optimisation_algorithms_dict[solver][1](Jfunc_vec, dJ_vec, m_init.vector())
+    optimisation_algorithms_dict[solver][1](Jfunc_vec, dJ_vec, m_init.vector(), **kwargs)
 
