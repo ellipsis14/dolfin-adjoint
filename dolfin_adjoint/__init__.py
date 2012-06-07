@@ -26,4 +26,5 @@ import lusolver
 import svd
 import function
 import genericmatrix
+import optimisation
 from ui import *
