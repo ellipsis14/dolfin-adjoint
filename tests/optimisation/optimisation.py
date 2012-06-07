@@ -50,3 +50,6 @@ if __name__ == "__main__":
     # Start the optimisation 
     optimisation.minimise(Jfunc, J, InitialConditionParameter(u), ic)
 
+    if Jfunc(ic) > 1e-9:
+        print 'Test failed: Optimised functional value exceeds tolerance.' 
+        sys.exit(1)

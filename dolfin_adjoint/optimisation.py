@@ -1,13 +1,15 @@
 from dolfin_adjoint import * 
 
 def minimise_scipy_fmin_l_bfgs_b(J, dJ, m0):
+
     from scipy.optimize import fmin_l_bfgs_b
-    fmin_l_bfgs_b(J, m0, fprime=dJ, disp = 1)
+    fmin_l_bfgs_b(J, m0, fprime = dJ, disp = 1)
 
 optimisation_algorithms_dict = {'scipy.l_bfgs_b': ('The L-BFGS-B implementation in scipy.', minimise_scipy_fmin_l_bfgs_b)}
 
 def print_optimisation_algorithms():
     ''' Prints all available optimisation algorithms '''
+
     print 'Available optimisation algorithms:'
     for function_name, (description, func) in optimisation_algorithms_dict.iteritems():
         print function_name, ': ', description
