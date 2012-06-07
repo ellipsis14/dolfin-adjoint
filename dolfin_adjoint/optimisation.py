@@ -8,8 +8,9 @@ optimisation_algorithms_dict = {'scipy.l_bfgs_b': ('The L-BFGS-B implementation 
 
 def print_optimisation_algorithms():
     ''' Prints all available optimisation algorithms '''
-    for function_name, (description, func) in optimisation_algorithms_list:
-        print function_name, description
+    print 'Available optimisation algorithms:'
+    for function_name, (description, func) in optimisation_algorithms_dict.iteritems():
+        print function_name, ': ', description
 
 def minimise(Jfunc, J, m, m_init, solver = 'scipy.l_bfgs_b'):
     ''' Solves the minimisation problem:
