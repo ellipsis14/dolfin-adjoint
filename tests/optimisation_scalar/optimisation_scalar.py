@@ -2,19 +2,16 @@ from dolfin import *
 from dolfin_adjoint import *
 import sys
 
-parameters["adjoint"]["fussy_replay"] = True
+dolfin.set_log_level(ERROR)
 
-adj_checkpointing(strategy='multistage', steps=4, 
-                  snaps_on_disk=5, snaps_in_ram=10, verbose=True)
-
-n = 30
+n = 10
 mesh = UnitInterval(n)
 V = FunctionSpace(mesh, "CG", 2)
 
 ic = project(Expression("sin(2*pi*x[0])"),  V)
+u = Function(ic)
 
 def main(nu):
-  u = Function(ic)
   u_next = Function(V)
   v = TestFunction(V)
 
@@ -33,29 +30,25 @@ def main(nu):
     t += float(timestep)
     adj_inc_timestep()
 
-  return u
-
 if __name__ == "__main__":
-  nu = Constant(0.0001)
-  u = main(nu)
-
-  adj_html("forward.html", "forward")
-  adj_html("adjoint.html", "adjoint")
-
-  adj_check_checkpoints()
+  nu = Constant(0.0001, name = 'Diffusivity')
+  main(nu)
 
   J = FinalFunctional(inner(u, u)*dx)
-  dJdnu = compute_gradient(J, ScalarParameter(nu))
 
-  parameters["adjoint"]["stop_annotating"] = True
-
-  Jnu = assemble(inner(u, u)*dx) # current value
-
-  def Jhat(nu): # the functional as a pure function of nu
-    u = main(nu)
+  def Jhat(nu): 
+    u.assign(ic)
+    main(nu)
     return assemble(inner(u, u)*dx)
 
-  conv_rate = taylor_test(Jhat, ScalarParameter(nu), Jnu, dJdnu)
+  # Run the optimisation 
+  nu = optimisation.minimise(Jhat, J, ScalarParameter(nu), nu, 'scipy.slsqp', iprint = 2)
+  print 'Final control value: ', float(nu)
 
-  if conv_rate < 1.9:
+  tol = 1e-4
+  if Jhat(nu) > tol:
+    print 'Test failed: Optimised functional value exceeds tolerance: ' , Jhat(nu), ' > ', tol, '.'
     sys.exit(1)
+
+
+

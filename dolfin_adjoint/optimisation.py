@@ -1,12 +1,12 @@
 from dolfin_adjoint import * 
+import numpy
 
-def generate_array_bounds(bounds, parameter_size):
-    import numpy
-
+def generate_array_bounds(bounds, m):
+    
     bounds_arr = []
     for i in range(2):
         if type(bounds[i]) == int or type(bounds[i]) == float:
-            bounds_arr.append(bounds[i]*numpy.ones(parameter_size))
+            bounds_arr.append(bounds[i]*numpy.ones(len(m)))
         else:
             bounds_arr.append(bounds[i].vector().array())
             
@@ -16,18 +16,20 @@ def minimise_scipy_slsqp(J, dJ, m0, bounds = None, **kwargs):
     from scipy.optimize import fmin_slsqp
 
     if bounds:
-        bounds = generate_array_bounds(bounds, m0.size())
-
-    fmin_slsqp(J, m0, fprime = dJ, bounds = bounds, **kwargs)
+        bounds = generate_array_bounds(bounds, m0)
+        mopt = fmin_slsqp(J, m0, fprime = dJ, bounds = bounds, **kwargs)
+    else:
+        mopt = fmin_slsqp(J, m0, fprime = dJ, **kwargs)
+    return mopt
 
 def minimise_scipy_fmin_l_bfgs_b(J, dJ, m0, bounds = None, **kwargs):
     from scipy.optimize import fmin_l_bfgs_b
-    import numpy
 
     if bounds:
-        bounds = generate_array_bounds(bounds, m0.size())
+        bounds = generate_array_bounds(bounds, m0)
 
-    fmin_l_bfgs_b(J, m0, fprime = dJ, bounds = bounds, **kwargs)
+    mopt, f, d = fmin_l_bfgs_b(J, m0, fprime = dJ, bounds = bounds, **kwargs)
+    return mopt
 
 optimisation_algorithms_dict = {'scipy.l_bfgs_b': ('The L-BFGS-B implementation in scipy.', minimise_scipy_fmin_l_bfgs_b),
                                 'scipy.slsqp': ('The SLSQP implementation in scipy.', minimise_scipy_slsqp) 
@@ -46,15 +48,23 @@ def minimise(Jfunc, J, m, m_init, algorithm, **kwargs):
         where J is a dolfin_adjoint.functional and m is a dolfin_adjoint.parameter to be minimised. 
         Jfunc must be a python function with m as a parameter that runs and annotates the model and returns the functional value. '''
 
-    def dJ_vec(m_vec):
+    def to_array(m_init):
+        ''' Returns the values of the parameter object as an array '''
+        return m_init.vector().array()
+
+    def set_from_array(m_init, m_arr):
+        ''' Sets the parameter object to the values given in the array '''
+        m_init.vector().set_local(m_arr)
+
+    def dJ_array(m_array):
 
         # In the case that the parameter values have changed since the last forward run, we need to rerun the forward model with the new parameters
-        if (m_vec != m_init.vector().array()).any():
-            Jfunc_vec(m_vec) 
+        if (m_array != to_array(m_init)).any():
+            Jfunc_array(m_array) 
         dJdm = utils.compute_gradient(J, m)
-        return dJdm.vector().array()
+        return to_array(dJdm)
 
-    def Jfunc_vec(m_vec):
+    def Jfunc_array(m_array):
 
         # Reset any prior annotation of the adjointer as we are about to rerun the forward model.
         solving.adj_reset()
@@ -62,11 +72,13 @@ def minimise(Jfunc, J, m, m_init, algorithm, **kwargs):
         if hasattr(J, 'activated'):
             J.activated = False
 
-        m_init.vector().set_local(m_vec)
+        m_init.vector().set_local(m_array)
         return Jfunc(m_init)
 
     if algorithm not in optimisation_algorithms_dict.keys():
         raise ValueError, 'Unknown optimisation algorithm ' + algorithm + '. Use the print_optimisation_algorithms to get a list of the available algorithms.'
 
-    optimisation_algorithms_dict[algorithm][1](Jfunc_vec, dJ_vec, m_init.vector(), **kwargs)
+    mopt_array = optimisation_algorithms_dict[algorithm][1](Jfunc_array, dJ_array, to_array(m_init), **kwargs)
+    set_from_array(m_init, mopt_array)
+
 
