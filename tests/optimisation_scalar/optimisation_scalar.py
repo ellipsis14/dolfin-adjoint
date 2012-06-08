@@ -31,7 +31,9 @@ def main(nu):
     adj_inc_timestep()
 
 if __name__ == "__main__":
-  nu = Constant(0.0001, name = 'Diffusivity')
+  R = FunctionSpace(mesh, 'Real', 0)
+  nu = Function(R, name = 'Diffusivity')
+  nu.vector()[0] = 0.0001
   main(nu)
 
   J = FinalFunctional(inner(u, u)*dx)
@@ -42,8 +44,8 @@ if __name__ == "__main__":
     return assemble(inner(u, u)*dx)
 
   # Run the optimisation 
-  nu = optimisation.minimise(Jhat, J, ScalarParameter(nu), nu, 'scipy.slsqp', iprint = 2)
-  print 'Final control value: ', float(nu)
+  optimisation.minimise(Jhat, J, InitialConditionParameter(nu), nu, 'scipy.slsqp', iprint = 2)
+  print 'Final control value: ', nu.vector().array()
 
   tol = 1e-4
   if Jhat(nu) > tol:

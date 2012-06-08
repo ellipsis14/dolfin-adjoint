@@ -32,8 +32,7 @@ def minimise_scipy_fmin_l_bfgs_b(J, dJ, m0, bounds = None, **kwargs):
     return mopt
 
 optimisation_algorithms_dict = {'scipy.l_bfgs_b': ('The L-BFGS-B implementation in scipy.', minimise_scipy_fmin_l_bfgs_b),
-                                'scipy.slsqp': ('The SLSQP implementation in scipy.', minimise_scipy_slsqp) 
-                               }
+                                'scipy.slsqp': ('The SLSQP implementation in scipy.', minimise_scipy_slsqp) }
 
 def print_optimisation_algorithms():
     ''' Prints the available optimisation algorithms '''
