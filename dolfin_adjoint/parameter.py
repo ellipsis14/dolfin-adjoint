@@ -103,11 +103,20 @@ class ScalarParameter(libadjoint.Parameter):
       else:
         raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to handle any other types!")
 
-      dFdm = dolfin.assemble(diff_form) # actually - dF/dm
-      assert isinstance(dFdm, dolfin.GenericVector)
+      # Let's see if the form actually depends on the parameter m
+      try:
+        dFdm = dolfin.assemble(diff_form) # actually - dF/dm
+        assert isinstance(dFdm, dolfin.GenericVector)
 
-      out = dFdm.inner(adjoint.vector())
-      return out
+        out = dFdm.inner(adjoint.vector())
+        return out
+      # Our equation doesn't actually depend on this Constant -- dF/dm is zero -- so we're good
+      except Exception as err:
+        if "seems to be zero" in err.message: # it would be more elegant if Dolfin raised a ZeroFormError
+                                              # or something, instead of a bare Exception
+          return None
+        else:
+          raise
 
 class ScalarParameters(libadjoint.Parameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
