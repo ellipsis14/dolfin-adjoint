@@ -192,6 +192,7 @@ def test_initial_condition_tlm(J, dJ, ic, seed=0.01, perturbation_direction=None
 
   adj_var = adjglobals.adj_variables[ic]; adj_var.timestep = 0
   if not adjglobals.adjointer.variable_known(adj_var):
+    info_red(str(adj_var) + " not known.")
     raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your initial condition must be the /exact same Function/ as the initial condition used in the forward model.")
 
   # First run the problem unperturbed
