@@ -430,7 +430,7 @@ def taylor_test(J, m, Jm, dJdm, seed=None, perturbation_direction=None, value=No
 
   def get_const(val):
     if isinstance(val, str):
-      return float(constant.constants[val])
+      return float(constant.constant_values[val])
     else:
       return float(val)
 

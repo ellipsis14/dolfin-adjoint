@@ -7,6 +7,7 @@ import adjlinalg
 import adjglobals
 from adjrhs import adj_get_forward_equation
 import adjresidual
+from constant import get_constant
 
 class InitialConditionParameter(libadjoint.Parameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
@@ -55,21 +56,10 @@ class ScalarParameter(libadjoint.Parameter):
       dparam = dolfin.Function(dolfin.FunctionSpace(fn_space.mesh(), "R", 0))
       dparam.vector()[:] = 1.0
 
-      if isinstance(self.a, dolfin.Constant):
-        diff_form = dolfin.derivative(form, self.a, dparam)
-      elif isinstance(self.a, str):
-        diff_form = None
-        for coeff in ufl.algorithms.extract_coefficients(form):
-          if hasattr(coeff, "adj_name"):
-            if coeff.adj_name == self.a:
-              diff_form = dolfin.derivative(form, coeff, dparam)
-              break
+      diff_form = ufl.algorithms.expand_derivatives(dolfin.derivative(form, get_constant(self.a), dparam))
 
-        if diff_form is None:
-          return None
-
-      else:
-        raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to handle any other types!")
+      if diff_form is None:
+        return None
 
       return adjlinalg.adjlinalg.Vector(diff_form)
     else:
@@ -87,36 +77,20 @@ class ScalarParameter(libadjoint.Parameter):
       dparam = dolfin.Function(dolfin.FunctionSpace(fn_space.mesh(), "R", 0))
       dparam.vector()[:] = 1.0
 
-      if isinstance(self.a, dolfin.Constant):
-        diff_form = dolfin.derivative(form, self.a, dparam)
-      elif isinstance(self.a, str):
-        diff_form = None
-        for coeff in ufl.algorithms.extract_coefficients(form):
-          if hasattr(coeff, "adj_name"):
-            if coeff.adj_name == self.a:
-              diff_form = dolfin.derivative(form, coeff, dparam)
-              break
+      diff_form = ufl.algorithms.expand_derivatives(dolfin.derivative(form, get_constant(self.a), dparam))
 
-        if diff_form is None:
-          return None
-
-      else:
-        raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to handle any other types!")
+      if diff_form is None:
+        return None
 
       # Let's see if the form actually depends on the parameter m
-      try:
+      if diff_form.integrals() != ():
         dFdm = dolfin.assemble(diff_form) # actually - dF/dm
         assert isinstance(dFdm, dolfin.GenericVector)
 
         out = dFdm.inner(adjoint.vector())
         return out
-      # Our equation doesn't actually depend on this Constant -- dF/dm is zero -- so we're good
-      except Exception as err:
-        if "seems to be zero" in err.message: # it would be more elegant if Dolfin raised a ZeroFormError
-                                              # or something, instead of a bare Exception
-          return None
-        else:
-          raise
+      else:
+        return None # dF/dm is zero, return None
 
 class ScalarParameters(libadjoint.Parameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
