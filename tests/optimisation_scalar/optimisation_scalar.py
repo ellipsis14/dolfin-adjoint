@@ -3,6 +3,7 @@ from dolfin_adjoint import *
 import sys
 
 dolfin.set_log_level(ERROR)
+dolfin.parameters["optimisation"]["test_gradient"] = True
 
 n = 10
 mesh = UnitInterval(n)
@@ -31,9 +32,7 @@ def main(nu):
     adj_inc_timestep()
 
 if __name__ == "__main__":
-  R = FunctionSpace(mesh, 'Real', 0)
-  nu = Function(R, name = 'Diffusivity')
-  nu.vector()[0] = 0.0001
+  nu = Constant(0.0001)
   main(nu)
 
   J = FinalFunctional(inner(u, u)*dx)
@@ -44,13 +43,9 @@ if __name__ == "__main__":
     return assemble(inner(u, u)*dx)
 
   # Run the optimisation 
-  optimisation.minimise(Jhat, J, InitialConditionParameter(nu), nu, 'scipy.slsqp', iprint = 2)
-  print 'Final control value: ', nu.vector().array()
+  optimisation.minimise(Jhat, J, ScalarParameter(nu), nu, 'scipy.slsqp', iprint = 2)
 
   tol = 1e-4
   if Jhat(nu) > tol:
     print 'Test failed: Optimised functional value exceeds tolerance: ' , Jhat(nu), ' > ', tol, '.'
     sys.exit(1)
-
-
-

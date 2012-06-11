@@ -1,3 +1,4 @@
+from dolfin import *
 from dolfin_adjoint import * 
 import numpy
 
@@ -41,43 +42,90 @@ def print_optimisation_algorithms():
     for function_name, (description, func) in optimisation_algorithms_dict.iteritems():
         print function_name, ': ', description
 
-def minimise(Jfunc, J, m, m_init, algorithm, **kwargs):
-    ''' Solves the minimisation problem with the specified optimisation algorithm:
-           min_m J 
-        where J is a dolfin_adjoint.functional and m is a dolfin_adjoint.parameter to be minimised. 
-        Jfunc must be a python function with m as a parameter that runs and annotates the model and returns the functional value. '''
+def minimise(reduced_functional, functional, parameter, m, algorithm, **kwargs):
+    ''' Solves the minimisation problem with PDE constraint:
 
-    def to_array(m_init):
-        ''' Returns the values of the parameter object as an array '''
-        return m_init.vector().array()
+           min_m functional(u, m) 
+             s.t. 
+           e(u, m) = 0
+           lb <= m <= ub
+           g(m) <= u
+           
+        where m is the control variable, u is the solution of the PDE system e(u, m) = 0, functional is the functional of interest and lb, ub and g(m) constraints the control variables. 
+        The optimisation problem is solved using a gradient based optimisation algorithm and the functional gradients are computed by solving the associated adjoint system.
 
-    def set_from_array(m_init, m_arr):
-        ''' Sets the parameter object to the values given in the array '''
-        m_init.vector().set_local(m_arr)
+        The functional arguments are as follows:
+        * 'reduced_functional' must be a python function the implements the reduced functional (i.e. functional(u(m), m)). That is, it takes m as a parameter, solves the model and returns the functional value. 
+        * 'functional' must be a dolfin_adjoint.functional object describing the functional of interest
+        * 'parameter' must be a dolfin_adjoint.parameter that is to be minimised
+        * 'm' must contain the control values. The optimisation algorithm uses these values as a initial guess and updates them after each optimisation iteration. The optimal control values can be accessed by reading 'm' after calling minimise.
+        * 'bounds' is an optional keyword parameter to support control constraints: bounds = (lb, ub). lb and ub can either be floats to enforce a global bound or a dolfin.Function to define a varying bound.
+        * 'algorithm' specifies the optimistation algorithm to be used to solve the problem. The available algorithms can be listed with the print_optimisation_algorithms function.
+        
+        Additional arguments specific for the optimisation algorithms can be added to the minimise functions (e.g. iprint = 2). These arguments will be passed to the underlying optimisation algorithm. For detailed information about which arguments are supported for each optimisation algorithm, please refer to the documentaton of the optimisation algorithm.
+        '''
+
+    def to_array(m):
+        ''' Returns the values of the control variable as an array '''
+        if type(m) == float:
+            return [m]
+        elif type(m) == numpy.ndarray:
+            return m
+        elif hasattr(m, 'vector'):
+            # Use the vector attribute if available
+            return m.vector().array()
+        else:
+            # Otherwise assume that the object is a Constant and cast/evaluate it depending on its shape 
+            if m.rank() == 0:
+                return [float(m)]
+            else:
+                a = numpy.zeros(m.shape())
+                p = numpy.zeros(m.shape())
+                m.eval(a, p)
+                return a
+
+    def set_from_array(m, m_array):
+        ''' Sets the control variable m to the values given in the array '''
+        if hasattr(m, 'vector'):
+            m.vector().set_local(m_array)
+        else:
+            if m.rank() == 0:
+                m.assign(m_array[0])
+            else:
+                m.assign(Constant(tuple(m_array)))
 
     def dJ_array(m_array):
 
-        # In the case that the parameter values have changed since the last forward run, we need to rerun the forward model with the new parameters
-        if (m_array != to_array(m_init)).any():
-            Jfunc_array(m_array) 
-        dJdm = utils.compute_gradient(J, m)
+        # In the case that the parameter values have changed since the last forward run, 
+        # we need to rerun the forward model with the new parameters
+        if (m_array != to_array(m)).any():
+            reduced_functional_array(m_array) 
+
+        dJdm = utils.compute_gradient(functional, parameter)
+
+        if dolfin.parameters["optimisation"]["test_gradient"]:
+            minconv = utils.test_gradient_array(reduced_functional_array, to_array(dJdm), m_array, seed = dolfin.parameters["optimisation"]["test_gradient_seed"])
+            if minconv < 1.9:
+                raise RuntimeWarning, "A gradient test failed during execution."
+            else:
+                info("Gradient test succesfull.")
+            reduced_functional_array(m_array) 
+
         return to_array(dJdm)
 
-    def Jfunc_array(m_array):
+    def reduced_functional_array(m_array):
 
         # Reset any prior annotation of the adjointer as we are about to rerun the forward model.
         solving.adj_reset()
-        # If J is a FinalFunctinal, we need to reactived it
-        if hasattr(J, 'activated'):
-            J.activated = False
+        # If functional is a FinalFunctinal, we need to set the actived flag to False
+        if hasattr(functional, 'activated'):
+            functional.activated = False
 
-        m_init.vector().set_local(m_array)
-        return Jfunc(m_init)
+        set_from_array(m, m_array)
+        return reduced_functional(m)
 
     if algorithm not in optimisation_algorithms_dict.keys():
         raise ValueError, 'Unknown optimisation algorithm ' + algorithm + '. Use the print_optimisation_algorithms to get a list of the available algorithms.'
 
-    mopt_array = optimisation_algorithms_dict[algorithm][1](Jfunc_array, dJ_array, to_array(m_init), **kwargs)
-    set_from_array(m_init, mopt_array)
-
-
+    m_array = optimisation_algorithms_dict[algorithm][1](reduced_functional_array, dJ_array, to_array(m), **kwargs)
+    set_from_array(m, m_array)
