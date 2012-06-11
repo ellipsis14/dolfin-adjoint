@@ -8,10 +8,10 @@ rank = comm.Get_rank()
 
 def serialise_array(comm, local_array):
     ''' Uses MPI to serialise an distributed array. The argument local_array must 
-        be an array containg the local contribution of the array. The return value 
-        will be the global array. '''
+        be an array containing the local contribution of the array. The return value 
+        is the global array. '''
 
-    # First, use a Allgather to collect the required information about the array size on each processor
+    # First, use a Allgather to collect the required information about the local array sizes on each processor
     p = comm.Get_size()
     sendcount = numpy.zeros(p, dtype='i')
     lsendcount = numpy.array([len(local_array)], dtype='i')
@@ -20,13 +20,14 @@ def serialise_array(comm, local_array):
     count = sum(sendcount) 
     displs = [sum(sendcount[:i]) for i in range(len(sendcount))]
 
-    # Second use a Allgatherv to distribute the array to all processors
+    # Second use a Allgatherv to distribute the array across all processors
     array = numpy.zeros(count, dtype='d')
     comm.Allgatherv([local_array, MPI.DOUBLE],
                     [array, (sendcount, displs),  MPI.DOUBLE])
     return array
 
 def serialise_bounds(bounds, m):
+    ''' Converts bounds to an array of tuples and serialises it in a parallel environment. '''
     
     bounds_arr = []
     for i in range(2):
