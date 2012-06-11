@@ -26,7 +26,7 @@ def serialise_array(comm, local_array):
                     [array, (sendcount, displs),  MPI.DOUBLE])
     return array
 
-def generate_array_bounds(bounds, m):
+def serialise_bounds(bounds, m):
     
     bounds_arr = []
     for i in range(2):
@@ -35,13 +35,14 @@ def generate_array_bounds(bounds, m):
         else:
             bounds_arr.append(bounds[i].vector().array())
             
-    return numpy.array(bounds_arr).T
+    sbounds_arr = [serialise_array(comm, b) for b in bounds_arr]
+    return numpy.array(sbounds_arr).T
 
 def minimise_scipy_slsqp(J, dJ, m0, bounds = None, **kwargs):
     from scipy.optimize import fmin_slsqp
 
     if bounds:
-        bounds = generate_array_bounds(bounds, m0)
+        bounds = serialise_bounds(bounds, m0)
         mopt = fmin_slsqp(J, m0, fprime = dJ, bounds = bounds, **kwargs)
     else:
         mopt = fmin_slsqp(J, m0, fprime = dJ, **kwargs)
@@ -51,7 +52,7 @@ def minimise_scipy_fmin_l_bfgs_b(J, dJ, m0, bounds = None, **kwargs):
     from scipy.optimize import fmin_l_bfgs_b
 
     if bounds:
-        bounds = generate_array_bounds(bounds, m0)
+        bounds = serialise_bounds(bounds, m0)
 
     mopt, f, d = fmin_l_bfgs_b(J, m0, fprime = dJ, bounds = bounds, **kwargs)
     return mopt
