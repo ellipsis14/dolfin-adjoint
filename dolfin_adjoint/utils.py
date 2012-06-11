@@ -192,6 +192,7 @@ def test_initial_condition_tlm(J, dJ, ic, seed=0.01, perturbation_direction=None
 
   adj_var = adjglobals.adj_variables[ic]; adj_var.timestep = 0
   if not adjglobals.adjointer.variable_known(adj_var):
+    info_red(str(adj_var) + " not known.")
     raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your initial condition must be the /exact same Function/ as the initial condition used in the forward model.")
 
   # First run the problem unperturbed
@@ -411,6 +412,56 @@ def test_scalar_parameters_adjoint(J, a, dJda, seed=0.1):
 
   return min(convergence_order(with_gradient))
 
+def test_gradient_array(J, dJdx, x, seed = 0.01, perturbation_direction = None):
+  '''Checks the correctness of the derivative dJ.
+     x must be an array that specifies at which point in the parameter space
+     the gradient is to be checked, and dJdx must be an array containing the gradient. 
+     The function J(x) must return the functional value. 
+
+     This function returns the order of convergence of the Taylor
+     series remainder, which should be 2 if the gradient is correct.'''
+
+  import random
+  # We will compute the gradient of the functional with respect to the initial condition,
+  # and check its correctness with the Taylor remainder convergence test.
+  info("Running Taylor remainder convergence analysis to check the gradient ... ")
+
+  # First run the problem unperturbed
+  j_direct = J(x)
+
+  # Randomise the perturbation direction:
+  if perturbation_direction is None:
+    perturbation_direction = x.copy()
+    for i in range(len(x)):
+      perturbation_direction[i] = random.random()
+
+  # Run the forward problem for various perturbed initial conditions
+  functional_values = []
+  perturbations = []
+  perturbation_sizes = [seed/(2**i) for i in range(5)]
+  for perturbation_size in perturbation_sizes:
+    perturbation = perturbation_direction.copy() * perturbation_size
+    perturbations.append(perturbation)
+
+    perturbed_x = x.copy() + perturbation 
+    functional_values.append(J(perturbed_x))
+
+  # First-order Taylor remainders (not using adjoint)
+  no_gradient = [abs(perturbed_j - j_direct) for perturbed_j in functional_values]
+
+  info("Absolute functional evaluation differences: %s" % str(no_gradient))
+  info("Convergence orders for Taylor remainder without adjoint information (should all be 1): %s" % str(convergence_order(no_gradient)))
+
+  with_gradient = []
+  for i in range(len(perturbations)):
+      remainder = abs(functional_values[i] - j_direct - numpy.dot(perturbations[i], dJdx))
+      with_gradient.append(remainder)
+
+  info("Absolute functional evaluation differences with adjoint: %s" % str(with_gradient))
+  info("Convergence orders for Taylor remainder with adjoint information (should all be 2): %s" % str(convergence_order(with_gradient)))
+
+  return min(convergence_order(with_gradient))
+
 def taylor_test(J, m, Jm, dJdm, seed=None, perturbation_direction=None, value=None):
   '''J must be a function that takes in a parameter value m and returns the value
      of the functional:
@@ -429,7 +480,7 @@ def taylor_test(J, m, Jm, dJdm, seed=None, perturbation_direction=None, value=No
 
   def get_const(val):
     if isinstance(val, str):
-      return float(constant.constants[val])
+      return float(constant.constant_values[val])
     else:
       return float(val)
 

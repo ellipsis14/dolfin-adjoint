@@ -15,6 +15,9 @@ def dolfin_adjoint_assign(self, other, annotate=True):
   nonobvious reasons. If anyone objects to me monkeypatching your objects, my apologies
   in advance.'''
 
+  if self is other:
+    return
+
   # ignore anything not a dolfin.Function
   if not isinstance(other, dolfin.Function) or annotate is False or dolfin.parameters["adjoint"]["stop_annotating"]:
     return dolfin_assign(self, other)
