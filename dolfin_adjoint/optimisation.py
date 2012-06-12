@@ -2,6 +2,7 @@ from dolfin import *
 from dolfin_adjoint import * 
 from mpi4py import MPI
 import numpy
+import sys
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
@@ -104,6 +105,10 @@ def minimise_scipy_slsqp(J, dJ, m0, bounds = None, **kwargs):
     dm0.local_array[:] = m0
     dm0.update_global()
 
+    # Shut up all processors but the first one.
+    if rank != 0:
+        kwargs['iprint'] = 0
+
     if bounds:
         bounds = serialise_bounds(bounds, m0)
         mopt = fmin_slsqp(J, dm0.global_array, fprime = dJ, bounds = bounds, **kwargs)
@@ -117,13 +122,17 @@ def minimise_scipy_slsqp(J, dJ, m0, bounds = None, **kwargs):
 def minimise_scipy_fmin_l_bfgs_b(J, dJ, m0, bounds = None, **kwargs):
     from scipy.optimize import fmin_l_bfgs_b
 
-    if bounds:
-        bounds = serialise_bounds(bounds, m0)
-
     # Create a distributed array containing the control variables
     dm0 = darray(comm, len(m0))
     dm0.local_array[:] = m0
     dm0.update_global()
+
+    # Shut up all processors but the first one.
+    if rank != 0:
+        kwargs['iprint'] = -1
+
+    if bounds:
+        bounds = serialise_bounds(bounds, m0)
 
     mopt, f, d = fmin_l_bfgs_b(J, dm0.global_array, fprime = dJ, bounds = bounds, **kwargs)
 
@@ -196,17 +205,18 @@ def minimise(reduced_functional, functional, parameter, m, algorithm, **kwargs):
     def reduced_functional_array(m_array):
 
         current_m = to_array(m)
-        dm = darray(comm, len(current_m))
-        dm.global_array[:] = m_array
-        dm.update_local()
+        m_darray = darray(comm, len(current_m))
+        m_darray.global_array[:] = m_array
+        m_darray.update_local()
 
         # Reset any prior annotation of the adjointer as we are about to rerun the forward model.
         solving.adj_reset()
-        # If functional is a FinalFunctinal, we need to set the actived flag to False
+        # If functional is a FinalFunctinal, we need to set the activated flag to False
         if hasattr(functional, 'activated'):
             functional.activated = False
 
-        set_from_array(m, dm.local_array)
+        set_from_array(m, m_darray.local_array)
+        m.vector().apply('insert')
         return reduced_functional(m)
 
     if algorithm not in optimisation_algorithms_dict.keys():
@@ -214,3 +224,4 @@ def minimise(reduced_functional, functional, parameter, m, algorithm, **kwargs):
 
     m_array = optimisation_algorithms_dict[algorithm][1](reduced_functional_array, dJ_array, to_array(m), **kwargs)
     set_from_array(m, m_array)
+    m.vector().apply('insert')
