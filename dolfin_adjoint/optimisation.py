@@ -70,23 +70,7 @@ def to_array(m):
 def set_from_array(m, m_array):
     ''' Sets value of m to the values given in the array. m must be of type dolfin.Function or dolfin.Constant '''
     if hasattr(m, 'vector'):
-        print 'new round'
-        print 'len(m.vector().array())', len(m.vector().array())
-        print 'len(m_array)', len(m_array)
-        try:
-            m.vector().set_local(m_array)
-        except Exception:
-            print 'ieeeeeeeeeeeeeeeeeeeeeeeeeeeek'
-            print 'ieeeeeeeeeeeeeeeeeeeeeeeeeeeek'
-            print 'ieeeeeeeeeeeeeeeeeeeeeeeeeeeek'
-            print 'ieeeeeeeeeeeeeeeeeeeeeeeeeeeek'
-            print 'ieeeeeeeeeeeeeeeeeeeeeeeeeeeek'
-            print 'ieeeeeeeeeeeeeeeeeeeeeeeeeeeek'
-            print 'ieeeeeeeeeeeeeeeeeeeeeeeeeeeek'
-            print 'ieeeeeeeeeeeeeeeeeeeeeeeeeeeek'
-            print 'ieeeeeeeeeeeeeeeeeeeeeeeeeeeek'
-            import sys
-            sys.exit(1)
+        m.vector().set_local(m_array)
     else:
         if m.rank() == 0:
             m.assign(m_array[0])
@@ -125,7 +109,10 @@ def minimise_scipy_slsqp(J, dJ, m0, bounds = None, **kwargs):
         mopt = fmin_slsqp(J, dm0.global_array, fprime = dJ, bounds = bounds, **kwargs)
     else:
         mopt = fmin_slsqp(J, dm0.global_array, fprime = dJ, **kwargs)
-    return mopt
+
+    dm0.global_array[:] = mopt 
+    dm0.update_local()
+    return dm0.local_array
 
 def minimise_scipy_fmin_l_bfgs_b(J, dJ, m0, bounds = None, **kwargs):
     from scipy.optimize import fmin_l_bfgs_b
@@ -139,7 +126,10 @@ def minimise_scipy_fmin_l_bfgs_b(J, dJ, m0, bounds = None, **kwargs):
     dm0.update_global()
 
     mopt, f, d = fmin_l_bfgs_b(J, dm0.global_array, fprime = dJ, bounds = bounds, **kwargs)
-    return mopt
+
+    dm0.global_array[:] = mopt 
+    dm0.update_local()
+    return dm0.local_array
 
 optimisation_algorithms_dict = {'scipy.l_bfgs_b': ('The L-BFGS-B implementation in scipy.', minimise_scipy_fmin_l_bfgs_b),
                                 'scipy.slsqp': ('The SLSQP implementation in scipy.', minimise_scipy_slsqp) }
@@ -207,12 +197,8 @@ def minimise(reduced_functional, functional, parameter, m, algorithm, **kwargs):
 
         current_m = to_array(m)
         dm = darray(comm, len(current_m))
-        print 'len(m_array)', len(m_array)
-        print 'len(dm.global_array)', len(dm.global_array)
         dm.global_array[:] = m_array
         dm.update_local()
-        print 'len(dm.local_array) after update', len(dm.local_array)
-        print 'len(current_m)', len(current_m)
 
         # Reset any prior annotation of the adjointer as we are about to rerun the forward model.
         solving.adj_reset()
