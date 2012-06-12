@@ -26,6 +26,26 @@ def serialise_array(comm, local_array):
                     [array, (sendcount, displs),  MPI.DOUBLE])
     return array
 
+def unserialise_array(comm, global_array):
+    ''' Uses MPI to serialise an distributed array. The argument local_array must 
+        be an array containing the local contribution of the array. The return value 
+        is the global array. '''
+
+    # First, use a Allgather to collect the required information about the local array sizes on each processor
+    p = comm.Get_size()
+    sendcount = numpy.zeros(p, dtype='i')
+    lsendcount = numpy.array([len(local_array)], dtype='i')
+    comm.Allgather([lsendcount,  MPI.INT],
+                   [sendcount, MPI.INT])
+    count = sum(sendcount) 
+    displs = [sum(sendcount[:i]) for i in range(len(sendcount))]
+
+    # Second use displs to extract the local part of the array 
+    rank = comm.Get_rank()
+    local_start = displs[rank]
+    local_end = displs[rank+1]-1
+    return global_array[local_start, local_end]
+
 def serialise_bounds(bounds, m):
     ''' Converts bounds to an array of tuples and serialises it in a parallel environment. '''
     
@@ -94,7 +114,7 @@ def minimise(reduced_functional, functional, parameter, m, algorithm, **kwargs):
     def to_array(m):
         ''' Returns the values of the control variable as an array '''
         if type(m) == float:
-            return [m]
+            return numpy.array([m])
         elif type(m) == numpy.ndarray:
             return m
         elif hasattr(m, 'vector'):
@@ -103,7 +123,7 @@ def minimise(reduced_functional, functional, parameter, m, algorithm, **kwargs):
         else:
             # Otherwise assume that the object is a Constant and cast/evaluate it depending on its shape 
             if m.rank() == 0:
-                return [float(m)]
+                return numpy.array([float(m)])
             else:
                 a = numpy.zeros(m.shape())
                 p = numpy.zeros(m.shape())
@@ -154,5 +174,10 @@ def minimise(reduced_functional, functional, parameter, m, algorithm, **kwargs):
     if algorithm not in optimisation_algorithms_dict.keys():
         raise ValueError, 'Unknown optimisation algorithm ' + algorithm + '. Use the print_optimisation_algorithms to get a list of the available algorithms.'
 
-    m_array = optimisation_algorithms_dict[algorithm][1](reduced_functional_array, dJ_array, to_array(m), **kwargs)
+    print 'local_m', to_array(m)
+    global_m = serialise_array(comm, to_array(m))
+    print 'global_m', global_m
+    print 'local_m', unserialise_array(comm, global_m)
+
+    m_array = optimisation_algorithms_dict[algorithm][1](reduced_functional_array, dJ_array, global_m, **kwargs)
     set_from_array(m, m_array)
