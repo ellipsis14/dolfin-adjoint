@@ -6,7 +6,7 @@ from dolfin import *
 from dolfin_adjoint import *
 
 dolfin.set_log_level(ERROR)
-dolfin.parameters["optimisation"]["test_gradient"] = False 
+dolfin.parameters["optimisation"]["test_gradient"] = True 
 
 n = 10
 mesh = UnitInterval(n)
@@ -52,6 +52,9 @@ if __name__ == "__main__":
     lb = project(Expression("-1"),  V)
     optimisation.minimise(Jfunc, J, InitialConditionParameter(u), ic, algorithm = 'scipy.l_bfgs_b', pgtol=1e-6, factr=1e5, bounds = (lb, 1), iprint = 1)
     ic = project(Expression("sin(2*pi*x[0])"),  V)
+
+    # For performance reasons, switch the gradient test off
+    dolfin.parameters["optimisation"]["test_gradient"] = False 
     optimisation.minimise(Jfunc, J, InitialConditionParameter(u), ic, algorithm = 'scipy.slsqp', bounds = (lb, 1), iprint = 2, acc = 1e-10)
 
     tol = 1e-9
