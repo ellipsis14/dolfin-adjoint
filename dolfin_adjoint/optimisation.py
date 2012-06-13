@@ -37,7 +37,7 @@ def get_global(m):
     m_v = m.vector()
     m_a = cpp.DoubleArray(m.vector().size())
     m.vector().gather(m_a, numpy.arange(m_v.size(), dtype='I'))
-    return m_a.array()
+    return numpy.array(m_a.array())
 
 def set_local(m, m_global_array):
     ''' Sets the values of the dolfin.Function m stored in the global array m_global_array '''
@@ -72,9 +72,7 @@ def minimise_scipy_slsqp(J, dJ, m, bounds = None, **kwargs):
     else:
         mopt = fmin_slsqp(J, m_global, fprime = dJ, **kwargs)
     set_local(m, mopt)
-    dolfin.MPI.barrier()
     m.vector().apply('insert')
-    dolfin.MPI.barrier()
 
 def minimise_scipy_fmin_l_bfgs_b(J, dJ, m, bounds = None, **kwargs):
     from scipy.optimize import fmin_l_bfgs_b
@@ -90,9 +88,7 @@ def minimise_scipy_fmin_l_bfgs_b(J, dJ, m, bounds = None, **kwargs):
 
     mopt, f, d = fmin_l_bfgs_b(J, m_global, fprime = dJ, bounds = bounds, **kwargs)
     set_local(m, mopt)
-    dolfin.MPI.barrier()
     m.vector().apply('insert')
-    dolfin.MPI.barrier()
 
 optimisation_algorithms_dict = {'scipy.l_bfgs_b': ('The L-BFGS-B implementation in scipy.', minimise_scipy_fmin_l_bfgs_b),
                                 'scipy.slsqp': ('The SLSQP implementation in scipy.', minimise_scipy_slsqp) }
@@ -131,9 +127,7 @@ def minimise(reduced_functional, functional, parameter, m, algorithm, **kwargs):
         # In the case that the parameter values have changed since the last forward run, 
         # we need to rerun the forward model with the new parameters
         if (m_array != get_global(m)).any():
-            dolfin.MPI.barrier()
             reduced_functional_array(m_array) 
-            dolfin.MPI.barrier()
 
         dJdm = utils.compute_gradient(functional, parameter)
         dJdm_global = get_global(dJdm)
@@ -147,7 +141,6 @@ def minimise(reduced_functional, functional, parameter, m, algorithm, **kwargs):
                 info("Gradient test succesfull.")
             reduced_functional_array(m_array) 
 
-        dolfin.MPI.barrier()
         return dJdm_global 
 
     def reduced_functional_array(m_array):
@@ -159,9 +152,7 @@ def minimise(reduced_functional, functional, parameter, m, algorithm, **kwargs):
             functional.activated = False
 
         set_local(m, m_array)
-        dolfin.MPI.barrier()
         m.vector().apply('insert')
-        dolfin.MPI.barrier()
         return reduced_functional(m)
 
     if algorithm not in optimisation_algorithms_dict.keys():
