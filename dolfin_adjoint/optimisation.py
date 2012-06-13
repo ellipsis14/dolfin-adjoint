@@ -1,53 +1,7 @@
 from dolfin import *
 from dolfin_adjoint import * 
-from mpi4py import MPI
 import numpy
 import sys
-
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-
-
-class darray():
-    ''' A distributed array class '''
-
-    def __init__(self, comm, local_size):
-        ''' comm must be the MPI communicator and local_array an numpy.array containing the local values of the distributed array '''
-        self.comm = comm
-        self.local_array = numpy.zeros(local_size) 
-
-        # First, use a Allgather to collect the required information about the local array sizes on each processor
-        p = comm.Get_size()
-        self.sendcount = numpy.zeros(p, dtype='i')
-        lsendcount = numpy.array([local_size], dtype='i')
-        comm.Allgather([lsendcount,  MPI.INT],
-                       [self.sendcount, MPI.INT])
-        # count is the global size of the array
-        self.count = sum(self.sendcount) 
-        # displs[i] is the offset index where the local_array data starts in the global array for processor i
-        self.displs = [sum(self.sendcount[:i]) for i in range(len(self.sendcount))]
-
-        # Allocate the space for the global array
-        self.global_array = numpy.zeros(self.count, dtype='d')
-
-    def update_global(self):
-        ''' Update and return the global array by distributing the local arrays between all processors '''
-        self.comm.Allgatherv([self.local_array, MPI.DOUBLE],
-                        [self.global_array, (self.sendcount, self.displs),  MPI.DOUBLE])
-        return self.global_array
-
-
-    def update_local(self):
-        ''' Update and return the local array by copying the relevant values from the global array '''
-
-        rank = self.comm.Get_rank()
-        local_start = self.displs[rank]
-        if len(self.displs) == rank+1:
-            self.local_array[:] = self.global_array[local_start:]
-        else:
-            local_end = self.displs[rank+1]
-            self.local_array[:] = self.global_array[local_start:local_end]
-        return self.local_array
 
 def to_array(m):
     ''' Converts the value of m to an array. m can be a float, array, dolfin.Function or dolfin.Constant '''
@@ -78,67 +32,67 @@ def set_from_array(m, m_array):
         else:
             m.assign(Constant(tuple(m_array)))
 
+def get_global(m):
+    ''' Takes a dolfin.Function and returns a vector containing all global values '''
+    m_v = m.vector()
+    m_a = cpp.DoubleArray(m.vector().size())
+    m.vector().gather(m_a, numpy.arange(m_v.size(), dtype='I'))
+    return m_a.array()
+
+def set_local(m, m_global_array):
+    ''' Sets the values of the dolfin.Function m stored in the global array m_global_array '''
+    range_begin, range_end = m.vector().local_range()
+    m_a_local = m_global_array[range_begin:range_end]
+    m.vector().set_local(m_a_local)
+
 def serialise_bounds(bounds, m):
     ''' Converts bounds to an array of tuples and serialises it in a parallel environment. '''
     
     bounds_arr = []
     for i in range(2):
         if type(bounds[i]) == int or type(bounds[i]) == float:
-            bounds_arr.append(bounds[i]*numpy.ones(len(m)))
+            bounds_arr.append(bounds[i]*numpy.ones(m.vector().size()))
         else:
-            bounds_arr.append(bounds[i].vector().array())
+            bounds_arr.append(get_global(bounds[i]))
             
-    def serialise_array(comm, local_array):
-        da = darray(comm, len(local_array))
-        da.local_array[:] = local_array
-        da.update_global()
-        return da.global_array
-                
-    sbounds_arr = [serialise_array(comm, b) for b in bounds_arr]
-    return numpy.array(sbounds_arr).T
+    return numpy.array(bounds_arr).T
 
-def minimise_scipy_slsqp(J, dJ, m0, bounds = None, **kwargs):
+def minimise_scipy_slsqp(J, dJ, m, bounds = None, **kwargs):
     from scipy.optimize import fmin_slsqp
 
-    # Create a distributed array containing the control variables
-    dm0 = darray(comm, len(m0))
-    dm0.local_array[:] = m0
-    dm0.update_global()
+    m_global = get_global(m)
 
     # Shut up all processors but the first one.
-    if rank != 0:
+    if MPI.process_number() != 0:
         kwargs['iprint'] = 0
 
     if bounds:
-        bounds = serialise_bounds(bounds, m0)
-        mopt = fmin_slsqp(J, dm0.global_array, fprime = dJ, bounds = bounds, **kwargs)
+        bounds = serialise_bounds(bounds, m)
+        mopt = fmin_slsqp(J, m_global, fprime = dJ, bounds = bounds, **kwargs)
     else:
-        mopt = fmin_slsqp(J, dm0.global_array, fprime = dJ, **kwargs)
+        mopt = fmin_slsqp(J, m_global, fprime = dJ, **kwargs)
+    set_local(m, mopt)
+    dolfin.MPI.barrier()
+    m.vector().apply('insert')
+    dolfin.MPI.barrier()
 
-    dm0.global_array[:] = mopt 
-    dm0.update_local()
-    return dm0.local_array
-
-def minimise_scipy_fmin_l_bfgs_b(J, dJ, m0, bounds = None, **kwargs):
+def minimise_scipy_fmin_l_bfgs_b(J, dJ, m, bounds = None, **kwargs):
     from scipy.optimize import fmin_l_bfgs_b
-
-    # Create a distributed array containing the control variables
-    dm0 = darray(comm, len(m0))
-    dm0.local_array[:] = m0
-    dm0.update_global()
+    
+    m_global = get_global(m)
 
     # Shut up all processors but the first one.
-    if rank != 0:
+    if MPI.process_number() != 0:
         kwargs['iprint'] = -1
 
     if bounds:
-        bounds = serialise_bounds(bounds, m0)
+        bounds = serialise_bounds(bounds, m)
 
-    mopt, f, d = fmin_l_bfgs_b(J, dm0.global_array, fprime = dJ, bounds = bounds, **kwargs)
-
-    dm0.global_array[:] = mopt 
-    dm0.update_local()
-    return dm0.local_array
+    mopt, f, d = fmin_l_bfgs_b(J, m_global, fprime = dJ, bounds = bounds, **kwargs)
+    set_local(m, mopt)
+    dolfin.MPI.barrier()
+    m.vector().apply('insert')
+    dolfin.MPI.barrier()
 
 optimisation_algorithms_dict = {'scipy.l_bfgs_b': ('The L-BFGS-B implementation in scipy.', minimise_scipy_fmin_l_bfgs_b),
                                 'scipy.slsqp': ('The SLSQP implementation in scipy.', minimise_scipy_slsqp) }
@@ -174,40 +128,29 @@ def minimise(reduced_functional, functional, parameter, m, algorithm, **kwargs):
         '''
     def dJ_array(m_array):
 
-        current_m = to_array(m)
-        m_darray = darray(comm, len(current_m))
-        m_darray.global_array[:] = m_array
-        m_darray.update_local()
-
         # In the case that the parameter values have changed since the last forward run, 
         # we need to rerun the forward model with the new parameters
-        if (m_darray.local_array != current_m).any():
+        if (m_array != get_global(m)).any():
+            dolfin.MPI.barrier()
             reduced_functional_array(m_array) 
+            dolfin.MPI.barrier()
 
         dJdm = utils.compute_gradient(functional, parameter)
-        dJdm_array = to_array(dJdm)
-        dJdm_darray = darray(comm, len(dJdm_array))
-        dJdm_darray.local_array[:] = dJdm_array
-        dJdm_darray.update_global()
+        dJdm_global = get_global(dJdm)
 
         if dolfin.parameters["optimisation"]["test_gradient"]:
-            minconv = utils.test_gradient_array(reduced_functional_array, dJdm_darray.global_array, m_darray.global_array, 
+            minconv = utils.test_gradient_array(reduced_functional_array, dJdm_global, m_array, 
                                                 seed = dolfin.parameters["optimisation"]["test_gradient_seed"])
             if minconv < 1.9:
                 raise RuntimeWarning, "A gradient test failed during execution."
             else:
                 info("Gradient test succesfull.")
-            reduced_functional_array(m_darray.global_array) 
+            reduced_functional_array(m_array) 
 
-
-        return dJdm_darray.global_array 
+        dolfin.MPI.barrier()
+        return dJdm_global 
 
     def reduced_functional_array(m_array):
-
-        current_m = to_array(m)
-        m_darray = darray(comm, len(current_m))
-        m_darray.global_array[:] = m_array
-        m_darray.update_local()
 
         # Reset any prior annotation of the adjointer as we are about to rerun the forward model.
         solving.adj_reset()
@@ -215,13 +158,13 @@ def minimise(reduced_functional, functional, parameter, m, algorithm, **kwargs):
         if hasattr(functional, 'activated'):
             functional.activated = False
 
-        set_from_array(m, m_darray.local_array)
+        set_local(m, m_array)
+        dolfin.MPI.barrier()
         m.vector().apply('insert')
+        dolfin.MPI.barrier()
         return reduced_functional(m)
 
     if algorithm not in optimisation_algorithms_dict.keys():
         raise ValueError, 'Unknown optimisation algorithm ' + algorithm + '. Use the print_optimisation_algorithms to get a list of the available algorithms.'
 
-    m_array = optimisation_algorithms_dict[algorithm][1](reduced_functional_array, dJ_array, to_array(m), **kwargs)
-    set_from_array(m, m_array)
-    m.vector().apply('insert')
+    optimisation_algorithms_dict[algorithm][1](reduced_functional_array, dJ_array, m, **kwargs)
