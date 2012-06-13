@@ -3,47 +3,37 @@ from dolfin_adjoint import *
 import numpy
 import sys
 
-def to_array(m):
-    ''' Converts the value of m to an array. m can be a float, array, dolfin.Function or dolfin.Constant '''
-    if type(m) == float:
-        return numpy.array([m])
-    elif type(m) == numpy.ndarray:
-        return m
-    elif hasattr(m, 'vector'):
-        # Use the vector attribute if available
-        return m.vector().array()
-    else:
-        # Otherwise assume that the object is a Constant and cast/evaluate it depending on its shape 
-        if m.rank() == 0:
-            return numpy.array([float(m)])
-        else:
-            a = numpy.zeros(m.shape())
-            p = numpy.zeros(m.shape())
-            m.eval(a, p)
-            return a
-
-def set_from_array(m, m_array):
-    ''' Sets value of m to the values given in the array. m must be of type dolfin.Function or dolfin.Constant '''
-    if hasattr(m, 'vector'):
-        m.vector().set_local(m_array)
-    else:
-        if m.rank() == 0:
-            m.assign(m_array[0])
-        else:
-            m.assign(Constant(tuple(m_array)))
-
 def get_global(m):
     ''' Takes a dolfin.Function and returns a vector containing all global values '''
-    m_v = m.vector()
-    m_a = cpp.DoubleArray(m.vector().size())
-    m.vector().gather(m_a, numpy.arange(m_v.size(), dtype='I'))
-    return numpy.array(m_a.array())
+    if type(m) == float:
+        return numpy.array(m)
+    if type(m) == constant.Constant:
+        a = numpy.zeros(m.value_size())
+        p = numpy.zeros(m.value_size())
+        m.eval(a, p)
+        return a
+    elif type(m) == functions.function.Function:
+        m_v = m.vector()
+        m_a = cpp.DoubleArray(m.vector().size())
+        m.vector().gather(m_a, numpy.arange(m_v.size(), dtype='I'))
+        return numpy.array(m_a.array())
+    else:
+        raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
 
 def set_local(m, m_global_array):
     ''' Sets the values of the dolfin.Function m stored in the global array m_global_array '''
-    range_begin, range_end = m.vector().local_range()
-    m_a_local = m_global_array[range_begin:range_end]
-    m.vector().set_local(m_a_local)
+    if type(m) == constant.Constant:
+        if m.rank() == 0:
+            m.assign(m_global_array[0])
+        else:
+            m.assign(Constant(tuple(m_global_array)))
+    elif type(m) == functions.function.Function:
+        range_begin, range_end = m.vector().local_range()
+        m_a_local = m_global_array[range_begin:range_end]
+        m.vector().set_local(m_a_local)
+        m.vector().apply('insert')
+    else:
+        raise TypeError, 'Unknown parameter type'
 
 def serialise_bounds(bounds, m):
     ''' Converts bounds to an array of tuples and serialises it in a parallel environment. '''
@@ -72,7 +62,6 @@ def minimise_scipy_slsqp(J, dJ, m, bounds = None, **kwargs):
     else:
         mopt = fmin_slsqp(J, m_global, fprime = dJ, **kwargs)
     set_local(m, mopt)
-    m.vector().apply('insert')
 
 def minimise_scipy_fmin_l_bfgs_b(J, dJ, m, bounds = None, **kwargs):
     from scipy.optimize import fmin_l_bfgs_b
@@ -88,7 +77,6 @@ def minimise_scipy_fmin_l_bfgs_b(J, dJ, m, bounds = None, **kwargs):
 
     mopt, f, d = fmin_l_bfgs_b(J, m_global, fprime = dJ, bounds = bounds, **kwargs)
     set_local(m, mopt)
-    m.vector().apply('insert')
 
 optimisation_algorithms_dict = {'scipy.l_bfgs_b': ('The L-BFGS-B implementation in scipy.', minimise_scipy_fmin_l_bfgs_b),
                                 'scipy.slsqp': ('The SLSQP implementation in scipy.', minimise_scipy_slsqp) }
@@ -152,7 +140,6 @@ def minimise(reduced_functional, functional, parameter, m, algorithm, **kwargs):
             functional.activated = False
 
         set_local(m, m_array)
-        m.vector().apply('insert')
         return reduced_functional(m)
 
     if algorithm not in optimisation_algorithms_dict.keys():
