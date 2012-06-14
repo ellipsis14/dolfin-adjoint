@@ -4,7 +4,7 @@ import numpy
 import sys
 
 def get_global(m):
-    ''' Takes a dolfin.Function and returns a vector containing all global values '''
+    ''' Takes a distributed object and returns a numpy array that contains all global values '''
     if type(m) == float:
         return numpy.array(m)
     if type(m) == constant.Constant:
@@ -21,7 +21,7 @@ def get_global(m):
         raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
 
 def set_local(m, m_global_array):
-    ''' Sets the values of the dolfin.Function m stored in the global array m_global_array '''
+    ''' Sets the local values of the distrbuted object m to the values contained in the global array m_global_array '''
     if type(m) == constant.Constant:
         if m.rank() == 0:
             m.assign(m_global_array[0])
