@@ -12,7 +12,7 @@ def get_global(m):
         p = numpy.zeros(m.value_size())
         m.eval(a, p)
         return a
-    elif type(m) == functions.function.Function:
+    elif type(m) in (function.Function, functions.function.Function):
         m_v = m.vector()
         m_a = cpp.DoubleArray(m.vector().size())
         m.vector().gather(m_a, numpy.arange(m_v.size(), dtype='I'))
@@ -27,7 +27,7 @@ def set_local(m, m_global_array):
             m.assign(m_global_array[0])
         else:
             m.assign(Constant(tuple(m_global_array)))
-    elif type(m) == functions.function.Function:
+    elif type(m) in (function.Function, functions.function.Function):
         range_begin, range_end = m.vector().local_range()
         m_a_local = m_global_array[range_begin:range_end]
         m.vector().set_local(m_a_local)
