@@ -30,13 +30,13 @@ def replay_dolfin(forget=False, tol=0.0, stop=False):
 
   return success
 
-def convergence_order(errors):
+def convergence_order(errors, base = 2):
   import math
 
   orders = [0.0] * (len(errors)-1)
   for i in range(len(errors)-1):
     try:
-      orders[i] = math.log(errors[i]/errors[i+1], 2)
+      orders[i] = math.log(errors[i]/errors[i+1], base)
     except ZeroDivisionError:
       orders[i] = numpy.nan
 
