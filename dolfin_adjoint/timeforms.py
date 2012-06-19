@@ -1,4 +1,5 @@
 import dolfin
+import ufl 
 
 class TimeConstant(object):
     def __init__(self, label):
@@ -96,7 +97,7 @@ class TimeMeasure(object):
 
     def __rmul__(self, other):
         
-        if isinstance(other, dolfin.ufl.form.form):
+        if isinstance(other, ufl.form.Form):
             # Multiplication with a form produces the TimeForm.
             return TimeForm(TimeTerm(other, self.interval))
             
