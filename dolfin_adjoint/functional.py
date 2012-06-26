@@ -183,3 +183,163 @@ class TimeFunctional(libadjoint.Functional):
       return self.name
     else:
       return hashlib.md5(str(self.form)).hexdigest()
+
+
+class Functional(libadjoint.Functional):
+  '''This class implements the libadjoint.Functional abstract base class for the Dolfin adjoint for implementing functionals of the form:
+      FIX THIS'''
+
+  def __init__(self, timeform, verbose=False, name=None):
+
+    self.timeform = timeform
+    self.verbose = verbose
+    self.name = name
+
+  def __call__(self, adjointer, timestep, dependencies, values):
+
+    # Select the correct value for the first timestep, as it has dependencies both at the end 
+    # and, for the initial conditions, at the beginning.
+    if variable.timestep == 0:
+      if variable.iteration == 0:
+        dolfin_values = [val.data for val in values[:len(values)/2]]
+      else:
+        dolfin_values = [val.data for val in values[len(values)/2:]]
+    else:            
+      dolfin_values = [val.data for val in values]
+
+    # The quadrature weight for the midpoint rule is 1.0 for interiour points and 0.5 at the end points.
+    if (timestep==0 and variable.iteration == 0) or timestep==adjointer.timestep_count-1: 
+      quad_weight = 0.5
+    else: 
+      quad_weight = 1.0
+
+    dolfin_dependencies_form = [dep for dep in ufl.algorithms.extract_coefficients(self.form) if (hasattr(dep, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[dep])]
+    functional_value = dolfin.replace(quad_weight*self.dt*self.form, dict(zip(dolfin_dependencies_form, dolfin_values)))
+
+    # Add the contribution of the integral at the last timestep
+    if self.final_form != None and timestep==adjointer.timestep_count-1:
+      dolfin_dependencies_final_form = [dep for dep in ufl.algorithms.extract_coefficients(self.final_form) if (hasattr(dep, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[dep])]
+      functional_value += dolfin.replace(self.final_form, dict(zip(dolfin_dependencies_final_form, dolfin_values)))
+
+    return dolfin.assemble(functional_value)
+
+  def derivative(self, adjointer, variable, dependencies, values):
+
+    # Find the dolfin Function corresponding to variable.
+    dolfin_variable = values[dependencies.index(variable)].data
+
+    dolfin_dependencies_form = [dep for dep in ufl.algorithms.extract_coefficients(self.form) if (hasattr(dep, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[dep])]
+    # Select the correct value for the first timestep, as it has dependencies both at the end 
+    # and, for the initial conditions, at the beginning.
+    if variable.timestep == 0:
+      if variable.iteration == 0:
+        dolfin_values = [val.data for val in values[:len(values)/2]]
+      else:
+        dolfin_values = [val.data for val in values[len(values)/2:]]
+    else:            
+      dolfin_values = [val.data for val in values]
+
+    test = dolfin.TestFunction(dolfin_variable.function_space())
+    current_form = dolfin.replace(self.form, dict(zip(dolfin_dependencies_form, dolfin_values)))
+
+    # The quadrature weight for the midpoint rule is 1.0 for interiour points and 0.5 at the end points.
+    if (variable.timestep == 0 and variable.iteration == 0) or variable.timestep==adjointer.timestep_count-1: 
+      quad_weight = 0.5
+    else: 
+      quad_weight = 1.0
+    functional_deriv_value = dolfin.derivative(quad_weight*self.dt*current_form, dolfin_variable, test)
+
+    # Add the contribution of the integral at the last timestep
+    if self.final_form != None and variable.timestep==adjointer.timestep_count-1:
+      dolfin_dependencies_final_form = [dep for dep in ufl.algorithms.extract_coefficients(self.final_form) if (hasattr(dep, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[dep])]
+      final_form = dolfin.replace(self.final_form, dict(zip(dolfin_dependencies_final_form, dolfin_values)))
+      functional_deriv_value += dolfin.derivative(final_form, dolfin_variable, test)
+
+    if self.verbose:
+      dolfin.info("Returning dJ/du term for %s" % str(variable))
+
+    return adjlinalg.Vector(functional_deriv_value)
+
+  def dependencies(self, adjointer, timestep):
+
+    if adjglobals.adj_variables.libadjoint_timestep == 0:
+      dolfin.info_red("Warning: instantiating a TimeFunctional without having called adj_inc_timestep. This probably won't work.")
+
+    point_deps=set()
+    integral_deps=set()
+
+    point_interval=slice(adjointer.time.time_levels[timestep],
+                         adjointer.time.time_levels[timestep+1])
+
+    integral_interval=slice(adjointer.time.time_levels[max(timestep-1,0)],
+                         adjointer.time.time_levels[timestep+1])
+
+
+    for term in self.timeform.terms:
+      if isinstance(term.time, slice):
+        # Integral.
+
+        # Get adj_variables for dependencies. Time level is not yet specified.
+
+        if _slice_intersect(integral_interval, term.time):
+          integral_deps.insert([adjglobals.adj_variables[coeff] for coeff in ufl.algorithms.extract_coefficients(term.form) if (hasattr(coeff, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[coeff])])
+        
+      else:
+        # Point evaluation.
+
+        if (term.time>=point_interval.start and term.time < point_interval.stop):
+          point_deps.insert([adjglobals.adj_variables[coeff] for coeff in ufl.algorithms.extract_coefficients(term.form) if (hasattr(coeff, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[coeff])])
+        
+    integral_deps=list(integral_deps)
+    point_deps=list(point_deps)
+
+    # Set the time level of the dependencies:
+    
+    # Point deps always need the current and previous timestep values.
+    point_deps *= 2
+    for i in range(len(point_deps)/2):
+      point_deps[i]= point_deps[i].copy()
+      point_deps[i].var.timestep = timestep
+      if timestep !=0:
+        point_deps[i].var.iteration = point_deps[i].iteration_count(adjointer) - 1 
+      else:
+        point_deps[i].var.iteration = 0
+    for i in range(len(point_deps)/2):len(point_deps):
+      point_deps[i].var.timestep = timestep+1
+      point_deps[i].var.iteration = point_deps[i].iteration_count(adjointer) - 1 
+
+    # Integral deps depend on the previous time level.
+    for i in range(len(integral_deps)):
+      if timestep !=0:
+        integral_deps[i].var.timestep = timestep - 1
+        integral_deps[i].var.iteration = integral_deps[i].iteration_count(adjointer) - 1 
+      else:
+        integral_deps[i].var.timestep = timestep
+        integral_deps[i].var.iteration = 0
+      
+    # Except at the final timestep, integrals only depend on the previous
+    # value.
+    if  timestep==adjointer.timestep_count-1 and adjointer.time.finished:
+      integral_deps*=2
+      for i in range(len(integral_deps)/2):len(integral_deps):
+        integral_deps[i].var.timestep = timestep
+        integral_deps[i].var.iteration = integral_deps[i].iteration_count(adjointer) - 1 
+    
+    deps=set(point_deps).union(set(integral_deps))
+
+    return deps
+
+  def __str__(self):
+    if self.name is not None:
+      return self.name
+    else:
+      return hashlib.md5(str(self.form)).hexdigest()
+
+def _slice_intersect(slice1, slice2):
+
+  if slice1.stop>=slice2.start and slice2.stop>slice1.start:
+    return slice(max(slice1.start, slice2.start),min(slice1.stop,slice2.stop))
+  else:
+    return None
+  
+    
