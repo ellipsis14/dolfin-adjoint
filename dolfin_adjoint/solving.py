@@ -405,14 +405,19 @@ def register_initial_condition(coeff, dep):
   if dolfin.parameters["adjoint"]["record_all"]:
     adjglobals.adjointer.record_variable(dep, libadjoint.MemoryStorage(adjlinalg.Vector(coeff)))
 
-  initial_eq = libadjoint.Equation(dep, blocks=[identity_block], targets=[dep], rhs=adjrhs.RHS(init_rhs))
-  adjglobals.adjointer.register_equation(initial_eq)
+  rhs = adjrhs.RHS(init_rhs)
+  initial_eq = libadjoint.Equation(dep, blocks=[identity_block], targets=[dep], rhs=rhs)
+  cs = adjglobals.adjointer.register_equation(initial_eq)
   assert adjglobals.adjointer.variable_known(dep)
+  do_checkpoint(cs, dep, rhs)
 
 def do_checkpoint(cs, var, rhs):
   if cs == int(libadjoint.constants.adj_constants["ADJ_CHECKPOINT_STORAGE_MEMORY"]):
     for coeff in adjglobals.adj_variables.keys(): 
       dep = adjglobals.adj_variables[coeff]
+      # Do not checkpoint variables which are (yet) unknown to libadjoint
+      if not adjglobals.adjointer.variable_known(dep):
+          continue
 
       if dep == var:
         # We may need to checkpoint another variable if rhs is a NonlinearRHS and we need
@@ -427,6 +432,9 @@ def do_checkpoint(cs, var, rhs):
   elif cs == int(libadjoint.constants.adj_constants["ADJ_CHECKPOINT_STORAGE_DISK"]):
     for coeff in adjglobals.adj_variables.keys(): 
       dep = adjglobals.adj_variables[coeff]
+      # Do not checkpoint variables which are (yet) unknown to libadjoint
+      if not adjglobals.adjointer.variable_known(dep):
+          continue
 
       if dep == var:
         # We may need to checkpoint another variable if rhs is a NonlinearRHS and we need
