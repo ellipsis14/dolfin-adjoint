@@ -282,13 +282,13 @@ class Functional(libadjoint.Functional):
         # Get adj_variables for dependencies. Time level is not yet specified.
 
         if _slice_intersect(integral_interval, term.time):
-          integral_deps.insert([adjglobals.adj_variables[coeff] for coeff in ufl.algorithms.extract_coefficients(term.form) if (hasattr(coeff, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[coeff])])
+          integral_deps.update([adjglobals.adj_variables[coeff].copy() for coeff in ufl.algorithms.extract_coefficients(term.form) if (hasattr(coeff, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[coeff])])
         
       else:
         # Point evaluation.
 
         if (term.time>=point_interval.start and term.time < point_interval.stop):
-          point_deps.insert([adjglobals.adj_variables[coeff] for coeff in ufl.algorithms.extract_coefficients(term.form) if (hasattr(coeff, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[coeff])])
+          point_deps.update([adjglobals.adj_variables[coeff].copy() for coeff in ufl.algorithms.extract_coefficients(term.form) if (hasattr(coeff, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[coeff])])
         
     integral_deps=list(integral_deps)
     point_deps=list(point_deps)
@@ -299,13 +299,14 @@ class Functional(libadjoint.Functional):
     point_deps *= 2
     for i in range(len(point_deps)/2):
       point_deps[i]= point_deps[i].copy()
-      point_deps[i].var.timestep = timestep
       if timestep !=0:
+        point_deps[i].var.timestep = timestep-1
         point_deps[i].var.iteration = point_deps[i].iteration_count(adjointer) - 1 
       else:
+        point_deps[i].var.timestep = timestep
         point_deps[i].var.iteration = 0
-    for i in range(len(point_deps)/2):len(point_deps):
-      point_deps[i].var.timestep = timestep+1
+    for i in range(len(point_deps)/2, len(point_deps)):
+      point_deps[i].var.timestep = timestep
       point_deps[i].var.iteration = point_deps[i].iteration_count(adjointer) - 1 
 
     # Integral deps depend on the previous time level.
@@ -321,13 +322,14 @@ class Functional(libadjoint.Functional):
     # value.
     if  timestep==adjointer.timestep_count-1 and adjointer.time.finished:
       integral_deps*=2
-      for i in range(len(integral_deps)/2):len(integral_deps):
+      for i in range(len(integral_deps)/2, len(integral_deps)):
+        integral_deps[i]= integral_deps[i].copy()
         integral_deps[i].var.timestep = timestep
         integral_deps[i].var.iteration = integral_deps[i].iteration_count(adjointer) - 1 
     
     deps=set(point_deps).union(set(integral_deps))
 
-    return deps
+    return list(deps)
 
   def __str__(self):
     if self.name is not None:
@@ -338,7 +340,12 @@ class Functional(libadjoint.Functional):
 def _slice_intersect(slice1, slice2):
 
   if slice1.stop>=slice2.start and slice2.stop>slice1.start:
-    return slice(max(slice1.start, slice2.start),min(slice1.stop,slice2.stop))
+    intersect=slice(max(slice1.start, slice2.start),min(slice1.stop,slice2.stop))
+    if intersect.start==intersect.stop:
+      # A zero length intersect doesn't count.
+      return None
+    else:
+      return intersect
   else:
     return None
   

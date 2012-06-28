@@ -77,26 +77,23 @@ class TimeForm(object):
 
         neg = TimeForm()
         neg.terms = [-term for term in other.terms]
-        
+        return neg
+
     def __repr__(self):
         return "TimeForm("+repr(self.terms)+")"
 
-def at_time(form, time):
-    '''Form a TimeForm evaluated at a particular time point from a form and
-    a time.'''
-    
-    return TimeForm(TimeTerm(form, time))
-
-
 class TimeMeasure(object):
     '''Define a measure for an integral over some interval in time.'''
-    def __init__(self, interval = slice(START_TIME,FINISH_TIME,None)):
+    def __init__(self, interval = None):
+        
+        if interval is None:
+            interval = slice(START_TIME,FINISH_TIME,None)
 
         self.interval = timeslice(interval)
 
     def __getitem__(object, key):
         
-        return TimeMeasure(timeslice)
+        return TimeMeasure(timeslice(key))
 
     def __rmul__(self, other):
         

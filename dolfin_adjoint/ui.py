@@ -1,5 +1,5 @@
 from assembly import assemble, assemble_system
-from functional import FinalFunctional, TimeFunctional
+from functional import FinalFunctional, TimeFunctional, Functional
 from parameter import InitialConditionParameter, ScalarParameter, ScalarParameters
 from lusolver import LUSolver
 from matrix_free import down_cast, AdjointPETScKrylovSolver, AdjointKrylovMatrix
@@ -16,3 +16,4 @@ from function import Function
 from interpolation import interpolate
 from constant import Constant
 from unimplemented import *
+from timeforms import dt, TimeMeasure, START_TIME, FINISH_TIME
