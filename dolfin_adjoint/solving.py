@@ -362,10 +362,11 @@ def define_nonlinear_equation(F, u):
 
   return (mass, dolfin.action(mass, u) - F)
 
-def adj_checkpointing(strategy, steps, snaps_on_disk, snaps_in_ram, verbose=False):
-  dolfin.parameters["adjoint"]["record_all"] = False
+def adj_checkpointing(strategy, steps, snaps_on_disk, snaps_in_ram, verbose=False, replay = False, replay_comparison_tolerance = 1e-10):
+  dolfin.parameters["adjoint"]["record_all"] = replay
   adjglobals.adjointer.set_checkpoint_strategy(strategy)
   adjglobals.adjointer.set_revolve_options(steps, snaps_on_disk, snaps_in_ram, verbose)
+  adjglobals.adjointer.set_revolve_debug_options(replay, replay_comparison_tolerance)
 
 def register_initial_conditions(coeffdeps, linear, var=None):
   for coeff, dep in coeffdeps:
