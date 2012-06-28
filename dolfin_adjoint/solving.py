@@ -419,6 +419,7 @@ def do_checkpoint(cs, var, rhs):
       if not adjglobals.adjointer.variable_known(dep):
           continue
 
+      # Handle the Newton solve case:
       if dep == var:
         # We may need to checkpoint another variable if rhs is a NonlinearRHS and we need
         # to store the initial condition in order to replay the solve.
@@ -426,10 +427,15 @@ def do_checkpoint(cs, var, rhs):
           dep = rhs.ic_var
         else:
           continue
+          for rdep in rhs.dependencies():
+            if rdep.name == dep.name:
+              dep = rdep
+              break
 
       adjglobals.adjointer.record_variable(dep, libadjoint.MemoryStorage(adjlinalg.Vector(coeff), cs=True))
 
   elif cs == int(libadjoint.constants.adj_constants["ADJ_CHECKPOINT_STORAGE_DISK"]):
+
     for coeff in adjglobals.adj_variables.keys(): 
       dep = adjglobals.adj_variables[coeff]
       # Do not checkpoint variables which are (yet) unknown to libadjoint

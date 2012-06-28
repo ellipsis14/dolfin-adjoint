@@ -105,8 +105,9 @@ class NonlinearRHS(RHS):
     if dolfin.parameters["adjoint"]["fussy_replay"]:
       can_depend = False
       if var.timestep > 0:
-        prev_var = libadjoint.Variable(var.name, var.timestep-1, var.iteration)
+        prev_var = libadjoint.Variable(var.name, var.timestep-1, 0)	
         if adjglobals.adjointer.variable_known(prev_var):
+          prev_var.var.iteration = prev_var.iteration_count(adjglobals.adjointer) - 1
           can_depend = True
 
       if can_depend:
