@@ -264,6 +264,7 @@ class Matrix(libadjoint.Matrix):
         dolfin.fem.solving.solve(assembled_lhs, x.data.vector(), assembled_rhs, ksp, pc)
       else:
         if hasattr(b, 'nonlinear_form'): # was a nonlinear solve
+          x.data.vector()[:] = b.nonlinear_u.vector()
           F = dolfin.replace(b.nonlinear_form, {b.nonlinear_u: x.data})
           dolfin.fem.solving.solve(F == 0, x.data, b.nonlinear_bcs, solver_parameters=self.solver_parameters)
         else:
