@@ -197,6 +197,36 @@ class Functional(libadjoint.Functional):
 
   def __call__(self, adjointer, timestep, dependencies, values):
 
+    for term in self.timeform.terms:
+      if isinstance(term.time, slice):
+        # Integral.
+
+        # Get adj_variables for dependencies. Time level is not yet specified.
+
+        # Dependency replacement dictionary.
+        replace={}
+
+        term_deps = [dep for dep in ufl.algorithms.extract_coefficients(term.form) if (hasattr(dep, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[dep])]
+
+        this_interval=_slice_intersect(integral_interval, term.time)
+        if this_interval:
+          if timestep==0:
+            #Time point 0,0
+            for dep, val in zip(dependencies, values):
+              
+
+          else:
+            # Time point timestep-1,-1
+          
+            quad_weight = 0.5*(this_interval.stop-this_interval.start)
+          # Calculate i
+
+      else:
+        # Point evaluation.
+
+        if (term.time>=point_interval.start and term.time < point_interval.stop):
+          
+
     # Select the correct value for the first timestep, as it has dependencies both at the end 
     # and, for the initial conditions, at the beginning.
     if variable.timestep == 0:
@@ -349,4 +379,6 @@ def _slice_intersect(slice1, slice2):
   else:
     return None
   
-    
+def _vars(form):
+  # Return the libadjoint variables corresponding to the coeffs in form.
+  return [adjglobals.adj_variables[coeff].copy() for coeff in ufl.algorithms.extract_coefficients(form) if (hasattr(coeff, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[coeff])]

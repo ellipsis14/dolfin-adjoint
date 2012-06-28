@@ -16,6 +16,10 @@ def timeslice(inslice):
     if not isinstance(inslice, slice):
         return inslice
 
+    if inslice.stop<=inslice.start:
+        raise libadjoint.exceptions.LibadjointErrorInvalidInputs(
+            "Zero or negative length time slice.")
+
     if inslice.start is None:
         start = START_TIME
     else:
