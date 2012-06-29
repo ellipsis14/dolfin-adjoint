@@ -347,6 +347,7 @@ def adj_html(*args, **kwargs):
 def adj_reset():
   adjglobals.adjointer.reset()
   adjglobals.adj_variables.__init__()
+  adjglobals.function_names.__init__()
   
 def define_nonlinear_equation(F, u):
   # Given an F := 0,

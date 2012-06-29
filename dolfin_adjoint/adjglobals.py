@@ -12,5 +12,7 @@ adjointer = libadjoint.Adjointer()
 # A dictionary that saves the functionspaces of all checkpoint variables that have been saved to disk
 checkpoint_fs = {}
 
+function_names = set()
+
 def adj_check_checkpoints():
   adjointer.check_checkpoints()
