@@ -197,15 +197,24 @@ class Functional(libadjoint.Functional):
 
   def __call__(self, adjointer, timestep, dependencies, values):
 
-    deps={dep:val for dep, val in zip(dependencies, values)}
+    deps={str(dep):val for dep, val in zip(dependencies, values)}
 
     functional_value = 0
 
-    point_interval=slice(adjointer.time.time_levels[timestep],
-                         adjointer.time.time_levels[timestep+1])
 
-    integral_interval=slice(adjointer.time.time_levels[max(timestep-1,0)],
-                         adjointer.time.time_levels[timestep+1])
+    # Get the necessary timestep information about the adjointer.
+    # For integrals, we're integrating over /two/ timesteps.
+    timestep_start, timestep_end = adjointer.get_times(timestep)
+    point_interval = slice(timestep_start, timestep_end)
+
+    if timestep > 0:
+      prev_start, prev_end = adjointer.get_times(timestep - 1)
+      integral_interval = slice(prev_start, timestep_end)
+    else:
+      integral_interval = slice(timestep_start, timestep_end)
+
+    print "point_interval: ", point_interval
+    print "integral_interval: ", integral_interval
 
     for term in self.timeform.terms:
       if isinstance(term.time, slice):
@@ -225,13 +234,14 @@ class Functional(libadjoint.Functional):
             for term_dep, term_var in zip(term_deps,term_vars):
               term_var.timestep = 0
               term_var.iteration = 0
-              replace[dep] = deps[term_var]
+              print "deps: ", deps
+              replace[term_dep] = deps[str(term_var)]
           else:
             # Time point timestep-1,-1
             for term_dep, term_var in zip(term_deps,term_vars):
               term_var.timestep = timestep-1
               term_var.iteration = term_var.iteration_count(adjointer) - 1 
-              replace[dep] = deps[term_var]
+              replace[term_dep] = deps[str(term_var)]
 
           # Trapezoidal rule over given interval.
           quad_weight = 0.5*(this_interval.stop-this_interval.start)
@@ -267,6 +277,7 @@ class Functional(libadjoint.Functional):
     #   dolfin_dependencies_final_form = _coeffs(self.final_form)
     #   functional_value += dolfin.replace(self.final_form, dict(zip(dolfin_dependencies_final_form, dolfin_values)))
 
+    print "functional_value: ", functional_value
     return dolfin.assemble(functional_value)
 
   def derivative(self, adjointer, variable, dependencies, values):
@@ -310,8 +321,6 @@ class Functional(libadjoint.Functional):
 
     if adjglobals.adj_variables.libadjoint_timestep == 0:
       dolfin.info_red("Warning: instantiating a TimeFunctional without having called adj_inc_timestep. This probably won't work.")
-
-    print adjointer
 
     point_deps=set()
     integral_deps=set()

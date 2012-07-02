@@ -40,7 +40,7 @@ def run_forward(initial_condition=None, annotate=True):
       adj_inc_timestep(time=t)
       t += float(dt)
 
-  adjointer.time.finish(1.)
+  adjointer.time.finish(1)
 
   return u_0
 
