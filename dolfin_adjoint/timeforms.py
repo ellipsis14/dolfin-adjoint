@@ -1,5 +1,6 @@
 import dolfin
 import ufl 
+import libadjoint
 
 class TimeConstant(object):
     def __init__(self, label):
@@ -32,19 +33,19 @@ def timeslice(inslice):
     if not isinstance(inslice, slice):
         return inslice
 
-    if inslice.stop<=inslice.start:
-        raise libadjoint.exceptions.LibadjointErrorInvalidInputs(
-            "Zero or negative length time slice.")
-
     if inslice.start is None:
         start = START_TIME
     else:
         start = inslice.start
         
-    if slice.stop is None:
+    if inslice.stop is None:
         stop = FINISH_TIME
     else:
         stop = inslice.stop
+
+    if stop<=start:
+        raise libadjoint.exceptions.LibadjointErrorInvalidInputs(
+            "Zero or negative length time slice.")
 
     return slice(start, stop, inslice.step)
 
