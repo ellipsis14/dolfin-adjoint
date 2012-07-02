@@ -225,18 +225,9 @@ class Functional(libadjoint.Functional):
           term_deps = _coeffs(adjointer, term.form)
           term_vars = _vars(adjointer, term.form)
 
-          if timestep == 0:
-            #Time point 0,0
-            for term_dep, term_var in zip(term_deps,term_vars):
-              term_var.timestep = 0
-              term_var.iteration = 0
-              replace[term_dep] = deps[str(term_var)]
-          else:
-            # Time point timestep-1,-1
-            for term_dep, term_var in zip(term_deps,term_vars):
-              term_var.timestep = timestep-1
-              term_var.iteration = term_var.iteration_count(adjointer) - 1 
-              replace[term_dep] = deps[str(term_var)]
+          for term_dep, term_var in zip(term_deps,term_vars):
+            start_var = self.get_vars(adjointer, timestep, term_var)[0]
+            replace[term_dep] = deps[str(start_var)]
 
           # Trapezoidal rule over given interval.
           quad_weight = 0.5*(this_interval.stop-this_interval.start)
@@ -259,18 +250,9 @@ class Functional(libadjoint.Functional):
             term_deps = _coeffs(adjointer, term.form)
             term_vars = _vars(adjointer, term.form)
 
-            if timestep == 0:
-              #Time point 0,0
-              for term_dep, term_var in zip(term_deps,term_vars):
-                term_var.timestep = 0
-                term_var.iteration = term_var.iteration_count(adjointer) - 1
-                replace[term_dep] = deps[str(term_var)]
-            else:
-              # Time point timestep,-1
-              for term_dep, term_var in zip(term_deps,term_vars):
-                term_var.timestep = timestep
-                term_var.iteration = term_var.iteration_count(adjointer) - 1 
-                replace[term_dep] = deps[str(term_var)]
+            for term_dep, term_var in zip(term_deps,term_vars):
+              start_var = self.get_vars(adjointer, timestep, term_var)[1]
+              replace[term_dep] = deps[str(start_var)]
 
             # Trapezoidal rule over given interval.
             quad_weight = 0.5*(this_interval.stop-this_interval.start)
@@ -286,68 +268,31 @@ class Functional(libadjoint.Functional):
         if (term.time>=point_interval.start and term.time < point_interval.stop):
            exit()
 
-    # # Select the correct value for the first timestep, as it has dependencies both at the end 
-    # # and, for the initial conditions, at the beginning.
-    # if variable.timestep == 0:
-    #   if variable.iteration == 0:
-    #     dolfin_values = [val.data for val in values[:len(values)/2]]
-    #   else:
-    #     dolfin_values = [val.data for val in values[len(values)/2:]]
-    # else:            
-    #   dolfin_values = [val.data for val in values]
-
-    # # The quadrature weight for the midpoint rule is 1.0 for interiour points and 0.5 at the end points.
-    # if (timestep==0 and variable.iteration == 0) or timestep==adjointer.timestep_count-1: 
-    #   quad_weight = 0.5
-    # else: 
-    #   quad_weight = 1.0
-
-    # dolfin_dependencies_form = _coeffs(self.form)
-    # functional_value = dolfin.replace(quad_weight*self.dt*self.form, dict(zip(dolfin_dependencies_form, dolfin_values)))
-
-    # # Add the contribution of the integral at the last timestep
-    # if self.final_form != None and timestep==adjointer.timestep_count-1:
-    #   dolfin_dependencies_final_form = _coeffs(self.final_form)
-    #   functional_value += dolfin.replace(self.final_form, dict(zip(dolfin_dependencies_final_form, dolfin_values)))
-
     return dolfin.assemble(functional_value)
+
+  def get_vars(self, adjointer, timestep, model):
+    # Using the adjointer, get the start and end variables associated
+    # with this timestep
+    start = model.copy()
+    end = model.copy()
+
+    if timestep == 0:
+      start.timestep = 0
+      start.iteration = 0
+      end.timestep = 0
+      end.iteration = end.iteration_count(adjointer) - 1
+    else:
+      start.timestep = timestep - 1
+      start.iteration = start.iteration_count(adjointer) - 1
+      end.timestep = timestep
+      end.iteration = end.iteration_count(adjointer) - 1
+
+    return (start, end)
+
 
   def derivative(self, adjointer, variable, dependencies, values):
 
-    # Find the dolfin Function corresponding to variable.
-    dolfin_variable = values[dependencies.index(variable)].data
-
-    dolfin_dependencies_form = _coeffs(adjointer, self.form)
-    # Select the correct value for the first timestep, as it has dependencies both at the end 
-    # and, for the initial conditions, at the beginning.
-    if variable.timestep == 0:
-      if variable.iteration == 0:
-        dolfin_values = [val.data for val in values[:len(values)/2]]
-      else:
-        dolfin_values = [val.data for val in values[len(values)/2:]]
-    else:            
-      dolfin_values = [val.data for val in values]
-
-    test = dolfin.TestFunction(dolfin_variable.function_space())
-    current_form = dolfin.replace(self.form, dict(zip(dolfin_dependencies_form, dolfin_values)))
-
-    # The quadrature weight for the midpoint rule is 1.0 for interiour points and 0.5 at the end points.
-    if (variable.timestep == 0 and variable.iteration == 0) or variable.timestep==adjointer.timestep_count-1: 
-      quad_weight = 0.5
-    else: 
-      quad_weight = 1.0
-    functional_deriv_value = dolfin.derivative(quad_weight*self.dt*current_form, dolfin_variable, test)
-
-    # Add the contribution of the integral at the last timestep
-    if self.final_form != None and variable.timestep==adjointer.timestep_count-1:
-      dolfin_dependencies_final_form = _coeffs(adjointer, self.final_form)
-      final_form = dolfin.replace(self.final_form, dict(zip(dolfin_dependencies_final_form, dolfin_values)))
-      functional_deriv_value += dolfin.derivative(final_form, dolfin_variable, test)
-
-    if self.verbose:
-      dolfin.info("Returning dJ/du term for %s" % str(variable))
-
-    return adjlinalg.Vector(functional_deriv_value)
+    raise Exception("Not implemented")
 
   def dependencies(self, adjointer, timestep):
 
