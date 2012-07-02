@@ -234,6 +234,7 @@ class Functional(libadjoint.Functional):
     deps={str(dep): val.data for dep, val in zip(dependencies, values)}
 
     functional_value = None
+    final_time = _time_levels(adjointer, adjointer.timestep_count - 1)[1]
 
     # Get the necessary timestep information about the adjointer.
     # For integrals, we're integrating over /two/ timesteps.
@@ -285,7 +286,7 @@ class Functional(libadjoint.Functional):
       else:
         # Point evaluation.
 
-        if (term.time>=point_interval.start and term.time < point_interval.stop):
+        if point_interval.start <= term.time < point_interval.stop:
           replace = {}
 
           term_deps = _coeffs(adjointer, term.form)
@@ -295,6 +296,23 @@ class Functional(libadjoint.Functional):
             (start, end) = self.get_vars(adjointer, timestep, term_var)
             theta = 1.0 - (term.time - point_interval.start)/(point_interval.stop - point_interval.start)
             replace[term_dep] = theta*deps[str(start)] + (1-theta)*deps[str(end)]
+
+          if functional_value is None:
+            functional_value = dolfin.replace(term.form, replace)
+          else:
+            functional_value += dolfin.replace(term.form, replace)
+
+        # Special case for evaluation at the end of time: we can't pass over to the
+        # right-hand timestep, so have to do it here.
+        elif term.time == final_time and point_interval.stop == final_time:
+          replace = {}
+
+          term_deps = _coeffs(adjointer, term.form)
+          term_vars = _vars(adjointer, term.form)
+
+          for term_dep, term_var in zip(term_deps, term_vars):
+            end = self.get_vars(adjointer, timestep, term_var)[1]
+            replace[term_dep] = deps[str(end)]
 
           if functional_value is None:
             functional_value = dolfin.replace(term.form, replace)
