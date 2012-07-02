@@ -276,6 +276,8 @@ class Functional(libadjoint.Functional):
     #   functional_value += dolfin.replace(self.final_form, dict(zip(dolfin_dependencies_final_form, dolfin_values)))
 
     print "functional_value: ", functional_value
+    if adjointer.finished:
+      print "We're finished, should add extra integral terms"
     return dolfin.assemble(functional_value)
 
   def derivative(self, adjointer, variable, dependencies, values):
