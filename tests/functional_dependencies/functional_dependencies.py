@@ -106,5 +106,5 @@ if __name__ == "__main__":
 
   # Pointwise evaluation in time
   J = Functional(inner(u,u)*dx*dt[0.5])
-  assert adjointer.evaluate_functional(J, 0) == 0.5**2
-  assert adjointer.evaluate_functional(J, 1) == 0.0
+  assert adjointer.evaluate_functional(J, 0) == 0.0
+  assert adjointer.evaluate_functional(J, 1) == 0.5**2

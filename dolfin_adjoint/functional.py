@@ -266,9 +266,25 @@ class Functional(libadjoint.Functional):
         # Point evaluation.
 
         if (term.time>=point_interval.start and term.time < point_interval.stop):
-           exit()
+          replace = {}
 
-    return dolfin.assemble(functional_value)
+          term_deps = _coeffs(adjointer, term.form)
+          term_vars = _vars(adjointer, term.form)
+
+          for term_dep, term_var in zip(term_deps, term_vars):
+            (start, end) = self.get_vars(adjointer, timestep, term_var)
+            theta = 1.0 - (term.time - point_interval.start)/(point_interval.stop - point_interval.start)
+            replace[term_dep] = theta*deps[str(start)] + (1-theta)*deps[str(end)]
+
+          if functional_value is None:
+            functional_value = dolfin.replace(term.form, replace)
+          else:
+            functional_value += dolfin.replace(term.form, replace)
+
+    if functional_value is not None:
+      return dolfin.assemble(functional_value)
+    else:
+      return 0.0
 
   def get_vars(self, adjointer, timestep, model):
     # Using the adjointer, get the start and end variables associated
