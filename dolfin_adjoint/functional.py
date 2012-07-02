@@ -227,35 +227,14 @@ class Functional(libadjoint.Functional):
     for term in self.timeform.terms:
       if isinstance(term.time, slice):
         # Integral.
-        this_interval=_slice_intersect(integral_interval, term.time)
-        if this_interval:
-          # Get adj_variables for dependencies. Time level is not yet specified.
 
-          # Dependency replacement dictionary.
-          replace={}
-
-          term_deps = _coeffs(adjointer, term.form)
-          term_vars = _vars(adjointer, term.form)
-
-          for term_dep, term_var in zip(term_deps,term_vars):
-            start_var = self.get_vars(adjointer, timestep, term_var)[0]
-            replace[term_dep] = deps[str(start_var)]
-
-          # Trapezoidal rule over given interval.
-          quad_weight = 0.5*(this_interval.stop-this_interval.start)
-          # Calculate i
-          if functional_value is None:
-            functional_value = dolfin.replace(quad_weight*term.form, replace)
-          else:
-            functional_value += dolfin.replace(quad_weight*term.form, replace)
-
-        if adjointer.finished and timestep == adjointer.timestep_count - 1: # we're at the end, and need to add the extra terms
-                                                                            # associated with that
-          final_interval = slice(timestep_start, timestep_end)
-          this_interval = _slice_intersect(final_interval, term.time)
+        def trapezoidal(interval, iteration):
+          # Evaluate the trapezoidal rule for the given interval and
+          # iteration. Iteration is used to select start and end of timestep.
+          this_interval=_slice_intersect(interval, term.time)
           if this_interval:
             # Get adj_variables for dependencies. Time level is not yet specified.
-
+            
             # Dependency replacement dictionary.
             replace={}
 
@@ -263,16 +242,23 @@ class Functional(libadjoint.Functional):
             term_vars = _vars(adjointer, term.form)
 
             for term_dep, term_var in zip(term_deps,term_vars):
-              start_var = self.get_vars(adjointer, timestep, term_var)[1]
-              replace[term_dep] = deps[str(start_var)]
+              this_var = self.get_vars(adjointer, timestep, term_var)[iteration]
+              replace[term_dep] = deps[str(this_var)]
 
             # Trapezoidal rule over given interval.
             quad_weight = 0.5*(this_interval.stop-this_interval.start)
-            # Calculate i
-            if functional_value is None:
-              functional_value = dolfin.replace(quad_weight*term.form, replace)
-            else:
-              functional_value += dolfin.replace(quad_weight*term.form, replace)
+            
+            return dolfin.replace(quad_weight*term.form, replace)
+
+        # Calculate the integral contribution from the previous time level.
+        functional_value = add(functional_value, trapezoidal(integral_interval, 0))
+
+        # On the final occasion, also calculate the contribution from the
+        # current time leve.
+        if adjointer.finished and timestep == adjointer.timestep_count - 1: # we're at the end, and need to add the extra terms
+                                                                            # associated with that
+          final_interval = slice(timestep_start, timestep_end)
+          functional_value = add(functional_value, trapezoidal(final_interval, 1))
 
       else:
         # Point evaluation.
@@ -419,3 +405,12 @@ def _coeffs(adjointer, form):
   return [coeff 
           for coeff in ufl.algorithms.extract_coefficients(form) 
           if (hasattr(coeff, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[coeff])]
+
+def add(value, increment):
+  # Add increment to value correctly taking into account None.
+  if increment is None:
+    return value
+  elif value is None:
+    return increment
+  else:
+    return value+increment
