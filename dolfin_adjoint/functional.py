@@ -196,6 +196,18 @@ class Functional(libadjoint.Functional):
     self.name = name
 
   def __call__(self, adjointer, timestep, dependencies, values):
+    
+    functional_value = self._substitute_form(adjointer, timestep, dependencies, values)
+
+    if functional_value is not None:
+      return dolfin.assemble(functional_value)
+    else:
+      return 0.0
+
+
+  def _substitute_form(self, adjointer, timestep, dependencies, values):
+    ''' Perform the substitution of the dependencies and values
+    provided. This is common to __call__ and __derivative__'''
 
     deps={str(dep): val.data for dep, val in zip(dependencies, values)}
 
@@ -280,11 +292,8 @@ class Functional(libadjoint.Functional):
             functional_value = dolfin.replace(term.form, replace)
           else:
             functional_value += dolfin.replace(term.form, replace)
-
-    if functional_value is not None:
-      return dolfin.assemble(functional_value)
-    else:
-      return 0.0
+    
+    return functional_value
 
   def get_vars(self, adjointer, timestep, model):
     # Using the adjointer, get the start and end variables associated
