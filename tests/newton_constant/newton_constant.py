@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
   u = main(ic, nu)
 
-  J = FinalFunctional(inner(u, u)*dx)
+  J = Functional(inner(u, u)*dx*dt[FINISH_TIME])
   dJdnu = compute_gradient(J, ScalarParameter(nu))
 
   def Jhat(nu):

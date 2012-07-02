@@ -36,7 +36,7 @@ if __name__ == "__main__":
   adj_html("forward.html", "forward")
   replay_dolfin()
 
-  J = FinalFunctional(inner(final, final)*dx)
+  J = Functional(inner(final, final)*dx*dt[FINISH_TIME])
   for (adjoint, var) in compute_adjoint(J, forget=False):
     pass
 
