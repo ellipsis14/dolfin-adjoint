@@ -7,8 +7,24 @@ class TimeConstant(object):
     def __repr__(self):
         return 'TimeConstant("'+self.label+'")'
 
-START_TIME = TimeConstant("START_TIME")
-FINISH_TIME = TimeConstant("FINISH_TIME")
+class StartTimeConstant(TimeConstant):
+    def __init__(self):
+        TimeConstant.__init__(self, "START_TIME")
+    def __cmp__(self, other):
+        return -1
+    def __repr__(self):
+        return "StartTimeConstant()"
+
+class FinishTimeConstant(TimeConstant):
+    def __init__(self):
+        TimeConstant.__init__(self, "FINISH_TIME")
+    def __cmp__(self, other):
+        return 1
+    def __repr__(self):
+        return "FinishTimeConstant()"
+
+START_TIME = StartTimeConstant()
+FINISH_TIME = FinishTimeConstant()
 
 def timeslice(inslice):
     '''Preprocess a time slice, replacing the start with START_TIME and

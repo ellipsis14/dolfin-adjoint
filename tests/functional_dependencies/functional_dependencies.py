@@ -85,9 +85,9 @@ if __name__ == "__main__":
   assert adjointer.evaluate_functional(J, 1) == 0.375
 
   # Integral over all time, no indices
-  #J = Functional(inner(u,u)*dx*dt)
-  #assert adjointer.evaluate_functional(J, 0) == 0.0
-  #assert adjointer.evaluate_functional(J, 1) == 0.375
+  J = Functional(inner(u,u)*dx*dt)
+  assert adjointer.evaluate_functional(J, 0) == 0.0
+  assert adjointer.evaluate_functional(J, 1) == 0.375
 
   # Integral over the first time interval
   J = Functional(inner(u,u)*dx*dt[0:0.5])
