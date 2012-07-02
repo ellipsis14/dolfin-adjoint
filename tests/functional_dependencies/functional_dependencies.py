@@ -82,7 +82,6 @@ if __name__ == "__main__":
   # Pointwise evaluation at final time
   J = Functional(inner(u,u)*dx*dt[1.0])
   assert J.dependencies(adjointer, 0) == []
-  print J.dependencies(adjointer, 1)
   assert J.dependencies(adjointer, 1) == [u10]
 
   # Integral over all time  

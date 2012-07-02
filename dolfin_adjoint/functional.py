@@ -327,11 +327,13 @@ class Functional(libadjoint.Functional):
     if adjglobals.adj_variables.libadjoint_timestep == 0:
       dolfin.info_red("Warning: instantiating a Functional without having called adj_inc_timestep. This probably won't work.")
 
-    point_deps=set()
-    integral_deps=set()
+    point_deps = set()
+    integral_deps = set()
+    final_deps = set()
 
     levels = _time_levels(adjointer, timestep)
     point_interval=slice(levels[0],levels[1])
+    final_time = _time_levels(adjointer, adjointer.timestep_count - 1)[1]
 
     prev_levels = _time_levels(adjointer, max(timestep-1,0))
     integral_interval=slice(prev_levels[0],levels[1])
@@ -348,11 +350,17 @@ class Functional(libadjoint.Functional):
       else:
         # Point evaluation.
 
-        if (term.time>=point_interval.start and term.time < point_interval.stop):
+        if point_interval.start <= term.time < point_interval.stop:
           point_deps.update(_vars(adjointer, term.form))
+
+        # Special case for evaluation at the end of time: we can't pass over to the
+        # right-hand timestep, so have to do it here.
+        elif term.time == final_time and point_interval.stop == final_time:
+          final_deps.update(_vars(adjointer, term.form))
         
-    integral_deps=list(integral_deps)
-    point_deps=list(point_deps)
+    integral_deps = list(integral_deps)
+    point_deps = list(point_deps)
+    final_deps = list(final_deps)
 
     # Set the time level of the dependencies:
     
@@ -387,8 +395,13 @@ class Functional(libadjoint.Functional):
         integral_deps[i]= integral_deps[i].copy()
         integral_deps[i].var.timestep = timestep
         integral_deps[i].var.iteration = integral_deps[i].iteration_count(adjointer) - 1 
+
+    # Final deps depend only at the very last value.
+    for i in range(len(final_deps)):
+      final_deps[i].timestep = timestep
+      final_deps[i].iteration = final_deps[i].iteration_count(adjointer) - 1
     
-    deps=set(point_deps).union(set(integral_deps))
+    deps=set(point_deps).union(set(integral_deps)).union(set(final_deps))
 
     return list(deps)
 
