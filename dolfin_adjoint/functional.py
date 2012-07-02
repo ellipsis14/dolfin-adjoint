@@ -204,6 +204,25 @@ class Functional(libadjoint.Functional):
     else:
       return 0.0
 
+  def derivative(self, adjointer, variable, dependencies, values):
+    
+    functional_value = None
+    for timestep in self._derivative_timesteps(adjointer, variable):
+      functional_value = _add(functional_value,
+                              self._substitute_form(adjointer, timestep, dependencies, values))
+
+    return dolfin.derivative(functional_value, values[dependencies.index(variable)].data)
+
+  def _derivative_timesteps(self, adjointer, variable):
+    
+    timestep = variable.timestep
+    iteration = variable.iteration
+    if timestep == 0 and iteration == 0:
+      return [0]
+    elif timestep == adjointer.timestep_count-1:
+      return [timestep]
+    else:
+      return [timestep, timestep+1]
 
   def _substitute_form(self, adjointer, timestep, dependencies, values):
     ''' Perform the substitution of the dependencies and values
@@ -299,11 +318,6 @@ class Functional(libadjoint.Functional):
       end.iteration = end.iteration_count(adjointer) - 1
 
     return (start, end)
-
-
-  def derivative(self, adjointer, variable, dependencies, values):
-
-    raise Exception("Not implemented")
 
   def dependencies(self, adjointer, timestep):
 
