@@ -310,7 +310,6 @@ class Functional(libadjoint.Functional):
     #   dolfin_dependencies_final_form = _coeffs(self.final_form)
     #   functional_value += dolfin.replace(self.final_form, dict(zip(dolfin_dependencies_final_form, dolfin_values)))
 
-    print "functional_value: ", functional_value
     return dolfin.assemble(functional_value)
 
   def derivative(self, adjointer, variable, dependencies, values):
@@ -425,7 +424,8 @@ class Functional(libadjoint.Functional):
     if self.name is not None:
       return self.name
     else:
-      return hashlib.md5(str(self.form)).hexdigest()
+      formstr = " ".join([str(term) for term in self.timeform.terms])
+      return hashlib.md5(formstr).hexdigest()
 
 def _slice_intersect(slice1, slice2):
 

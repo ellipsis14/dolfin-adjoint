@@ -24,12 +24,12 @@ def run_forward(annotate=True):
 
   t = float(dt)
 
-  print "u_0.vector().array(): ", u_0.vector().array()
+  #print "u_0.vector().array(): ", u_0.vector().array()
   adjointer.time.start(0)
   while t <= T:
 
       solve(a == L, u_0, annotate=annotate)
-      print "u_0.vector().array(): ", u_0.vector().array()
+      #print "u_0.vector().array(): ", u_0.vector().array()
 
       adj_inc_timestep(time=t, finished=t+dt>T)
       t += float(dt)
@@ -80,8 +80,31 @@ if __name__ == "__main__":
   assert J.dependencies(adjointer, 1)[1] != J.dependencies(adjointer, 1)[0]
 
   # Integral over all time  
-  # Functional.__hash__ is currently invalid
-  #J = Functional(inner(u,u)*dx*dt[0:1])
-  J = Functional(inner(u,u)*dx*dt[0:1],name="test")
-  assert adjointer.evaluate_functional(J,0) == 0.0
-  assert adjointer.evaluate_functional(J,1) == 0.375
+  J = Functional(inner(u,u)*dx*dt[0:1])
+  assert adjointer.evaluate_functional(J, 0) == 0.0
+  assert adjointer.evaluate_functional(J, 1) == 0.375
+
+  # Integral over all time, no indices
+  #J = Functional(inner(u,u)*dx*dt)
+  #assert adjointer.evaluate_functional(J, 0) == 0.0
+  #assert adjointer.evaluate_functional(J, 1) == 0.375
+
+  # Integral over the first time interval
+  J = Functional(inner(u,u)*dx*dt[0:0.5])
+  assert adjointer.evaluate_functional(J, 0) == 0.0
+  assert adjointer.evaluate_functional(J, 1) == 0.0625
+
+  # Integral over something that's not aligned with the timesteps
+  J = Functional(inner(u,u)*dx*dt[0.25:0.75])
+  assert adjointer.evaluate_functional(J, 0) == 0.0
+  assert adjointer.evaluate_functional(J, 1) == 0.1875
+
+  # Pointwise evaluation in time
+  J = Functional(inner(u,u)*dx*dt[0.25])
+  assert adjointer.evaluate_functional(J, 0) == 0.25**2
+  assert adjointer.evaluate_functional(J, 1) == 0.0
+
+  # Pointwise evaluation in time
+  J = Functional(inner(u,u)*dx*dt[0.5])
+  assert adjointer.evaluate_functional(J, 0) == 0.5**2
+  assert adjointer.evaluate_functional(J, 1) == 0.0
