@@ -245,6 +245,41 @@ class Functional(libadjoint.Functional):
             functional_value = dolfin.replace(quad_weight*term.form, replace)
           else:
             functional_value += dolfin.replace(quad_weight*term.form, replace)
+
+        if adjointer.finished and timestep == adjointer.timestep_count - 1: # we're at the end, and need to add the extra terms
+                                                                            # associated with that
+          final_interval = slice(timestep_start, timestep_end)
+          this_interval = _slice_intersect(final_interval, term.time)
+          if this_interval:
+            # Get adj_variables for dependencies. Time level is not yet specified.
+
+            # Dependency replacement dictionary.
+            replace={}
+
+            term_deps = _coeffs(adjointer, term.form)
+            term_vars = _vars(adjointer, term.form)
+
+            if timestep == 0:
+              #Time point 0,0
+              for term_dep, term_var in zip(term_deps,term_vars):
+                term_var.timestep = 0
+                term_var.iteration = term_var.iteration_count(adjointer) - 1
+                replace[term_dep] = deps[str(term_var)]
+            else:
+              # Time point timestep,-1
+              for term_dep, term_var in zip(term_deps,term_vars):
+                term_var.timestep = timestep
+                term_var.iteration = term_var.iteration_count(adjointer) - 1 
+                replace[term_dep] = deps[str(term_var)]
+
+            # Trapezoidal rule over given interval.
+            quad_weight = 0.5*(this_interval.stop-this_interval.start)
+            # Calculate i
+            if functional_value is None:
+              functional_value = dolfin.replace(quad_weight*term.form, replace)
+            else:
+              functional_value += dolfin.replace(quad_weight*term.form, replace)
+
       else:
         # Point evaluation.
 
@@ -276,8 +311,6 @@ class Functional(libadjoint.Functional):
     #   functional_value += dolfin.replace(self.final_form, dict(zip(dolfin_dependencies_final_form, dolfin_values)))
 
     print "functional_value: ", functional_value
-    if adjointer.finished:
-      print "We're finished, should add extra integral terms"
     return dolfin.assemble(functional_value)
 
   def derivative(self, adjointer, variable, dependencies, values):
