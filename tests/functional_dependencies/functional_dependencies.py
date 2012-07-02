@@ -32,10 +32,12 @@ def run_forward(initial_condition=None, annotate=True):
   n = 1
 
 
+  #print "u_0.vector().array(): ", u_0.vector().array()
   adjointer.time.start(0)
   while t <= T:
 
       solve(a == L, u_0, bc, annotate=annotate)
+      #print "u_0.vector().array(): ", u_0.vector().array()
       #solve(a == L, u_0, annotate=annotate)
 
       adj_inc_timestep(time=t)
@@ -67,7 +69,10 @@ if __name__ == "__main__":
   # Integral over a certain time window
   J = Functional(inner(u,u)*dx*dt[0.5:1.0])
   assert J.dependencies(adjointer, 0) == []
-  assert J.dependencies(adjointer, 1) == [u01, u10]
+  deps=J.dependencies(adjointer, 1)
+  assert deps[0] in [u01, u10]
+  assert deps[1] in [u01, u10]
+  assert deps[0] != deps[1]
 
   # Pointwise evaluation (in the middle of a timestep)
   J = Functional(inner(u,u)*dx*dt[0.25])
@@ -75,6 +80,7 @@ if __name__ == "__main__":
   deps=J.dependencies(adjointer, 0)
   assert deps[0] in [u00, u01]
   assert deps[1] in [u00, u01]
+  assert deps[0] != deps[1]
   assert J.dependencies(adjointer, 1) == []
 
   # Pointwise evaluation (at a timelevel)
@@ -89,3 +95,4 @@ if __name__ == "__main__":
   #J = Functional(inner(u,u)*dx*dt[0:1])
   J = Functional(inner(u,u)*dx*dt[0:1],name="test")
   print adjointer.evaluate_functional(J,0)
+  print adjointer.evaluate_functional(J,1)
