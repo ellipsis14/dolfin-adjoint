@@ -211,7 +211,9 @@ class Functional(libadjoint.Functional):
       functional_value = _add(functional_value,
                               self._substitute_form(adjointer, timestep, dependencies, values))
 
-    return dolfin.derivative(functional_value, values[dependencies.index(variable)].data)
+    d = dolfin.derivative(functional_value, values[dependencies.index(variable)].data)
+    d = ufl.algorithms.expand_derivatives(d)
+    return adjlinalg.Vector(d)
 
   def _derivative_timesteps(self, adjointer, variable):
     
