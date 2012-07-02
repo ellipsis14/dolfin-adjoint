@@ -6,7 +6,7 @@ import hashlib
 import solving
 import adjglobals
 import adjlinalg
-from timeforms import NoTime
+from timeforms import NoTime, StartTimeConstant, FinishTimeConstant
 
 class FinalFunctional(libadjoint.Functional):
   '''This class implements the libadjoint.Functional abstract base class for the Dolfin adjoint.
@@ -304,7 +304,7 @@ class Functional(libadjoint.Functional):
 
         # Special case for evaluation at the end of time: we can't pass over to the
         # right-hand timestep, so have to do it here.
-        elif term.time == final_time and point_interval.stop == final_time:
+        elif (term.time == final_time or isinstance(term.time, FinishTimeConstant)) and point_interval.stop == final_time:
           replace = {}
 
           term_deps = _coeffs(adjointer, term.form)
@@ -373,7 +373,7 @@ class Functional(libadjoint.Functional):
 
         # Special case for evaluation at the end of time: we can't pass over to the
         # right-hand timestep, so have to do it here.
-        elif term.time == final_time and point_interval.stop == final_time:
+        elif (term.time == final_time or isinstance(term.time, FinishTimeConstant)) and point_interval.stop == final_time:
           final_deps.update(_vars(adjointer, term.form))
         
     integral_deps = list(integral_deps)
@@ -467,4 +467,13 @@ def _time_levels(adjointer, timestep):
   try:
     return adjointer.get_times(timestep)
   except Exception as exc:
-    return (NoTime(str(exc)), NoTime(str(exc)))
+    start = NoTime(str(exc))
+    end = NoTime(str(exc))
+
+    if timestep == adjointer.timestep_count - 1:
+      end = FinishTimeConstant()
+
+    if timestep == 0:
+      start = StartTimeConstant()
+
+    return (start, end)

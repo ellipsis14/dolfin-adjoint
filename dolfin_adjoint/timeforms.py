@@ -12,6 +12,8 @@ class StartTimeConstant(TimeConstant):
     def __init__(self):
         TimeConstant.__init__(self, "START_TIME")
     def __cmp__(self, other):
+        if isinstance(other, StartTimeConstant):
+          return 0
         return -1
     def __repr__(self):
         return "StartTimeConstant()"
@@ -20,7 +22,9 @@ class FinishTimeConstant(TimeConstant):
     def __init__(self):
         TimeConstant.__init__(self, "FINISH_TIME")
     def __cmp__(self, other):
-            return 1
+        if isinstance(other, FinishTimeConstant):
+          return 0
+        return 1
     def __repr__(self):
         return "FinishTimeConstant()"
 
