@@ -73,12 +73,19 @@ if __name__ == "__main__":
   J = Functional(inner(u,u)*dx*dt[0.25])
   # assert J.dependencies(adjointer, 0) == [u00, u01]
   deps=J.dependencies(adjointer, 0)
-  assert deps[0]==u00
-  assert deps[1]==u01
+  assert deps[0] in [u00, u01]
+  assert deps[1] in [u00, u01]
   assert J.dependencies(adjointer, 1) == []
 
   # Pointwise evaluation (at a timelevel)
   J = Functional(inner(u,u)*dx*dt[0.5])
   assert J.dependencies(adjointer, 0) == []
-  assert J.dependencies(adjointer, 1) == [u01, u10]
+  assert J.dependencies(adjointer, 1)[0] in [u01, u10]
+  assert J.dependencies(adjointer, 1)[1] in [u01, u10]
+  assert J.dependencies(adjointer, 1)[1] != J.dependencies(adjointer, 1)[0]
 
+  # Integral over all time  
+  # Functional.__hash__ is currently invalid
+  #J = Functional(inner(u,u)*dx*dt[0:1])
+  J = Functional(inner(u,u)*dx*dt[0:1],name="test")
+  print adjointer.evaluate_functional(J,0)

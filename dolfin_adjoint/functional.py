@@ -197,59 +197,75 @@ class Functional(libadjoint.Functional):
 
   def __call__(self, adjointer, timestep, dependencies, values):
 
+    deps={dep:val for dep, val in zip(dependencies, values)}
+
+    functional_value = 0
+
+    point_interval=slice(adjointer.time.time_levels[timestep],
+                         adjointer.time.time_levels[timestep+1])
+
+    integral_interval=slice(adjointer.time.time_levels[max(timestep-1,0)],
+                         adjointer.time.time_levels[timestep+1])
+
     for term in self.timeform.terms:
       if isinstance(term.time, slice):
         # Integral.
-
-        # Get adj_variables for dependencies. Time level is not yet specified.
-
-        # Dependency replacement dictionary.
-        replace={}
-
-        term_deps = [dep for dep in ufl.algorithms.extract_coefficients(term.form) if (hasattr(dep, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[dep])]
-
         this_interval=_slice_intersect(integral_interval, term.time)
         if this_interval:
-          if timestep==0:
-            #Time point 0,0
-            for dep, val in zip(dependencies, values):
-              
+          # Get adj_variables for dependencies. Time level is not yet specified.
 
+          # Dependency replacement dictionary.
+          replace={}
+
+          term_deps = _coeffs(adjointer, term.form)
+          term_vars = _vars(adjointer, term.form)
+
+          if timestep == 0:
+            #Time point 0,0
+            for term_dep, term_var in zip(term_deps,term_vars):
+              term_var.timestep = 0
+              term_var.iteration = 0
+              replace[dep] = deps[term_var]
           else:
             # Time point timestep-1,-1
-          
-            quad_weight = 0.5*(this_interval.stop-this_interval.start)
-          # Calculate i
+            for term_dep, term_var in zip(term_deps,term_vars):
+              term_var.timestep = timestep-1
+              term_var.iteration = term_var.iteration_count(adjointer) - 1 
+              replace[dep] = deps[term_var]
 
+          # Trapezoidal rule over given interval.
+          quad_weight = 0.5*(this_interval.stop-this_interval.start)
+          # Calculate i
+          functional_value += dolfin.replace(quad_weight*term.form, replace)
       else:
         # Point evaluation.
 
         if (term.time>=point_interval.start and term.time < point_interval.stop):
-          
+           exit()
 
-    # Select the correct value for the first timestep, as it has dependencies both at the end 
-    # and, for the initial conditions, at the beginning.
-    if variable.timestep == 0:
-      if variable.iteration == 0:
-        dolfin_values = [val.data for val in values[:len(values)/2]]
-      else:
-        dolfin_values = [val.data for val in values[len(values)/2:]]
-    else:            
-      dolfin_values = [val.data for val in values]
+    # # Select the correct value for the first timestep, as it has dependencies both at the end 
+    # # and, for the initial conditions, at the beginning.
+    # if variable.timestep == 0:
+    #   if variable.iteration == 0:
+    #     dolfin_values = [val.data for val in values[:len(values)/2]]
+    #   else:
+    #     dolfin_values = [val.data for val in values[len(values)/2:]]
+    # else:            
+    #   dolfin_values = [val.data for val in values]
 
-    # The quadrature weight for the midpoint rule is 1.0 for interiour points and 0.5 at the end points.
-    if (timestep==0 and variable.iteration == 0) or timestep==adjointer.timestep_count-1: 
-      quad_weight = 0.5
-    else: 
-      quad_weight = 1.0
+    # # The quadrature weight for the midpoint rule is 1.0 for interiour points and 0.5 at the end points.
+    # if (timestep==0 and variable.iteration == 0) or timestep==adjointer.timestep_count-1: 
+    #   quad_weight = 0.5
+    # else: 
+    #   quad_weight = 1.0
 
-    dolfin_dependencies_form = [dep for dep in ufl.algorithms.extract_coefficients(self.form) if (hasattr(dep, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[dep])]
-    functional_value = dolfin.replace(quad_weight*self.dt*self.form, dict(zip(dolfin_dependencies_form, dolfin_values)))
+    # dolfin_dependencies_form = _coeffs(self.form)
+    # functional_value = dolfin.replace(quad_weight*self.dt*self.form, dict(zip(dolfin_dependencies_form, dolfin_values)))
 
-    # Add the contribution of the integral at the last timestep
-    if self.final_form != None and timestep==adjointer.timestep_count-1:
-      dolfin_dependencies_final_form = [dep for dep in ufl.algorithms.extract_coefficients(self.final_form) if (hasattr(dep, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[dep])]
-      functional_value += dolfin.replace(self.final_form, dict(zip(dolfin_dependencies_final_form, dolfin_values)))
+    # # Add the contribution of the integral at the last timestep
+    # if self.final_form != None and timestep==adjointer.timestep_count-1:
+    #   dolfin_dependencies_final_form = _coeffs(self.final_form)
+    #   functional_value += dolfin.replace(self.final_form, dict(zip(dolfin_dependencies_final_form, dolfin_values)))
 
     return dolfin.assemble(functional_value)
 
@@ -258,7 +274,7 @@ class Functional(libadjoint.Functional):
     # Find the dolfin Function corresponding to variable.
     dolfin_variable = values[dependencies.index(variable)].data
 
-    dolfin_dependencies_form = [dep for dep in ufl.algorithms.extract_coefficients(self.form) if (hasattr(dep, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[dep])]
+    dolfin_dependencies_form = _coeffs(adjointer, self.form)
     # Select the correct value for the first timestep, as it has dependencies both at the end 
     # and, for the initial conditions, at the beginning.
     if variable.timestep == 0:
@@ -281,7 +297,7 @@ class Functional(libadjoint.Functional):
 
     # Add the contribution of the integral at the last timestep
     if self.final_form != None and variable.timestep==adjointer.timestep_count-1:
-      dolfin_dependencies_final_form = [dep for dep in ufl.algorithms.extract_coefficients(self.final_form) if (hasattr(dep, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[dep])]
+      dolfin_dependencies_final_form = _coeffs(adjointer, self.final_form)
       final_form = dolfin.replace(self.final_form, dict(zip(dolfin_dependencies_final_form, dolfin_values)))
       functional_deriv_value += dolfin.derivative(final_form, dolfin_variable, test)
 
@@ -294,6 +310,8 @@ class Functional(libadjoint.Functional):
 
     if adjglobals.adj_variables.libadjoint_timestep == 0:
       dolfin.info_red("Warning: instantiating a TimeFunctional without having called adj_inc_timestep. This probably won't work.")
+
+    print adjointer
 
     point_deps=set()
     integral_deps=set()
@@ -312,13 +330,13 @@ class Functional(libadjoint.Functional):
         # Get adj_variables for dependencies. Time level is not yet specified.
 
         if _slice_intersect(integral_interval, term.time):
-          integral_deps.update([adjglobals.adj_variables[coeff].copy() for coeff in ufl.algorithms.extract_coefficients(term.form) if (hasattr(coeff, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[coeff])])
+          integral_deps.update(_vars(adjointer, term.form))
         
       else:
         # Point evaluation.
 
         if (term.time>=point_interval.start and term.time < point_interval.stop):
-          point_deps.update([adjglobals.adj_variables[coeff].copy() for coeff in ufl.algorithms.extract_coefficients(term.form) if (hasattr(coeff, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[coeff])])
+          point_deps.update(_vars(adjointer, term.form))
         
     integral_deps=list(integral_deps)
     point_deps=list(point_deps)
@@ -379,6 +397,13 @@ def _slice_intersect(slice1, slice2):
   else:
     return None
   
-def _vars(form):
+def _vars(adjointer, form):
   # Return the libadjoint variables corresponding to the coeffs in form.
-  return [adjglobals.adj_variables[coeff].copy() for coeff in ufl.algorithms.extract_coefficients(form) if (hasattr(coeff, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[coeff])]
+  return [adjglobals.adj_variables[coeff].copy() 
+          for coeff in ufl.algorithms.extract_coefficients(form) 
+          if (hasattr(coeff, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[coeff])]
+
+def _coeffs(adjointer, form):
+  return [coeff 
+          for coeff in ufl.algorithms.extract_coefficients(form) 
+          if (hasattr(coeff, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[coeff])]
