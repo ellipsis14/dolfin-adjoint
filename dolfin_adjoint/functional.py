@@ -213,9 +213,6 @@ class Functional(libadjoint.Functional):
     else:
       integral_interval = slice(timestep_start, timestep_end)
 
-    print "point_interval: ", point_interval
-    print "integral_interval: ", integral_interval
-
     for term in self.timeform.terms:
       if isinstance(term.time, slice):
         # Integral.
@@ -234,7 +231,6 @@ class Functional(libadjoint.Functional):
             for term_dep, term_var in zip(term_deps,term_vars):
               term_var.timestep = 0
               term_var.iteration = 0
-              print "deps: ", deps
               replace[term_dep] = deps[str(term_var)]
           else:
             # Time point timestep-1,-1
