@@ -67,6 +67,13 @@ if __name__ == "__main__":
   # Work out the solution by hand -- it's 3
   assert dJdic.vector().array()[0] == 3.0
 
+  # Pointwise evaluation (at the end of time)
+  J = Functional(inner(u,u)*dx*dt[1.0])
+  dJdic = compute_gradient(J, InitialConditionParameter(u), forget=False)
+  # Work out the solution by hand -- it's 4
+  assert dJdic.vector().array()[0] == 4.0
+
+  # Let's do a sum
   J = Functional(inner(u,u)*dx*dt[0.5] + inner(u,u)*dx*dt[0.5:1.0])
   dJdic = compute_gradient(J, InitialConditionParameter(u), forget=False)
   # Work out the solution by hand -- it's 3 + 7/4
