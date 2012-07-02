@@ -40,10 +40,8 @@ def run_forward(initial_condition=None, annotate=True):
       #print "u_0.vector().array(): ", u_0.vector().array()
       #solve(a == L, u_0, annotate=annotate)
 
-      adj_inc_timestep(time=t)
+      adj_inc_timestep(time=t, finished=t+dt>T)
       t += float(dt)
-
-  adjointer.time.finish(1)
 
   return u_0
 
