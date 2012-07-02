@@ -342,9 +342,6 @@ class Functional(libadjoint.Functional):
 
   def dependencies(self, adjointer, timestep):
 
-    if adjglobals.adj_variables.libadjoint_timestep == 0:
-      dolfin.info_red("Warning: instantiating a Functional without having called adj_inc_timestep. This probably won't work.")
-
     point_deps = set()
     integral_deps = set()
     final_deps = set()
