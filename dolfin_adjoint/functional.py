@@ -6,6 +6,7 @@ import hashlib
 import solving
 import adjglobals
 import adjlinalg
+from timeforms import NoTime
 
 class FinalFunctional(libadjoint.Functional):
   '''This class implements the libadjoint.Functional abstract base class for the Dolfin adjoint.
@@ -236,11 +237,11 @@ class Functional(libadjoint.Functional):
 
     # Get the necessary timestep information about the adjointer.
     # For integrals, we're integrating over /two/ timesteps.
-    timestep_start, timestep_end = adjointer.get_times(timestep)
+    timestep_start, timestep_end = _time_levels(adjointer, timestep)
     point_interval = slice(timestep_start, timestep_end)
 
     if timestep > 0:
-      prev_start, prev_end = adjointer.get_times(timestep - 1)
+      prev_start, prev_end = _time_levels(adjointer, timestep - 1)
       integral_interval = slice(prev_start, timestep_end)
     else:
       integral_interval = slice(timestep_start, timestep_end)
@@ -324,17 +325,16 @@ class Functional(libadjoint.Functional):
   def dependencies(self, adjointer, timestep):
 
     if adjglobals.adj_variables.libadjoint_timestep == 0:
-      dolfin.info_red("Warning: instantiating a TimeFunctional without having called adj_inc_timestep. This probably won't work.")
+      dolfin.info_red("Warning: instantiating a Functional without having called adj_inc_timestep. This probably won't work.")
 
     point_deps=set()
     integral_deps=set()
 
-    point_interval=slice(adjointer.time.time_levels[timestep],
-                         adjointer.time.time_levels[timestep+1])
+    levels = _time_levels(adjointer, timestep)
+    point_interval=slice(levels[0],levels[1])
 
-    integral_interval=slice(adjointer.time.time_levels[max(timestep-1,0)],
-                         adjointer.time.time_levels[timestep+1])
-
+    prev_levels = _time_levels(adjointer, max(timestep-1,0))
+    integral_interval=slice(prev_levels[0],levels[1])
 
     for term in self.timeform.terms:
       if isinstance(term.time, slice):
@@ -430,3 +430,10 @@ def _add(value, increment):
     return increment
   else:
     return value+increment
+
+def _time_levels(adjointer, timestep):
+  
+  try:
+    return adjointer.get_times(timestep)
+  except Exception as exc:
+    return (NoTime(str(exc)), NoTime(str(exc)))

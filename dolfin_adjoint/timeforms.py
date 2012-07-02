@@ -20,9 +20,23 @@ class FinishTimeConstant(TimeConstant):
     def __init__(self):
         TimeConstant.__init__(self, "FINISH_TIME")
     def __cmp__(self, other):
-        return 1
+            return 1
     def __repr__(self):
         return "FinishTimeConstant()"
+
+class NoTime(TimeConstant):
+    def __init__(self, msg=""):
+        TimeConstant.__init__(self, msg)
+    def __cmp__(self, other):
+        if isinstance(other, StartTimeConstant):
+            return 1
+        elif isinstance(other, FinishTimeConstant):
+            return -1
+        else:
+            raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Invalid time information: "+self.label)
+    def __repr__(self):
+        return "NoTimeConstant("+self.label+")"
+    
 
 START_TIME = StartTimeConstant()
 FINISH_TIME = FinishTimeConstant()
