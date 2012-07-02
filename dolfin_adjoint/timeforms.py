@@ -75,8 +75,7 @@ class TimeForm(object):
         # Adding occurs by concatenating terms in the forms list.
         
         if isinstance(other, TimeForm):
-            sum = TimeForm()        
-            sum.terms = self.terms + other.terms
+            sum = TimeForm(self.terms + other.terms)
             return sum
 
         else:
