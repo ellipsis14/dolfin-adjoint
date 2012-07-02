@@ -5,40 +5,31 @@ from dolfin import *
 from dolfin_adjoint import *
 import libadjoint
 
-f = Expression("x[0]*(x[0]-1)*x[1]*(x[1]-1)")
 mesh = UnitSquare(4, 4)
-V = FunctionSpace(mesh, "CG", 1)
+V = FunctionSpace(mesh, "R", 0)
+f = Constant(1.0)
 
-def run_forward(initial_condition=None, annotate=True):
+# Solve the 'PDE' with solution u(t) = t
+def run_forward(annotate=True):
   u = TrialFunction(V)
   v = TestFunction(V)
 
-  u_0 = Function(V, name="Velocity")
-  if initial_condition is not None:
-    u_0.assign(initial_condition)
-
-  u_1 = Function(V)
+  u_0 = Function(V, name="Value")
 
   dt = 0.5
   T =  1.0
 
-  F = ( (u - u_0)/dt*v + inner(grad(u), grad(v)) + f*v)*dx
-
-  bc = DirichletBC(V, 1.0, "on_boundary")
-
+  F = ( (u - u_0)/dt*v - f*v)*dx
   a, L = lhs(F), rhs(F)
 
   t = float(dt)
-  n = 1
 
-
-  #print "u_0.vector().array(): ", u_0.vector().array()
+  print "u_0.vector().array(): ", u_0.vector().array()
   adjointer.time.start(0)
   while t <= T:
 
-      solve(a == L, u_0, bc, annotate=annotate)
-      #print "u_0.vector().array(): ", u_0.vector().array()
-      #solve(a == L, u_0, annotate=annotate)
+      solve(a == L, u_0, annotate=annotate)
+      print "u_0.vector().array(): ", u_0.vector().array()
 
       adj_inc_timestep(time=t, finished=t+dt>T)
       t += float(dt)
@@ -52,9 +43,9 @@ if __name__ == "__main__":
   adj_html("forward.html", "forward")
   adj_html("adjoint.html", "adjoint")
 
-  u00 = libadjoint.Variable("Velocity", 0, 0)
-  u01 = libadjoint.Variable("Velocity", 0, 1)
-  u10 = libadjoint.Variable("Velocity", 1, 0)
+  u00 = libadjoint.Variable("Value", 0, 0)
+  u01 = libadjoint.Variable("Value", 0, 1)
+  u10 = libadjoint.Variable("Value", 1, 0)
 
   # Integral over all time
   J = Functional(inner(u,u)*dx*dt[0:1])
@@ -92,5 +83,5 @@ if __name__ == "__main__":
   # Functional.__hash__ is currently invalid
   #J = Functional(inner(u,u)*dx*dt[0:1])
   J = Functional(inner(u,u)*dx*dt[0:1],name="test")
-  print adjointer.evaluate_functional(J,0)
-  print adjointer.evaluate_functional(J,1)
+  assert adjointer.evaluate_functional(J,0) == 0.0
+  assert adjointer.evaluate_functional(J,1) == 0.375
