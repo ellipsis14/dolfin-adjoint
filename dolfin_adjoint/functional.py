@@ -197,10 +197,9 @@ class Functional(libadjoint.Functional):
 
   def __call__(self, adjointer, timestep, dependencies, values):
 
-    deps={str(dep):val for dep, val in zip(dependencies, values)}
+    deps={str(dep): val.data for dep, val in zip(dependencies, values)}
 
-    functional_value = 0
-
+    functional_value = None
 
     # Get the necessary timestep information about the adjointer.
     # For integrals, we're integrating over /two/ timesteps.
@@ -242,7 +241,10 @@ class Functional(libadjoint.Functional):
           # Trapezoidal rule over given interval.
           quad_weight = 0.5*(this_interval.stop-this_interval.start)
           # Calculate i
-          functional_value += dolfin.replace(quad_weight*term.form, replace)
+          if functional_value is None:
+            functional_value = dolfin.replace(quad_weight*term.form, replace)
+          else:
+            functional_value += dolfin.replace(quad_weight*term.form, replace)
       else:
         # Point evaluation.
 
@@ -274,6 +276,7 @@ class Functional(libadjoint.Functional):
     #   functional_value += dolfin.replace(self.final_form, dict(zip(dolfin_dependencies_final_form, dolfin_values)))
 
     print "functional_value: ", functional_value
+    print "assembled: ", dolfin.assemble(functional_value)
     return dolfin.assemble(functional_value)
 
   def derivative(self, adjointer, variable, dependencies, values):

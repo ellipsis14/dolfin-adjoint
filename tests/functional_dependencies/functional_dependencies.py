@@ -1,3 +1,4 @@
+import io
 import sys
 
 from dolfin import *
@@ -59,10 +60,9 @@ if __name__ == "__main__":
   J = Functional(inner(u,u)*dx*dt[0:1])
   assert J.dependencies(adjointer, 0) == [u00]
   deps=J.dependencies(adjointer, 1)
-  assert deps[0]==u01
-  assert deps[1]==u10
-  # This version of the test appears borked.
-  #assert J.dependencies(adjointer, 1) == [u01, u10]
+  assert deps[0] in [u01, u10]
+  assert deps[1] in [u01, u10]
+  assert deps[0] != deps[1]
 
   # Integral over a certain time window
   J = Functional(inner(u,u)*dx*dt[0.5:1.0])
