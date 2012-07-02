@@ -43,7 +43,7 @@ if __name__ == "__main__":
   if not success:
     sys.exit(1)
 
-  J = FinalFunctional(out*out*dx)
+  J = Functional(out*out*dx*dt[FINISH_TIME])
   icparam = InitialConditionParameter("InitialCondition")
   dJdic = compute_gradient(J, icparam)
 

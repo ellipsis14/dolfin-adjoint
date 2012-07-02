@@ -87,7 +87,7 @@ if __name__ == "__main__":
   adj_html("heat_adjoint.html", "adjoint")
 
   # The functional is only a function of final state.
-  functional=FinalFunctional(final_forward*final_forward*dx)
+  functional=Functional(final_forward*final_forward*dx*dt[FINISH_TIME])
   f_direct = adjointer.evaluate_functional(functional, adjointer.equation_count-1)
 
   print "Running adjoint model ..."
