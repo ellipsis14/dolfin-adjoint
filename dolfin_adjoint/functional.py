@@ -251,14 +251,14 @@ class Functional(libadjoint.Functional):
             return dolfin.replace(quad_weight*term.form, replace)
 
         # Calculate the integral contribution from the previous time level.
-        functional_value = add(functional_value, trapezoidal(integral_interval, 0))
+        functional_value = _add(functional_value, trapezoidal(integral_interval, 0))
 
         # On the final occasion, also calculate the contribution from the
         # current time leve.
         if adjointer.finished and timestep == adjointer.timestep_count - 1: # we're at the end, and need to add the extra terms
                                                                             # associated with that
           final_interval = slice(timestep_start, timestep_end)
-          functional_value = add(functional_value, trapezoidal(final_interval, 1))
+          functional_value = _add(functional_value, trapezoidal(final_interval, 1))
 
       else:
         # Point evaluation.
@@ -406,7 +406,7 @@ def _coeffs(adjointer, form):
           for coeff in ufl.algorithms.extract_coefficients(form) 
           if (hasattr(coeff, "function_space")) and adjointer.variable_known(adjglobals.adj_variables[coeff])]
 
-def add(value, increment):
+def _add(value, increment):
   # Add increment to value correctly taking into account None.
   if increment is None:
     return value
