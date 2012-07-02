@@ -1,5 +1,5 @@
 from assembly import assemble, assemble_system
-from functional import FinalFunctional, TimeFunctional, Functional
+from functional import TimeFunctional, Functional
 from parameter import InitialConditionParameter, ScalarParameter, ScalarParameters
 from lusolver import LUSolver
 from matrix_free import down_cast, AdjointPETScKrylovSolver, AdjointKrylovMatrix

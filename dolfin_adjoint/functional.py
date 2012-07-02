@@ -8,69 +8,6 @@ import adjglobals
 import adjlinalg
 from timeforms import NoTime, StartTimeConstant, FinishTimeConstant
 
-class FinalFunctional(libadjoint.Functional):
-  '''This class implements the libadjoint.Functional abstract base class for the Dolfin adjoint.
-  It takes in a form that evaluates the functional at the final timestep, and implements the 
-  necessary routines such as calling the functional  and taking its derivative.'''
-
-  def __init__(self, form, name=None):
-
-    self.form = form
-    self.activated = False
-    self.name = name
-
-  def __call__(self, adjointer, dependencies, values):
-
-    dolfin_dependencies=[dep for dep in ufl.algorithms.extract_coefficients(self.form) if hasattr(dep, "function_space")]
-    # Remove dependencies for which no equation is registered 
-    for dep in dolfin_dependencies:
-        if not adjointer.variable_known(adjglobals.adj_variables[dep]):
-            dolfin_dependencies.remove(dep)
-
-    dolfin_values=[val.data for val in values]
-
-    return dolfin.assemble(dolfin.replace(self.form, dict(zip(dolfin_dependencies, dolfin_values))))
-
-  def derivative(self, adjointer, variable, dependencies, values):
-
-    # Find the dolfin Function corresponding to variable.
-    dolfin_variable = values[dependencies.index(variable)].data
-
-    dolfin_dependencies = [dep for dep in ufl.algorithms.extract_coefficients(self.form) if hasattr(dep, "function_space")]
-    # Remove dependencies for which no equation is registered 
-    for dep in dolfin_dependencies:
-        if not adjointer.variable_known(adjglobals.adj_variables[dep]):
-            dolfin_dependencies.remove(dep)
-
-    dolfin_values = [val.data for val in values]
-
-    current_form = dolfin.replace(self.form, dict(zip(dolfin_dependencies, dolfin_values)))
-    test = dolfin.TestFunction(dolfin_variable.function_space())
-
-    return adjlinalg.Vector(dolfin.derivative(current_form, dolfin_variable, test))
-
-  def dependencies(self, adjointer, timestep):
-
-    if self.activated is False:
-      deps = [adjglobals.adj_variables[coeff] for coeff in ufl.algorithms.extract_coefficients(self.form) if hasattr(coeff, "function_space")] 
-      # If there is no equation annotated for a dependency variable we remove it from the dependency list
-      for dep in deps:
-          if not adjointer.variable_known(dep):
-              deps.remove(dep)
-               
-      self.activated = True
-    else:
-      deps = []
-    
-    return deps
-
-  def __str__(self):
-    if self.name is not None:
-      return self.name
-    else:
-      return hashlib.md5(str(self.form)).hexdigest()
-
-
 class TimeFunctional(libadjoint.Functional):
   '''This class implements the libadjoint.Functional abstract base class for the Dolfin adjoint for implementing functionals of the form:
       \int_{t=0..T} form(t) + final_form(T).
@@ -334,6 +271,8 @@ class Functional(libadjoint.Functional):
       end.iteration = end.iteration_count(adjointer) - 1
     else:
       start.timestep = timestep - 1
+      print "timestep: ", timestep
+      print "start: ", start
       start.iteration = start.iteration_count(adjointer) - 1
       end.timestep = timestep
       end.iteration = end.iteration_count(adjointer) - 1
