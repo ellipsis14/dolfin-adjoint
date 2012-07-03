@@ -53,7 +53,9 @@ class Functional(libadjoint.Functional):
     ''' Perform the substitution of the dependencies and values
     provided. This is common to __call__ and __derivative__'''
 
-    deps={str(dep): val.data for dep, val in zip(dependencies, values)}
+    deps = {}
+    for dep, val in zip(dependencies, values):
+      deps[str(dep)] = val.data
 
     functional_value = None
     final_time = _time_levels(adjointer, adjointer.timestep_count - 1)[1]
