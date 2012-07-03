@@ -73,16 +73,19 @@ class Function(dolfin.Function):
     For more details, see :doc:`the dolfin-adjoint documentation </documentation/misc>`.'''
 
   def __init__(self, *args, **kwargs):
-    if "name" in kwargs:
-      self.adj_name = kwargs["name"]
-      del kwargs["name"]
-
     annotate = False
     if 'annotate' in kwargs:
       annotate = kwargs['annotate']
       del kwargs['annotate']
     if dolfin.parameters["adjoint"]["stop_annotating"]:
       annotate = False
+
+    if "name" in kwargs:
+      self.adj_name = kwargs["name"]
+      if self.adj_name in adjglobals.function_names and annotate:
+        dolfin.info_red("Warning: got duplicate function name %s" % self.adj_name)
+      adjglobals.function_names.add(self.adj_name)
+      del kwargs["name"]
 
     dolfin.Function.__init__(self, *args, **kwargs)
 

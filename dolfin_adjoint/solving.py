@@ -347,6 +347,7 @@ def adj_html(*args, **kwargs):
 def adj_reset():
   adjglobals.adjointer.reset()
   adjglobals.adj_variables.__init__()
+  adjglobals.function_names.__init__()
   
 def define_nonlinear_equation(F, u):
   # Given an F := 0,
@@ -362,10 +363,11 @@ def define_nonlinear_equation(F, u):
 
   return (mass, dolfin.action(mass, u) - F)
 
-def adj_checkpointing(strategy, steps, snaps_on_disk, snaps_in_ram, verbose=False):
-  dolfin.parameters["adjoint"]["record_all"] = False
+def adj_checkpointing(strategy, steps, snaps_on_disk, snaps_in_ram, verbose=False, replay = False, replay_comparison_tolerance = 1e-10):
+  dolfin.parameters["adjoint"]["record_all"] = replay
   adjglobals.adjointer.set_checkpoint_strategy(strategy)
   adjglobals.adjointer.set_revolve_options(steps, snaps_on_disk, snaps_in_ram, verbose)
+  adjglobals.adjointer.set_revolve_debug_options(replay, replay_comparison_tolerance)
 
 def register_initial_conditions(coeffdeps, linear, var=None):
   for coeff, dep in coeffdeps:
@@ -405,15 +407,21 @@ def register_initial_condition(coeff, dep):
   if dolfin.parameters["adjoint"]["record_all"]:
     adjglobals.adjointer.record_variable(dep, libadjoint.MemoryStorage(adjlinalg.Vector(coeff)))
 
-  initial_eq = libadjoint.Equation(dep, blocks=[identity_block], targets=[dep], rhs=adjrhs.RHS(init_rhs))
-  adjglobals.adjointer.register_equation(initial_eq)
+  rhs = adjrhs.RHS(init_rhs)
+  initial_eq = libadjoint.Equation(dep, blocks=[identity_block], targets=[dep], rhs=rhs)
+  cs = adjglobals.adjointer.register_equation(initial_eq)
   assert adjglobals.adjointer.variable_known(dep)
+  do_checkpoint(cs, dep, rhs)
 
 def do_checkpoint(cs, var, rhs):
   if cs == int(libadjoint.constants.adj_constants["ADJ_CHECKPOINT_STORAGE_MEMORY"]):
     for coeff in adjglobals.adj_variables.keys(): 
       dep = adjglobals.adj_variables[coeff]
+      # Do not checkpoint variables which are (yet) unknown to libadjoint
+      if not adjglobals.adjointer.variable_known(dep):
+          continue
 
+      # Handle the Newton solve case:
       if dep == var:
         # We may need to checkpoint another variable if rhs is a NonlinearRHS and we need
         # to store the initial condition in order to replay the solve.
@@ -421,12 +429,20 @@ def do_checkpoint(cs, var, rhs):
           dep = rhs.ic_var
         else:
           continue
+          for rdep in rhs.dependencies():
+            if rdep.name == dep.name:
+              dep = rdep
+              break
 
       adjglobals.adjointer.record_variable(dep, libadjoint.MemoryStorage(adjlinalg.Vector(coeff), cs=True))
 
   elif cs == int(libadjoint.constants.adj_constants["ADJ_CHECKPOINT_STORAGE_DISK"]):
+
     for coeff in adjglobals.adj_variables.keys(): 
       dep = adjglobals.adj_variables[coeff]
+      # Do not checkpoint variables which are (yet) unknown to libadjoint
+      if not adjglobals.adjointer.variable_known(dep):
+          continue
 
       if dep == var:
         # We may need to checkpoint another variable if rhs is a NonlinearRHS and we need
