@@ -36,6 +36,10 @@ def main(ic, annotate=False):
     end = 0.2
     j = 0
     j += 0.5*float(timestep)*assemble(u_*u_*dx)
+
+    if annotate:
+      adjointer.time.start(0)
+
     while (t <= end):
         solve(F == 0, u, bc, annotate=annotate)
         u_.assign(u, annotate=annotate)
@@ -47,7 +51,8 @@ def main(ic, annotate=False):
         else:
           quad_weight = 1.0
         j += quad_weight*float(timestep)*assemble(u_*u_*dx)
-        adj_inc_timestep()
+        if annotate:
+          adj_inc_timestep(time=t, finished=t>end)
 
     return j, u_
 
@@ -69,7 +74,7 @@ if __name__ == "__main__":
     print "Running adjoint ... "
 
     timestep = Constant(1.0/n)
-    J = TimeFunctional(forward*forward*dx, float(timestep))
+    J = Functional(forward*forward*dx*dt)
     dJdic = compute_gradient(J, InitialConditionParameter(ic), forget=False)
 
     def Jfunc(ic):

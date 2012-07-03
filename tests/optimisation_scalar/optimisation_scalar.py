@@ -35,7 +35,7 @@ if __name__ == "__main__":
   nu = Constant(0.0001)
   main(nu)
 
-  J = FinalFunctional(inner(u, u)*dx)
+  J = Functional(inner(u, u)*dx*dt[FINISH_TIME])
 
   def Jhat(nu): 
     u.assign(ic)

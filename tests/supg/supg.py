@@ -138,7 +138,7 @@ if __name__ == "__main__":
 
   info_blue("Running adjoint ... ")
 
-  J = FinalFunctional(u*u*dx)
+  J = Functional(u*u*dx*dt[FINISH_TIME])
   param = ScalarParameter(f)
   dJdf = compute_gradient(J, param, forget=False)
 

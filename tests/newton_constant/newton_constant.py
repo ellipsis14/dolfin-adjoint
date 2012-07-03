@@ -29,16 +29,16 @@ def main(ic, nu):
 
 if __name__ == "__main__":
   ic = project(Expression("sin(2*pi*x[0])"),  V)
-  nu = Constant(0.0001)
+  nu = Constant(0.0001, name="Nu")
 
   u = main(ic, nu)
 
-  J = FinalFunctional(inner(u, u)*dx)
-  dJdnu = compute_gradient(J, ScalarParameter(nu))
+  J = Functional(inner(u, u)*dx*dt[FINISH_TIME] + inner(nu, nu)*dx*dt[FINISH_TIME])
+  dJdnu = compute_gradient(J, ScalarParameter("Nu"))
 
   def Jhat(nu):
     u = main(ic, nu)
-    return assemble(inner(u, u)*dx)
+    return assemble(inner(u, u)*dx + inner(nu, nu)*dx)
 
   minconv = test_scalar_parameter_adjoint(Jhat, nu, dJdnu)
 
