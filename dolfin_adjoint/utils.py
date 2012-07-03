@@ -30,13 +30,13 @@ def replay_dolfin(forget=False, tol=0.0, stop=False):
 
   return success
 
-def convergence_order(errors):
+def convergence_order(errors, base = 2):
   import math
 
   orders = [0.0] * (len(errors)-1)
   for i in range(len(errors)-1):
     try:
-      orders[i] = math.log(errors[i]/errors[i+1], 2)
+      orders[i] = math.log(errors[i]/errors[i+1], base)
     except ZeroDivisionError:
       orders[i] = numpy.nan
 
@@ -412,7 +412,7 @@ def test_scalar_parameters_adjoint(J, a, dJda, seed=0.1):
 
   return min(convergence_order(with_gradient))
 
-def test_gradient_array(J, dJdx, x, seed = 0.01, perturbation_direction = None):
+def test_gradient_array(J, dJdx, x, seed = 0.01, perturbation_direction = None, random_seed = 118):
   '''Checks the correctness of the derivative dJ.
      x must be an array that specifies at which point in the parameter space
      the gradient is to be checked, and dJdx must be an array containing the gradient. 
@@ -422,6 +422,10 @@ def test_gradient_array(J, dJdx, x, seed = 0.01, perturbation_direction = None):
      series remainder, which should be 2 if the gradient is correct.'''
 
   import random
+  # Set the random seed to a constant. This is important for parallel environments to ensure that the 
+  # perturbation direction is consistent between all processors.
+  random.seed(random_seed)
+
   # We will compute the gradient of the functional with respect to the initial condition,
   # and check its correctness with the Taylor remainder convergence test.
   info("Running Taylor remainder convergence analysis to check the gradient ... ")
