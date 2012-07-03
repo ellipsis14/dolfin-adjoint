@@ -296,7 +296,8 @@ if __name__ == "__main__":
     # Use elastic/viscous traction on vertical plane as goal
     (sigma0, sigma1, v, gamma) = split(z)
     sigma = sigma0 + sigma1
-    J = FinalFunctional(inner(sigma0[2], sigma0[2])*dx)
+    dtm = TimeMeasure()
+    J = Functional(inner(sigma0[2], sigma0[2])*dx*dtm[FINISH_TIME])
     param = ScalarParameter(amplitude)
     adjointer = adjglobals.adjointer
 

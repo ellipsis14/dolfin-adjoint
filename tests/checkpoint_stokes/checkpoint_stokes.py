@@ -122,7 +122,7 @@ if __name__ == "__main__":
     adj_html("stokes_adjoint.html", "adjoint")
 
     print "Running adjoint ... "
-    J = FinalFunctional(T*T*dx)
+    J = Functional(T*T*dx*dt[FINISH_TIME])
     for (adjoint, var) in compute_adjoint(J, forget=False):
       pass
 

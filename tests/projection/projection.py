@@ -22,7 +22,7 @@ if __name__ == "__main__":
   adj_html("projection_forward.html", "forward")
   replay_dolfin()
 
-  J = FinalFunctional(soln*soln*dx)
+  J = Functional(soln*soln*dx*dt[FINISH_TIME])
   Jic = assemble(soln*soln*dx)
   dJdic = compute_gradient(J, InitialConditionParameter(ic), forget=False)
 

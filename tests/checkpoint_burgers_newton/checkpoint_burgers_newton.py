@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
   adj_check_checkpoints()
 
-  J = FinalFunctional(inner(u, u)*dx)
+  J = Functional(inner(u,u)*dx*dt[FINISH_TIME])
   dJdnu = compute_gradient(J, ScalarParameter(nu))
 
   parameters["adjoint"]["stop_annotating"] = True

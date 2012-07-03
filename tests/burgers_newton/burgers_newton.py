@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
     print "Running adjoint ... "
 
-    J = FinalFunctional(forward*forward*dx)
+    J = Functional(forward*forward*dx*dt[FINISH_TIME])
     dJdic = compute_gradient(J, InitialConditionParameter(ic), forget=False)
 
     def Jfunc(ic):

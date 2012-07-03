@@ -42,7 +42,7 @@ if __name__ == "__main__":
     ic = project(Expression("sin(2*pi*x[0])"),  V)
     u = Function(ic, name='Velocity')
 
-    J = FinalFunctional(u*u*dx)
+    J = Functional(u*u*dx*dt[FINISH_TIME])
     def Jfunc(ic):
       u.assign(ic)
       main(u, annotate=True)

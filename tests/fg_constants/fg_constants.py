@@ -30,7 +30,7 @@ if __name__ == "__main__":
   ic = project(Expression("x[0]*(x[0]-1)*x[1]*(x[1]-1)"), V)
   soln = main(ic, (a, b), annotate=True)
 
-  J = FinalFunctional(soln*soln*dx)
+  J = Functional(soln*soln*dx*dt[FINISH_TIME])
   Ja = assemble(soln*soln*dx)
   dJda = compute_gradient(J, ScalarParameters((a, b)))
 

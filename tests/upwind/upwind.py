@@ -104,7 +104,7 @@ if __name__ == "__main__":
   if not success:
     sys.exit(1)
 
-  J = FinalFunctional(phi*phi*dx)
+  J = Functional(phi*phi*dx*dt[FINISH_TIME])
   Jkappa = assemble(phi*phi*dx)
   dJdkappa = compute_gradient(J, ScalarParameter(kappa))
 
