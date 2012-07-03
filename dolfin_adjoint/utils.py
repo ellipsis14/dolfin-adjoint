@@ -7,7 +7,6 @@ import numpy
 import constant
 import adjresidual
 import ufl.algorithms
-from solving import adj_html
 
 def replay_dolfin(forget=False, tol=0.0, stop=False):
   if not dolfin.parameters["adjoint"]["record_all"]:
