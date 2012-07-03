@@ -37,19 +37,18 @@ if __name__ == "__main__":
     vec[i] = random.random()
 
   out = main(ic, annotate=True)
-
   success = replay_dolfin()
 
   if not success:
     sys.exit(1)
 
-  J = Functional(out*out*dx*dt[FINISH_TIME])
+  J = Functional(out*out*dx*dt[FINISH_TIME] + ic*ic*dx*dt[START_TIME])
   icparam = InitialConditionParameter("InitialCondition")
   dJdic = compute_gradient(J, icparam)
 
   def J(ic):
     out = main(ic, annotate=False)
-    return assemble(out*out*dx)
+    return assemble(out*out*dx + ic*ic*dx)
 
   minconv = test_initial_condition_adjoint(J, ic, dJdic)
   if minconv < 1.9:
