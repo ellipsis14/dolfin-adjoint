@@ -26,7 +26,7 @@ adj_html("sw_adjoint.html", "adjoint")
 replay_dolfin()
 
 (u,p) = split(state)
-J = TimeFunctional(dot(u, u)*dx, divett.params["dt"], final_form=3.14*dot(state, state)*dx)
+J = Functional(dot(u, u)*dx*dt + 3.14*dot(state, state)*dx*dt[FINISH_TIME])
 for (adj_state, var) in compute_adjoint(J):
   pass
 

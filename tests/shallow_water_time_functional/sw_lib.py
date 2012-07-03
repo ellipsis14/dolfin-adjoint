@@ -149,6 +149,9 @@ def timeloop_theta(M, G, rhs_contr, ufl, ufr, state, params, annotate=True):
     j = 0
     (u_j, p_j) = split(state)
     j += 0.5*dt*assemble(dot(u_j, u_j)*dx)
+    if annotate:
+      adjointer.time.start(t)
+
     while (t < params["finish_time"]):
         t+=dt
 
@@ -161,7 +164,7 @@ def timeloop_theta(M, G, rhs_contr, ufl, ufr, state, params, annotate=True):
 
         state.assign(tmpstate, annotate=annotate)
 
-        # We solve twice, to make sure that TimeFunctional handles multiple-solves-per-timestep correctly
+        # We solve twice, to make sure that Functional handles multiple-solves-per-timestep correctly
         solve(A==rhs, tmpstate, annotate=annotate)
         #solve(A, state.vector(), rhs, "preonly", "lu")
 
@@ -188,7 +191,8 @@ def timeloop_theta(M, G, rhs_contr, ufl, ufr, state, params, annotate=True):
         j += quad_weight*dt*assemble(dot(u_j, u_j)*dx)
 
         # Tell libadjoint about the next timestep
-        adj_inc_timestep()
+        if annotate:
+          adj_inc_timestep(time=t, finished=t >= params["finish_time"])
 
     return j, state # return the state and the functional's time integral contribution at the final time
 
