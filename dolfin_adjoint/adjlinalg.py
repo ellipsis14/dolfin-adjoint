@@ -251,7 +251,6 @@ class Matrix(libadjoint.Matrix):
         # simulation ran further ahead than when the functional was evaluated, or it could be that the
         # functional is set up incorrectly.
         dolfin.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
-        dolfin.info_red("hasattr(b, 'nonlinear_form'): %s" % hasattr(b, 'nonlinear_form'))
       elif isinstance(b.data, dolfin.Function):
 
         assembled_lhs = dolfin.assemble(self.data)

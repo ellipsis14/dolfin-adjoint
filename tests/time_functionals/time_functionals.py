@@ -84,3 +84,10 @@ if __name__ == "__main__":
   dJdic = compute_gradient(J, InitialConditionParameter(u), forget=False)
   # Work out the solution by hand -- it's 3 + 7/4
   assert dJdic.vector().array()[0] == 3.0 + 7.0/4.0
+
+  # Integral over all time, forgetting this time
+  J = Functional(inner(u,u)*dx*dt[0:1])
+  dJdic = compute_gradient(J, InitialConditionParameter(u), forget=True)
+  # Work out the solution by hand -- it's 3
+  assert dJdic.vector().array()[0] == 3.0
+

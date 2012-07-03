@@ -271,8 +271,6 @@ class Functional(libadjoint.Functional):
       end.iteration = end.iteration_count(adjointer) - 1
     else:
       start.timestep = timestep - 1
-      print "timestep: ", timestep
-      print "start: ", start
       start.iteration = start.iteration_count(adjointer) - 1
       end.timestep = timestep
       end.iteration = end.iteration_count(adjointer) - 1

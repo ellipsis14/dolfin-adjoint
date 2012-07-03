@@ -7,6 +7,7 @@ import numpy
 import constant
 import adjresidual
 import ufl.algorithms
+from solving import adj_html
 
 def replay_dolfin(forget=False, tol=0.0, stop=False):
   if not dolfin.parameters["adjoint"]["record_all"]:
@@ -43,6 +44,9 @@ def convergence_order(errors):
   return orders
 
 def compute_adjoint(functional, forget=True):
+
+  for i in range(adjglobals.adjointer.timestep_count):
+    adjglobals.adjointer.set_functional_dependencies(functional, i)
 
   for i in range(adjglobals.adjointer.equation_count)[::-1]:
       (adj_var, output) = adjglobals.adjointer.get_adjoint_solution(i, functional)
@@ -319,6 +323,9 @@ def test_initial_condition_adjoint_cdiff(J, ic, final_adjoint, seed=0.01, pertur
 
 def compute_gradient(J, param, forget=True):
   dJdparam = None
+
+  for i in range(adjglobals.adjointer.timestep_count):
+    adjglobals.adjointer.set_functional_dependencies(J, i)
 
   for i in range(adjglobals.adjointer.equation_count)[::-1]:
     (adj_var, output) = adjglobals.adjointer.get_adjoint_solution(i, J)
