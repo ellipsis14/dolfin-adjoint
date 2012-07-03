@@ -85,6 +85,9 @@ def main(ic, annotate=False):
   T = steps*dt
   import os
   j = 0.5 * dt * assemble((1.0/(4*eps)) * (pow( (-1.0/eps) * u0[1], 2))*dx)
+
+  if annotate:
+    adjointer.time.start(t)
   while (t < T):
       t += dt
       solve(L == 0, u, J=a, solver_parameters=parameters, annotate=annotate)
@@ -98,7 +101,8 @@ def main(ic, annotate=False):
         quad_weight = 1.0
       j += quad_weight * dt * assemble((1.0/(4*eps)) * (pow( (-1.0/eps) * u0[1], 2))*dx)
 
-      adj_inc_timestep()
+      if annotate:
+        adj_inc_timestep(time=t, finished=t>=T)
 
   return u0, j
 
@@ -115,7 +119,8 @@ if __name__ == "__main__":
 
   adj_html("forward.html", "forward")
 
-  J = TimeFunctional((1.0/(4*eps)) * (pow( (-1.0/eps) * forward[1], 2))*dx, dt=dt, verbose=True)
+  dtm = TimeMeasure()
+  J = Functional((1.0/(4*eps)) * (pow( (-1.0/eps) * forward[1], 2))*dx*dtm)
   dJdic = compute_gradient(J, InitialConditionParameter(ic), forget=False)
 
   print "Functional value: ", j

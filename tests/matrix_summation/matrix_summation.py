@@ -37,7 +37,7 @@ if __name__ == "__main__":
     forward_copy = Function(forward)
     print "Running adjoint ... "
 
-    J = FinalFunctional(forward*forward*dx)
+    J = Functional(forward*forward*dx*dt[FINISH_TIME])
     for (adjoint, var) in compute_adjoint(J, forget=False):
       pass
 

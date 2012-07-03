@@ -116,7 +116,7 @@ if __name__ == "__main__":
     adj_html("stokes_adjoint.html", "adjoint")
 
     print "Running adjoint ... "
-    J = FinalFunctional(T*T*dx)
+    J = Functional(T*T*dx*dt[FINISH_TIME])
     Jic = assemble(T*T*dx)
     dJdic = compute_gradient(J, InitialConditionParameter(T), forget=False)
 
