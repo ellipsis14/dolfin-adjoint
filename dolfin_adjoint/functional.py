@@ -99,7 +99,7 @@ class Functional(libadjoint.Functional):
         functional_value = _add(functional_value, trapezoidal(integral_interval, 0))
 
         # On the final occasion, also calculate the contribution from the
-        # current time leve.
+        # current time level.
         if adjointer.finished and timestep == adjointer.timestep_count - 1: # we're at the end, and need to add the extra terms
                                                                             # associated with that
           final_interval = slice(timestep_start, timestep_end)
@@ -108,7 +108,7 @@ class Functional(libadjoint.Functional):
       else:
         # Point evaluation.
 
-        if point_interval.start <= term.time < point_interval.stop:
+        if point_interval.start < term.time < point_interval.stop:
           replace = {}
 
           term_deps = _coeffs(adjointer, term.form)
@@ -119,10 +119,7 @@ class Functional(libadjoint.Functional):
             theta = 1.0 - (term.time - point_interval.start)/(point_interval.stop - point_interval.start)
             replace[term_dep] = theta*deps[str(start)] + (1-theta)*deps[str(end)]
 
-          if functional_value is None:
-            functional_value = dolfin.replace(term.form, replace)
-          else:
-            functional_value += dolfin.replace(term.form, replace)
+          functional_value = _add(functional_value, dolfin.replace(term.form, replace))
 
         # Special case for evaluation at the end of time: we can't pass over to the
         # right-hand timestep, so have to do it here.
@@ -136,10 +133,20 @@ class Functional(libadjoint.Functional):
             end = self.get_vars(adjointer, timestep, term_var)[1]
             replace[term_dep] = deps[str(end)]
 
-          if functional_value is None:
-            functional_value = dolfin.replace(term.form, replace)
-          else:
-            functional_value += dolfin.replace(term.form, replace)
+          functional_value = _add(functional_value, dolfin.replace(term.form, replace))
+
+        # Another special case for the start of a timestep.
+        elif (isinstance(term.time, StartTimeConstant) and timestep == 0) or point_interval.start == term.time:
+          replace = {}
+
+          term_deps = _coeffs(adjointer, term.form)
+          term_vars = _vars(adjointer, term.form)
+
+          for term_dep, term_var in zip(term_deps, term_vars):
+            end = self.get_vars(adjointer, timestep, term_var)[0]
+            replace[term_dep] = deps[str(end)]
+
+          functional_value = _add(functional_value, dolfin.replace(term.form, replace))
     
     return functional_value
 
@@ -173,6 +180,7 @@ class Functional(libadjoint.Functional):
     point_deps = set()
     integral_deps = set()
     final_deps = set()
+    start_deps = set()
 
     levels = _time_levels(adjointer, timestep)
     point_interval=slice(levels[0],levels[1])
@@ -193,17 +201,22 @@ class Functional(libadjoint.Functional):
       else:
         # Point evaluation.
 
-        if point_interval.start <= term.time < point_interval.stop:
+        if point_interval.start < term.time < point_interval.stop:
           point_deps.update(_vars(adjointer, term.form))
 
         # Special case for evaluation at the end of time: we can't pass over to the
         # right-hand timestep, so have to do it here.
         elif (term.time == final_time or isinstance(term.time, FinishTimeConstant)) and point_interval.stop == final_time:
           final_deps.update(_vars(adjointer, term.form))
+
+        # Another special case for evaluation at the START_TIME, or the start of the timestep.
+        elif (isinstance(term.time, StartTimeConstant) and timestep == 0) or point_interval.start == term.time:
+          start_deps.update(_vars(adjointer, term.form))
         
     integral_deps = list(integral_deps)
     point_deps = list(point_deps)
     final_deps = list(final_deps)
+    start_deps = list(start_deps)
 
     # Set the time level of the dependencies:
     
@@ -241,10 +254,13 @@ class Functional(libadjoint.Functional):
 
     # Final deps depend only at the very last value.
     for i in range(len(final_deps)):
-      final_deps[i].timestep = timestep
-      final_deps[i].iteration = final_deps[i].iteration_count(adjointer) - 1
+      final_deps[i] = self.get_vars(adjointer, timestep, final_deps[i])[1]
+
+    # Start deps depend only at the very first value.
+    for i in range(len(start_deps)):
+      start_deps[i] = self.get_vars(adjointer, timestep, start_deps[i])[0]
     
-    deps=set(point_deps).union(set(integral_deps)).union(set(final_deps))
+    deps=set(point_deps).union(set(integral_deps)).union(set(final_deps)).union(set(start_deps))
 
     return list(deps)
 

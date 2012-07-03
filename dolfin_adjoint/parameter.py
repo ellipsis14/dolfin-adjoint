@@ -9,7 +9,14 @@ from adjrhs import adj_get_forward_equation
 import adjresidual
 from constant import get_constant
 
-class InitialConditionParameter(libadjoint.Parameter):
+class DolfinAdjointParameter(libadjoint.Parameter):
+  def inner_adjoint(self, adjointer, adjoint, i, variable):
+    pass
+
+  def partial_derivative(self, adjointer, J, timestep):
+    pass
+
+class InitialConditionParameter(DolfinAdjointParameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
   when one wishes to compute dJ/d(initial condition) in a particular direction (perturbation).'''
   def __init__(self, coeff, perturbation=None):
@@ -41,7 +48,7 @@ class InitialConditionParameter(libadjoint.Parameter):
     else:
       return None
 
-class ScalarParameter(libadjoint.Parameter):
+class ScalarParameter(DolfinAdjointParameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
   when one wishes to compute dJ/da, where a is a single scalar parameter.'''
   def __init__(self, a):
@@ -111,7 +118,7 @@ class ScalarParameter(libadjoint.Parameter):
     diff_form = ufl.algorithms.expand_derivatives(dolfin.derivative(form, get_constant(self.a), dparam))
     return dolfin.assemble(diff_form)
 
-class ScalarParameters(libadjoint.Parameter):
+class ScalarParameters(DolfinAdjointParameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
   when one wishes to compute dJ/dv . delta v, where v is a vector of scalar parameters.'''
   def __init__(self, v, dv=None):

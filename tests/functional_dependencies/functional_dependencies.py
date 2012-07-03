@@ -75,9 +75,7 @@ if __name__ == "__main__":
   # Pointwise evaluation (at a timelevel)
   J = Functional(inner(u,u)*dx*dt[0.5])
   assert J.dependencies(adjointer, 0) == []
-  assert J.dependencies(adjointer, 1)[0] in [u01, u10]
-  assert J.dependencies(adjointer, 1)[1] in [u01, u10]
-  assert J.dependencies(adjointer, 1)[1] != J.dependencies(adjointer, 1)[0]
+  assert J.dependencies(adjointer, 1) == [u01]
 
   # Pointwise evaluation at final time
   J = Functional(inner(u,u)*dx*dt[1.0])
@@ -88,6 +86,16 @@ if __name__ == "__main__":
   J = Functional(inner(u,u)*dx*dt[FINISH_TIME])
   assert J.dependencies(adjointer, 0) == []
   assert J.dependencies(adjointer, 1) == [u10]
+
+  # Pointwise evaluation at start time
+  J = Functional(inner(u,u)*dx*dt[0.0])
+  assert J.dependencies(adjointer, 0) == [u00]
+  assert J.dependencies(adjointer, 1) == []
+
+  # Pointwise evaluation at start time, symbolic
+  J = Functional(inner(u,u)*dx*dt[START_TIME])
+  assert J.dependencies(adjointer, 0) == [u00]
+  assert J.dependencies(adjointer, 1) == []
 
   # Integral over all time  
   J = Functional(inner(u,u)*dx*dt[0:1])
@@ -138,3 +146,13 @@ if __name__ == "__main__":
   J = Functional(inner(u,u)*dx*dt[FINISH_TIME])
   assert adjointer.evaluate_functional(J, 0) == 0.0
   assert adjointer.evaluate_functional(J, 1) == 1.0
+
+  # Pointwise evaluation at start time
+  J = Functional(inner(u,u)*dx*dt[0.0])
+  assert adjointer.evaluate_functional(J, 0) == 0.0
+  assert adjointer.evaluate_functional(J, 1) == 0.0
+
+  # Pointwise evaluation at final time, symbolic
+  J = Functional(inner(u,u)*dx*dt[START_TIME])
+  assert adjointer.evaluate_functional(J, 0) == 0.0
+  assert adjointer.evaluate_functional(J, 1) == 0.0
