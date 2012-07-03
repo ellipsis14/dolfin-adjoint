@@ -15,8 +15,12 @@ def get_global(m):
     elif type(m) in (function.Function, functions.function.Function):
         m_v = m.vector()
         m_a = cpp.DoubleArray(m.vector().size())
-        m.vector().gather(m_a, numpy.arange(m_v.size(), dtype='I'))
-        return numpy.array(m_a.array())
+        try:
+            m.vector().gather(m_a, numpy.arange(m_v.size(), dtype='I'))
+            return numpy.array(m_a.array())
+        except TypeError:
+            m_a = m.vector().gather(numpy.arange(m_v.size(), dtype='I'))
+            return m_a 
     else:
         raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
 
