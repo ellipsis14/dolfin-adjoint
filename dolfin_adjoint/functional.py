@@ -162,6 +162,12 @@ class Functional(libadjoint.Functional):
 
     return (start, end)
 
+  def get_form(self, adjointer, timestep):
+    deps = self.dependencies(adjointer, timestep)
+    values = [adjointer.get_variable_value(dep) for dep in deps]
+    form = self._substitute_form(adjointer, timestep, deps, values)
+    return form
+
   def dependencies(self, adjointer, timestep):
 
     point_deps = set()

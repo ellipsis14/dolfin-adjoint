@@ -323,6 +323,7 @@ def test_initial_condition_adjoint_cdiff(J, ic, final_adjoint, seed=0.01, pertur
 
 def compute_gradient(J, param, forget=True):
   dJdparam = None
+  last_timestep = adjglobals.adjointer.timestep_count
 
   for i in range(adjglobals.adjointer.timestep_count):
     adjglobals.adjointer.set_functional_dependencies(J, i)
@@ -335,10 +336,13 @@ def compute_gradient(J, param, forget=True):
     fwd_var = libadjoint.Variable(adj_var.name, adj_var.timestep, adj_var.iteration)
 
     out = param.inner_adjoint(adjglobals.adjointer, output.data, i, fwd_var)
-    if dJdparam is None:
-      dJdparam = out
-    elif dJdparam is not None and out is not None:
-      dJdparam += out
+    dJdparam = _add(dJdparam, out)
+
+    if last_timestep > adj_var.timestep:
+      # We have hit a new timestep, and need to compute this timesteps' \partial J/\partial m contribution
+      last_timestep = adj_var.timestep
+      out = param.partial_derivative(adjglobals.adjointer, J, adj_var.timestep)
+      dJdparam = _add(dJdparam, out)
 
     if forget is None:
       pass
@@ -605,3 +609,13 @@ def estimate_error(J, forget=True):
     i = i - 1
 
   return err
+
+def _add(value, increment):
+  # Add increment to value correctly taking into account None.
+  if increment is None:
+    return value
+  elif value is None:
+    return increment
+  else:
+    return value+increment
+

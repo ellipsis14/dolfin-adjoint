@@ -73,8 +73,9 @@ class ScalarParameter(libadjoint.Parameter):
     if form is not None:
       form = -form
 
-      fn_space = ufl.algorithms.extract_arguments(form)[0].function_space()
-      dparam = dolfin.Function(dolfin.FunctionSpace(fn_space.mesh(), "R", 0))
+      mesh = ufl.algorithms.extract_arguments(form)[0].function_space().mesh()
+      fn_space = dolfin.FunctionSpace(mesh, "R", 0)
+      dparam = dolfin.Function(fn_space)
       dparam.vector()[:] = 1.0
 
       diff_form = ufl.algorithms.expand_derivatives(dolfin.derivative(form, get_constant(self.a), dparam))
@@ -91,6 +92,24 @@ class ScalarParameter(libadjoint.Parameter):
         return out
       else:
         return None # dF/dm is zero, return None
+
+  def partial_derivative(self, adjointer, J, timestep):
+    form = J.get_form(adjointer, timestep)
+
+    # OK. Now that we have the form for the functional at this timestep, let's differentiate it with respect to
+    # my dear Constant, and be done.
+    for coeff in ufl.algorithms.extract_coefficients(form):
+      try:
+        fn_space = coeff.function_space()
+        break
+      except:
+        pass
+
+    dparam = dolfin.Function(fn_space)
+    dparam.vector()[:] = 1.0
+
+    diff_form = ufl.algorithms.expand_derivatives(dolfin.derivative(form, get_constant(self.a), dparam))
+    return dolfin.assemble(diff_form)
 
 class ScalarParameters(libadjoint.Parameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
