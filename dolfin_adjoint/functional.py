@@ -380,8 +380,8 @@ def patch_ufl_form():
         return action(self, coefficient)
     return NotImplemented
 
-  from dolfin import UnitInterval, FunctionSpace, Function, dx
-  mesh = UnitInterval(5)
+  from dolfin import UnitSquare, FunctionSpace, Function, dx
+  mesh = UnitSquare(2, 2)
   V = FunctionSpace(mesh, "CG", 1)
   f = Function(V)
   try:
