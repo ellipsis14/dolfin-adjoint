@@ -36,6 +36,7 @@ def compute_propagator_matrix(gst):
   for i in range(1, gst.ncv):
     (sigma, u, v) = gst.get_gst(i, return_vectors=True)
     (u, v) = (u.vector().array(), v.vector().array())
+
     sum_mat = sigma * numpy.outer(u, v)
     mat += sum_mat
 

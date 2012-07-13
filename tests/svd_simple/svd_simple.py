@@ -24,7 +24,7 @@ if __name__ == "__main__":
   soln = main(ic, annotate=True)
 
   svd = compute_gst(ic, soln, 1)
-  (sigma, error) = svd.get_svd(0, return_error=True)
+  (sigma, error) = svd.get_gst(0, return_error=True)
 
   print "Maximal singular value: ", (sigma, error)
 

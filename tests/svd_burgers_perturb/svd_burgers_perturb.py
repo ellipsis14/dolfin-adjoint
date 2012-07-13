@@ -56,7 +56,7 @@ if __name__ == "__main__":
     ic.vector()[:] = ic_copy.vector()
 
     svd = compute_gst("State", "State", nsv=1)
-    (sigma, u, v) = svd.get_svd(0, return_vectors=True)
+    (sigma, u, v) = svd.get_gst(0, return_vectors=True)
 
     ic_norm = sqrt(assemble(inner(v, v)*dx))
 
