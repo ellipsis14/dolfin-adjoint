@@ -55,7 +55,7 @@ if __name__ == "__main__":
     ic = forward
     ic.vector()[:] = ic_copy.vector()
 
-    svd = adj_compute_propagator_svd("State", "State", nsv=1)
+    svd = compute_gst("State", "State", nsv=1)
     (sigma, u, v) = svd.get_svd(0, return_vectors=True)
 
     ic_norm = sqrt(assemble(inner(v, v)*dx))

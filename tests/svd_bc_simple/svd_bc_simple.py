@@ -36,7 +36,7 @@ if __name__ == "__main__":
   ic = project(Expression("x[0]*(x[0]-1)*x[1]*(x[1]-1)"), V)
   soln = main(ic, annotate=True)
 
-  svd = adj_compute_propagator_svd(ic, soln, 1)
+  svd = compute_gst(ic, soln, 1)
   assert svd.ncv >= 1
   (sigma, u, v, error) = svd.get_svd(0, return_vectors=True, return_error=True)
 
