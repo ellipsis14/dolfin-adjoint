@@ -4,6 +4,7 @@ import ufl
 import adjglobals
 import os
 import os.path
+import numpy
 
 class Vector(libadjoint.Vector):
   '''This class implements the libadjoint.Vector abstract base class for the Dolfin adjoint.
