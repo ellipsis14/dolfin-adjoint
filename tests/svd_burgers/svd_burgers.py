@@ -73,10 +73,9 @@ if __name__ == "__main__":
     assert svd.ncv == ndof
 
     mat = compute_propagator_matrix(svd)
-    print mat
     tlm_output = numpy.dot(mat, perturbation.vector().array())
     norm = numpy.linalg.norm(final_tlm.vector().array() - tlm_output)
 
     print "Error norm: ", norm
 
-    assert norm < 1.0e-13
+    assert norm < 1.0e-8
