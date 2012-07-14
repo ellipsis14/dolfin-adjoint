@@ -3,7 +3,7 @@ import adjlinalg
 import libadjoint
 import dolfin
 
-def compute_gst(ic, final, nsv, ic_norm=None, final_norm="mass"):
+def compute_gst(ic, final, nsv, ic_norm="mass", final_norm="mass"):
   ic_var = adjglobals.adj_variables[ic]; ic_var.c_object.timestep = 0; ic_var.c_object.iteration = 0
   final_var = adjglobals.adj_variables[final]
 
@@ -14,7 +14,14 @@ def compute_gst(ic, final, nsv, ic_norm=None, final_norm="mass"):
     v = dolfin.TestFunction(final_fnsp)
     final_mass = dolfin.inner(u, v)*dolfin.dx
     final_norm = adjlinalg.Matrix(final_mass)
-    print "compute_gst: final_norm.__class__ == ", final_norm.__class__
+
+  if ic_norm == "mass":
+    ic_value = adjglobals.adjointer.get_variable_value(ic_var).data
+    ic_fnsp  = ic_value.function_space()
+    u = dolfin.TrialFunction(ic_fnsp)
+    v = dolfin.TestFunction(ic_fnsp)
+    ic_mass = dolfin.inner(u, v)*dolfin.dx
+    ic_norm = adjlinalg.Matrix(ic_mass)
 
   return adjglobals.adjointer.compute_gst(ic_var, ic_norm, final_var, final_norm, nsv)
 
