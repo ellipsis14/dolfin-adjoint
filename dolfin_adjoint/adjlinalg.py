@@ -274,6 +274,14 @@ class Matrix(libadjoint.Matrix):
 
     return x
 
+  def action(self, x, y):
+    assert isinstance(x.data, dolfin.Function)
+    assert isinstance(y.data, dolfin.Function)
+
+    action_form = dolfin.action(self.data, x.data)
+    action_vec  = dolfin.assemble(action_form)
+    y.data.vector()[:] = action_vec
+
   def axpy(self, alpha, x):
     assert isinstance(x.data, ufl.Form)
     assert isinstance(self.data, ufl.Form)
