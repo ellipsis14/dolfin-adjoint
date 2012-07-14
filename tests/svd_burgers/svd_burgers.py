@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
     ndof = V.dim()
     info_blue("Computing the TLM the SVD way ... ")
-    svd = compute_gst("State", "State", nsv=ndof)
+    svd = compute_gst("State", "State", nsv=ndof, ic_norm=None, final_norm=None)
 
     assert svd.ncv == ndof
 

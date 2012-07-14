@@ -23,7 +23,7 @@ def solve_optimal_control(n):
 
     u_d = 1/(2*pi**2)*sin(pi*x[0])*sin(pi*x[1]) 
 
-    J = FinalFunctional((inner(u-u_d, u-u_d))*dx)
+    J = Functional((inner(u-u_d, u-u_d))*dx*dt[FINISH_TIME])
     def Jfunc(m):
       solve_pde(u, V, m)
       return assemble(inner(u-u_d, u-u_d)*dx)
