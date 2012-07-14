@@ -128,7 +128,7 @@ class Vector(libadjoint.Vector):
         other = dolfin.assemble(y.data)
       else:
         other = y.data.vector()
-      return numpy.dot(numpy.array(self.data.vector()), numpy.array(other))
+      return self.data.vector().inner(other)
     else:
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to dot anything else.")
 
