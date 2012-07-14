@@ -364,7 +364,6 @@ def patch_ufl_form():
   import ufl
   from ufl.integral import is_scalar_constant_expression
   from ufl.expr import Expr
-  from timeforms import dt
 
   def patched_form_rmul(self, scalar):
     "Multiply all integrals in form with constant scalar value."
@@ -380,14 +379,7 @@ def patch_ufl_form():
         return action(self, coefficient)
     return NotImplemented
 
-  from dolfin import UnitSquare, FunctionSpace, Function, dx
-  mesh = UnitSquare(2, 2)
-  V = FunctionSpace(mesh, "CG", 1)
-  f = Function(V)
-  try:
-    J = Functional(f*f*dx*dt)
-  except IndexError:
-    ufl.Form.__rmul__ = patched_form_rmul
-    ufl.Form.__mul__ = patched_form_mul
+  ufl.Form.__rmul__ = patched_form_rmul
+  ufl.Form.__mul__ = patched_form_mul
 
 patch_ufl_form()
