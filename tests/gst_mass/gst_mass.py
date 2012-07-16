@@ -36,4 +36,4 @@ if __name__ == "__main__":
   print "L2 norm of v: ", v_l2
   assert near(v_l2, 1.0)
 
-  assert near(sigma, 1.0)
+  assert abs(sigma - 1.0) < 1.0e-15
