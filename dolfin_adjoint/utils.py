@@ -343,13 +343,13 @@ def compute_gradient(J, param, forget=True):
 
     for j in range(len(lparam)):
       out = lparam[j].inner_adjoint(adjglobals.adjointer, output.data, i, fwd_var)
-      dJdparam[j] = _add(dJdparam, out)
+      dJdparam[j] = _add(dJdparam[j], out)
 
       if last_timestep > adj_var.timestep:
         # We have hit a new timestep, and need to compute this timesteps' \partial J/\partial m contribution
         last_timestep = adj_var.timestep
         out = lparam[j].partial_derivative(adjglobals.adjointer, J, adj_var.timestep)
-        dJdparam = _add(dJdparam, out)
+        dJdparam[j] = _add(dJdparam[j], out)
 
     if forget is None:
       pass
