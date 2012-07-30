@@ -5,6 +5,22 @@ import ufl.algorithms
 import adjglobals
 import adjlinalg
 
+def find_previous_variable(var):
+  ''' Returns the previous instance of the given variable. '''
+
+  for timestep in range(var.timestep, -1, -1):
+    prev_var = libadjoint.Variable(var.name, timestep, 0)	
+
+    if adjglobals.adjointer.variable_known(prev_var):
+      prev_var.var.iteration = prev_var.iteration_count(adjglobals.adjointer) - 1 
+
+      if prev_var.timestep == var.timestep and prev_var.iteration == 0:
+        continue
+      else: 
+        return prev_var
+
+  raise libadjoint.exceptions.LibadjointErrorInvalidInputs, 'No previous variable found'
+
 class RHS(libadjoint.RHS):
   '''This class implements the libadjoint.RHS abstract base class for the Dolfin adjoint.
   It takes in a form, and implements the necessary routines such as calling the right-hand side
@@ -103,12 +119,12 @@ class NonlinearRHS(RHS):
     self.ic_var = None
 
     if dolfin.parameters["adjoint"]["fussy_replay"]:
-      can_depend = False
-      if var.timestep > 0:
-        prev_var = libadjoint.Variable(var.name, var.timestep-1, var.iteration)
-        if adjglobals.adjointer.variable_known(prev_var):
-          can_depend = True
-
+      can_depend = True
+      try:
+        prev_var = find_previous_variable(var)
+      except:
+        can_depend = False
+      
       if can_depend:
         self.deps.append(prev_var)
         self.ic_var = prev_var

@@ -43,7 +43,7 @@ class NonlinearVariationalSolver(dolfin.NonlinearVariationalSolver):
 class LinearVariationalProblem(dolfin.LinearVariationalProblem):
   '''This object is overloaded so that solves using this class are automatically annotated,
   so that libadjoint can automatically derive the adjoint and tangent linear models.'''
-  def __init__(self, a, L, u, bcs, *args, **kwargs):
+  def __init__(self, a, L, u, bcs=None, *args, **kwargs):
     dolfin.LinearVariationalProblem.__init__(self, a, L, u, bcs, *args, **kwargs)
     self.a = a
     self.L = L

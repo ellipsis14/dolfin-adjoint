@@ -44,6 +44,9 @@ def main(ic, annotate=False):
     u = Function(V)
     j = 0
     j += 0.5*float(timestep)*assemble(u_*u_*dx)
+    if annotate:
+      adjointer.time.start(t)
+
     while (t <= end):
         solve(a == L, u, bc, annotate=annotate)
 
@@ -56,7 +59,9 @@ def main(ic, annotate=False):
         else:
           quad_weight = 1.0
         j += quad_weight*float(timestep)*assemble(u_*u_*dx)
-        adj_inc_timestep()
+        
+        if annotate:
+          adj_inc_timestep(time=t, finished=t>end)
         #plot(u)
 
     #interactive()
@@ -74,7 +79,7 @@ if __name__ == "__main__":
     print "Running adjoint ... "
 
     timestep = Constant(1.0/n)
-    J = TimeFunctional(forward*forward*dx, float(timestep))
+    J = Functional(forward*forward*dx*dt)
     for (adjoint, var) in compute_adjoint(J, forget=False):
       pass
 

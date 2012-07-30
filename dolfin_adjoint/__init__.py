@@ -23,7 +23,8 @@ import matrix_free
 import functional
 import split_annotation
 import lusolver
-import svd
+import gst
 import function
 import genericmatrix
+import optimisation
 from ui import *

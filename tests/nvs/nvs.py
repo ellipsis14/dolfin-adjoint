@@ -25,11 +25,11 @@ def main(f, annotate=False):
 
 u = main(f, annotate=True)
 replay_dolfin()
-grad = compute_gradient(FinalFunctional(u*u*dx), InitialConditionParameter(f))
+grad = compute_gradient(Functional(u*u*dx*dt[FINISH_TIME] + f*f*dx*dt[START_TIME]), InitialConditionParameter(f))
 
 def J(f):
   u = main(f, annotate=False)
-  return assemble(u*u*dx)
+  return assemble(u*u*dx + f*f*dx)
 
 minconv = test_initial_condition_adjoint(J, f, grad)
 if minconv < 1.9:

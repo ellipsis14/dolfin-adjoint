@@ -7,4 +7,9 @@ adj_params.add("test_derivative", False)
 adj_params.add("fussy_replay", True)
 adj_params.add("stop_annotating", False)
 
+opt_params = Parameters("optimisation")
+opt_params.add("test_gradient", False)
+opt_params.add("test_gradient_seed", 0.0001)
+
 parameters.add(adj_params)
+parameters.add(opt_params)

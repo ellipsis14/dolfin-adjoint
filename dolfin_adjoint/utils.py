@@ -30,19 +30,22 @@ def replay_dolfin(forget=False, tol=0.0, stop=False):
 
   return success
 
-def convergence_order(errors):
+def convergence_order(errors, base = 2):
   import math
 
   orders = [0.0] * (len(errors)-1)
   for i in range(len(errors)-1):
     try:
-      orders[i] = math.log(errors[i]/errors[i+1], 2)
+      orders[i] = math.log(errors[i]/errors[i+1], base)
     except ZeroDivisionError:
       orders[i] = numpy.nan
 
   return orders
 
 def compute_adjoint(functional, forget=True):
+
+  for i in range(adjglobals.adjointer.timestep_count):
+    adjglobals.adjointer.set_functional_dependencies(functional, i)
 
   for i in range(adjglobals.adjointer.equation_count)[::-1]:
       (adj_var, output) = adjglobals.adjointer.get_adjoint_solution(i, functional)
@@ -192,6 +195,7 @@ def test_initial_condition_tlm(J, dJ, ic, seed=0.01, perturbation_direction=None
 
   adj_var = adjglobals.adj_variables[ic]; adj_var.timestep = 0
   if not adjglobals.adjointer.variable_known(adj_var):
+    info_red(str(adj_var) + " not known.")
     raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your initial condition must be the /exact same Function/ as the initial condition used in the forward model.")
 
   # First run the problem unperturbed
@@ -317,7 +321,6 @@ def test_initial_condition_adjoint_cdiff(J, ic, final_adjoint, seed=0.01, pertur
   return min(convergence_order(with_gradient))
 
 def compute_gradient(J, param, forget=True):
-
   try:
     scalar = False
     dJdparam = [None for i in range(len(param))]
@@ -326,6 +329,10 @@ def compute_gradient(J, param, forget=True):
     scalar = True
     dJdparam = [None]
     lparam = [param]
+  last_timestep = adjglobals.adjointer.timestep_count
+
+  for i in range(adjglobals.adjointer.timestep_count):
+    adjglobals.adjointer.set_functional_dependencies(J, i)
 
   for i in range(adjglobals.adjointer.equation_count)[::-1]:
     (adj_var, output) = adjglobals.adjointer.get_adjoint_solution(i, J)
@@ -336,10 +343,13 @@ def compute_gradient(J, param, forget=True):
 
     for j in range(len(lparam)):
       out = lparam[j].inner_adjoint(adjglobals.adjointer, output.data, i, fwd_var)
-      if dJdparam[j] is None:
-        dJdparam[j] = out
-      elif dJdparam[j] is not None and out is not None:
-        dJdparam[j] += out
+      dJdparam[j] = _add(dJdparam, out)
+
+      if last_timestep > adj_var.timestep:
+        # We have hit a new timestep, and need to compute this timesteps' \partial J/\partial m contribution
+        last_timestep = adj_var.timestep
+        out = lparam[j].partial_derivative(adjglobals.adjointer, J, adj_var.timestep)
+        dJdparam = _add(dJdparam, out)
 
     if forget is None:
       pass
@@ -423,6 +433,60 @@ def test_scalar_parameters_adjoint(J, a, dJda, seed=0.1):
 
   return min(convergence_order(with_gradient))
 
+def test_gradient_array(J, dJdx, x, seed = 0.01, perturbation_direction = None, random_seed = 118):
+  '''Checks the correctness of the derivative dJ.
+     x must be an array that specifies at which point in the parameter space
+     the gradient is to be checked, and dJdx must be an array containing the gradient. 
+     The function J(x) must return the functional value. 
+
+     This function returns the order of convergence of the Taylor
+     series remainder, which should be 2 if the gradient is correct.'''
+
+  import random
+  # Set the random seed to a constant. This is important for parallel environments to ensure that the 
+  # perturbation direction is consistent between all processors.
+  random.seed(random_seed)
+
+  # We will compute the gradient of the functional with respect to the initial condition,
+  # and check its correctness with the Taylor remainder convergence test.
+  info("Running Taylor remainder convergence analysis to check the gradient ... ")
+
+  # First run the problem unperturbed
+  j_direct = J(x)
+
+  # Randomise the perturbation direction:
+  if perturbation_direction is None:
+    perturbation_direction = x.copy()
+    for i in range(len(x)):
+      perturbation_direction[i] = random.random()
+
+  # Run the forward problem for various perturbed initial conditions
+  functional_values = []
+  perturbations = []
+  perturbation_sizes = [seed/(2**i) for i in range(5)]
+  for perturbation_size in perturbation_sizes:
+    perturbation = perturbation_direction.copy() * perturbation_size
+    perturbations.append(perturbation)
+
+    perturbed_x = x.copy() + perturbation 
+    functional_values.append(J(perturbed_x))
+
+  # First-order Taylor remainders (not using adjoint)
+  no_gradient = [abs(perturbed_j - j_direct) for perturbed_j in functional_values]
+
+  info("Absolute functional evaluation differences: %s" % str(no_gradient))
+  info("Convergence orders for Taylor remainder without adjoint information (should all be 1): %s" % str(convergence_order(no_gradient)))
+
+  with_gradient = []
+  for i in range(len(perturbations)):
+      remainder = abs(functional_values[i] - j_direct - numpy.dot(perturbations[i], dJdx))
+      with_gradient.append(remainder)
+
+  info("Absolute functional evaluation differences with adjoint: %s" % str(with_gradient))
+  info("Convergence orders for Taylor remainder with adjoint information (should all be 2): %s" % str(convergence_order(with_gradient)))
+
+  return min(convergence_order(with_gradient))
+
 def taylor_test(J, m, Jm, dJdm, seed=None, perturbation_direction=None, value=None):
   '''J must be a function that takes in a parameter value m and returns the value
      of the functional:
@@ -441,7 +505,7 @@ def taylor_test(J, m, Jm, dJdm, seed=None, perturbation_direction=None, value=No
 
   def get_const(val):
     if isinstance(val, str):
-      return float(constant.constants[val])
+      return float(constant.constant_values[val])
     else:
       return float(val)
 
@@ -559,3 +623,13 @@ def estimate_error(J, forget=True):
     i = i - 1
 
   return err
+
+def _add(value, increment):
+  # Add increment to value correctly taking into account None.
+  if increment is None:
+    return value
+  elif value is None:
+    return increment
+  else:
+    return value+increment
+

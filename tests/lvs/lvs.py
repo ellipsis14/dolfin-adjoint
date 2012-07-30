@@ -19,6 +19,7 @@ def main(f, annotate=False):
   bcs = None
 
   problem = LinearVariationalProblem(a, L, u, bcs)
+  problem = LinearVariationalProblem(a, L, u)
   solver = LinearVariationalSolver(problem)
   solver.solve(annotate=annotate)
 
@@ -27,7 +28,7 @@ def main(f, annotate=False):
 u = main(f, annotate=True)
 replay_dolfin()
 
-grad = compute_gradient(FinalFunctional(u*u*dx), InitialConditionParameter(f))
+grad = compute_gradient(Functional(u*u*dx*dt[FINISH_TIME]), InitialConditionParameter(f))
 
 def J(f):
   u = main(f, annotate=False)

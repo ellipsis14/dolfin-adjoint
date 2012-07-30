@@ -1,6 +1,7 @@
 import dolfin
 
-constants = {}
+constant_values = {}
+constant_objects = {}
 
 class Constant(dolfin.Constant):
   '''The Constant class is overloaded so that you can give :py:class:`Constants` *names*. For example,
@@ -18,4 +19,11 @@ class Constant(dolfin.Constant):
     dolfin.Constant.__init__(self, value, cell)
     if name is not None:
       self.adj_name = name
-      constants[name] = value
+      constant_values[name] = value
+      constant_objects[name] = self
+
+def get_constant(a):
+  if isinstance(a, Constant):
+    return a
+  else:
+    return constant_objects[a]

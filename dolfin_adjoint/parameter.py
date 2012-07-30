@@ -7,8 +7,16 @@ import adjlinalg
 import adjglobals
 from adjrhs import adj_get_forward_equation
 import adjresidual
+from constant import get_constant
 
-class InitialConditionParameter(libadjoint.Parameter):
+class DolfinAdjointParameter(libadjoint.Parameter):
+  def inner_adjoint(self, adjointer, adjoint, i, variable):
+    pass
+
+  def partial_derivative(self, adjointer, J, timestep):
+    pass
+
+class InitialConditionParameter(DolfinAdjointParameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
   when one wishes to compute dJ/d(initial condition) in a particular direction (perturbation).'''
   def __init__(self, coeff, perturbation=None):
@@ -40,7 +48,7 @@ class InitialConditionParameter(libadjoint.Parameter):
     else:
       return None
 
-class ScalarParameter(libadjoint.Parameter):
+class ScalarParameter(DolfinAdjointParameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
   when one wishes to compute dJ/da, where a is a single scalar parameter.'''
   def __init__(self, a):
@@ -55,21 +63,10 @@ class ScalarParameter(libadjoint.Parameter):
       dparam = dolfin.Function(dolfin.FunctionSpace(fn_space.mesh(), "R", 0))
       dparam.vector()[:] = 1.0
 
-      if isinstance(self.a, dolfin.Constant):
-        diff_form = dolfin.derivative(form, self.a, dparam)
-      elif isinstance(self.a, str):
-        diff_form = None
-        for coeff in ufl.algorithms.extract_coefficients(form):
-          if hasattr(coeff, "adj_name"):
-            if coeff.adj_name == self.a:
-              diff_form = dolfin.derivative(form, coeff, dparam)
-              break
+      diff_form = ufl.algorithms.expand_derivatives(dolfin.derivative(form, get_constant(self.a), dparam))
 
-        if diff_form is None:
-          return None
-
-      else:
-        raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to handle any other types!")
+      if diff_form is None:
+        return None
 
       return adjlinalg.adjlinalg.Vector(diff_form)
     else:
@@ -83,33 +80,53 @@ class ScalarParameter(libadjoint.Parameter):
     if form is not None:
       form = -form
 
-      fn_space = ufl.algorithms.extract_arguments(form)[0].function_space()
-      dparam = dolfin.Function(dolfin.FunctionSpace(fn_space.mesh(), "R", 0))
+      mesh = ufl.algorithms.extract_arguments(form)[0].function_space().mesh()
+      fn_space = dolfin.FunctionSpace(mesh, "R", 0)
+      dparam = dolfin.Function(fn_space)
       dparam.vector()[:] = 1.0
 
-      if isinstance(self.a, dolfin.Constant):
-        diff_form = dolfin.derivative(form, self.a, dparam)
-      elif isinstance(self.a, str):
-        diff_form = None
-        for coeff in ufl.algorithms.extract_coefficients(form):
-          if hasattr(coeff, "adj_name"):
-            if coeff.adj_name == self.a:
-              diff_form = dolfin.derivative(form, coeff, dparam)
-              break
+      diff_form = ufl.algorithms.expand_derivatives(dolfin.derivative(form, get_constant(self.a), dparam))
 
-        if diff_form is None:
-          return None
+      if diff_form is None:
+        return None
 
+      # Let's see if the form actually depends on the parameter m
+      if diff_form.integrals() != ():
+        dFdm = dolfin.assemble(diff_form) # actually - dF/dm
+        assert isinstance(dFdm, dolfin.GenericVector)
+
+        out = dFdm.inner(adjoint.vector())
+        return out
       else:
-        raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to handle any other types!")
+        return None # dF/dm is zero, return None
 
-      dFdm = dolfin.assemble(diff_form) # actually - dF/dm
-      assert isinstance(dFdm, dolfin.GenericVector)
+  def partial_derivative(self, adjointer, J, timestep):
+    form = J.get_form(adjointer, timestep)
 
-      out = dFdm.inner(adjoint.vector())
-      return out
+    if form is None:
+      return None
 
-class ScalarParameters(libadjoint.Parameter):
+    # OK. Now that we have the form for the functional at this timestep, let's differentiate it with respect to
+    # my dear Constant, and be done.
+    for coeff in ufl.algorithms.extract_coefficients(form):
+      try:
+        mesh = coeff.function_space().mesh()
+        fn_space = dolfin.FunctionSpace(mesh, "R", 0)
+        break
+      except:
+        pass
+
+    dparam = dolfin.Function(fn_space)
+    dparam.vector()[:] = 1.0
+
+    d = dolfin.derivative(form, get_constant(self.a), dparam)
+    d = ufl.algorithms.expand_derivatives(d)
+    if d.integrals() != ():
+      return dolfin.assemble(d)
+    else:
+      return None
+
+class ScalarParameters(DolfinAdjointParameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
   when one wishes to compute dJ/dv . delta v, where v is a vector of scalar parameters.'''
   def __init__(self, v, dv=None):

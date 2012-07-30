@@ -4,6 +4,7 @@ import ufl
 import adjglobals
 import os
 import os.path
+import numpy
 
 class Vector(libadjoint.Vector):
   '''This class implements the libadjoint.Vector abstract base class for the Dolfin adjoint.
@@ -127,7 +128,7 @@ class Vector(libadjoint.Vector):
         other = dolfin.assemble(y.data)
       else:
         other = y.data.vector()
-      return numpy.dot(numpy.array(self.data.vector()), numpy.array(other))
+      return self.data.vector().inner(other)
     else:
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to dot anything else.")
 
@@ -251,7 +252,6 @@ class Matrix(libadjoint.Matrix):
         # simulation ran further ahead than when the functional was evaluated, or it could be that the
         # functional is set up incorrectly.
         dolfin.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
-        dolfin.info_red("hasattr(b, 'nonlinear_form'): %s" % hasattr(b, 'nonlinear_form'))
       elif isinstance(b.data, dolfin.Function):
 
         assembled_lhs = dolfin.assemble(self.data)
@@ -264,6 +264,7 @@ class Matrix(libadjoint.Matrix):
         dolfin.fem.solving.solve(assembled_lhs, x.data.vector(), assembled_rhs, ksp, pc)
       else:
         if hasattr(b, 'nonlinear_form'): # was a nonlinear solve
+          x.data.vector()[:] = b.nonlinear_u.vector()
           F = dolfin.replace(b.nonlinear_form, {b.nonlinear_u: x.data})
           dolfin.fem.solving.solve(F == 0, x.data, b.nonlinear_bcs, solver_parameters=self.solver_parameters)
         else:
@@ -273,6 +274,14 @@ class Matrix(libadjoint.Matrix):
           dolfin.fem.solving.solve(self.data==b.data, x.data, bcs, solver_parameters=solver_params)
 
     return x
+
+  def action(self, x, y):
+    assert isinstance(x.data, dolfin.Function)
+    assert isinstance(y.data, dolfin.Function)
+
+    action_form = dolfin.action(self.data, x.data)
+    action_vec  = dolfin.assemble(action_form)
+    y.data.vector()[:] = action_vec
 
   def axpy(self, alpha, x):
     assert isinstance(x.data, ufl.Form)

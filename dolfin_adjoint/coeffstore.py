@@ -46,7 +46,6 @@ class CoeffStore(object):
 
   def keys(self):
     for i in self.coeffs:
-      print "out.__class__: ", self.str_to_coeff[i].__class__
       yield self.str_to_coeff[i]
 
   def increment_timestep(self):

@@ -28,7 +28,7 @@ adj_html("sw_forward.html", "forward")
 adj_html("sw_adjoint.html", "adjoint")
 
 replay_dolfin()
-J = FinalFunctional(dot(state, state)*dx)
+J = Functional(dot(state, state)*dx*dt[FINISH_TIME])
 f_direct = assemble(dot(state, state)*dx)
 for (adj_state, var) in compute_adjoint(J):
   pass

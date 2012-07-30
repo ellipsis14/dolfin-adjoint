@@ -40,7 +40,7 @@ def main(dbdt_c, annotate=False):
 if __name__ == "__main__":
   J = main(1.0, annotate=True)
   Jc = assemble(inner(J, J)*dx)
-  dJdc = compute_gradient(FinalFunctional(inner(J, J)*dx), ScalarParameter("dbdt"))
+  dJdc = compute_gradient(Functional(inner(J, J)*dx*dt[FINISH_TIME]), ScalarParameter("dbdt"))
 
   def J(c):
     j = main(c)

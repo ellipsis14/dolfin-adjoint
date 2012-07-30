@@ -68,14 +68,14 @@ if __name__ == "__main__":
 
     ndof = V.dim()
     info_blue("Computing the TLM the SVD way ... ")
-    svd = adj_compute_propagator_svd("State", "State", nsv=ndof)
+    svd = compute_gst("State", "State", nsv=ndof, ic_norm=None, final_norm=None)
 
     assert svd.ncv == ndof
 
-    mat = adj_compute_propagator_matrix(svd)
+    mat = compute_propagator_matrix(svd)
     tlm_output = numpy.dot(mat, perturbation.vector().array())
     norm = numpy.linalg.norm(final_tlm.vector().array() - tlm_output)
 
     print "Error norm: ", norm
 
-    assert norm < 1.0e-13
+    assert norm < 1.0e-8

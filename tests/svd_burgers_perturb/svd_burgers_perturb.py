@@ -54,20 +54,41 @@ if __name__ == "__main__":
 
     ic = forward
     ic.vector()[:] = ic_copy.vector()
+    factor = 0.01
 
-    svd = adj_compute_propagator_svd("State", "State", nsv=1)
-    (sigma, u, v) = svd.get_svd(0, return_vectors=True)
+    svd = compute_gst("State", "State", nsv=1, ic_norm=None, final_norm=None)
+    (sigma, u, v) = svd.get_gst(0, return_vectors=True)
+
+    ic_norm = v.vector().norm("l2")
+
+    perturbed_ic = Function(ic)
+    perturbed_ic.vector().axpy(factor, v.vector())
+    perturbed_soln = main(perturbed_ic, annotate=False)
+
+    final_norm = (perturbed_soln.vector() - forward_copy.vector()).norm("l2")/factor
+    print "Norm of initial perturbation: ", ic_norm
+    print "Norm of final perturbation: ", final_norm
+    ratio = final_norm / ic_norm
+    print "Ratio: ", ratio
+    print "Predicted growth of perturbation: ", sigma
+
+    prediction_error = abs(sigma - ratio)/ratio * 100
+    print "Prediction error: ", prediction_error,  "%"
+    assert prediction_error < 2
+
+    svd = compute_gst("State", "State", nsv=1, ic_norm="mass", final_norm="mass")
+    (sigma, u, v) = svd.get_gst(0, return_vectors=True)
 
     ic_norm = sqrt(assemble(inner(v, v)*dx))
 
     perturbed_ic = Function(ic)
-    perturbed_ic.vector().axpy(1.0, v.vector())
+    perturbed_ic.vector().axpy(factor, v.vector())
     perturbed_soln = main(perturbed_ic, annotate=False)
 
-    soln_perturbation = perturbed_soln - forward_copy
-    final_norm = sqrt(assemble(inner(soln_perturbation, soln_perturbation)*dx))
+    final_norm = sqrt(assemble(inner(perturbed_soln - forward_copy, perturbed_soln - forward_copy)*dx))/factor
     print "Norm of initial perturbation: ", ic_norm
-    print "Norm of final perturbation: ", final_norm
+    print "Norm of final perturbation (after solve): ", final_norm
+    print "Norm of final perturbation (from SVD): ", sqrt(assemble(inner(u, u)*dx))
     ratio = final_norm / ic_norm
     print "Ratio: ", ratio
     print "Predicted growth of perturbation: ", sigma

@@ -207,7 +207,7 @@ if __name__ == "__main__":
   print "Running adjoint ... "
   adj_html("adjoint.html", "adjoint")
 
-  J = FinalFunctional(-(1.0/Nu2)*grad(Tfinal)[1]*ds2)
+  J = Functional(-(1.0/Nu2)*grad(Tfinal)[1]*ds2*dt[FINISH_TIME])
   for (adjoint, var) in compute_adjoint(J, forget=False):
     pass
 
