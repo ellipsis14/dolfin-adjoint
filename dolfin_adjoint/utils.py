@@ -321,7 +321,14 @@ def test_initial_condition_adjoint_cdiff(J, ic, final_adjoint, seed=0.01, pertur
   return min(convergence_order(with_gradient))
 
 def compute_gradient(J, param, forget=True):
-  dJdparam = None
+  try:
+    scalar = False
+    dJdparam = [None for i in range(len(param))]
+    lparam = param
+  except TypeError:
+    scalar = True
+    dJdparam = [None]
+    lparam = [param]
   last_timestep = adjglobals.adjointer.timestep_count
 
   for i in range(adjglobals.adjointer.timestep_count):
@@ -334,14 +341,15 @@ def compute_gradient(J, param, forget=True):
     adjglobals.adjointer.record_variable(adj_var, storage)
     fwd_var = libadjoint.Variable(adj_var.name, adj_var.timestep, adj_var.iteration)
 
-    out = param.inner_adjoint(adjglobals.adjointer, output.data, i, fwd_var)
-    dJdparam = _add(dJdparam, out)
+    for j in range(len(lparam)):
+      out = lparam[j].inner_adjoint(adjglobals.adjointer, output.data, i, fwd_var)
+      dJdparam[j] = _add(dJdparam[j], out)
 
-    if last_timestep > adj_var.timestep:
-      # We have hit a new timestep, and need to compute this timesteps' \partial J/\partial m contribution
-      last_timestep = adj_var.timestep
-      out = param.partial_derivative(adjglobals.adjointer, J, adj_var.timestep)
-      dJdparam = _add(dJdparam, out)
+      if last_timestep > adj_var.timestep:
+        # We have hit a new timestep, and need to compute this timesteps' \partial J/\partial m contribution
+        last_timestep = adj_var.timestep
+        out = lparam[j].partial_derivative(adjglobals.adjointer, J, adj_var.timestep)
+        dJdparam[j] = _add(dJdparam[j], out)
 
     if forget is None:
       pass
@@ -350,7 +358,10 @@ def compute_gradient(J, param, forget=True):
     else:
       adjglobals.adjointer.forget_adjoint_values(i)
 
-  return dJdparam
+  if scalar:
+    return dJdparam[0]
+  else:
+    return dJdparam
 
 def test_scalar_parameter_adjoint(J, a, dJda, seed=None):
   info_blue("Running Taylor remainder convergence analysis for the adjoint model ... ")
