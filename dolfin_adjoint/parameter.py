@@ -23,7 +23,17 @@ class InitialConditionParameter(DolfinAdjointParameter):
     '''coeff: the variable whose initial condition you wish to perturb.
        perturbation: the perturbation direction in which you wish to compute the gradient. Must be a Function.'''
 
-    self.var = libadjoint.Variable(str(coeff), 0, 0)
+    self.var = None 
+    # Find the first occurance of the coeffcient
+    for t in range(adjglobals.adjointer.timestep_count):
+      var = libadjoint.Variable(str(coeff), t, 0)
+      if adjglobals.adjointer.variable_known(var):
+        self.var = var 
+        break
+    # Fallback option for cases where the parameter is initialised before the annotation 
+    if not self.var:
+      self.var = libadjoint.Variable(str(coeff), 0, 0)
+
 
     if perturbation:
       self.perturbation = adjlinalg.Vector(perturbation).duplicate()
