@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     # For performance reasons, switch the gradient test off
     dolfin.parameters["optimisation"]["test_gradient"] = False 
-    optimisation.minimise(Jfunc, J, InitialConditionParameter(u), ic, algorithm = 'scipy.slsqp', bounds = (lb, 1), iprint = 2, acc = 1e-10)
+    optimisation.minimise(Jfunc, J, [InitialConditionParameter(u)], ic, algorithm = 'scipy.slsqp', bounds = (lb, 1), iprint = 2, acc = 1e-10)
 
     tol = 1e-9
     if Jfunc(ic) > tol:

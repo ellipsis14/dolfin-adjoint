@@ -3,41 +3,53 @@ from dolfin_adjoint import *
 import numpy
 import sys
 
-def get_global(m):
-    ''' Takes a distributed object and returns a numpy array that contains all global values '''
-    if type(m) == float:
-        return numpy.array(m)
-    if type(m) == constant.Constant:
-        a = numpy.zeros(m.value_size())
-        p = numpy.zeros(m.value_size())
-        m.eval(a, p)
-        return a
-    elif type(m) in (function.Function, functions.function.Function):
-        m_v = m.vector()
-        m_a = cpp.DoubleArray(m.vector().size())
-        try:
-            m.vector().gather(m_a, numpy.arange(m_v.size(), dtype='I'))
-            return numpy.array(m_a.array())
-        except TypeError:
-            m_a = m.vector().gather(numpy.arange(m_v.size(), dtype='I'))
-            return m_a 
-    else:
-        raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
+def get_global(m_list):
+    ''' Takes a (optional a list of) distributed object(s) and returns one numpy array containing their global values '''
+    if not isinstance(m_list, (list, tuple)):
+        m_list = [m_list]
 
-def set_local(m, m_global_array):
-    ''' Sets the local values of the distrbuted object m to the values contained in the global array m_global_array '''
-    if type(m) == constant.Constant:
-        if m.rank() == 0:
-            m.assign(m_global_array[0])
+    m_global = []
+    for m in m_list:
+        # Parameters of type float
+        if type(m) == float:
+            m_global.append(m)
+        # Parameters of type dolfin.Constant 
+        elif type(m) == constant.Constant:
+            a = numpy.zeros(m.value_size())
+            p = numpy.zeros(m.value_size())
+            m.eval(a, p)
+            m_global += a.tolist()
+        # Function parameters of type dolfin.Function 
+        elif type(m) in (function.Function, functions.function.Function):
+            m_v = m.vector()
+            m_a = cpp.DoubleArray(m.vector().size())
+            try:
+                m.vector().gather(m_a, numpy.arange(m_v.size(), dtype='I'))
+                m_global += m_a.array().tolist()
+            except TypeError:
+                m_a = m.vector().gather(numpy.arange(m_v.size(), dtype='I'))
+                m_global += m_a.tolist()
         else:
-            m.assign(Constant(tuple(m_global_array)))
-    elif type(m) in (function.Function, functions.function.Function):
-        range_begin, range_end = m.vector().local_range()
-        m_a_local = m_global_array[range_begin:range_end]
-        m.vector().set_local(m_a_local)
-        m.vector().apply('insert')
-    else:
-        raise TypeError, 'Unknown parameter type'
+            raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
+    return numpy.array(m_global, dtype='d')
+
+def set_local(m_list, m_global_array):
+    ''' Sets the local values of a (or optionally  a list of) distributed object(s) to the values contained in the global array m_global_array '''
+    if not isinstance(m_list, (list, tuple)):
+        m_list = [m_list]
+    offset = 0
+    for m in m_list:
+        if type(m) == constant.Constant:
+            m.assign(Constant(numpy.reshape(m_global_array[offset:offset+m.value_size()], m.shape())))
+            offset += m.value_size()    
+        elif type(m) in (function.Function, functions.function.Function):
+            range_begin, range_end = m.vector().local_range()
+            m_a_local = m_global_array[offset + range_begin:offset + range_end]
+            m.vector().set_local(m_a_local)
+            m.vector().apply('insert')
+            offset += m.value_size() 
+        else:
+            raise TypeError, 'Unknown parameter type'
 
 def serialise_bounds(bounds, m):
     ''' Converts bounds to an array of tuples and serialises it in a parallel environment. '''
@@ -52,6 +64,7 @@ def serialise_bounds(bounds, m):
     return numpy.array(bounds_arr).T
 
 def minimise_scipy_slsqp(J, dJ, m, bounds = None, **kwargs):
+    ''' Interface to the SQP algorithm in scipy '''
     from scipy.optimize import fmin_slsqp
 
     m_global = get_global(m)
@@ -68,6 +81,7 @@ def minimise_scipy_slsqp(J, dJ, m, bounds = None, **kwargs):
     set_local(m, mopt)
 
 def minimise_scipy_fmin_l_bfgs_b(J, dJ, m, bounds = None, **kwargs):
+    ''' Interface to the L-BFGS-B algorithm in scipy '''
     from scipy.optimize import fmin_l_bfgs_b
     
     m_global = get_global(m)
