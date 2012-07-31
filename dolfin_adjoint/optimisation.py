@@ -11,7 +11,7 @@ def get_global(m_list):
     m_global = []
     for m in m_list:
         # Parameters of type float
-        if type(m) == float:
+        if m == None or type(m) == float:
             m_global.append(m)
         # Parameters of type dolfin.Constant 
         elif type(m) == constant.Constant:
@@ -106,7 +106,7 @@ def print_optimisation_algorithms():
     for function_name, (description, func) in optimisation_algorithms_dict.iteritems():
         print function_name, ': ', description
 
-def minimise(reduced_functional, functional, parameter, m, algorithm, **kwargs):
+def minimise(reduced_functional, functional, parameter, m, algorithm, dontreset = False, **kwargs):
     ''' Solves the minimisation problem with PDE constraint:
 
            min_m functional(u, m) 
@@ -152,7 +152,8 @@ def minimise(reduced_functional, functional, parameter, m, algorithm, **kwargs):
     def reduced_functional_array(m_array):
 
         # Reset any prior annotation of the adjointer as we are about to rerun the forward model.
-        solving.adj_reset()
+        if not dontreset:
+            solving.adj_reset()
         # If functional is a FinalFunctinal, we need to set the activated flag to False
         if hasattr(functional, 'activated'):
             functional.activated = False
