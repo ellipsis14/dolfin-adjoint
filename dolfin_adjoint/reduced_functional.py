@@ -2,6 +2,9 @@ import libadjoint
 from dolfin_adjoint import adjlinalg, adjrhs, constant 
 from dolfin_adjoint.adjglobals import adjointer
 
+class DummyEquation(object):
+    pass
+
 class ReducedFunctional(object):
     def __init__(self, functional, parameter):
         ''' Creates a reduced functional object, that evaluates the functional value for a given parameter value '''
@@ -39,7 +42,7 @@ class ReducedFunctional(object):
                 init_rhs.axpy(1.0, adjlinalg.Vector(value[i]))
                 rhs = adjrhs.RHS(init_rhs)
                 # Register the new rhs in the annotation
-                eqn = libadjoint.Equation(libadjoint.Variable("dummy", timestep = 0), blocks=[libadjoint.Block("dummy")], targets=[libadjoint.Variable("dummy", timestep = 0)], rhs=rhs)
+                eqn = DummyEquation() 
                 eqn_nb = self.parameter[i].var.equation_nb(adjointer)
                 eqn.equation = adjointer.adjointer.equations[eqn_nb]
                 # Store the equation as a class variable in order to keep a python reference in the memory
