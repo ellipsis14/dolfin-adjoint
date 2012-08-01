@@ -54,7 +54,7 @@ def set_local(m_list, m_global_array):
             m_a_local = m_global_array[offset + range_begin:offset + range_end]
             m.vector().set_local(m_a_local)
             m.vector().apply('insert')
-            offset += m.value_size() 
+            offset += m.vector().size() 
         else:
             raise TypeError, 'Unknown parameter type'
 
