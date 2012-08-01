@@ -11,6 +11,7 @@ class ReducedFunctional(object):
         self.parameter = parameter
         # This flag indicates if the functional evaluation is based on replaying the forward annotation. 
         self.replays_annotation = True
+        self.eqns = []
 
     def __call__(self, value):
         ''' Evaluates the reduced functional for the given parameter value, by replaying the forward model.
@@ -35,15 +36,15 @@ class ReducedFunctional(object):
 
                 # Create a RHS object with the new control values
                 init_rhs = adjlinalg.Vector(value[i]).duplicate()
-                init_rhs.axpy(1.0,adjlinalg.Vector(value[i]))
+                init_rhs.axpy(1.0, adjlinalg.Vector(value[i]))
                 rhs = adjrhs.RHS(init_rhs)
                 # Register the new rhs in the annotation
-                class DummyEquation(object):
-                    pass
-                e = DummyEquation()
+                eqn = libadjoint.Equation(libadjoint.Variable("dummy", timestep = 0), blocks=[libadjoint.Block("dummy")], targets=[libadjoint.Variable("dummy", timestep = 0)], rhs=rhs)
                 eqn_nb = self.parameter[i].var.equation_nb(adjointer)
-                e.equation = adjointer.adjointer.equations[eqn_nb]
-                rhs.register(e)
+                eqn.equation = adjointer.adjointer.equations[eqn_nb]
+                # Store the equation as a class variable in order to keep a python reference in the memory
+                self.eqns.append(eqn)
+                rhs.register(self.eqns[-1])
             else:
                 raise NotImplementedError, "The ReducedFunctional class currently only works for parameters that are Functions"
 
