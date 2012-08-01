@@ -46,7 +46,7 @@ def set_local(m_list, m_global_array):
     for m in m_list:
         # Parameters of type dolfin.Constant 
         if type(m) == constant.Constant:
-            m.assign(Constant(numpy.reshape(m_global_array[offset:offset+m.value_size()], m.shape())))
+            m.assign(constant.Constant(numpy.reshape(m_global_array[offset:offset+m.value_size()], m.shape())))
             offset += m.value_size()    
         # Function parameters of type dolfin.Function 
         elif hasattr(m, "vector"): 

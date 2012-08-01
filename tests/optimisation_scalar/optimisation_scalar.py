@@ -43,7 +43,8 @@ if __name__ == "__main__":
     return assemble(inner(u, u)*dx)
 
   # Run the optimisation 
-  optimisation.minimise(Jhat, J, ScalarParameter(nu), nu, 'scipy.slsqp', iprint = 2)
+  reduced_functional = ReducedFunctional(J, ScalarParameter(nu))
+  minimize(reduced_functional, nu, 'scipy.slsqp', iprint = 2)
 
   tol = 1e-4
   if Jhat(nu) > tol:
