@@ -31,8 +31,8 @@ def solve_optimal_control(n):
 
     # Run the optimisation 
     reduced_func = ReducedFunctional(J, InitialConditionParameter(m))
-    minimize(reduced_func, m, algorithm = 'scipy.l_bfgs_b', pgtol=1e-16, factr=1, bounds = (-1, 1), iprint = 1, maxfun = 20)
-    #minimize(Jfunc, J, InitialConditionParameter(m), m, algorithm = 'scipy.slsqp', bounds = (-1, 1), iprint = 3, iter = 60)
+    minimize(reduced_func, algorithm = 'scipy.l_bfgs_b', pgtol=1e-16, factr=1, bounds = (-1, 1), iprint = 1, maxfun = 20)
+    #minimize(reduced_func, algorithm = 'scipy.slsqp', bounds = (-1, 1), iprint = 3, iter = 60)
     solve_pde(u, V, m)
 
     m_analytic = sin(pi*x[0])*sin(pi*x[1]) 

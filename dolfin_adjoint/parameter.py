@@ -23,6 +23,7 @@ class InitialConditionParameter(DolfinAdjointParameter):
     '''coeff: the variable whose initial condition you wish to perturb.
        perturbation: the perturbation direction in which you wish to compute the gradient. Must be a Function.'''
 
+    self.coeff = coeff
     self.var = None 
     # Find the first occurance of the coeffcient
     for t in range(adjglobals.adjointer.timestep_count):
@@ -57,6 +58,9 @@ class InitialConditionParameter(DolfinAdjointParameter):
       return adjoint
     else:
       return None
+
+  def data(self):
+    return self.coeff
 
 class ScalarParameter(DolfinAdjointParameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
@@ -136,6 +140,9 @@ class ScalarParameter(DolfinAdjointParameter):
     else:
       return None
 
+  def data(self):
+    return self.a
+
 class ScalarParameters(DolfinAdjointParameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
   when one wishes to compute dJ/dv . delta v, where v is a vector of scalar parameters.'''
@@ -194,3 +201,6 @@ class ScalarParameters(DolfinAdjointParameter):
       dJdv[i] = out
 
     return dJdv
+
+  def data(self):
+    return self.v

@@ -60,13 +60,17 @@ def set_local(m_list, m_global_array):
 
 def serialise_bounds(bounds, m):
     ''' Converts bounds to an array of tuples and serialises it in a parallel environment. '''
-    
+     
+    if len(numpy.array(bounds).shape) == 1:
+        bounds = [bounds]
+
     bounds_arr = []
-    for i in range(2):
-        if type(bounds[i]) == int or type(bounds[i]) == float:
-            bounds_arr.append(bounds[i]*numpy.ones(m.vector().size()))
-        else:
-            bounds_arr.append(get_global(bounds[i]))
+    for b in bounds:
+        for i in range(2):
+            if type(b[i]) == int or type(b[i]) == float:
+                bounds_arr.append(b[i]*numpy.ones(m[0].vector().size()))
+            else:
+                bounds_arr.append(get_global(b[i]))
             
     return numpy.array(bounds_arr).T
 
@@ -113,7 +117,7 @@ def print_optimisation_algorithms():
     for function_name, (description, func) in optimisation_algorithms_dict.iteritems():
         print function_name, ': ', description
 
-def minimize(reduced_func, m, algorithm, **kwargs):
+def minimize(reduced_func, algorithm = 'scipy.l_bfgs_b', **kwargs):
     ''' Solves the minimisation problem with PDE constraint:
 
            min_m func(u, m) 
@@ -127,7 +131,6 @@ def minimize(reduced_func, m, algorithm, **kwargs):
 
         The function arguments are as follows:
         * 'reduced_func' must be a python function the implements the reduced functional (i.e. func(u(m), m)). That is, it takes m as a parameter, solves the model and returns the functional value. A simple way of creating this function is the ReducedFunctional class.
-        * 'm' must contain the control values. The optimisation algorithm uses these values as a initial guess and updates them after each optimisation iteration. The optimal control values can be accessed by reading 'm' after calling minimize.
         * 'bounds' is an optional keyword parameter to support control constraints: bounds = (lb, ub). lb and ub can either be floats to enforce a global bound or a dolfin.Function to define a varying bound.
         * 'algorithm' specifies the optimistation algorithm to be used to solve the problem. The available algorithms can be listed with the print_optimisation_algorithms function.
         
@@ -140,6 +143,7 @@ def minimize(reduced_func, m, algorithm, **kwargs):
         # In the case that the parameter values have changed since the last forward run, 
         # we first need to rerun the forward model with the new parameters to have the 
         # correct forward solutions
+        m = [p.data() for p in reduced_func.parameter]
         if (m_array != get_global(m)).any():
             reduced_func_array(m_array) 
 
@@ -165,10 +169,11 @@ def minimize(reduced_func, m, algorithm, **kwargs):
             solving.adj_reset()
 
         # Set the parameter values and execute the reduced functional
+        m = [p.data() for p in reduced_func.parameter]
         set_local(m, m_array)
         return reduced_func(m)
 
     if algorithm not in optimisation_algorithms_dict.keys():
         raise ValueError, 'Unknown optimisation algorithm ' + algorithm + '. Use the print_optimisation_algorithms to get a list of the available algorithms.'
 
-    optimisation_algorithms_dict[algorithm][1](reduced_func_array, reduced_func_deriv_array, m, **kwargs)
+    optimisation_algorithms_dict[algorithm][1](reduced_func_array, reduced_func_deriv_array, [p.data() for p in reduced_func.parameter], **kwargs)

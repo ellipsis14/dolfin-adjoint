@@ -33,13 +33,14 @@ def main(nu):
 
 if __name__ == "__main__":
   nu = Constant(0.0001)
+  # Run the forward model once to have the annotation
   main(nu)
 
   J = Functional(inner(u, u)*dx*dt[FINISH_TIME])
 
   # Run the optimisation 
   reduced_functional = ReducedFunctional(J, ScalarParameter(nu))
-  minimize(reduced_functional, nu, 'scipy.slsqp', iprint = 2)
+  minimize(reduced_functional, 'scipy.slsqp', iprint = 2)
 
   tol = 1e-4
   if reduced_functional(nu) > tol:
