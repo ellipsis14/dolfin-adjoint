@@ -28,9 +28,13 @@ def solve_optimal_control(n):
       solve_pde(u, V, m)
       return assemble(inner(u-u_d, u-u_d)*dx)
 
+    # Run the forward model once to create the annotation
+    #solve_pde(u, V, m)
+
     # Run the optimisation 
-    optimisation.minimise(Jfunc, J, InitialConditionParameter(m), m, algorithm = 'scipy.l_bfgs_b', pgtol=1e-16, factr=1, bounds = (-1, 1), iprint = 1, maxfun = 20)
-    #optimisation.minimise(Jfunc, J, InitialConditionParameter(m), m, algorithm = 'scipy.slsqp', bounds = (-1, 1), iprint = 3, iter = 60)
+    reduced_func = ReducedFunctional(J, InitialConditionParameter(m))
+    minimize(reduced_func, m, algorithm = 'scipy.l_bfgs_b', pgtol=1e-16, factr=1, bounds = (-1, 1), iprint = 1, maxfun = 20)
+    #minimize(Jfunc, J, InitialConditionParameter(m), m, algorithm = 'scipy.slsqp', bounds = (-1, 1), iprint = 3, iter = 60)
     Jfunc(m)
 
     m_analytic = sin(pi*x[0])*sin(pi*x[1]) 
@@ -49,6 +53,7 @@ for i in range(3,7):
     control_errors.append(control_error)
     state_errors.append(state_error)
     element_sizes.append(1./n)
+
 
 info_green("Control errors: " + str(control_errors))
 info_green("Control convergence: " + str(convergence_order(control_errors, base = 2)))

@@ -27,5 +27,5 @@ import gst
 import function
 import genericmatrix
 import optimisation
-import reduced_functional
+import reduced_functional 
 from ui import *

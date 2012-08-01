@@ -1,5 +1,7 @@
-from dolfin import *
-from dolfin_adjoint import * 
+import dolfin
+from dolfin import cpp, MPI, info_red, info
+from dolfin_adjoint import constant, utils
+from reduced_functional import ReducedFunctional
 import numpy
 import sys
 
@@ -13,14 +15,14 @@ def get_global(m_list):
         # Parameters of type float
         if m == None or type(m) == float:
             m_global.append(m)
-        # Parameters of type dolfin.Constant 
+        # Parameters of type Constant 
         elif type(m) == constant.Constant:
             a = numpy.zeros(m.value_size())
             p = numpy.zeros(m.value_size())
             m.eval(a, p)
             m_global += a.tolist()
-        # Function parameters of type dolfin.Function 
-        elif type(m) in (function.Function, functions.function.Function):
+        # Function parameters of type Function 
+        elif hasattr(m, "vector"): 
             m_v = m.vector()
             m_a = cpp.DoubleArray(m.vector().size())
             try:
@@ -31,18 +33,23 @@ def get_global(m_list):
                 m_global += m_a.tolist()
         else:
             raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
+
     return numpy.array(m_global, dtype='d')
 
 def set_local(m_list, m_global_array):
     ''' Sets the local values of a (or optionally  a list of) distributed object(s) to the values contained in the global array m_global_array '''
+
     if not isinstance(m_list, (list, tuple)):
         m_list = [m_list]
+
     offset = 0
     for m in m_list:
+        # Parameters of type dolfin.Constant 
         if type(m) == constant.Constant:
             m.assign(Constant(numpy.reshape(m_global_array[offset:offset+m.value_size()], m.shape())))
             offset += m.value_size()    
-        elif type(m) in (function.Function, functions.function.Function):
+        # Function parameters of type dolfin.Function 
+        elif hasattr(m, "vector"): 
             range_begin, range_end = m.vector().local_range()
             m_a_local = m_global_array[offset + range_begin:offset + range_end]
             m.vector().set_local(m_a_local)
@@ -63,7 +70,7 @@ def serialise_bounds(bounds, m):
             
     return numpy.array(bounds_arr).T
 
-def minimise_scipy_slsqp(J, dJ, m, bounds = None, **kwargs):
+def minimize_scipy_slsqp(J, dJ, m, bounds = None, **kwargs):
     ''' Interface to the SQP algorithm in scipy '''
     from scipy.optimize import fmin_slsqp
 
@@ -80,7 +87,7 @@ def minimise_scipy_slsqp(J, dJ, m, bounds = None, **kwargs):
         mopt = fmin_slsqp(J, m_global, fprime = dJ, **kwargs)
     set_local(m, mopt)
 
-def minimise_scipy_fmin_l_bfgs_b(J, dJ, m, bounds = None, **kwargs):
+def minimize_scipy_fmin_l_bfgs_b(J, dJ, m, bounds = None, **kwargs):
     ''' Interface to the L-BFGS-B algorithm in scipy '''
     from scipy.optimize import fmin_l_bfgs_b
     
@@ -96,8 +103,8 @@ def minimise_scipy_fmin_l_bfgs_b(J, dJ, m, bounds = None, **kwargs):
     mopt, f, d = fmin_l_bfgs_b(J, m_global, fprime = dJ, bounds = bounds, **kwargs)
     set_local(m, mopt)
 
-optimisation_algorithms_dict = {'scipy.l_bfgs_b': ('The L-BFGS-B implementation in scipy.', minimise_scipy_fmin_l_bfgs_b),
-                                'scipy.slsqp': ('The SLSQP implementation in scipy.', minimise_scipy_slsqp) }
+optimisation_algorithms_dict = {'scipy.l_bfgs_b': ('The L-BFGS-B implementation in scipy.', minimize_scipy_fmin_l_bfgs_b),
+                                'scipy.slsqp': ('The SLSQP implementation in scipy.', minimize_scipy_slsqp) }
 
 def print_optimisation_algorithms():
     ''' Prints the available optimisation algorithms '''
@@ -106,62 +113,62 @@ def print_optimisation_algorithms():
     for function_name, (description, func) in optimisation_algorithms_dict.iteritems():
         print function_name, ': ', description
 
-def minimise(reduced_functional, functional, parameter, m, algorithm, dontreset = False, **kwargs):
+def minimize(reduced_func, m, algorithm, **kwargs):
     ''' Solves the minimisation problem with PDE constraint:
 
-           min_m functional(u, m) 
+           min_m func(u, m) 
              s.t. 
            e(u, m) = 0
            lb <= m <= ub
            g(m) <= u
            
-        where m is the control variable, u is the solution of the PDE system e(u, m) = 0, functional is the functional of interest and lb, ub and g(m) constraints the control variables. 
+        where m is the control variable, u is the solution of the PDE system e(u, m) = 0, func is the functional of interest and lb, ub and g(m) constraints the control variables. 
         The optimisation problem is solved using a gradient based optimisation algorithm and the functional gradients are computed by solving the associated adjoint system.
 
-        The functional arguments are as follows:
-        * 'reduced_functional' must be a python function the implements the reduced functional (i.e. functional(u(m), m)). That is, it takes m as a parameter, solves the model and returns the functional value. 
-        * 'functional' must be a dolfin_adjoint.functional object describing the functional of interest
-        * 'parameter' must be a dolfin_adjoint.parameter that is to be minimised
-        * 'm' must contain the control values. The optimisation algorithm uses these values as a initial guess and updates them after each optimisation iteration. The optimal control values can be accessed by reading 'm' after calling minimise.
+        The function arguments are as follows:
+        * 'reduced_func' must be a python function the implements the reduced functional (i.e. func(u(m), m)). That is, it takes m as a parameter, solves the model and returns the functional value. A simple way of creating this function is the ReducedFunctional class.
+        * 'm' must contain the control values. The optimisation algorithm uses these values as a initial guess and updates them after each optimisation iteration. The optimal control values can be accessed by reading 'm' after calling minimize.
         * 'bounds' is an optional keyword parameter to support control constraints: bounds = (lb, ub). lb and ub can either be floats to enforce a global bound or a dolfin.Function to define a varying bound.
         * 'algorithm' specifies the optimistation algorithm to be used to solve the problem. The available algorithms can be listed with the print_optimisation_algorithms function.
         
-        Additional arguments specific for the optimisation algorithms can be added to the minimise functions (e.g. iprint = 2). These arguments will be passed to the underlying optimisation algorithm. For detailed information about which arguments are supported for each optimisation algorithm, please refer to the documentaton of the optimisation algorithm.
+        Additional arguments specific for the optimisation algorithms can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimisation algorithm. For detailed information about which arguments are supported for each optimisation algorithm, please refer to the documentaton of the optimisation algorithm.
         '''
-    def dJ_array(m_array):
+
+    def reduced_func_deriv_array(m_array):
+        ''' An implementation of the reduced functional derivative that accepts the parameter as an array ''' 
 
         # In the case that the parameter values have changed since the last forward run, 
-        # we need to rerun the forward model with the new parameters
+        # we first need to rerun the forward model with the new parameters to have the 
+        # correct forward solutions
         if (m_array != get_global(m)).any():
-            reduced_functional_array(m_array) 
+            reduced_func_array(m_array) 
 
-        dJdm = utils.compute_gradient(functional, parameter)
+        dJdm = utils.compute_gradient(reduced_func.functional, reduced_func.parameter)
         dJdm_global = get_global(dJdm)
 
+        # Perform the gradient test
         if dolfin.parameters["optimisation"]["test_gradient"]:
-            minconv = utils.test_gradient_array(reduced_functional_array, dJdm_global, m_array, 
+            minconv = utils.test_gradient_array(reduced_func_array, dJdm_global, m_array, 
                                                 seed = dolfin.parameters["optimisation"]["test_gradient_seed"])
             if minconv < 1.9:
                 raise RuntimeWarning, "A gradient test failed during execution."
             else:
                 info("Gradient test succesfull.")
-            reduced_functional_array(m_array) 
+            reduced_func_array(m_array) 
 
         return dJdm_global 
 
-    def reduced_functional_array(m_array):
-
-        # Reset any prior annotation of the adjointer as we are about to rerun the forward model.
-        if not dontreset:
+    def reduced_func_array(m_array):
+        ''' An implementation of the reduced functional that accepts the parameter as an array '''
+        # In case the annotation is not reused, we need to reset any prior annotation of the adjointer before reruning the forward model.
+        if not reduced_func.replays_annotation:
             solving.adj_reset()
-        # If functional is a FinalFunctinal, we need to set the activated flag to False
-        if hasattr(functional, 'activated'):
-            functional.activated = False
 
+        # Set the parameter values and execute the reduced functional
         set_local(m, m_array)
-        return reduced_functional(m)
+        return reduced_func(m)
 
     if algorithm not in optimisation_algorithms_dict.keys():
         raise ValueError, 'Unknown optimisation algorithm ' + algorithm + '. Use the print_optimisation_algorithms to get a list of the available algorithms.'
 
-    optimisation_algorithms_dict[algorithm][1](reduced_functional_array, dJ_array, m, **kwargs)
+    optimisation_algorithms_dict[algorithm][1](reduced_func_array, reduced_func_deriv_array, m, **kwargs)
