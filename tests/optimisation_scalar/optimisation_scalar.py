@@ -37,16 +37,11 @@ if __name__ == "__main__":
 
   J = Functional(inner(u, u)*dx*dt[FINISH_TIME])
 
-  def Jhat(nu): 
-    u.assign(ic)
-    main(nu)
-    return assemble(inner(u, u)*dx)
-
   # Run the optimisation 
   reduced_functional = ReducedFunctional(J, ScalarParameter(nu))
   minimize(reduced_functional, nu, 'scipy.slsqp', iprint = 2)
 
   tol = 1e-4
-  if Jhat(nu) > tol:
-    print 'Test failed: Optimised functional value exceeds tolerance: ' , Jhat(nu), ' > ', tol, '.'
+  if reduced_functional(nu) > tol:
+    print 'Test failed: Optimised functional value exceeds tolerance: ', reduced_functional(nu), ' > ', tol, '.'
     sys.exit(1)
