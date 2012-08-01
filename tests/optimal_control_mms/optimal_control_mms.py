@@ -1,5 +1,6 @@
 """ Solves a MMS problem with smooth control """
 
+import sys
 from dolfin import *
 from dolfin_adjoint import *
 
@@ -24,18 +25,15 @@ def solve_optimal_control(n):
     u_d = 1/(2*pi**2)*sin(pi*x[0])*sin(pi*x[1]) 
 
     J = Functional((inner(u-u_d, u-u_d))*dx*dt[FINISH_TIME])
-    def Jfunc(m):
-      solve_pde(u, V, m)
-      return assemble(inner(u-u_d, u-u_d)*dx)
 
     # Run the forward model once to create the annotation
-    #solve_pde(u, V, m)
+    solve_pde(u, V, m)
 
     # Run the optimisation 
     reduced_func = ReducedFunctional(J, InitialConditionParameter(m))
     minimize(reduced_func, m, algorithm = 'scipy.l_bfgs_b', pgtol=1e-16, factr=1, bounds = (-1, 1), iprint = 1, maxfun = 20)
     #minimize(Jfunc, J, InitialConditionParameter(m), m, algorithm = 'scipy.slsqp', bounds = (-1, 1), iprint = 3, iter = 60)
-    Jfunc(m)
+    solve_pde(u, V, m)
 
     m_analytic = sin(pi*x[0])*sin(pi*x[1]) 
     u_analytic = 1/(2*pi**2)*sin(pi*x[0])*sin(pi*x[1])
@@ -53,7 +51,7 @@ for i in range(3,7):
     control_errors.append(control_error)
     state_errors.append(state_error)
     element_sizes.append(1./n)
-
+    adj_reset()
 
 info_green("Control errors: " + str(control_errors))
 info_green("Control convergence: " + str(convergence_order(control_errors, base = 2)))
@@ -61,7 +59,9 @@ info_green("State errors: " + str(state_errors))
 info_green("State convergence: " + str(convergence_order(state_errors, base = 2)))
 
 if min(convergence_order(control_errors)) < 2.0:
+    info_red("Convergence order below tolerance") 
     sys.exit(1)
 if min(convergence_order(state_errors)) < 4.0:
+    info_red("Convergence order below tolerance") 
     sys.exit(1)
 info_green("Test passed")    
