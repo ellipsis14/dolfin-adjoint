@@ -16,7 +16,7 @@ V = FunctionSpace(mesh, "CG", 2)
 def Dt(u_next, u, timestep):
     return (u_next - u)/timestep
 
-def main(u, annotate=False, J = None):
+def main(u, annotate=False):
 
     u_next = Function(V, name="VelocityNext")
     v = TestFunction(V)
@@ -45,52 +45,57 @@ if __name__ == "__main__":
     u = Function(ic, name='Velocity')
 
     J = Functional(u*u*dx*dt[FINISH_TIME])
-    #J = Functional(u*u*dx*dt)
-    def Jfunc(ic):
-      u.assign(ic)
-      main(u, annotate=True, J=J)
-      return assemble(u*u*dx)
 
-    jfuncvalue = Jfunc(ic)
-    print "Jfunc value", jfuncvalue 
+    # Run the model once to create the annotation
+    u.assign(ic)
+    main(u, annotate=True)
 
-    def reduced_functional(coeff):
+    class ReducedFunctional(object):
+        def __init__(self, functional, parameter):
+            ''' Creates a reduced functional object, that evaluates the functional value for a given parameter value '''
+            self.functional = functional
+            self.parameter = parameter
 
-        init_rhs = adjlinalg.Vector(coeff).duplicate()
-        init_rhs.axpy(1.0,adjlinalg.Vector(coeff))
-        rhs = adjrhs.RHS(init_rhs)
-        class MyEquation(object):
-            pass
-        MyEquation()
-        x = MyEquation()
-        x.equation = adjointer.adjointer.equations[0]
-        rhs.register(x)
+        def evaluate(self, coeff):
+            ''' Evaluates the reduced functional for the given parameter value '''
+            # Create a RHS object with the new control values
+            init_rhs = adjlinalg.Vector(coeff).duplicate()
+            init_rhs.axpy(1.0,adjlinalg.Vector(coeff))
+            rhs = adjrhs.RHS(init_rhs)
+            # Register the new rhs in the annotation
+            class DummyEquation(object):
+                pass
+            e = DummyEquation()
+            eqn_nb = self.parameter.var.equation_nb(adjointer)
+            e.equation = adjointer.adjointer.equations[eqn_nb]
+            rhs.register(e)
 
-        func_value = 0.
-        for i in range(adjglobals.adjointer.equation_count):
-            (fwd_var, output) = adjglobals.adjointer.get_forward_solution(i)
+            # Replay the annotation and evaluate the functional
+            func_value = 0.
+            for i in range(adjglobals.adjointer.equation_count):
+                (fwd_var, output) = adjglobals.adjointer.get_forward_solution(i)
 
-            storage = libadjoint.MemoryStorage(output)
-            storage.set_overwrite(True)
-            adjglobals.adjointer.record_variable(fwd_var, storage)
-            if i == adjointer.timestep_end_equation(fwd_var.timestep):
-                func_value += adjointer.evaluate_functional(J, fwd_var.timestep)
+                storage = libadjoint.MemoryStorage(output)
+                storage.set_overwrite(True)
+                adjglobals.adjointer.record_variable(fwd_var, storage)
+                if i == adjointer.timestep_end_equation(fwd_var.timestep):
+                    func_value += adjointer.evaluate_functional(self.functional, fwd_var.timestep)
 
-            #adjglobals.adjointer.forget_forward_equation(i)
-        return func_value
-
+                #adjglobals.adjointer.forget_forward_equation(i)
+            return func_value
 
     # Run the optimisation 
     lb = project(Expression("-1"),  V)
 
-    optimisation.minimise(reduced_functional, J, InitialConditionParameter(u), ic, algorithm = 'scipy.l_bfgs_b', dontreset = True, pgtol=1e-6, factr=1e5, bounds = (lb, 1), iprint = 1)
+    reduced_functional = ReducedFunctional(J, InitialConditionParameter(u))
+    optimisation.minimise(reduced_functional.evaluate, J, InitialConditionParameter(u), ic, algorithm = 'scipy.l_bfgs_b', dontreset = True, pgtol=1e-6, factr=1e5, bounds = (lb, 1), iprint = 1)
     ic = project(Expression("sin(2*pi*x[0])"),  V)
 
     # For performance reasons, switch the gradient test off
     dolfin.parameters["optimisation"]["test_gradient"] = False 
-    optimisation.minimise(reduced_functional, J, InitialConditionParameter(u), ic, algorithm = 'scipy.slsqp', dontreset = True, bounds = (lb, 1), iprint = 2, acc = 1e-10)
+    optimisation.minimise(reduced_functional.evaluate, J, InitialConditionParameter(u), ic, algorithm = 'scipy.slsqp', dontreset = True, bounds = (lb, 1), iprint = 2, acc = 1e-10)
 
     tol = 1e-9
-    if reduced_functional(ic) > tol:
+    if reduced_functional.evaluate(ic) > tol:
         print 'Test failed: Optimised functional value exceeds tolerance: ' , Jfunc(ic), ' > ', tol, '.'
         sys.exit(1)
