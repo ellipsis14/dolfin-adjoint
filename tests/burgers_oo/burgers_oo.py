@@ -85,6 +85,7 @@ if __name__ == "__main__":
 
     minconv = test_initial_condition_adjoint(Jfunc, ic, adjoint, seed=1.0e-5)
     if minconv < 1.9:
+      info_red("Test failed. Convergence rate is %f < 1.9", minconv)
       sys.exit(1)
 
     dJ = assemble(derivative(forward_copy*forward_copy*dx, forward_copy))
@@ -93,4 +94,5 @@ if __name__ == "__main__":
     ic.vector()[:] = ic_copy.vector()
     minconv = test_initial_condition_tlm(Jfunc, dJ, ic, seed=1.0e-5)
     if minconv < 1.9:
+      info_red("Test failed. Convergence rate is %d < 1.9", minconv)
       sys.exit(1)

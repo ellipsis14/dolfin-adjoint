@@ -118,6 +118,8 @@ def annotate(*args, **kwargs):
   # /before/ we map the coefficients -> dependencies,
   # so that libadjoint records the dependencies with the right timestep number.
   if not linear:
+    # Register the initial condition before the first nonlinear solve
+    register_initial_conditions([[u, adjglobals.adj_variables[u]],], linear=False)
     var = adjglobals.adj_variables.next(u)
   else:
     var = None
