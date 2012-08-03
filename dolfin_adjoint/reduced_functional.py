@@ -16,10 +16,17 @@ class ReducedFunctional(object):
         self.replays_annotation = True
         self.eqns = []
 
+    def eval_callback(self, value):
+        ''' This function is called before the reduced functional is evaluated.
+            It is intended to be overwritten by the user, for example to plot the control values 
+            that are passed into the callback as "value". ''' 
+        pass
+
     def __call__(self, value):
         ''' Evaluates the reduced functional for the given parameter value, by replaying the forward model.
             Note: before using this evaluation, make sure that the forward model has been annotated. '''
 
+        self.eval_callback(value)
         if not isinstance(value, (list, tuple)):
             value = [value]
         if len(value) != len(self.parameter):
