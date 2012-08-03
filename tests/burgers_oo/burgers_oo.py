@@ -76,14 +76,13 @@ if __name__ == "__main__":
     print "Running adjoint ... "
 
     J = Functional(forward*forward*dx*dt[FINISH_TIME])
-    for (adjoint, var) in compute_adjoint(J, forget=False):
-      pass
+    dJdm = compute_gradient(J, InitialConditionParameter(forward), forget = False)
 
     def Jfunc(ic):
       forward = main(ic, annotate=False)
       return assemble(forward*forward*dx)
 
-    minconv = test_initial_condition_adjoint(Jfunc, ic, adjoint, seed=1.0e-5)
+    minconv = test_initial_condition_adjoint(Jfunc, ic, dJdm, seed=1.0e-5)
     if minconv < 1.9:
       info_red("Test failed. Convergence rate is %f < 1.9", minconv)
       sys.exit(1)
