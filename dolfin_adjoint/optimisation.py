@@ -59,19 +59,24 @@ def set_local(m_list, m_global_array):
             raise TypeError, 'Unknown parameter type'
 
 def serialise_bounds(bounds, m):
-    ''' Converts bounds to an array of tuples and serialises it in a parallel environment. '''
-     
-    if len(numpy.array(bounds).shape) == 1:
-        bounds = [bounds]
+    ''' Converts bounds to an array of (min, max) tuples and serialises it in a parallel environment. '''
 
-    bounds_arr = []
-    for b in bounds:
-        for i in range(2):
-            if type(b[i]) == int or type(b[i]) == float:
-                bounds_arr.append(b[i]*numpy.ones(m[0].vector().size()))
+    # Convert the bounds into the canoncial array form [ [lower_bound1, lower_bound2, ... ], [upper_bound1, upper_bound2, ...] ]
+    if len(numpy.array(bounds).shape) == 1:
+        bounds = numpy.array([[b] for b in bounds])
+
+    if len(bounds) != 2:
+        raise ValueError, "The 'bounds' parameter must be of the form [lower_bound, upper_bound] for one parameter or [ [lower_bound1, lower_bound2, ...], [upper_bound1, upper_bound2, ...] ] for multiple parameters."
+
+    bounds_arr = [[], []]
+    for i in range(2):
+        for j in range(len(bounds[i])):
+            if type(bounds[i][j]) in [int,  float, numpy.int32, numpy.int64]:
+                bounds_arr[i] += (bounds[i][j]*numpy.ones(m[j].vector().size())).tolist()
             else:
-                bounds_arr.append(get_global(b[i]))
-            
+                bounds_arr[i] += get_global(bounds[i][j]).tolist()
+
+    # Transpose and return the array to get the form [ [lower_bound1, upper_bound1], [lower_bound2, upper_bound2], ... ] 
     return numpy.array(bounds_arr).T
 
 def minimize_scipy_slsqp(J, dJ, m, bounds = None, **kwargs):
