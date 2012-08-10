@@ -135,9 +135,9 @@ def minimize(reduced_func, algorithm = 'scipy.l_bfgs_b', **kwargs):
         The optimisation problem is solved using a gradient based optimisation algorithm and the functional gradients are computed by solving the associated adjoint system.
 
         The function arguments are as follows:
-        * 'reduced_func' must be a python function the implements the reduced functional (i.e. func(u(m), m)). That is, it takes m as a parameter, solves the model and returns the functional value. A simple way of creating this function is the ReducedFunctional class.
+        * 'reduced_func' must be a ReducedFunctional object. 
+        * 'algorithm' specifies the optimisation algorithm to be used to solve the problem. The available algorithms can be listed with the print_optimisation_algorithms function.
         * 'bounds' is an optional keyword parameter to support control constraints: bounds = (lb, ub). lb and ub can either be floats to enforce a global bound or a dolfin.Function to define a varying bound.
-        * 'algorithm' specifies the optimistation algorithm to be used to solve the problem. The available algorithms can be listed with the print_optimisation_algorithms function.
         
         Additional arguments specific for the optimisation algorithms can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimisation algorithm. For detailed information about which arguments are supported for each optimisation algorithm, please refer to the documentaton of the optimisation algorithm.
         '''
