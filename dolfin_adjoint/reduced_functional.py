@@ -7,7 +7,11 @@ class DummyEquation(object):
 
 class ReducedFunctional(object):
     def __init__(self, functional, parameter):
-        ''' Creates a reduced functional object, that evaluates the functional value for a given parameter value '''
+        ''' Creates a reduced functional object, that evaluates the functional value for a given parameter value.
+            The arguments are as follows:
+            * 'functional' must be a dolfin_adjoint.Functional object. 
+            * 'parameter' must be a single or a list of dolfin_adjoint.DolfinAdjointParameter objects.
+            '''
         self.functional = functional
         if not isinstance(parameter, (list, tuple)):
             parameter = [parameter]
