@@ -112,8 +112,25 @@ def minimize_scipy_fmin_l_bfgs_b(J, dJ, m, bounds = None, **kwargs):
     mopt, f, d = fmin_l_bfgs_b(J, m_global, fprime = dJ, bounds = bounds, **kwargs)
     set_local(m, mopt)
 
+def minimize_scipy_tnc(J, dJ, m, bounds = None, **kwargs):
+    from scipy.optimize import fmin_tnc
+    
+    m_global = get_global(m)
+
+    # Shut up all processors but the first one.
+    if MPI.process_number() != 0:
+        kwargs['iprint'] = -1
+
+    if bounds:
+        bounds = serialise_bounds(bounds, m)
+
+    mopt, nfeval, rc = fmin_tnc(J, m_global, fprime = dJ, bounds = bounds, **kwargs)
+    set_local(m, mopt)
+
 optimisation_algorithms_dict = {'scipy.l_bfgs_b': ('The L-BFGS-B implementation in scipy.', minimize_scipy_fmin_l_bfgs_b),
-                                'scipy.slsqp': ('The SLSQP implementation in scipy.', minimize_scipy_slsqp) }
+                                'scipy.slsqp': ('The SLSQP implementation in scipy.', minimize_scipy_slsqp),
+                                'scipy.tnc': ('The truncated Newton algorithm implemented in scipy.', minimize_scipy_tnc), 
+                                }
 
 def print_optimisation_algorithms():
     ''' Prints the available optimisation algorithms '''
