@@ -127,9 +127,35 @@ def minimize_scipy_tnc(J, dJ, m, bounds = None, **kwargs):
     mopt, nfeval, rc = fmin_tnc(J, m_global, fprime = dJ, bounds = bounds, **kwargs)
     set_local(m, mopt)
 
+def minimize_scipy_cg(J, dJ, m, **kwargs):
+    from scipy.optimize import fmin_cg
+    
+    m_global = get_global(m)
+
+    # Shut up all processors but the first one.
+    if MPI.process_number() != 0:
+        kwargs['iprint'] = -1
+
+    mopt, fopt, func_calls, grad_calls, warnflag, allvecs = fmin_cg(J, m_global, fprime = dJ, **kwargs)
+    set_local(m, mopt)
+
+def minimize_scipy_bfgs(J, dJ, m, **kwargs):
+    from scipy.optimize import fmin_bfgs
+    
+    m_global = get_global(m)
+
+    # Shut up all processors but the first one.
+    if MPI.process_number() != 0:
+        kwargs['iprint'] = -1
+
+    mopt, fopt, gopt, Bopt, func_calls, grad_calls, warnflag, allvecs = fmin_bfgs(J, m_global, fprime = dJ, **kwargs)
+    set_local(m, mopt)
+
 optimisation_algorithms_dict = {'scipy.l_bfgs_b': ('The L-BFGS-B implementation in scipy.', minimize_scipy_fmin_l_bfgs_b),
                                 'scipy.slsqp': ('The SLSQP implementation in scipy.', minimize_scipy_slsqp),
                                 'scipy.tnc': ('The truncated Newton algorithm implemented in scipy.', minimize_scipy_tnc), 
+                                'scipy.cg': ('The nonlinear conjugate gradient algorithm implemented in scipy.', minimize_scipy_cg), 
+                                'scipy.bfgs': ('The BFGS implementation in scipy.', minimize_scipy_bfgs), 
                                 }
 
 def print_optimisation_algorithms():
