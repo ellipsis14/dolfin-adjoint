@@ -228,3 +228,25 @@ def minimize(reduced_func, algorithm = 'scipy.l_bfgs_b', scale = 1.0, **kwargs):
         raise ValueError, 'Unknown optimization algorithm ' + algorithm + '. Use the print_optimization_algorithms to get a list of the available algorithms.'
 
     optimization_algorithms_dict[algorithm][1](reduced_func_array, reduced_func_deriv_array, [p.data() for p in reduced_func.parameter], **kwargs)
+
+def maximize(reduced_func, algorithm = 'scipy.l_bfgs_b', scale = 1.0, **kwargs):
+    ''' Solves the maximisation problem with PDE constraint:
+
+           max_m func(u, m) 
+             s.t. 
+           e(u, m) = 0
+           lb <= m <= ub
+           g(m) <= u
+           
+        where m is the control variable, u is the solution of the PDE system e(u, m) = 0, func is the functional of interest and lb, ub and g(m) constraints the control variables. 
+        The optimization problem is solved using a gradient based optimization algorithm and the functional gradients are computed by solving the associated adjoint system.
+
+        The function arguments are as follows:
+        * 'reduced_func' must be a ReducedFunctional object. 
+        * 'algorithm' specifies the optimization algorithm to be used to solve the problem. The available algorithms can be listed with the print_optimization_algorithms function.
+        * 'scale' is a factor to scale to problem. Use a negative number to solve a maximisation problem.
+        * 'bounds' is an optional keyword parameter to support control constraints: bounds = (lb, ub). lb and ub must be of the same type than the parameters m. 
+        
+        Additional arguments specific for the optimization algorithms can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimization algorithm. For detailed information about which arguments are supported for each optimization algorithm, please refer to the documentaton of the optimization algorithm.
+        '''
+    minimize(reduced_func, algorithm, scale = -scale, **kwargs)
