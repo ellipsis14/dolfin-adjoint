@@ -94,7 +94,9 @@ def minimize_scipy_slsqp(J, dJ, m, bounds = None, **kwargs):
         mopt = fmin_slsqp(J, m_global, fprime = dJ, bounds = bounds, **kwargs)
     else:
         mopt = fmin_slsqp(J, m_global, fprime = dJ, **kwargs)
-    set_local(m, mopt)
+    if len(mopt.shape) > 1:
+        mopt = mopt[0]
+    set_local(m, numpy.array(mopt))
 
 def minimize_scipy_fmin_l_bfgs_b(J, dJ, m, bounds = None, **kwargs):
     ''' Interface to the L-BFGS-B algorithm in scipy '''
@@ -151,21 +153,21 @@ def minimize_scipy_bfgs(J, dJ, m, **kwargs):
     mopt, fopt, gopt, Bopt, func_calls, grad_calls, warnflag, allvecs = fmin_bfgs(J, m_global, fprime = dJ, **kwargs)
     set_local(m, mopt)
 
-optimisation_algorithms_dict = {'scipy.l_bfgs_b': ('The L-BFGS-B implementation in scipy.', minimize_scipy_fmin_l_bfgs_b),
+optimization_algorithms_dict = {'scipy.l_bfgs_b': ('The L-BFGS-B implementation in scipy.', minimize_scipy_fmin_l_bfgs_b),
                                 'scipy.slsqp': ('The SLSQP implementation in scipy.', minimize_scipy_slsqp),
                                 'scipy.tnc': ('The truncated Newton algorithm implemented in scipy.', minimize_scipy_tnc), 
                                 'scipy.cg': ('The nonlinear conjugate gradient algorithm implemented in scipy.', minimize_scipy_cg), 
                                 'scipy.bfgs': ('The BFGS implementation in scipy.', minimize_scipy_bfgs), 
                                 }
 
-def print_optimisation_algorithms():
-    ''' Prints the available optimisation algorithms '''
+def print_optimization_algorithms():
+    ''' Prints the available optimization algorithms '''
 
-    print 'Available optimisation algorithms:'
-    for function_name, (description, func) in optimisation_algorithms_dict.iteritems():
+    print 'Available optimization algorithms:'
+    for function_name, (description, func) in optimization_algorithms_dict.iteritems():
         print function_name, ': ', description
 
-def minimize(reduced_func, algorithm = 'scipy.l_bfgs_b', **kwargs):
+def minimize(reduced_func, algorithm = 'scipy.l_bfgs_b', scale = 1.0, **kwargs):
     ''' Solves the minimisation problem with PDE constraint:
 
            min_m func(u, m) 
@@ -175,14 +177,15 @@ def minimize(reduced_func, algorithm = 'scipy.l_bfgs_b', **kwargs):
            g(m) <= u
            
         where m is the control variable, u is the solution of the PDE system e(u, m) = 0, func is the functional of interest and lb, ub and g(m) constraints the control variables. 
-        The optimisation problem is solved using a gradient based optimisation algorithm and the functional gradients are computed by solving the associated adjoint system.
+        The optimization problem is solved using a gradient based optimization algorithm and the functional gradients are computed by solving the associated adjoint system.
 
         The function arguments are as follows:
         * 'reduced_func' must be a ReducedFunctional object. 
-        * 'algorithm' specifies the optimisation algorithm to be used to solve the problem. The available algorithms can be listed with the print_optimisation_algorithms function.
+        * 'algorithm' specifies the optimization algorithm to be used to solve the problem. The available algorithms can be listed with the print_optimization_algorithms function.
+        * 'scale' is a factor to scale to problem. Use a negative number to solve a maximisation problem.
         * 'bounds' is an optional keyword parameter to support control constraints: bounds = (lb, ub). lb and ub must be of the same type than the parameters m. 
         
-        Additional arguments specific for the optimisation algorithms can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimisation algorithm. For detailed information about which arguments are supported for each optimisation algorithm, please refer to the documentaton of the optimisation algorithm.
+        Additional arguments specific for the optimization algorithms can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimization algorithm. For detailed information about which arguments are supported for each optimization algorithm, please refer to the documentaton of the optimization algorithm.
         '''
 
     def reduced_func_deriv_array(m_array):
@@ -199,16 +202,16 @@ def minimize(reduced_func, algorithm = 'scipy.l_bfgs_b', **kwargs):
         dJdm_global = get_global(dJdm)
 
         # Perform the gradient test
-        if dolfin.parameters["optimisation"]["test_gradient"]:
-            minconv = utils.test_gradient_array(reduced_func_array, dJdm_global, m_array, 
-                                                seed = dolfin.parameters["optimisation"]["test_gradient_seed"])
+        if dolfin.parameters["optimization"]["test_gradient"]:
+            minconv = utils.test_gradient_array(reduced_func_array, scale * dJdm_global, m_array, 
+                                                seed = dolfin.parameters["optimization"]["test_gradient_seed"])
             if minconv < 1.9:
                 raise RuntimeWarning, "A gradient test failed during execution."
             else:
                 info("Gradient test succesfull.")
             reduced_func_array(m_array) 
 
-        return dJdm_global 
+        return scale * dJdm_global 
 
     def reduced_func_array(m_array):
         ''' An implementation of the reduced functional that accepts the parameter as an array '''
@@ -219,9 +222,9 @@ def minimize(reduced_func, algorithm = 'scipy.l_bfgs_b', **kwargs):
         # Set the parameter values and execute the reduced functional
         m = [p.data() for p in reduced_func.parameter]
         set_local(m, m_array)
-        return reduced_func(m)
+        return scale * reduced_func(m)
 
-    if algorithm not in optimisation_algorithms_dict.keys():
-        raise ValueError, 'Unknown optimisation algorithm ' + algorithm + '. Use the print_optimisation_algorithms to get a list of the available algorithms.'
+    if algorithm not in optimization_algorithms_dict.keys():
+        raise ValueError, 'Unknown optimization algorithm ' + algorithm + '. Use the print_optimization_algorithms to get a list of the available algorithms.'
 
-    optimisation_algorithms_dict[algorithm][1](reduced_func_array, reduced_func_deriv_array, [p.data() for p in reduced_func.parameter], **kwargs)
+    optimization_algorithms_dict[algorithm][1](reduced_func_array, reduced_func_deriv_array, [p.data() for p in reduced_func.parameter], **kwargs)

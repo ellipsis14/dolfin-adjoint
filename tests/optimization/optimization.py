@@ -7,7 +7,7 @@ from dolfin_adjoint import *
 import libadjoint
 
 dolfin.set_log_level(ERROR)
-dolfin.parameters["optimisation"]["test_gradient"] = True 
+dolfin.parameters["optimization"]["test_gradient"] = True 
 
 n = 10
 mesh = UnitInterval(n)
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     ic = project(Expression("sin(2*pi*x[0])"),  V)
 
     # Run the problem again with SQP, this time for performance reasons with the gradient test switched off
-    dolfin.parameters["optimisation"]["test_gradient"] = False 
+    dolfin.parameters["optimization"]["test_gradient"] = False 
     minimize(reduced_functional, algorithm = 'scipy.slsqp', bounds = (lb, 1), iprint = 2, acc = 1e-10)
 
     tol = 1e-9

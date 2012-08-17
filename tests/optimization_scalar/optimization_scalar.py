@@ -3,7 +3,7 @@ from dolfin_adjoint import *
 import sys
 
 dolfin.set_log_level(ERROR)
-dolfin.parameters["optimisation"]["test_gradient"] = True
+dolfin.parameters["optimization"]["test_gradient"] = True
 
 n = 10
 mesh = UnitInterval(n)
