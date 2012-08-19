@@ -40,9 +40,9 @@ if __name__ == "__main__":
 
   # Run the optimisation 
   reduced_functional = ReducedFunctional(J, ScalarParameter(nu))
-  minimize(reduced_functional, 'scipy.slsqp', iprint = 2)
+  nu_opt = minimize(reduced_functional, 'scipy.slsqp', iprint = 2)
 
   tol = 1e-4
-  if reduced_functional(nu) > tol:
-    print 'Test failed: Optimised functional value exceeds tolerance: ', reduced_functional(nu), ' > ', tol, '.'
+  if reduced_functional(nu_opt) > tol:
+    print 'Test failed: Optimised functional value exceeds tolerance: ', reduced_functional(nu_opt), ' > ', tol, '.'
     sys.exit(1)

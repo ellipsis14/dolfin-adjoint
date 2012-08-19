@@ -94,9 +94,10 @@ def minimize_scipy_slsqp(J, dJ, m, bounds = None, **kwargs):
         mopt = fmin_slsqp(J, m_global, fprime = dJ, bounds = bounds, **kwargs)
     else:
         mopt = fmin_slsqp(J, m_global, fprime = dJ, **kwargs)
-    if len(mopt.shape) > 1:
+    if type(mopt) == list:
         mopt = mopt[0]
     set_local(m, numpy.array(mopt))
+    return m
 
 def minimize_scipy_fmin_l_bfgs_b(J, dJ, m, bounds = None, **kwargs):
     ''' Interface to the L-BFGS-B algorithm in scipy '''
@@ -113,6 +114,7 @@ def minimize_scipy_fmin_l_bfgs_b(J, dJ, m, bounds = None, **kwargs):
 
     mopt, f, d = fmin_l_bfgs_b(J, m_global, fprime = dJ, bounds = bounds, **kwargs)
     set_local(m, mopt)
+    return m
 
 def minimize_scipy_tnc(J, dJ, m, bounds = None, **kwargs):
     from scipy.optimize import fmin_tnc
@@ -128,6 +130,7 @@ def minimize_scipy_tnc(J, dJ, m, bounds = None, **kwargs):
 
     mopt, nfeval, rc = fmin_tnc(J, m_global, fprime = dJ, bounds = bounds, **kwargs)
     set_local(m, mopt)
+    return m
 
 def minimize_scipy_cg(J, dJ, m, **kwargs):
     from scipy.optimize import fmin_cg
@@ -140,6 +143,7 @@ def minimize_scipy_cg(J, dJ, m, **kwargs):
 
     mopt, fopt, func_calls, grad_calls, warnflag, allvecs = fmin_cg(J, m_global, fprime = dJ, **kwargs)
     set_local(m, mopt)
+    return m
 
 def minimize_scipy_bfgs(J, dJ, m, **kwargs):
     from scipy.optimize import fmin_bfgs
@@ -152,6 +156,7 @@ def minimize_scipy_bfgs(J, dJ, m, **kwargs):
 
     mopt, fopt, gopt, Bopt, func_calls, grad_calls, warnflag, allvecs = fmin_bfgs(J, m_global, fprime = dJ, **kwargs)
     set_local(m, mopt)
+    return m
 
 optimization_algorithms_dict = {'scipy.l_bfgs_b': ('The L-BFGS-B implementation in scipy.', minimize_scipy_fmin_l_bfgs_b),
                                 'scipy.slsqp': ('The SLSQP implementation in scipy.', minimize_scipy_slsqp),
@@ -227,7 +232,7 @@ def minimize(reduced_func, algorithm = 'scipy.l_bfgs_b', scale = 1.0, **kwargs):
     if algorithm not in optimization_algorithms_dict.keys():
         raise ValueError, 'Unknown optimization algorithm ' + algorithm + '. Use the print_optimization_algorithms to get a list of the available algorithms.'
 
-    optimization_algorithms_dict[algorithm][1](reduced_func_array, reduced_func_deriv_array, [p.data() for p in reduced_func.parameter], **kwargs)
+    return optimization_algorithms_dict[algorithm][1](reduced_func_array, reduced_func_deriv_array, [p.data() for p in reduced_func.parameter], **kwargs)
 
 def maximize(reduced_func, algorithm = 'scipy.l_bfgs_b', scale = 1.0, **kwargs):
     ''' Solves the maximisation problem with PDE constraint:
@@ -249,4 +254,4 @@ def maximize(reduced_func, algorithm = 'scipy.l_bfgs_b', scale = 1.0, **kwargs):
         
         Additional arguments specific for the optimization algorithms can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimization algorithm. For detailed information about which arguments are supported for each optimization algorithm, please refer to the documentaton of the optimization algorithm.
         '''
-    minimize(reduced_func, algorithm, scale = -scale, **kwargs)
+    return minimize(reduced_func, algorithm, scale = -scale, **kwargs)

@@ -57,17 +57,17 @@ if __name__ == "__main__":
     reduced_functional = ReducedFunctional(J, InitialConditionParameter(u))
 
     # Run the optimisation problem with gradient tests and L-BFGS-B
-    minimize(reduced_functional, algorithm = 'scipy.l_bfgs_b', pgtol=1e-6, factr=1e5, bounds = (lb, 1), iprint = 1)
+    u_opt = minimize(reduced_functional, algorithm = 'scipy.l_bfgs_b', pgtol=1e-6, factr=1e5, bounds = (lb, 1), iprint = 1)
     ic = project(Expression("sin(2*pi*x[0])"),  V)
 
     # Run the problem again with SQP, this time for performance reasons with the gradient test switched off
     dolfin.parameters["optimization"]["test_gradient"] = False 
-    minimize(reduced_functional, algorithm = 'scipy.slsqp', bounds = (lb, 1), iprint = 2, acc = 1e-10)
+    u_opt = minimize(reduced_functional, algorithm = 'scipy.slsqp', bounds = (lb, 1), iprint = 2, acc = 1e-10)
 
     tol = 1e-9
-    final_functional = reduced_functional(u)
+    final_functional = reduced_functional(u_opt)
     print "Final functional value: ", final_functional
     if final_functional > tol:
-        print 'Test failed: Optimised functional value exceeds tolerance: ' , reduced_functional(ic), ' > ', tol, '.'
+        print 'Test failed: Optimised functional value exceeds tolerance: ' , final_functional, ' > ', tol, '.'
         sys.exit(1)
 
