@@ -78,4 +78,4 @@ if __name__ == "__main__":
 
     print "Error norm: ", norm
 
-    assert norm < 1.0e-8
+    assert norm < 1.0e-7
