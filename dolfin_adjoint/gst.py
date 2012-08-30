@@ -8,22 +8,24 @@ def compute_gst(ic, final, nsv, ic_norm="mass", final_norm="mass"):
   Generalised stability theory computes the perturbations to a field (such as an
   initial condition, forcing term, etc.) that /grow the most/ over the finite
   time window of the simulation. For more details, see the mathematical documentation
-  at http://dolfin-adjoint.org.
+  on `the website <http://dolfin-adjoint.org>`_.
 
-  ic -- the input of the propagator
-  final -- the output of the propagator
-  nsv -- the number of optimal perturbations to compute
-  ic_norm -- a symmetric positive-definite bilinear form that defines the norm on the input space
-  final_norm -- a symmetric positive-definite bilinear form that defines the norm on the output space
+  :py:data:`ic` -- the input of the propagator
+  :py:data:`final` -- the output of the propagator
+  :py:data:`nsv` -- the number of optimal perturbations to compute
+  :py:data:`ic_norm` -- a symmetric positive-definite bilinear form that defines the norm on the input space
+  :py:data:`final_norm` -- a symmetric positive-definite bilinear form that defines the norm on the output space
 
-  You can supply "mass" for ic_norm and final_norm to use the (default) mass matrices associated
+  You can supply :py:data:`"mass"` for :py:data:`ic_norm` and :py:data:`final_norm` to use the (default) mass matrices associated
   with these spaces.
 
   For example:
 
-  gst = compute_gst("State", "State", nsv=10)
-  for i in range(gst.ncv): # number of converged vectors
-    (sigma, u, v, error) = gst.get_gst(i, return_vectors=True, return_error=True)
+  .. code-block:: python
+
+    gst = compute_gst("State", "State", nsv=10)
+    for i in range(gst.ncv): # number of converged vectors
+      (sigma, u, v) = gst.get_gst(i, return_vectors=True)
   '''
 
   ic_var = adjglobals.adj_variables[ic]; ic_var.c_object.timestep = 0; ic_var.c_object.iteration = 0

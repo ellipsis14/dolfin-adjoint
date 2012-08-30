@@ -9,8 +9,9 @@ import adjlinalg
 from timeforms import NoTime, StartTimeConstant, FinishTimeConstant
 
 class Functional(libadjoint.Functional):
-  '''This class implements the libadjoint.Functional abstract base class for dolfin-adjoint.
+  '''This class implements the :py:class:`libadjoint.Functional` abstract base class for dolfin-adjoint.
   The core idea is that a functional is either
+
     (a) an integral of a form over a certain time window, or
     (b) a pointwise evaluation in time of a certain form, or
     (c) a sum of terms like (a) and (b).
@@ -18,30 +19,44 @@ class Functional(libadjoint.Functional):
   Some examples:
 
     - Integration over all time:
-    J = Functional(inner(u, u)*dx*dt)
+      .. code-block:: python
+
+        J = Functional(inner(u, u)*dx*dt)
 
     - Integration over a certain time window:
-    J = Functional(inner(u, u)*dx*dt[0:1])
+      .. code-block:: python
+
+        J = Functional(inner(u, u)*dx*dt[0:1])
 
     - Integration from a certain point until the end:
-    J = Functional(inner(u, u)*dx*dt[0.5:])
+      .. code-block:: python
+
+        J = Functional(inner(u, u)*dx*dt[0.5:])
 
     - Pointwise evaluation in time (does not need to line up with timesteps):
-    J = Functional(inner(u, u)*dx*dt[0.5])
+      .. code-block:: python
 
-    - Pointwise evaluation at the start (for regularisation terms):
-    J = Functional(inner(u, u)*dx*dt[START_TIME])
+        J = Functional(inner(u, u)*dx*dt[0.5])
+
+    - Pointwise evaluation at the start (e.g. for regularisation terms):
+      .. code-block:: python
+
+        J = Functional(inner(u, u)*dx*dt[START_TIME])
 
     - Pointwise evaluation at the end:
-    J = Functional(inner(u, u)*dx*dt[FINISH_TIME])
+      .. code-block:: python
+
+        J = Functional(inner(u, u)*dx*dt[FINISH_TIME])
 
     - And sums of these work too:
-    J = Functional(inner(u, u)*dx*dt + inner(u, u)*dx*dt[FINISH_TIME])
+      .. code-block:: python
 
-    If dt has been redefined, you can create your own time measure with TimeMeasure().
+        J = Functional(inner(u, u)*dx*dt + inner(u, u)*dx*dt[FINISH_TIME])
+
+    If :py:data:`dt` has been redefined, you can create your own time measure with :py:class:`TimeMeasure`.
 
     For anything but the evaluation at the final time to work, you need to annotate the
-    timestepping of your model with adj_inc_timestep.'''
+    timestepping of your model with :py:func:`adj_inc_timestep`.'''
 
   def __init__(self, timeform, verbose=False, name=None):
 
