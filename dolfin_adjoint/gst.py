@@ -4,6 +4,28 @@ import libadjoint
 import dolfin
 
 def compute_gst(ic, final, nsv, ic_norm="mass", final_norm="mass"):
+  '''This function computes the generalised stability analysis of a simulation.
+  Generalised stability theory computes the perturbations to a field (such as an
+  initial condition, forcing term, etc.) that /grow the most/ over the finite
+  time window of the simulation. For more details, see the mathematical documentation
+  at http://dolfin-adjoint.org.
+
+  ic -- the input of the propagator
+  final -- the output of the propagator
+  nsv -- the number of optimal perturbations to compute
+  ic_norm -- a symmetric positive-definite bilinear form that defines the norm on the input space
+  final_norm -- a symmetric positive-definite bilinear form that defines the norm on the output space
+
+  You can supply "mass" for ic_norm and final_norm to use the (default) mass matrices associated
+  with these spaces.
+
+  For example:
+
+  gst = compute_gst("State", "State", nsv=10)
+  for i in range(gst.ncv): # number of converged vectors
+    (sigma, u, v, error) = gst.get_gst(i, return_vectors=True, return_error=True)
+  '''
+
   ic_var = adjglobals.adj_variables[ic]; ic_var.c_object.timestep = 0; ic_var.c_object.iteration = 0
   final_var = adjglobals.adj_variables[final]
 
@@ -14,6 +36,8 @@ def compute_gst(ic, final, nsv, ic_norm="mass", final_norm="mass"):
     v = dolfin.TestFunction(final_fnsp)
     final_mass = dolfin.inner(u, v)*dolfin.dx
     final_norm = adjlinalg.Matrix(final_mass)
+  else:
+    final_norm = adjlinalg.Matrix(final_norm)
 
   if ic_norm == "mass":
     ic_value = adjglobals.adjointer.get_variable_value(ic_var).data
@@ -22,6 +46,8 @@ def compute_gst(ic, final, nsv, ic_norm="mass", final_norm="mass"):
     v = dolfin.TestFunction(ic_fnsp)
     ic_mass = dolfin.inner(u, v)*dolfin.dx
     ic_norm = adjlinalg.Matrix(ic_mass)
+  else:
+    ic_norm = adjlinalg.Matrix(ic_norm)
 
   return adjglobals.adjointer.compute_gst(ic_var, ic_norm, final_var, final_norm, nsv)
 
