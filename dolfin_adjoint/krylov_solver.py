@@ -1,7 +1,6 @@
 import dolfin
 import solving
 import libadjoint
-from matrix_free import transpose_operators
 import adjlinalg
 import adjglobals
 
@@ -153,3 +152,34 @@ class KrylovSolver(dolfin.KrylovSolver):
       adjglobals.adjointer.record_variable(adjglobals.adj_variables[u], libadjoint.MemoryStorage(adjlinalg.Vector(u)))
 
     return out
+
+def transpose_operators(operators):
+  out = [None, None]
+
+  for i in range(2):
+    op = operators[i]
+
+    if op is None: 
+      out[i] = None
+    elif isinstance(op, dolfin.cpp.GenericMatrix):
+      out[i] = op.__class__()
+      dolfin.assemble(dolfin.adjoint(op.form), tensor=out[i])
+
+      if hasattr(op, 'bcs'):
+        adjoint_bcs = [dolfin.homogenize(bc) for bc in op.bcs if isinstance(bc, dolfin.cpp.DirichletBC)] + [bc for bc in op.bcs if not isinstance(bc, dolfin.DirichletBC)]
+        [bc.apply(out[i]) for bc in adjoint_bcs]
+
+    elif isinstance(op, dolfin.Form) or isinstance(op, ufl.form.Form):
+      out[i] = dolfin.adjoint(op)
+
+      if hasattr(op, 'bcs'):
+        out[i].bcs = [dolfin.homogenize(bc) for bc in op.bcs if isinstance(bc, dolfin.cpp.DirichletBC)] + [bc for bc in op.bcs if not isinstance(bc, dolfin.DirichletBC)]
+
+    elif isinstance(op, AdjointKrylovMatrix):
+      pass
+
+    else:
+      print "op.__class__: ", op.__class__
+      raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to transpose anything else!")
+
+  return out

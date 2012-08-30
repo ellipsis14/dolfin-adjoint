@@ -18,7 +18,11 @@ test_cmds = {'tlm_simple': 'mpirun -n 2 python tlm_simple.py',
              'differentiability-dg-upwind': None,
              'differentiability-stokes': None,
              'checkpoint_online': None,
-             'changing_vector': None}
+             'changing_vector': None,
+             'matrix_free_burgers': None,
+             'matrix_free_heat': None,
+             'matrix_free_simple': None,
+             'mantle_convection': None}
 
 chdirlock = threading.Lock()
 appendlock = threading.Lock()

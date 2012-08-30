@@ -2,7 +2,7 @@ from assembly import assemble, assemble_system
 from functional import Functional
 from parameter import InitialConditionParameter, ScalarParameter, ScalarParameters
 from lusolver import LUSolver
-from matrix_free import down_cast, AdjointPETScKrylovSolver, AdjointKrylovMatrix
+#from matrix_free import down_cast, AdjointPETScKrylovSolver, AdjointKrylovMatrix
 from solving import solve, adj_html, adj_reset, adj_checkpointing
 from adjglobals import adj_inc_timestep, adjointer, adj_check_checkpoints
 from gst import compute_gst, compute_propagator_matrix
