@@ -58,13 +58,18 @@ def new_get_gst(self, *args, **kwargs):
   '''Process the output of get_gst to return dolfin.Function's instead of adjlinalg.Vector's.'''
   retvals = orig_get_gst(self, *args, **kwargs)
   new_retvals = []
-  for retval in retvals:
-    if isinstance(retval, adjlinalg.Vector):
-      new_retvals.append(retval.data)
-    else:
-      new_retvals.append(retval)
+  try:
+    for retval in retvals:
+      if isinstance(retval, adjlinalg.Vector):
+        new_retvals.append(retval.data)
+      else:
+        new_retvals.append(retval)
 
-  return new_retvals
+    return new_retvals
+
+  except TypeError:
+    return retvals
+
 libadjoint.GSTHandle.get_gst = new_get_gst
 
 def compute_propagator_matrix(gst):
