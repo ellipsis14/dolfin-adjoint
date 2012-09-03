@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
   svd = compute_gst(ic, soln, 1, ic_norm=None, final_norm=None)
   assert svd.ncv >= 1
-  (sigma, u, v, error) = svd.get_gst(0, return_vectors=True, return_error=True)
+  (sigma, u, v, error) = svd.get_gst(0, return_vectors=True, return_residual=True)
 
   print "Maximal singular value: ", sigma
 

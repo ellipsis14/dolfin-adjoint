@@ -38,7 +38,7 @@ def compute_gst(ic, final, nsv, ic_norm="mass", final_norm="mass"):
     v = dolfin.TestFunction(final_fnsp)
     final_mass = dolfin.inner(u, v)*dolfin.dx
     final_norm = adjlinalg.Matrix(final_mass)
-  else:
+  elif final_norm is not None:
     final_norm = adjlinalg.Matrix(final_norm)
 
   if ic_norm == "mass":
@@ -48,7 +48,7 @@ def compute_gst(ic, final, nsv, ic_norm="mass", final_norm="mass"):
     v = dolfin.TestFunction(ic_fnsp)
     ic_mass = dolfin.inner(u, v)*dolfin.dx
     ic_norm = adjlinalg.Matrix(ic_mass)
-  else:
+  elif ic_norm is not None:
     ic_norm = adjlinalg.Matrix(ic_norm)
 
   return adjglobals.adjointer.compute_gst(ic_var, ic_norm, final_var, final_norm, nsv)
