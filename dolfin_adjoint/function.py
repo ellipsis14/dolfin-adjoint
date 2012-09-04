@@ -74,7 +74,9 @@ class Function(dolfin.Function):
 
   def __init__(self, *args, **kwargs):
     annotate = False
+    annotate_in_kwargs = False
     if 'annotate' in kwargs:
+      annotate_in_kwargs = True
       annotate = kwargs['annotate']
       del kwargs['annotate']
     if dolfin.parameters["adjoint"]["stop_annotating"]:
@@ -91,7 +93,7 @@ class Function(dolfin.Function):
 
     if isinstance(args[0], dolfin.Function) and annotate:
       other_var = adjglobals.adj_variables[args[0]]
-      if adjglobals.adjointer.variable_known(other_var):
+      if adjglobals.adjointer.variable_known(other_var) or annotate_in_kwargs:
         assign.register_assign(self, args[0])
 
   def assign(self, other, annotate=True):
