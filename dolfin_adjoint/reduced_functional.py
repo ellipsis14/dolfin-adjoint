@@ -6,6 +6,9 @@ class DummyEquation(object):
     pass
 
 class ReducedFunctional(object):
+    ''' This class implements the reduced functional for a given functional/parameter combination. The core idea 
+        of the reduced functional is to consider the problem as a pure function of the paramter value which 
+        implicitly solves the recorded PDE. '''
     def __init__(self, functional, parameter):
         ''' Creates a reduced functional object, that evaluates the functional value for a given parameter value.
             The arguments are as follows:
