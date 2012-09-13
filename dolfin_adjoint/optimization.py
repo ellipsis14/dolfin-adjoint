@@ -71,7 +71,7 @@ def serialise_bounds(bounds, m):
     bounds_arr = [[], []]
     for i in range(2):
         for j in range(len(bounds[i])):
-            if type(bounds[i][j]) in [int,  float, numpy.int32, numpy.int64]:
+            if type(bounds[i][j]) in [int,  float, numpy.int32, numpy.int64, numpy.float32, numpy.float64]:
                 bounds_arr[i] += (bounds[i][j]*numpy.ones(m[j].vector().size())).tolist()
             else:
                 bounds_arr[i] += get_global(bounds[i][j]).tolist()
