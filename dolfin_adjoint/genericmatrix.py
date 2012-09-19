@@ -25,3 +25,14 @@ def adjoint_genericmatrix_mul(self, other):
   return out
 
 dolfin.GenericMatrix.__mul__ = adjoint_genericmatrix_mul
+
+dolfin_genericmatrix_copy = dolfin.GenericMatrix.copy
+
+def adjoint_genericmatrix_copy(self):
+  out = dolfin_genericmatrix_copy(self)
+  if hasattr(self, 'form'):
+    out.form = self.form
+
+  return out
+
+dolfin.GenericMatrix.copy = adjoint_genericmatrix_copy
