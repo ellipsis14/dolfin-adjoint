@@ -91,6 +91,9 @@ class Function(dolfin.Function):
 
     dolfin.Function.__init__(self, *args, **kwargs)
 
+    if hasattr(self, 'adj_name'):
+      self.rename(self.adj_name, self.adj_name)
+
     if isinstance(args[0], dolfin.Function) and annotate:
       other_var = adjglobals.adj_variables[args[0]]
       if adjglobals.adjointer.variable_known(other_var) or annotate_in_kwargs:
