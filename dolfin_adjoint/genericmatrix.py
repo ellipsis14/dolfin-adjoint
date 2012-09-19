@@ -35,6 +35,8 @@ def adjoint_genericmatrix_copy(self):
   out = dolfin_genericmatrix_copy(self)
   if hasattr(self, 'form'):
     out.form = self.form
+  if hasattr(self, 'assemble_system'):
+    out.assemble_system = self.assemble_system
 
   return out
 

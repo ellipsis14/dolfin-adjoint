@@ -1,4 +1,5 @@
 import dolfin
+import ufl
 import solving
 import libadjoint
 import adjlinalg
@@ -31,6 +32,9 @@ class KrylovSolver(dolfin.KrylovSolver):
     if "annotate" in kwargs:
       to_annotate = kwargs["annotate"]
       del kwargs["annotate"] # so we don't pass it on to the real solver
+
+    if dolfin.parameters["adjoint"]["stop_annotating"]:
+      to_annotate = False
 
     if to_annotate:
       if len(args) == 3:
@@ -79,7 +83,10 @@ class KrylovSolver(dolfin.KrylovSolver):
           adjlinalg.Matrix.__init__(self, *args, **kwargs)
 
           self.adjoint = kwargs['adjoint']
-          self.operators = (dolfin.replace(A, replace_map), dolfin.replace(P, replace_map))
+          if P is None:
+            self.operators = (dolfin.replace(A, replace_map), None)
+          else:
+            self.operators = (dolfin.replace(A, replace_map), dolfin.replace(P, replace_map))
 
         def axpy(self, alpha, x):
           raise libadjoint.exceptions.LibadjointErrorNotImplemented("Shouldn't ever get here")
