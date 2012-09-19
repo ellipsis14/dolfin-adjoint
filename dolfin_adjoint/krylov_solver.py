@@ -42,7 +42,13 @@ class KrylovSolver(dolfin.KrylovSolver):
         x = args[0]
         b = args[1]
 
-      bcs = list(set(A.bcs + b.bcs))
+      bcs = []
+      if hasattr(A, 'bcs'):
+        bcs += A.bcs
+      if hasattr(b, 'bcs'):
+        bcs += b.bcs
+      bcs = list(set(bcs))
+
       assemble_system = A.assemble_system
 
       A = A.form
