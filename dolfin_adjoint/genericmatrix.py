@@ -20,9 +20,10 @@ def adjoint_genericmatrix_mul(self, other):
     if hasattr(other, 'form'):
       out.form = dolfin.action(self.form, other.form)
     elif hasattr(other, 'function'):
-      out.form = dolfin.action(self.form, other.function)
       if hasattr(other, 'function_factor'):
-        out.form *= other.function_factor
+        out.form = dolfin.action(other.function_factor*self.form, other.function)
+      else:
+        out.form = dolfin.action(self.form, other.function)
 
   return out
 
