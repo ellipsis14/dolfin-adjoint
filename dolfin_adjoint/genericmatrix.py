@@ -21,6 +21,8 @@ def adjoint_genericmatrix_mul(self, other):
       out.form = dolfin.action(self.form, other.form)
     elif hasattr(other, 'function'):
       out.form = dolfin.action(self.form, other.function)
+      if hasattr(other, 'function_factor'):
+        out.form *= other.function_factor
 
   return out
 
