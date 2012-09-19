@@ -26,6 +26,7 @@ import lusolver
 import gst
 import function
 import genericmatrix
+import genericvector
 import optimization
 import reduced_functional 
 from ui import *
