@@ -140,9 +140,10 @@ def minimize_scipy_cg(J, dJ, m, **kwargs):
     # Shut up all processors but the first one.
     if MPI.process_number() != 0:
         kwargs['iprint'] = -1
+    kwargs['full_output'] = True
 
-    mopt, fopt, func_calls, grad_calls, warnflag, allvecs = fmin_cg(J, m_global, fprime = dJ, **kwargs)
-    set_local(m, mopt)
+    result = fmin_cg(J, m_global, fprime = dJ, **kwargs)
+    set_local(m, result[0])
     return m
 
 def minimize_scipy_bfgs(J, dJ, m, **kwargs):
