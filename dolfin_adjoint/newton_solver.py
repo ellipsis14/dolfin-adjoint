@@ -21,7 +21,7 @@ class NewtonSolver(dolfin.NewtonSolver):
     if to_annotate:
       factory = args[0]
       vec = args[1]
-      b = dolfin.PETScVector()
+      b = dolfin.down_cast(vec).__class__()
 
       factory.F(b=b, x=vec)
 
