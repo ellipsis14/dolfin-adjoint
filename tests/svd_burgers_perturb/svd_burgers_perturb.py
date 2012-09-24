@@ -9,6 +9,7 @@ import random
 
 from dolfin import *
 from dolfin_adjoint import *
+import libadjoint.exceptions
 
 dolfin.parameters["adjoint"]["record_all"] = True
 dolfin.parameters["adjoint"]["fussy_replay"] = False
@@ -56,7 +57,12 @@ if __name__ == "__main__":
     ic.vector()[:] = ic_copy.vector()
     factor = 0.01
 
-    svd = compute_gst("State", "State", nsv=1, ic_norm=None, final_norm=None)
+    try:
+      svd = compute_gst("State", "State", nsv=1, ic_norm=None, final_norm=None)
+    except libadjoint.exceptions.LibadjointErrorSlepcError:
+      info_red("Not testing since SLEPc unavailable.")
+      import sys; sys.exit(0)
+
     (sigma, u, v) = svd.get_gst(0, return_vectors=True)
 
     ic_norm = v.vector().norm("l2")
@@ -76,7 +82,12 @@ if __name__ == "__main__":
     print "Prediction error: ", prediction_error,  "%"
     assert prediction_error < 2
 
-    svd = compute_gst("State", "State", nsv=1, ic_norm="mass", final_norm="mass")
+    try:
+      svd = compute_gst("State", "State", nsv=1, ic_norm="mass", final_norm="mass")
+    except libadjoint.exceptions.LibadjointErrorSlepcError:
+      info_red("Not testing since SLEPc unavailable.")
+      import sys; sys.exit(0)
+
     (sigma, u, v) = svd.get_gst(0, return_vectors=True)
 
     ic_norm = sqrt(assemble(inner(v, v)*dx))

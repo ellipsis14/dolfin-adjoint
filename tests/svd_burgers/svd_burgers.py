@@ -9,6 +9,7 @@ import random
 
 from dolfin import *
 from dolfin_adjoint import *
+import libadjoint.exceptions
 
 dolfin.parameters["adjoint"]["record_all"] = True
 dolfin.parameters["adjoint"]["fussy_replay"] = False
@@ -68,7 +69,11 @@ if __name__ == "__main__":
 
     ndof = V.dim()
     info_blue("Computing the TLM the SVD way ... ")
-    svd = compute_gst("State", "State", nsv=ndof, ic_norm=None, final_norm=None)
+    try:
+      svd = compute_gst("State", "State", nsv=ndof, ic_norm=None, final_norm=None)
+    except libadjoint.exceptions.LibadjointErrorSlepcError:
+      info_red("Not testing since SLEPc unavailable.")
+      import sys; sys.exit(0)
 
     assert svd.ncv == ndof
 

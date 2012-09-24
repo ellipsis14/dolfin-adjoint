@@ -3,6 +3,7 @@ import random
 from dolfin import *
 from dolfin_adjoint import *
 import sys
+import libadjoint.exceptions
 
 mesh = UnitSquare(4, 4)
 V = FunctionSpace(mesh, "CG", 1)
@@ -23,7 +24,12 @@ if __name__ == "__main__":
   ic = project(Expression("x[0]*(x[0]-1)*x[1]*(x[1]-1)"), V)
   soln = main(ic, annotate=True)
 
-  svd = compute_gst(ic, soln, 1, ic_norm="mass", final_norm="mass")
+  try:
+    svd = compute_gst(ic, soln, 1, ic_norm="mass", final_norm="mass")
+  except libadjoint.exceptions.LibadjointErrorSlepcError:
+    info_red("Not testing since SLEPc unavailable.")
+    import sys; sys.exit(0)
+
   (sigma, u, v, error) = svd.get_gst(0, return_vectors=True, return_residual=True)
 
   print "Maximal singular value: ", (sigma, error)
