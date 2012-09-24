@@ -36,8 +36,8 @@ dolfin.parameters["adjoint"]["fussy_replay"] = True
 
 # Test for PETSc or Epetra
 if not has_linear_algebra_backend("PETSc") and not has_linear_algebra_backend("Epetra"):
-    info("DOLFIN has not been configured with Trilinos or PETSc. Exiting.")
-    exit()
+    info_red("DOLFIN has not been configured with Trilinos or PETSc. Exiting.")
+    sys.exit(0)
 
 # Load mesh
 mesh = UnitCube(4, 4, 4)
