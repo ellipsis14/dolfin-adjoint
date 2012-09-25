@@ -96,6 +96,8 @@ def main(ic, annotate=False):
   A2 = assemble(a2)
   A3 = assemble(a3)
 
+  prec = "amg" if has_krylov_solver_preconditioner("amg") else "default"
+
   # Time-stepping
   t = dt
   while t < T + DOLFIN_EPS:
@@ -114,7 +116,7 @@ def main(ic, annotate=False):
       begin("Computing pressure correction")
       b2 = assemble(L2)
       [bc.apply(A2, b2) for bc in bcp]
-      solve(A2, p1.vector(), b2, "gmres", "amg")
+      solve(A2, p1.vector(), b2, "gmres", prec)
       end()
 
       # Velocity correction
