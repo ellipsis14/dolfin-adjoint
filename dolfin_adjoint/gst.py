@@ -91,3 +91,69 @@ def compute_propagator_matrix(gst):
     mat += sum_mat
 
   return mat
+
+def perturbed_replay(parameter, perturbation, perturbation_norm, perturbation_scale, observation, observation_norm):
+  r"""Perturb the forward run and compute
+
+  .. math::
+
+    \frac{
+    \left|\left| \delta \mathrm{observation} \right|\right| 
+    }{
+    \left|\left| \delta \mathrm{input} \right| \right|
+    }
+
+  as a function of time.
+
+  :py:data:`parameter` -- an InitialConditionParameter to say what variable should be perturbed (e.g. InitialConditionParameter('InitialConcentration'))
+  :py:data:`perturbation` -- a Function to give the perturbation direction (from a GST analysis, for example)
+  :py:data:`perturbation_norm` -- a bilinear Form which induces a norm on the space of perturbation inputs
+  :py:data:`perturbation_scale` -- how big the norm of the initial perturbation should be
+  :py:data:`observation` -- the variable to observe (e.g. 'Concentration')
+  :py:data:`observation_norm` -- a bilinear Form which induces a norm on the space of perturbation outputs
+  """
+
+  if not dolfin.parameters["adjoint"]["record_all"]:
+    info_red("Warning: your replay test will be much more effective with dolfin.parameters['adjoint']['record_all'] = True.")
+
+  assert isinstance(parameter, InitialConditionParameter)
+
+  perturbation_norm = assemble(perturbation_norm)
+
+  def compute_norm(perturbation, norm):
+    # Need to compute <x, Ax> and then take its sqrt
+    # where x is perturbation, A is norm
+    try:
+      vec = perturbation.vector()
+    except:
+      vec = perturbation
+
+    Ax = norm.mult(vec)
+    xAx = vec.inner(Ax)
+    return sqrt(xAx)
+
+  growths = []
+
+  for i in range(adjglobals.adjointer.equation_count):
+      (fwd_var, output) = adjglobals.adjointer.get_forward_solution(i)
+
+      if fwd_var == parameter.var: # we've hit the initial condition we want to perturb
+        current_norm = compute_norm(perturbation, perturbation_norm)
+        output.data.vector()[:] += (perturbation_scale/current_norm) * perturbation.vector()
+
+      if fwd_var.name == observation: # we've hit something we want to observe
+        # Fetch the unperturbed result from the record
+        unperturbed = adjglobals.adjointer.get_variable_value(fwd_var).data
+        diff = output.data.vector() - unperturbed.vector()
+        growths.append(compute_norm(diff, observation_norm)/perturbation_scale) # <--- the action line
+
+      storage = libadjoint.MemoryStorage(output)
+      storage.set_compare(tol=None)
+      storage.set_overwrite(True)
+      out = adjglobals.adjointer.record_variable(fwd_var, storage)
+
+      if forget:
+        adjglobals.adjointer.forget_forward_equation(i)
+
+  return growths
+
