@@ -80,3 +80,23 @@ class ReducedFunctional(object):
             #adjglobals.adjointer.forget_forward_equation(i)
         return func_value
 
+    def taylor_test(self, seed = 0.001):
+        ''' Runs the taylor remainder convergence test at current parameter values. 
+            The peturbation direction is random and the perturbation size can be controlled with the seed argument.
+        '''
+        from optimization import get_global, set_local
+        import utils
+        
+        m = [p.data() for p in self.parameter]
+        m_array = get_global(m)
+        dJdm = utils.compute_gradient(self.functional, self.parameter)
+        dJdm_global = get_global(dJdm)
+
+        def reduced_func_array(m_array):
+            if not self.replays_annotation:
+                solving.adj_reset()
+            set_local(m, m_array)
+            return self(m)
+
+        minconv = utils.test_gradient_array(reduced_func_array, dJdm_global, m_array, seed = seed)
+        return minconv
