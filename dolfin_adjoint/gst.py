@@ -2,6 +2,8 @@ import adjglobals
 import adjlinalg
 import libadjoint
 import dolfin
+import parameter as parameter_module
+import math
 
 def compute_gst(ic, final, nsv, ic_norm="mass", final_norm="mass"):
   '''This function computes the generalised stability analysis of a simulation.
@@ -92,7 +94,7 @@ def compute_propagator_matrix(gst):
 
   return mat
 
-def perturbed_replay(parameter, perturbation, perturbation_norm, perturbation_scale, observation, observation_norm):
+def perturbed_replay(parameter, perturbation, perturbation_scale, observation, perturbation_norm="mass", observation_norm="mass", forget=False):
   r"""Perturb the forward run and compute
 
   .. math::
@@ -116,9 +118,19 @@ def perturbed_replay(parameter, perturbation, perturbation_norm, perturbation_sc
   if not dolfin.parameters["adjoint"]["record_all"]:
     info_red("Warning: your replay test will be much more effective with dolfin.parameters['adjoint']['record_all'] = True.")
 
-  assert isinstance(parameter, InitialConditionParameter)
+  assert isinstance(parameter, parameter_module.InitialConditionParameter)
 
-  perturbation_norm = assemble(perturbation_norm)
+  if perturbation_norm == "mass":
+    p_fnsp = perturbation.function_space()
+    u = dolfin.TrialFunction(p_fnsp)
+    v = dolfin.TestFunction(p_fnsp)
+    p_mass = dolfin.inner(u, v)*dolfin.dx
+    perturbation_norm = p_mass
+
+  if not isinstance(perturbation_norm, dolfin.GenericMatrix):
+    perturbation_norm = dolfin.assemble(perturbation_norm)
+  if not isinstance(observation_norm, dolfin.GenericMatrix) and observation_norm != "mass":
+    observation_norm = dolfin.assemble(observation_norm)
 
   def compute_norm(perturbation, norm):
     # Need to compute <x, Ax> and then take its sqrt
@@ -128,9 +140,10 @@ def perturbed_replay(parameter, perturbation, perturbation_norm, perturbation_sc
     except:
       vec = perturbation
 
-    Ax = norm.mult(vec)
+    Ax = vec.copy()
+    norm.mult(vec, Ax)
     xAx = vec.inner(Ax)
-    return sqrt(xAx)
+    return math.sqrt(xAx)
 
   growths = []
 
@@ -143,6 +156,14 @@ def perturbed_replay(parameter, perturbation, perturbation_norm, perturbation_sc
 
       if fwd_var.name == observation: # we've hit something we want to observe
         # Fetch the unperturbed result from the record
+
+        if observation_norm == "mass": # we can't do this earlier, because we don't have the observation function space yet
+          o_fnsp = output.data.function_space()
+          u = dolfin.TrialFunction(o_fnsp)
+          v = dolfin.TestFunction(o_fnsp)
+          o_mass = dolfin.inner(u, v)*dolfin.dx
+          observation_norm = assemble(o_mass)
+
         unperturbed = adjglobals.adjointer.get_variable_value(fwd_var).data
         diff = output.data.vector() - unperturbed.vector()
         growths.append(compute_norm(diff, observation_norm)/perturbation_scale) # <--- the action line
@@ -155,5 +176,9 @@ def perturbed_replay(parameter, perturbation, perturbation_norm, perturbation_sc
       if forget:
         adjglobals.adjointer.forget_forward_equation(i)
 
-  return growths
+  # can happen if we initialised a nonlinear solve with a constant zero guess
+  if growths[0] == 0.0:
+    return growths[1:]
+  else:
+    return growths
 
