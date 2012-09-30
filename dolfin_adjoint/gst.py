@@ -94,7 +94,7 @@ def compute_propagator_matrix(gst):
 
   return mat
 
-def perturbed_replay(parameter, perturbation, perturbation_scale, observation, perturbation_norm="mass", observation_norm="mass", forget=False):
+def perturbed_replay(parameter, perturbation, perturbation_scale, observation, perturbation_norm="mass", observation_norm="mass", callback=None, forget=False):
   r"""Perturb the forward run and compute
 
   .. math::
@@ -113,6 +113,7 @@ def perturbed_replay(parameter, perturbation, perturbation_scale, observation, p
   :py:data:`perturbation_scale` -- how big the norm of the initial perturbation should be
   :py:data:`observation` -- the variable to observe (e.g. 'Concentration')
   :py:data:`observation_norm` -- a bilinear Form which induces a norm on the space of perturbation outputs
+  :py:data:`callback` -- a function f(var, data) that the user can supply (e.g. to dump out variables during the perturbed replay)
   """
 
   if not dolfin.parameters["adjoint"]["record_all"]:
@@ -154,6 +155,8 @@ def perturbed_replay(parameter, perturbation, perturbation_scale, observation, p
         current_norm = compute_norm(perturbation, perturbation_norm)
         output.data.vector()[:] += (perturbation_scale/current_norm) * perturbation.vector()
 
+      unperturbed = adjglobals.adjointer.get_variable_value(fwd_var).data
+
       if fwd_var.name == observation: # we've hit something we want to observe
         # Fetch the unperturbed result from the record
 
@@ -162,11 +165,13 @@ def perturbed_replay(parameter, perturbation, perturbation_scale, observation, p
           u = dolfin.TrialFunction(o_fnsp)
           v = dolfin.TestFunction(o_fnsp)
           o_mass = dolfin.inner(u, v)*dolfin.dx
-          observation_norm = assemble(o_mass)
+          observation_norm = dolfin.assemble(o_mass)
 
-        unperturbed = adjglobals.adjointer.get_variable_value(fwd_var).data
         diff = output.data.vector() - unperturbed.vector()
         growths.append(compute_norm(diff, observation_norm)/perturbation_scale) # <--- the action line
+
+      if callback is not None:
+        callback(fwd_var, output.data, unperturbed)
 
       storage = libadjoint.MemoryStorage(output)
       storage.set_compare(tol=None)
