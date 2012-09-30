@@ -7,7 +7,7 @@ class DummyEquation(object):
 
 class ReducedFunctional(object):
     ''' This class implements the reduced functional for a given functional/parameter combination. The core idea 
-        of the reduced functional is to consider the problem as a pure function of the paramter value which 
+        of the reduced functional is to consider the problem as a pure function of the parameter value which 
         implicitly solves the recorded PDE. '''
     def __init__(self, functional, parameter):
         ''' Creates a reduced functional object, that evaluates the functional value for a given parameter value.
@@ -82,7 +82,7 @@ class ReducedFunctional(object):
 
     def taylor_test(self, seed = 0.001):
         ''' Runs the taylor remainder convergence test at current parameter values. 
-            The peturbation direction is random and the perturbation size can be controlled with the seed argument.
+            The perturbation direction is random and the perturbation size can be controlled with the seed argument.
         '''
         from optimization import get_global, set_local
         import utils
