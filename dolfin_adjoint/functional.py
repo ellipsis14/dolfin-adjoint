@@ -19,36 +19,43 @@ class Functional(libadjoint.Functional):
   Some examples:
 
     - Integration over all time:
+
       .. code-block:: python
 
         J = Functional(inner(u, u)*dx*dt)
 
     - Integration over a certain time window:
+
       .. code-block:: python
 
         J = Functional(inner(u, u)*dx*dt[0:1])
 
     - Integration from a certain point until the end:
+
       .. code-block:: python
 
         J = Functional(inner(u, u)*dx*dt[0.5:])
 
     - Pointwise evaluation in time (does not need to line up with timesteps):
+
       .. code-block:: python
 
         J = Functional(inner(u, u)*dx*dt[0.5])
 
     - Pointwise evaluation at the start (e.g. for regularisation terms):
+
       .. code-block:: python
 
         J = Functional(inner(u, u)*dx*dt[START_TIME])
 
     - Pointwise evaluation at the end:
+
       .. code-block:: python
 
         J = Functional(inner(u, u)*dx*dt[FINISH_TIME])
 
     - And sums of these work too:
+
       .. code-block:: python
 
         J = Functional(inner(u, u)*dx*dt + inner(u, u)*dx*dt[FINISH_TIME])
