@@ -341,12 +341,14 @@ def solve(*args, **kwargs):
 def adj_html(*args, **kwargs):
   '''This routine dumps the current state of the adjglobals.adjointer to a HTML visualisation.
   Use it like:
-    adj_html("forward.html", "forward") # for the equations recorded on the forward run
-    adj_html("adjoint.html", "adjoint") # for the equations to be assembled on the adjoint run
+
+    - adj_html("forward.html", "forward") # for the equations recorded on the forward run
+    - adj_html("adjoint.html", "adjoint") # for the equations to be assembled on the adjoint run
   '''
   return adjglobals.adjointer.to_html(*args, **kwargs)
 
 def adj_reset():
+  '''Forget all annotation, and reset the entire dolfin-adjoint state.'''
   adjglobals.adjointer.reset()
   adjglobals.adj_variables.__init__()
   adjglobals.function_names.__init__()

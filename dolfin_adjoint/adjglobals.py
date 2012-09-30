@@ -7,6 +7,16 @@ adjointer = libadjoint.Adjointer()
 
 adj_variables = coeffstore.CoeffStore()
 def adj_inc_timestep(time=None, finished=False):
+  '''Dolfin does not supply us with information about timesteps, and so more information
+  is required from the user for certain features. This function should be called at
+  the end of the time loop with two arguments:
+
+    - :py:data:`time` -- the time at the end of the timestep just computed
+    - :py:data:`finished` -- whether this is the final timestep.
+
+  With this information, complex functional expressions using the :py:class:`Functional` class
+  can be used.
+  '''
   adj_variables.increment_timestep()
   if time:
     adjointer.time.next(time)

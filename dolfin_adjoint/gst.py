@@ -12,11 +12,11 @@ def compute_gst(ic, final, nsv, ic_norm="mass", final_norm="mass"):
   time window of the simulation. For more details, see the mathematical documentation
   on `the website <http://dolfin-adjoint.org>`_.
 
-  :py:data:`ic` -- the input of the propagator
-  :py:data:`final` -- the output of the propagator
-  :py:data:`nsv` -- the number of optimal perturbations to compute
-  :py:data:`ic_norm` -- a symmetric positive-definite bilinear form that defines the norm on the input space
-  :py:data:`final_norm` -- a symmetric positive-definite bilinear form that defines the norm on the output space
+  - :py:data:`ic` -- the input of the propagator
+  - :py:data:`final` -- the output of the propagator
+  - :py:data:`nsv` -- the number of optimal perturbations to compute
+  - :py:data:`ic_norm` -- a symmetric positive-definite bilinear form that defines the norm on the input space
+  - :py:data:`final_norm` -- a symmetric positive-definite bilinear form that defines the norm on the output space
 
   You can supply :py:data:`"mass"` for :py:data:`ic_norm` and :py:data:`final_norm` to use the (default) mass matrices associated
   with these spaces.
