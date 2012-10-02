@@ -9,8 +9,16 @@ def assemble(*args, **kwargs):
   even when the user calls the lower-level :py:data:`solve(A, x, b)`.
   """
   form = args[0]
+
+  to_annotate = True
+  if "annotate" in kwargs:
+    to_annotate = kwargs["annotate"]
+    del kwargs["annotate"] # so we don't pass it on to the real solver
+  if dolfin.parameters["adjoint"]["stop_annotating"]:
+    to_annotate = False
+
   output = dolfin_assemble(*args, **kwargs)
-  if not isinstance(output, float):
+  if not isinstance(output, float) and to_annotate:
     output.form = form
     output.assemble_system = False
 
