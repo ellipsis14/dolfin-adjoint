@@ -45,6 +45,9 @@ def dolfin_adjoint_assign(self, other, annotate=True):
     return dolfin_assign(self, other)
 
   # OK, so we have a variable we've seen before. Beautiful.
+  if not adjglobals.adjointer.variable_known(self_var):
+    adjglobals.adj_variables.forget(self)
+
   out = dolfin_assign(self, other)
   assign.register_assign(self, other)
   return out
