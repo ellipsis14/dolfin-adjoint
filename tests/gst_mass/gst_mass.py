@@ -35,11 +35,11 @@ if __name__ == "__main__":
   print "Maximal singular value: ", (sigma, error)
 
   u_l2 = assemble(inner(u, u)*dx)
-  print "L2 norm of u: ", u_l2
-  assert near(u_l2, 1.0)
+  print "L2 norm of u: %.16e" % u_l2
+  assert abs(u_l2 - 1.0) < 1.0e-15
 
   v_l2 = assemble(inner(v, v)*dx)
-  print "L2 norm of v: ", v_l2
-  assert near(v_l2, 1.0)
+  print "L2 norm of v: %.16e" % v_l2
+  assert abs(v_l2 - 1.0) < 1.0e-15
 
   assert abs(sigma - 1.0) < 1.0e-15
