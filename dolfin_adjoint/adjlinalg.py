@@ -269,8 +269,14 @@ class Matrix(libadjoint.Matrix):
           dolfin.fem.solving.solve(F == 0, x.data, b.nonlinear_bcs, solver_parameters=self.solver_parameters)
         else:
           solver_params = dict(self.solver_parameters) # take a copy
+
           if 'newton_solver' in solver_params:
             del solver_params['newton_solver']
+          if 'snes_solver' in solver_params:
+            del solver_params['snes_solver']
+          if 'nonlinear_solver' in solver_params:
+            del solver_params['nonlinear_solver']
+
           dolfin.fem.solving.solve(self.data==b.data, x.data, bcs, solver_parameters=solver_params)
 
     return x
