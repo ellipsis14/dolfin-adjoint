@@ -42,12 +42,26 @@ def convergence_order(errors, base = 2):
 
   return orders
 
-def compute_adjoint(functional, forget=True):
+def compute_adjoint(functional, forget=True, ignore=[]):
+
+  ignorelist = []
+  for fn in ignore:
+    if isinstance(fn, dolfin.Function):
+      ignorelist.append(adjglobals.adj_variables[fn])
+    elif isinstance(fn, str):
+      ignorelist.append(libadjoint.Variable(fn, 0, 0))
+    else:
+      ignorelist.append(fn)
 
   for i in range(adjglobals.adjointer.timestep_count):
     adjglobals.adjointer.set_functional_dependencies(functional, i)
 
   for i in range(adjglobals.adjointer.equation_count)[::-1]:
+      fwd_var = adjglobals.adjointer.get_forward_variable(i)
+      if fwd_var in ignorelist:
+        info("Ignoring the adjoint equation for %s" % fwd_var)
+        continue
+
       (adj_var, output) = adjglobals.adjointer.get_adjoint_solution(i, functional)
 
       storage = libadjoint.MemoryStorage(output)
@@ -320,7 +334,7 @@ def test_initial_condition_adjoint_cdiff(J, ic, final_adjoint, seed=0.01, pertur
 
   return min(convergence_order(with_gradient))
 
-def compute_gradient(J, param, forget=True):
+def compute_gradient(J, param, forget=True, ignore=[]):
   try:
     scalar = False
     dJdparam = [None for i in range(len(param))]
@@ -331,10 +345,24 @@ def compute_gradient(J, param, forget=True):
     lparam = [param]
   last_timestep = adjglobals.adjointer.timestep_count
 
+  ignorelist = []
+  for fn in ignore:
+    if isinstance(fn, dolfin.Function):
+      ignorelist.append(adjglobals.adj_variables[fn])
+    elif isinstance(fn, str):
+      ignorelist.append(libadjoint.Variable(fn, 0, 0))
+    else:
+      ignorelist.append(fn)
+
   for i in range(adjglobals.adjointer.timestep_count):
     adjglobals.adjointer.set_functional_dependencies(J, i)
 
   for i in range(adjglobals.adjointer.equation_count)[::-1]:
+    fwd_var = adjglobals.adjointer.get_forward_variable(i)
+    if fwd_var in ignorelist:
+      info("Ignoring the adjoint equation for %s" % fwd_var)
+      continue
+
     (adj_var, output) = adjglobals.adjointer.get_adjoint_solution(i, J)
 
     storage = libadjoint.MemoryStorage(output)
