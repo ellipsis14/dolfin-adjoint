@@ -51,7 +51,7 @@ def compute_initial_conditions(T_, W, Q, bcs, annotate):
     # composition
     eta = viscosity(T_)
     (a, L, pre) = momentum(W, eta, (Ra*T_)*g)
-    w = Function(W)
+    w = Function(W, name="InitialVelocity")
 
     P = PETScMatrix()
     assemble(pre, tensor=P); [bc.apply(P) for bc in bcs]
@@ -122,9 +122,6 @@ def main(T_, annotate=False):
   (u_, p_) = split(w_)
 
   # Solver for the Stokes systems
-  solver = AdjointPETScKrylovSolver("gmres", "amg")
-  solver.parameters["relative_tolerance"] = 1.0e-14
-  solver.parameters["monitor_convergence"] = False
 
   while (t <= finish and n <= 2):
     #message(t, dt)
@@ -136,12 +133,7 @@ def main(T_, annotate=False):
     # Solve for predicted flow
     eta = viscosity(T_pr)
     (a, L, precond) = momentum(W, eta, (Ra*T_pr)*g)
-
-    b = assemble(L); [bc.apply(b) for bc in bcs]
-    A = AdjointKrylovMatrix(a, bcs=bcs)
-
-    solver.set_operators(A, P)
-    solver.solve(w_pr.vector(), b, annotate=annotate)
+    solve(a == L, w_pr, bcs, annotate=annotate)
 
     # Solve for corrected temperature T in terms of predicted and previous velocity
     (a, L) = energy_correction(Q, Constant(dt), u_pr, u_, T_)
@@ -150,12 +142,7 @@ def main(T_, annotate=False):
     # Solve for corrected flow
     eta = viscosity(T)
     (a, L, precond) = momentum(W, eta, (Ra*T)*g)
-
-    b = assemble(L); [bc.apply(b) for bc in bcs]
-    A = AdjointKrylovMatrix(a, bcs=bcs)
-
-    solver.set_operators(A, P)
-    solver.solve(w.vector(), b, annotate=annotate)
+    solve(a == L, w, bcs, annotate=annotate)
 
     # Store stuff
     store(T, w, t)
@@ -193,7 +180,7 @@ def Nusselt():
     #return Nu
 
 if __name__ == "__main__":
-  Tic = interpolate(InitialTemperature(Ra, length), Q)
+  Tic = Function(interpolate(InitialTemperature(Ra, length), Q), name="InitialTemperature")
   ic_copy = Function(Tic)
   another_copy = Function(Tic)
 
