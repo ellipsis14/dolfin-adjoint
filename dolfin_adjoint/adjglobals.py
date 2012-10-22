@@ -6,6 +6,17 @@ import libadjoint
 adjointer = libadjoint.Adjointer()
 
 adj_variables = coeffstore.CoeffStore()
+
+def adj_start_timestep(time=0.0):
+  '''Dolfin does not supply us with information about timesteps, and so more information
+  is required from the user for certain features. This function should be called at the
+  start of the time loop with the initial time (defaults to 0).
+  
+  See also: :py:func:`dolfin_adjoint.adj_inc_timestep`
+  '''
+
+  adjointer.time.start(time)
+
 def adj_inc_timestep(time=None, finished=False):
   '''Dolfin does not supply us with information about timesteps, and so more information
   is required from the user for certain features. This function should be called at
@@ -16,6 +27,11 @@ def adj_inc_timestep(time=None, finished=False):
 
   With this information, complex functional expressions using the :py:class:`Functional` class
   can be used.
+
+  The finished argument is necessary because the final step of a functional integration must perform
+  additional calculations.
+
+  See also: :py:func:`dolfin_adjoint.adj_start_timestep`
   '''
   adj_variables.increment_timestep()
   if time:
