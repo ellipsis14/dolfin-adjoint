@@ -1,5 +1,6 @@
 import coeffstore
 import libadjoint
+import dolfin
 
 # Create the adjointer, the central object that records the forward solve
 # as it happens.
@@ -15,7 +16,8 @@ def adj_start_timestep(time=0.0):
   See also: :py:func:`dolfin_adjoint.adj_inc_timestep`
   '''
 
-  adjointer.time.start(time)
+  if not dolfin.parameters["adjoint"]["stop_annotating"]:
+    adjointer.time.start(time)
 
 def adj_inc_timestep(time=None, finished=False):
   '''Dolfin does not supply us with information about timesteps, and so more information
@@ -33,12 +35,14 @@ def adj_inc_timestep(time=None, finished=False):
 
   See also: :py:func:`dolfin_adjoint.adj_start_timestep`
   '''
-  adj_variables.increment_timestep()
-  if time:
-    adjointer.time.next(time)
 
-  if finished:
-    adjointer.time.finish()
+  if not dolfin.parameters["adjoint"]["stop_annotating"]:
+    adj_variables.increment_timestep()
+    if time:
+      adjointer.time.next(time)
+
+    if finished:
+      adjointer.time.finish()
 
 # A dictionary that saves the functionspaces of all checkpoint variables that have been saved to disk
 checkpoint_fs = {}
