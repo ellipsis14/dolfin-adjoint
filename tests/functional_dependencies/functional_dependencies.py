@@ -8,6 +8,7 @@ import libadjoint
 mesh = UnitSquare(4, 4)
 V = FunctionSpace(mesh, "R", 0)
 f = Constant(1.0)
+g = Constant(2.0)
 
 # Solve the 'PDE' with solution u(t) = t
 def run_forward(annotate=True):
@@ -15,12 +16,16 @@ def run_forward(annotate=True):
   v = TestFunction(V)
 
   u_0 = Function(V, name="Value")
+  u_obs = Function(V, name="ObsValue")
 
   dt = 0.5
   T =  1.0
 
   F = ( (u - u_0)/dt*v - f*v)*dx
   a, L = lhs(F), rhs(F)
+
+  F_obs = ( (u - u_obs)/dt*v - g*v)*dx
+  a_obs, L_obs = lhs(F_obs), rhs(F_obs)
 
   t = float(dt)
 
@@ -29,16 +34,16 @@ def run_forward(annotate=True):
   while t <= T:
 
       solve(a == L, u_0, annotate=annotate)
-      #print "u_0.vector().array(): ", u_0.vector().array()
+      solve(a_obs == L_obs, u_obs, annotate=annotate)
 
       adj_inc_timestep(time=t, finished=t+dt>T)
       t += float(dt)
 
-  return u_0
+  return (u_0, u_obs)
 
 if __name__ == "__main__":
 
-  u = run_forward()
+  (u, u_obs) = run_forward()
 
   adj_html("forward.html", "forward")
   adj_html("adjoint.html", "adjoint")
@@ -156,3 +161,22 @@ if __name__ == "__main__":
   J = Functional(inner(u,u)*dx*dt[START_TIME])
   assert adjointer.evaluate_functional(J, 0) == 0.0
   assert adjointer.evaluate_functional(J, 1) == 0.0
+
+  o00 = libadjoint.Variable("ObsValue", 0, 0)
+  o01 = libadjoint.Variable("ObsValue", 0, 1)
+  o10 = libadjoint.Variable("ObsValue", 1, 0)
+
+  # Investigate its behaviour with other variables also
+  J = Functional(inner(u - u_obs, u - u_obs)*dx*dt)
+  deps = J.dependencies(adjointer, 0)
+  assert len(deps) == 2
+  assert deps[0] in [u00, o00]
+  assert deps[1] in [u00, o00]
+  assert deps[0] != deps[1]
+
+  deps = J.dependencies(adjointer, 1)
+  assert len(deps) == 4
+  assert deps[0] in [u01, u10, o01, o10]
+  assert deps[1] in [u01, u10, o01, o10]
+  assert deps[2] in [u01, u10, o01, o10]
+  assert deps[3] in [u01, u10, o01, o10]
