@@ -113,7 +113,7 @@ def perturbed_replay(parameter, perturbation, perturbation_scale, observation, p
   :py:data:`perturbation_scale` -- how big the norm of the initial perturbation should be
   :py:data:`observation` -- the variable to observe (e.g. 'Concentration')
   :py:data:`observation_norm` -- a bilinear Form which induces a norm on the space of perturbation outputs
-  :py:data:`callback` -- a function f(var, data) that the user can supply (e.g. to dump out variables during the perturbed replay)
+  :py:data:`callback` -- a function f(var, perturbed, unperturbed) that the user can supply (e.g. to dump out variables during the perturbed replay)
   """
 
   if not dolfin.parameters["adjoint"]["record_all"]:
