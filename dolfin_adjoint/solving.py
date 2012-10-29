@@ -184,7 +184,10 @@ def annotate(*args, **kwargs):
       # Homogenise the adjoint boundary conditions. This creates the adjoint
       # solution associated with the lifted discrete system that is actually solved.
       adjoint_bcs = [dolfin.homogenize(bc) for bc in eq_bcs if isinstance(bc, dolfin.DirichletBC)] + [bc for bc in eq_bcs if not isinstance(bc, dolfin.DirichletBC)]
-      if len(adjoint_bcs) == 0: adjoint_bcs = None
+      if len(adjoint_bcs) == 0: 
+        adjoint_bcs = None
+      else:
+        adjoint_bcs = list(set(adjoint_bcs))
 
       kwargs = {}
       kwargs['bcs'] = adjoint_bcs
@@ -201,7 +204,7 @@ def annotate(*args, **kwargs):
     else:
 
       kwargs = {}
-      kwargs['bcs'] = eq_bcs
+      kwargs['bcs'] = list(set(eq_bcs))
       kwargs['solver_parameters'] = solver_parameters
       kwargs['adjoint'] = False
 
