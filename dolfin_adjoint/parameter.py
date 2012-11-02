@@ -10,11 +10,36 @@ import adjresidual
 from constant import get_constant
 
 class DolfinAdjointParameter(libadjoint.Parameter):
+  def __call__(self, adjointer, i, dependencies, values, variable):
+    '''This function gives the source term for the tangent linear model.
+    variable gives the forward variable associated with this tangent
+    linear solve; the other inputs (adjointer, i, dependencies, values)
+    are there in case you need them.
+
+    Return an adjlinalg.Vector to contribute a source term, or return
+    None if there's nothing to do.'''
+    raise NotImplementedError
+
   def inner_adjoint(self, adjointer, adjoint, i, variable):
-    pass
+    '''This function computes the contribution to the functional gradient
+    associated with a particular equation.
+
+    Given the adjoint solution adjoint, this function is to compute
+    inner(adjoint, diff(F, m))
+
+    where F is a particular equation (i is its number, variable is the forward
+    variable associated with it)
+    and m is the Parameter.'''
+    raise NotImplementedError
 
   def partial_derivative(self, adjointer, J, timestep):
-    pass
+    '''Given a functional J, compute diff(J, m) -- the partial derivative of
+    J with respect to m. This is necessary to compute correct functional gradients.'''
+    raise NotImplementedError
+
+  def data(self):
+    '''Return the data associated with the current values of the Parameter.'''
+    raise NotImplementedError
 
 class InitialConditionParameter(DolfinAdjointParameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
