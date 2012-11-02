@@ -229,3 +229,11 @@ class ScalarParameters(DolfinAdjointParameter):
 
   def data(self):
     return self.v
+
+class TimeConstantParameter(InitialConditionParameter):
+  '''TimeConstantParameter is just another name for InitialConditionParameter,
+  since from dolfin-adjoint's point of view they're exactly the same. But it
+  confuses people to talk about initial conditions of data that doesn't change
+  in time (like diffusivities, or bathymetries, or whatever), so hence this
+  alias.'''
+  pass
