@@ -35,7 +35,7 @@ class DolfinAdjointParameter(libadjoint.Parameter):
   def partial_derivative(self, adjointer, J, timestep):
     '''Given a functional J, compute diff(J, m) -- the partial derivative of
     J with respect to m. This is necessary to compute correct functional gradients.'''
-    raise NotImplementedError
+    pass
 
   def data(self):
     '''Return the data associated with the current values of the Parameter.'''
