@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
   # Run the optimisation 
   reduced_functional = ReducedFunctional(J, ScalarParameter(nu))
-  nu_opt = minimize(reduced_functional, 'scipy.slsqp', iprint = 2)
+  nu_opt = minimize(reduced_functional, 'SLSQP')
 
   tol = 1e-4
   if reduced_functional(nu_opt) > tol:

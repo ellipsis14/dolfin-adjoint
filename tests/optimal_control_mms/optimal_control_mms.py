@@ -3,6 +3,8 @@
 import sys
 from dolfin import *
 from dolfin_adjoint import *
+from distutils.version import StrictVersion
+import scipy
 
 dolfin.set_log_level(ERROR)
 parameters['std_out_all_processes'] = False
@@ -31,7 +33,15 @@ def solve_optimal_control(n):
 
     # Run the optimisation 
     reduced_func = ReducedFunctional(J, InitialConditionParameter(m))
-    minimize(reduced_func, algorithm = 'scipy.l_bfgs_b', pgtol=1e-16, factr=1, bounds = (-1, 1), iprint = 1, maxfun = 20)
+    # Run the optimisation problem with gradient tests and L-BFGS-B
+    # scipt.optimize 0.11.0 introduced a new generic interface to the minimisation routines, 
+    # which dolfin-adjoint.optimize automatically uses if available. Since the arguments changed, we need
+    # to check for the version at this point.
+    new_scipy = StrictVersion(scipy.__version__) >= StrictVersion('0.11.0')
+    if new_scipy:
+        minimize(reduced_func, method = 'L-BFGS-B', tol = 1e-16, options = {'disp': True, 'maxiter': 20})
+    else:
+        minimize(reduced_func, method = 'L-BFGS-B', pgtol=1e-16, factr=1, bounds = (-1, 1), iprint = 1, maxfun = 20)
     #minimize(reduced_func, algorithm = 'scipy.slsqp', bounds = (-1, 1), iprint = 3, iter = 60)
     solve_pde(u, V, m)
 

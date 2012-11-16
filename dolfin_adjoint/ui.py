@@ -18,4 +18,4 @@ from constant import Constant
 from unimplemented import *
 from timeforms import dt, TimeMeasure, START_TIME, FINISH_TIME
 from reduced_functional import ReducedFunctional
-from optimization import minimize, maximize, print_optimization_algorithms
+from optimization import minimize, maximize, print_optimization_methods

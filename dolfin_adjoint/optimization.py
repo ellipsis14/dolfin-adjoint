@@ -79,8 +79,37 @@ def serialise_bounds(bounds, m):
     # Transpose and return the array to get the form [ [lower_bound1, upper_bound1], [lower_bound2, upper_bound2], ... ] 
     return numpy.array(bounds_arr).T
 
+def minimize_scipy_generic(J, dJ, m, method, bounds = None, **kwargs):
+    ''' Interface to the generic minimize method in scipy '''
+    try:
+        from scipy.optimize import minimize as scipy_minimize
+    except ImportError:
+        raise ImportError, "You need to install a scipy version > 0.11 in order to use this optimisation method."
+
+    m_global = get_global(m)
+
+    # Shut up all processors but the first one.
+    if MPI.process_number() != 0:
+        if not options in kwargs:
+            kwargs["options"] = {}
+        kwargs["options"]["disp"] = False
+
+    if bounds:
+        bounds = serialise_bounds(bounds, m)
+        res = scipy_minimize(J, m_global, method = method, jac = dJ, bounds = bounds, **kwargs)
+    else:
+        res = scipy_minimize(J, m_global, method = method, jac = dJ, **kwargs)
+
+    set_local(m, numpy.array(res["x"]))
+    return m
+
 def minimize_scipy_slsqp(J, dJ, m, bounds = None, **kwargs):
     ''' Interface to the SQP algorithm in scipy '''
+    # If possible use scipy's generic interface 
+    try:
+        return minimize_scipy_generic(J, dJ, m, bounds = bounds, method = "SLSQP", **kwargs)
+    except ImportError:
+        pass
     from scipy.optimize import fmin_slsqp
 
     m_global = get_global(m)
@@ -101,6 +130,11 @@ def minimize_scipy_slsqp(J, dJ, m, bounds = None, **kwargs):
 
 def minimize_scipy_fmin_l_bfgs_b(J, dJ, m, bounds = None, **kwargs):
     ''' Interface to the L-BFGS-B algorithm in scipy '''
+    # If possible use scipy's generic interface 
+    try:
+        return minimize_scipy_generic(J, dJ, m, bounds = bounds, method = "L-BFGS-B", **kwargs)
+    except ImportError:
+        pass
     from scipy.optimize import fmin_l_bfgs_b
     
     m_global = get_global(m)
@@ -117,6 +151,11 @@ def minimize_scipy_fmin_l_bfgs_b(J, dJ, m, bounds = None, **kwargs):
     return m
 
 def minimize_scipy_tnc(J, dJ, m, bounds = None, **kwargs):
+    # If possible use scipy's generic interface 
+    try:
+        return minimize_scipy_generic(J, dJ, m, bounds = bounds, method = "TNC", **kwargs)
+    except ImportError:
+        pass
     from scipy.optimize import fmin_tnc
     
     m_global = get_global(m)
@@ -133,6 +172,11 @@ def minimize_scipy_tnc(J, dJ, m, bounds = None, **kwargs):
     return m
 
 def minimize_scipy_cg(J, dJ, m, **kwargs):
+    # If possible use scipy's generic interface 
+    try:
+        return minimize_scipy_generic(J, dJ, m, bounds = bounds, method = "CG", **kwargs)
+    except ImportError:
+        pass
     from scipy.optimize import fmin_cg
     
     m_global = get_global(m)
@@ -147,6 +191,11 @@ def minimize_scipy_cg(J, dJ, m, **kwargs):
     return m
 
 def minimize_scipy_bfgs(J, dJ, m, **kwargs):
+    # If possible use scipy's generic interface 
+    try:
+        return minimize_scipy_generic(J, dJ, m, bounds = bounds, method = "BFGS", **kwargs)
+    except ImportError:
+        pass
     from scipy.optimize import fmin_bfgs
     
     m_global = get_global(m)
@@ -159,21 +208,26 @@ def minimize_scipy_bfgs(J, dJ, m, **kwargs):
     set_local(m, mopt)
     return m
 
-optimization_algorithms_dict = {'scipy.l_bfgs_b': ('The L-BFGS-B implementation in scipy.', minimize_scipy_fmin_l_bfgs_b),
-                                'scipy.slsqp': ('The SLSQP implementation in scipy.', minimize_scipy_slsqp),
-                                'scipy.tnc': ('The truncated Newton algorithm implemented in scipy.', minimize_scipy_tnc), 
-                                'scipy.cg': ('The nonlinear conjugate gradient algorithm implemented in scipy.', minimize_scipy_cg), 
-                                'scipy.bfgs': ('The BFGS implementation in scipy.', minimize_scipy_bfgs), 
+optimization_algorithms_dict = {'L-BFGS-B': ('The L-BFGS-B implementation in scipy.', minimize_scipy_fmin_l_bfgs_b),
+                                'SLSQP': ('The SLSQP implementation in scipy.', minimize_scipy_slsqp),
+                                'TNC': ('The truncated Newton algorithm implemented in scipy.', minimize_scipy_tnc), 
+                                'CG': ('The nonlinear conjugate gradient algorithm implemented in scipy.', minimize_scipy_cg), 
+                                'BFGS': ('The BFGS implementation in scipy.', minimize_scipy_bfgs), 
+                                'Nelder-Mead': ('Gradient-free Simplex algorithm.', minimize_scipy_generic),
+                                'Powell': ('Gradient-free Powells method', minimize_scipy_generic),
+                                'Newton-CG': ('Newton-CG method', minimize_scipy_generic),
+                                'Anneal': ('Gradient-free simulated annealing', minimize_scipy_generic),
+                                'COBYLA': ('Gradient-free constrained optimization by linear approxition method', minimize_scipy_generic)
                                 }
 
-def print_optimization_algorithms():
-    ''' Prints the available optimization algorithms '''
+def print_optimization_methods():
+    ''' Prints the available optimization methods '''
 
-    print 'Available optimization algorithms:'
+    print 'Available optimization methods:'
     for function_name, (description, func) in optimization_algorithms_dict.iteritems():
         print function_name, ': ', description
 
-def minimize(reduced_func, algorithm = 'scipy.l_bfgs_b', scale = 1.0, **kwargs):
+def minimize(reduced_func, method = 'L-BFGS-B', scale = 1.0, **kwargs):
     ''' Solves the minimisation problem with PDE constraint:
 
            min_m func(u, m) 
@@ -187,7 +241,7 @@ def minimize(reduced_func, algorithm = 'scipy.l_bfgs_b', scale = 1.0, **kwargs):
 
         The function arguments are as follows:
         * 'reduced_func' must be a ReducedFunctional object. 
-        * 'algorithm' specifies the optimization algorithm to be used to solve the problem. The available algorithms can be listed with the print_optimization_algorithms function.
+        * 'method' specifies the optimization method to be used to solve the problem. The available methods can be listed with the print_optimization_methods function.
         * 'scale' is a factor to scale to problem. Use a negative number to solve a maximisation problem.
         * 'bounds' is an optional keyword parameter to support control constraints: bounds = (lb, ub). lb and ub must be of the same type than the parameters m. 
         
@@ -195,7 +249,7 @@ def minimize(reduced_func, algorithm = 'scipy.l_bfgs_b', scale = 1.0, **kwargs):
         '''
 
     def reduced_func_deriv_array(m_array):
-        ''' An implementation of the reduced functional derivative that accepts the parameter as an array ''' 
+        ''' An implementation of the reduced functional derivative that accepts the parameter as an array of scalars ''' 
 
         # In the case that the parameter values have changed since the last forward run, 
         # we first need to rerun the forward model with the new parameters to have the 
@@ -220,7 +274,7 @@ def minimize(reduced_func, algorithm = 'scipy.l_bfgs_b', scale = 1.0, **kwargs):
         return scale * dJdm_global 
 
     def reduced_func_array(m_array):
-        ''' An implementation of the reduced functional that accepts the parameter as an array '''
+        ''' An implementation of the reduced functional that accepts the parameter as an array of scalars '''
         # In case the annotation is not reused, we need to reset any prior annotation of the adjointer before reruning the forward model.
         if not reduced_func.replays_annotation:
             solving.adj_reset()
@@ -230,12 +284,22 @@ def minimize(reduced_func, algorithm = 'scipy.l_bfgs_b', scale = 1.0, **kwargs):
         set_local(m, m_array)
         return scale * reduced_func(m)
 
-    if algorithm not in optimization_algorithms_dict.keys():
-        raise ValueError, 'Unknown optimization algorithm ' + algorithm + '. Use the print_optimization_algorithms to get a list of the available algorithms.'
+    try:
+        algorithm = optimization_algorithms_dict[method][1]
+    except KeyError:
+        raise KeyError, 'Unknown optimization method ' + method + '. Use print_optimization_methods() to get a list of the available methods.'
 
-    return optimization_algorithms_dict[algorithm][1](reduced_func_array, reduced_func_deriv_array, [p.data() for p in reduced_func.parameter], **kwargs)
+    # For scipy's generic inteface we need to pass the optimisation method as a parameter. 
+    if algorithm == "minimize_scipy_generic":
+        kwargs["method"] = method 
 
-def maximize(reduced_func, algorithm = 'scipy.l_bfgs_b', scale = 1.0, **kwargs):
+    opt = algorithm(reduced_func_array, reduced_func_deriv_array, [p.data() for p in reduced_func.parameter], **kwargs)
+    if len(opt) == 1:
+        return opt[0]
+    else:
+        return opt
+
+def maximize(reduced_func, method = 'L-BFGS-B', scale = 1.0, **kwargs):
     ''' Solves the maximisation problem with PDE constraint:
 
            max_m func(u, m) 
@@ -249,10 +313,10 @@ def maximize(reduced_func, algorithm = 'scipy.l_bfgs_b', scale = 1.0, **kwargs):
 
         The function arguments are as follows:
         * 'reduced_func' must be a ReducedFunctional object. 
-        * 'algorithm' specifies the optimization algorithm to be used to solve the problem. The available algorithms can be listed with the print_optimization_algorithms function.
+        * 'method' specifies the optimization method to be used to solve the problem. The available methods can be listed with the print_optimization_methods function.
         * 'scale' is a factor to scale to problem. Use a negative number to solve a maximisation problem.
         * 'bounds' is an optional keyword parameter to support control constraints: bounds = (lb, ub). lb and ub must be of the same type than the parameters m. 
         
-        Additional arguments specific for the optimization algorithms can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimization algorithm. For detailed information about which arguments are supported for each optimization algorithm, please refer to the documentaton of the optimization algorithm.
+        Additional arguments specific for the optimization methods can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimization method. For detailed information about which arguments are supported for each optimization method, please refer to the documentaton of the optimization algorithm.
         '''
-    return minimize(reduced_func, algorithm, scale = -scale, **kwargs)
+    return minimize(reduced_func, method, scale = -scale, **kwargs)

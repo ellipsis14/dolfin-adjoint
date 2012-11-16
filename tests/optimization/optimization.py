@@ -4,6 +4,8 @@ import sys
 
 from dolfin import *
 from dolfin_adjoint import *
+from distutils.version import StrictVersion
+import scipy
 import libadjoint
 
 dolfin.set_log_level(ERROR)
@@ -57,12 +59,23 @@ if __name__ == "__main__":
     reduced_functional = ReducedFunctional(J, InitialConditionParameter(u))
 
     # Run the optimisation problem with gradient tests and L-BFGS-B
-    u_opt = minimize(reduced_functional, algorithm = 'scipy.l_bfgs_b', pgtol=1e-6, factr=1e5, bounds = (lb, 1), iprint = 1)
+    # scipt.optimize 0.11.0 introduced a new generic interface to the minimisation routines, 
+    # which dolfin-adjoint.optimize automatically uses if available. Since the arguments changed, we need
+    # to check for the version at this point.
+    new_scipy = StrictVersion(scipy.__version__) >= StrictVersion('0.11.0')
+    if new_scipy:
+        u_opt = minimize(reduced_functional, method = 'L-BFGS-B', bounds = (lb, 1), tol = 1e-6, options = {'disp': True})
+    else:
+        u_opt = minimize(reduced_functional, method = 'L-BFGS-B', pgtol=1e-6, factr=1e5, bounds = (lb, 1), iprint = 1)
     ic = project(Expression("sin(2*pi*x[0])"),  V)
 
     # Run the problem again with SQP, this time for performance reasons with the gradient test switched off
+    u_opt.assign(ic, annotate = False)
     dolfin.parameters["optimization"]["test_gradient"] = False 
-    u_opt = minimize(reduced_functional, algorithm = 'scipy.slsqp', bounds = (lb, 1), iprint = 2, acc = 1e-10)
+    if new_scipy:
+        u_opt = minimize(reduced_functional, method = 'SLSQP', bounds = (lb, 1), tol = 1e-10, options ={'disp': True})
+    else:
+        u_opt = minimize(reduced_functional, method = 'SLSQP', bounds = (lb, 1), iprint = 2, acc = 1e-10)
 
     tol = 1e-9
     final_functional = reduced_functional(u_opt)
