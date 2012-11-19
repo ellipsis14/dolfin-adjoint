@@ -281,8 +281,7 @@ def annotate(*args, **kwargs):
       # Zero the rows of G corresponding to Dirichlet rows of the form
       bcs = [bc for bc in eq_bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
       for bc in bcs:
-        bcvals = bc.get_boundary_values()
-        G.zero(numpy.array(bcvals.keys(), dtype='I'))
+        bc.zero(G)
 
       if hermitian:
         output = dolfin.Function(dolfin_variable.function_space()) # output lives in the function space of the differentiating variable
