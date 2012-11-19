@@ -270,16 +270,26 @@ class Matrix(libadjoint.Matrix):
           F = dolfin.replace(b.nonlinear_form, {b.nonlinear_u: x.data})
           dolfin.fem.solving.solve(F == 0, x.data, b.nonlinear_bcs, solver_parameters=self.solver_parameters)
         else:
-          solver_params = dict(self.solver_parameters) # take a copy
+          assembled_lhs = dolfin.assemble(self.data)
+          [bc.apply(assembled_lhs) for bc in bcs]
+          assembled_rhs = dolfin.assemble(b.data)
+          [bc.apply(assembled_rhs) for bc in bcs]
 
-          if 'newton_solver' in solver_params:
-            del solver_params['newton_solver']
-          if 'snes_solver' in solver_params:
-            del solver_params['snes_solver']
-          if 'nonlinear_solver' in solver_params:
-            del solver_params['nonlinear_solver']
+          pc = self.solver_parameters.get("preconditioner", "default")
+          ksp = self.solver_parameters.get("linear_solver", "default")
+          dolfin.fem.solving.solve(assembled_lhs, x.data.vector(), assembled_rhs, ksp, pc)
 
-          dolfin.fem.solving.solve(self.data==b.data, x.data, bcs, solver_parameters=solver_params)
+          #solver_params = dict(self.solver_parameters) # take a copy
+
+          #if 'newton_solver' in solver_params:
+          #  del solver_params['newton_solver']
+          #if 'snes_solver' in solver_params:
+          #  del solver_params['snes_solver']
+          #if 'nonlinear_solver' in solver_params:
+          #  del solver_params['nonlinear_solver']
+
+          # Why is this 2x slower than the solve call above?
+          #dolfin.fem.solving.solve(self.data==b.data, x.data, bcs, solver_parameters=solver_params)
 
     return x
 
