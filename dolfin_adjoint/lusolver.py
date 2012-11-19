@@ -53,17 +53,32 @@ class LUSolver(dolfin.LUSolver):
   '''This object is overloaded so that solves using this class are automatically annotated,
   so that libadjoint can automatically derive the adjoint and tangent linear models.'''
   def __init__(self, *args):
+
+    if len(args) > 0:
+      try:
+        self.operator = args[0].form
+      except AttributeError:
+        raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your matrix A has to have the .form attribute: was it assembled after from dolfin_adjoint import *?")
+
+      try:
+        self.op_bcs = args[0].bcs
+      except AttributeError:
+        self.op_bcs = []
+
+    dolfin.LUSolver.__init__(self, *args)
+
+  def set_operator(self, operator):
     try:
-      self.operator = args[0].form
+      self.operator = operator.form
     except AttributeError:
       raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your matrix A has to have the .form attribute: was it assembled after from dolfin_adjoint import *?")
 
     try:
-      self.op_bcs = args[0].bcs
+      self.op_bcs = operator.bcs
     except AttributeError:
       self.op_bcs = []
 
-    dolfin.LUSolver.__init__(self, *args)
+    dolfin.LUSolver.set_operator(self, operator)
 
   def solve(self, *args, **kwargs):
     '''To disable the annotation, just pass :py:data:`annotate=False` to this routine, and it acts exactly like the

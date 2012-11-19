@@ -40,7 +40,10 @@ def boundary_value(n):
 
 # Load mesh and subdomains
 mesh = Mesh("mesh.xml.gz")
-sub_domains = MeshFunction("uint", mesh, "subdomains.xml.gz");
+try:
+  sub_domains = MeshFunction("sizet", mesh, "subdomains.xml.gz");
+except:
+  sub_domains = MeshFunction("uint", mesh, "subdomains.xml.gz");
 h = CellSize(mesh)
 
 # Create FunctionSpaces
@@ -90,7 +93,8 @@ def main(u0, f):
   bc.apply(A)
 
   # Create linear solver and factorize matrix
-  solver = LUSolver(A)
+  solver = LUSolver()
+  solver.set_operator(A)
   solver.parameters["reuse_factorization"] = True
 
   # Output file
