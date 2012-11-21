@@ -41,7 +41,7 @@ def minimize_scipy_generic(J, dJ, m, method, bounds = None, **kwargs):
             kwargs["options"] = {}
         kwargs["options"]["disp"] = False
 
-    if bounds:
+    if bounds != None:
         bounds = serialise_bounds(bounds, m)
         res = scipy_minimize(J, m_global, method = method, jac = dJ, bounds = bounds, **kwargs)
     else:
@@ -65,7 +65,7 @@ def minimize_scipy_slsqp(J, dJ, m, bounds = None, **kwargs):
     if MPI.process_number() != 0:
         kwargs['iprint'] = 0
 
-    if bounds:
+    if bounds != None:
         bounds = serialise_bounds(bounds, m)
         mopt = fmin_slsqp(J, m_global, fprime = dJ, bounds = bounds, **kwargs)
     else:
@@ -90,7 +90,7 @@ def minimize_scipy_fmin_l_bfgs_b(J, dJ, m, bounds = None, **kwargs):
     if MPI.process_number() != 0:
         kwargs['iprint'] = -1
 
-    if bounds:
+    if bounds != None:
         bounds = serialise_bounds(bounds, m)
 
     mopt, f, d = fmin_l_bfgs_b(J, m_global, fprime = dJ, bounds = bounds, **kwargs)
@@ -111,7 +111,7 @@ def minimize_scipy_tnc(J, dJ, m, bounds = None, **kwargs):
     if MPI.process_number() != 0:
         kwargs['iprint'] = -1
 
-    if bounds:
+    if bounds != None:
         bounds = serialise_bounds(bounds, m)
 
     mopt, nfeval, rc = fmin_tnc(J, m_global, fprime = dJ, bounds = bounds, **kwargs)

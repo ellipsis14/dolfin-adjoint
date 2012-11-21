@@ -14,8 +14,10 @@ def get_global(m_list):
         # Parameters of type float
         if m == None or type(m) == float:
             m_global.append(m)
+        elif hasattr(m, "tolist"): 
+            m_global += m.tolist()
         # Parameters of type Constant 
-        elif type(m) == constant.Constant:
+        elif hasattr(m, "value_size"): 
             a = numpy.zeros(m.value_size())
             p = numpy.zeros(m.value_size())
             m.eval(a, p)
@@ -44,7 +46,7 @@ def set_local(m_list, m_global_array):
     offset = 0
     for m in m_list:
         # Parameters of type dolfin.Constant 
-        if type(m) == constant.Constant:
+        if hasattr(m, "value_size"): 
             m.assign(constant.Constant(numpy.reshape(m_global_array[offset:offset+m.value_size()], m.shape())))
             offset += m.value_size()    
         # Function parameters of type dolfin.Function 
@@ -98,7 +100,7 @@ class ReducedFunctional(object):
 
         # Update the parameter values
         for i in range(len(value)):
-            if type(value[i]) == constant.Constant:
+            if hasattr(value[i], "value_size"): 
                 # Constants are not duplicated in the annotation. That is, changing a constant that occurs
                 # in the forward model will also change the forward replay with libadjoint.
                 # However, this is not the case for functions...
