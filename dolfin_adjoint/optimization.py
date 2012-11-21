@@ -1,62 +1,9 @@
 import dolfin
-from dolfin import cpp, MPI, info_red, info
-from dolfin_adjoint import constant, utils
-from reduced_functional import ReducedFunctional
+from dolfin import MPI 
+from dolfin_adjoint import constant 
+from reduced_functional import ReducedFunctional, get_global, set_local
 import numpy
 import sys
-
-def get_global(m_list):
-    ''' Takes a (optional a list of) distributed object(s) and returns one numpy array containing their global values '''
-    if not isinstance(m_list, (list, tuple)):
-        m_list = [m_list]
-
-    m_global = []
-    for m in m_list:
-        # Parameters of type float
-        if m == None or type(m) == float:
-            m_global.append(m)
-        # Parameters of type Constant 
-        elif type(m) == constant.Constant:
-            a = numpy.zeros(m.value_size())
-            p = numpy.zeros(m.value_size())
-            m.eval(a, p)
-            m_global += a.tolist()
-        # Function parameters of type Function 
-        elif hasattr(m, "vector"): 
-            m_v = m.vector()
-            m_a = cpp.DoubleArray(m.vector().size())
-            try:
-                m.vector().gather(m_a, numpy.arange(m_v.size(), dtype='I'))
-                m_global += m_a.array().tolist()
-            except TypeError:
-                m_a = m.vector().gather(numpy.arange(m_v.size(), dtype='I'))
-                m_global += m_a.tolist()
-        else:
-            raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
-
-    return numpy.array(m_global, dtype='d')
-
-def set_local(m_list, m_global_array):
-    ''' Sets the local values of a (or optionally  a list of) distributed object(s) to the values contained in the global array m_global_array '''
-
-    if not isinstance(m_list, (list, tuple)):
-        m_list = [m_list]
-
-    offset = 0
-    for m in m_list:
-        # Parameters of type dolfin.Constant 
-        if type(m) == constant.Constant:
-            m.assign(constant.Constant(numpy.reshape(m_global_array[offset:offset+m.value_size()], m.shape())))
-            offset += m.value_size()    
-        # Function parameters of type dolfin.Function 
-        elif hasattr(m, "vector"): 
-            range_begin, range_end = m.vector().local_range()
-            m_a_local = m_global_array[offset + range_begin:offset + range_end]
-            m.vector().set_local(m_a_local)
-            m.vector().apply('insert')
-            offset += m.vector().size() 
-        else:
-            raise TypeError, 'Unknown parameter type'
 
 def serialise_bounds(bounds, m):
     ''' Converts bounds to an array of (min, max) tuples and serialises it in a parallel environment. '''
@@ -248,41 +195,7 @@ def minimize(reduced_func, method = 'L-BFGS-B', scale = 1.0, **kwargs):
         Additional arguments specific for the optimization algorithms can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimization algorithm. For detailed information about which arguments are supported for each optimization algorithm, please refer to the documentaton of the optimization algorithm.
         '''
 
-    def reduced_func_deriv_array(m_array):
-        ''' An implementation of the reduced functional derivative that accepts the parameter as an array of scalars ''' 
-
-        # In the case that the parameter values have changed since the last forward run, 
-        # we first need to rerun the forward model with the new parameters to have the 
-        # correct forward solutions
-        m = [p.data() for p in reduced_func.parameter]
-        if (m_array != get_global(m)).any():
-            reduced_func_array(m_array) 
-
-        dJdm = utils.compute_gradient(reduced_func.functional, reduced_func.parameter)
-        dJdm_global = get_global(dJdm)
-
-        # Perform the gradient test
-        if dolfin.parameters["optimization"]["test_gradient"]:
-            minconv = utils.test_gradient_array(reduced_func_array, scale * dJdm_global, m_array, 
-                                                seed = dolfin.parameters["optimization"]["test_gradient_seed"])
-            if minconv < 1.9:
-                raise RuntimeWarning, "A gradient test failed during execution."
-            else:
-                info("Gradient test succesfull.")
-            reduced_func_array(m_array) 
-
-        return scale * dJdm_global 
-
-    def reduced_func_array(m_array):
-        ''' An implementation of the reduced functional that accepts the parameter as an array of scalars '''
-        # In case the annotation is not reused, we need to reset any prior annotation of the adjointer before reruning the forward model.
-        if not reduced_func.replays_annotation:
-            solving.adj_reset()
-
-        # Set the parameter values and execute the reduced functional
-        m = [p.data() for p in reduced_func.parameter]
-        set_local(m, m_array)
-        return scale * reduced_func(m)
+    reduced_func.scale = scale
 
     try:
         algorithm = optimization_algorithms_dict[method][1]
@@ -293,7 +206,8 @@ def minimize(reduced_func, method = 'L-BFGS-B', scale = 1.0, **kwargs):
     if algorithm == "minimize_scipy_generic":
         kwargs["method"] = method 
 
-    opt = algorithm(reduced_func_array, reduced_func_deriv_array, [p.data() for p in reduced_func.parameter], **kwargs)
+    dj = lambda m: reduced_func.derivative_array(m, taylor_test = dolfin.parameters["optimization"]["test_gradient"], seed = dolfin.parameters["optimization"]["test_gradient_seed"])
+    opt = algorithm(reduced_func.eval_array, dj, [p.data() for p in reduced_func.parameter], **kwargs)
     if len(opt) == 1:
         return opt[0]
     else:

@@ -1,6 +1,61 @@
 import libadjoint
-from dolfin_adjoint import adjlinalg, adjrhs, constant 
+import numpy
+from dolfin import cpp, info
+from dolfin_adjoint import adjlinalg, adjrhs, constant, utils 
 from dolfin_adjoint.adjglobals import adjointer
+
+def get_global(m_list):
+    ''' Takes a (optional a list of) distributed object(s) and returns one numpy array containing their global values '''
+    if not isinstance(m_list, (list, tuple)):
+        m_list = [m_list]
+
+    m_global = []
+    for m in m_list:
+        # Parameters of type float
+        if m == None or type(m) == float:
+            m_global.append(m)
+        # Parameters of type Constant 
+        elif type(m) == constant.Constant:
+            a = numpy.zeros(m.value_size())
+            p = numpy.zeros(m.value_size())
+            m.eval(a, p)
+            m_global += a.tolist()
+        # Function parameters of type Function 
+        elif hasattr(m, "vector"): 
+            m_v = m.vector()
+            m_a = cpp.DoubleArray(m.vector().size())
+            try:
+                m.vector().gather(m_a, numpy.arange(m_v.size(), dtype='I'))
+                m_global += m_a.array().tolist()
+            except TypeError:
+                m_a = m.vector().gather(numpy.arange(m_v.size(), dtype='I'))
+                m_global += m_a.tolist()
+        else:
+            raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
+
+    return numpy.array(m_global, dtype='d')
+
+def set_local(m_list, m_global_array):
+    ''' Sets the local values of a (or optionally  a list of) distributed object(s) to the values contained in the global array m_global_array '''
+
+    if not isinstance(m_list, (list, tuple)):
+        m_list = [m_list]
+
+    offset = 0
+    for m in m_list:
+        # Parameters of type dolfin.Constant 
+        if type(m) == constant.Constant:
+            m.assign(constant.Constant(numpy.reshape(m_global_array[offset:offset+m.value_size()], m.shape())))
+            offset += m.value_size()    
+        # Function parameters of type dolfin.Function 
+        elif hasattr(m, "vector"): 
+            range_begin, range_end = m.vector().local_range()
+            m_a_local = m_global_array[offset + range_begin:offset + range_end]
+            m.vector().set_local(m_a_local)
+            m.vector().apply('insert')
+            offset += m.vector().size() 
+        else:
+            raise TypeError, 'Unknown parameter type'
 
 class DummyEquation(object):
     pass
@@ -9,11 +64,12 @@ class ReducedFunctional(object):
     ''' This class implements the reduced functional for a given functional/parameter combination. The core idea 
         of the reduced functional is to consider the problem as a pure function of the parameter value which 
         implicitly solves the recorded PDE. '''
-    def __init__(self, functional, parameter):
+    def __init__(self, functional, parameter, scale = 1.0):
         ''' Creates a reduced functional object, that evaluates the functional value for a given parameter value.
             The arguments are as follows:
             * 'functional' must be a dolfin_adjoint.Functional object. 
             * 'parameter' must be a single or a list of dolfin_adjoint.DolfinAdjointParameter objects.
+            * 'scale' is an additional scaling factor. 
             '''
         self.functional = functional
         if not isinstance(parameter, (list, tuple)):
@@ -22,6 +78,7 @@ class ReducedFunctional(object):
         # This flag indicates if the functional evaluation is based on replaying the forward annotation. 
         self.replays_annotation = True
         self.eqns = []
+        self.scale = scale
 
     def eval_callback(self, value):
         ''' This function is called before the reduced functional is evaluated.
@@ -80,23 +137,49 @@ class ReducedFunctional(object):
             #adjglobals.adjointer.forget_forward_equation(i)
         return func_value
 
-    def taylor_test(self, seed = 0.001):
-        ''' Runs the taylor remainder convergence test at current parameter values. 
-            The perturbation direction is random and the perturbation size can be controlled with the seed argument.
-        '''
-        from optimization import get_global, set_local
-        import utils
-        
+    def derivative(self):
+        ''' Evaluates the derivative of the reduced functional for the lastly evaluated parameter value. ''' 
+        return utils.compute_gradient(self.functional, self.parameter)
+
+    def eval_array(self, m_array):
+        ''' An implementation of the reduced functional evaluation
+            that accepts the parameter as an array of scalars '''
+
+        # In case the annotation is not reused, we need to reset any prior annotation of the adjointer before reruning the forward model.
+        if not self.replays_annotation:
+            solving.adj_reset()
+
+        # Set the parameter values and execute the reduced functional
         m = [p.data() for p in self.parameter]
-        m_array = get_global(m)
-        dJdm = utils.compute_gradient(self.functional, self.parameter)
+        set_local(m, m_array)
+        return self.scale * self(m)
+
+    def derivative_array(self, m_array, taylor_test = False, seed = 0.001):
+        ''' An implementation of the reduced functional derivative evaluation 
+            that accepts the parameter as an array of scalars  
+            If taylor_test = True, the derivative is automatically verified 
+            by the Taylor remainder convergence test. The perturbation direction 
+            is random and the perturbation size can be controlled with the seed argument.
+            '''
+
+        # In the case that the parameter values have changed since the last forward run, 
+        # we first need to rerun the forward model with the new parameters to have the 
+        # correct forward solutions
+        m = [p.data() for p in self.parameter]
+        if (m_array != get_global(m)).any():
+            self.eval_array(m_array) 
+
+        dJdm = self.derivative() 
         dJdm_global = get_global(dJdm)
 
-        def reduced_func_array(m_array):
-            if not self.replays_annotation:
-                solving.adj_reset()
-            set_local(m, m_array)
-            return self(m)
+        # Perform the gradient test
+        if taylor_test:
+            minconv = utils.test_gradient_array(self.eval_array, self.scale * dJdm_global, m_array, 
+                                                seed = seed) 
+            if minconv < 1.9:
+                raise RuntimeWarning, "A gradient test failed during execution."
+            else:
+                info("Gradient test succesfull.")
+            self.eval_array(m_array) 
 
-        minconv = utils.test_gradient_array(reduced_func_array, dJdm_global, m_array, seed = seed)
-        return minconv
+        return self.scale * dJdm_global 
