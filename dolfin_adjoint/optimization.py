@@ -31,7 +31,7 @@ def minimize_scipy_generic(J, dJ, m, method, bounds = None, **kwargs):
     try:
         from scipy.optimize import minimize as scipy_minimize
     except ImportError:
-        raise ImportError, "You need to install a scipy version > 0.11 in order to use this optimisation method."
+        raise ImportError, "You need to install a scipy version >= 0.11 in order to use this optimisation method."
 
     m_global = get_global(m)
 
@@ -203,7 +203,7 @@ def minimize(reduced_func, method = 'L-BFGS-B', scale = 1.0, **kwargs):
         raise KeyError, 'Unknown optimization method ' + method + '. Use print_optimization_methods() to get a list of the available methods.'
 
     # For scipy's generic inteface we need to pass the optimisation method as a parameter. 
-    if algorithm == "minimize_scipy_generic":
+    if algorithm == minimize_scipy_generic:
         kwargs["method"] = method 
 
     dj = lambda m: reduced_func.derivative_array(m, taylor_test = dolfin.parameters["optimization"]["test_gradient"], seed = dolfin.parameters["optimization"]["test_gradient_seed"])
