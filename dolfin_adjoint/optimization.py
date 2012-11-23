@@ -37,7 +37,7 @@ def minimize_scipy_generic(J, dJ, m, method, bounds = None, **kwargs):
 
     # Shut up all processors but the first one.
     if MPI.process_number() != 0:
-        if not options in kwargs:
+        if not "options" in kwargs:
             kwargs["options"] = {}
         kwargs["options"]["disp"] = False
 

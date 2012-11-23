@@ -16,12 +16,6 @@ def get_global(m_list):
             m_global.append(m)
         elif hasattr(m, "tolist"): 
             m_global += m.tolist()
-        # Parameters of type Constant 
-        elif hasattr(m, "value_size"): 
-            a = numpy.zeros(m.value_size())
-            p = numpy.zeros(m.value_size())
-            m.eval(a, p)
-            m_global += a.tolist()
         # Function parameters of type Function 
         elif hasattr(m, "vector"): 
             m_v = m.vector()
@@ -32,6 +26,12 @@ def get_global(m_list):
             except TypeError:
                 m_a = m.vector().gather(numpy.arange(m_v.size(), dtype='I'))
                 m_global += m_a.tolist()
+        # Parameters of type Constant 
+        elif hasattr(m, "value_size"): 
+            a = numpy.zeros(m.value_size())
+            p = numpy.zeros(m.value_size())
+            m.eval(a, p)
+            m_global += a.tolist()
         else:
             raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
 
@@ -45,17 +45,17 @@ def set_local(m_list, m_global_array):
 
     offset = 0
     for m in m_list:
-        # Parameters of type dolfin.Constant 
-        if hasattr(m, "value_size"): 
-            m.assign(constant.Constant(numpy.reshape(m_global_array[offset:offset+m.value_size()], m.shape())))
-            offset += m.value_size()    
         # Function parameters of type dolfin.Function 
-        elif hasattr(m, "vector"): 
+        if hasattr(m, "vector"): 
             range_begin, range_end = m.vector().local_range()
             m_a_local = m_global_array[offset + range_begin:offset + range_end]
             m.vector().set_local(m_a_local)
             m.vector().apply('insert')
             offset += m.vector().size() 
+        # Parameters of type dolfin.Constant 
+        elif hasattr(m, "value_size"): 
+            m.assign(constant.Constant(numpy.reshape(m_global_array[offset:offset+m.value_size()], m.shape())))
+            offset += m.value_size()    
         else:
             raise TypeError, 'Unknown parameter type'
 
@@ -100,12 +100,7 @@ class ReducedFunctional(object):
 
         # Update the parameter values
         for i in range(len(value)):
-            if hasattr(value[i], "value_size"): 
-                # Constants are not duplicated in the annotation. That is, changing a constant that occurs
-                # in the forward model will also change the forward replay with libadjoint.
-                # However, this is not the case for functions...
-                pass
-            elif hasattr(value[i], 'vector'):
+            if hasattr(value[i], 'vector'):
                 # ... since these are duplicated and then occur as rhs in the annotation. 
                 # Therefore, we need to update the right hand side callbacks for
                 # the equation that targets the associated variable.
@@ -121,6 +116,11 @@ class ReducedFunctional(object):
                 # Store the equation as a class variable in order to keep a python reference in the memory
                 self.eqns.append(eqn)
                 rhs.register(self.eqns[-1])
+            elif hasattr(value[i], "value_size"): 
+                # Constants are not duplicated in the annotation. That is, changing a constant that occurs
+                # in the forward model will also change the forward replay with libadjoint.
+                # However, this is not the case for functions...
+                pass
             else:
                 raise NotImplementedError, "The ReducedFunctional class currently only works for parameters that are Functions"
 
