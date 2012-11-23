@@ -38,7 +38,7 @@ def get_global(m_list):
     return numpy.array(m_global, dtype='d')
 
 def set_local(m_list, m_global_array):
-    ''' Sets the local values of a (or optionally  a list of) distributed object(s) to the values contained in the global array m_global_array '''
+    ''' Sets the local values of one or a list of distributed object(s) to the values contained in the global array m_global_array '''
 
     if not isinstance(m_list, (list, tuple)):
         m_list = [m_list]

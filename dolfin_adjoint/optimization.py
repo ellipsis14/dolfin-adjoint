@@ -41,11 +41,15 @@ def minimize_scipy_generic(J, dJ, m, method, bounds = None, **kwargs):
             kwargs["options"] = {}
         kwargs["options"]["disp"] = False
 
+    # For gradient-based methods add the derivative function to the argument list 
+    if method not in ["COBYLA", "Nelder-Mead", "Anneal", "Powell"]:
+        kwargs["jac"] = dJ
+
     if bounds != None:
         bounds = serialise_bounds(bounds, m)
-        res = scipy_minimize(J, m_global, method = method, jac = dJ, bounds = bounds, **kwargs)
+        res = scipy_minimize(J, m_global, method = method, bounds = bounds, **kwargs)
     else:
-        res = scipy_minimize(J, m_global, method = method, jac = dJ, **kwargs)
+        res = scipy_minimize(J, m_global, method = method, **kwargs)
 
     set_local(m, numpy.array(res["x"]))
     return m
