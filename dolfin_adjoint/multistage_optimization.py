@@ -25,4 +25,3 @@ def mg_opt(rf, meshes, current_mesh_idx):
         m_h_p1 = minimize(rf)
     else:
         m_h1 = minimize(rf, options = {"maxiter": 1})
-        m_H1 = project(m_h1,  
