@@ -48,6 +48,8 @@ class InitialConditionParameter(DolfinAdjointParameter):
     '''coeff: the variable whose initial condition you wish to perturb.
        perturbation: the perturbation direction in which you wish to compute the gradient. Must be a Function.'''
 
+    if not (isinstance(coeff, dolfin.Function) or isinstance(coeff, str)):
+      raise TypeError, "The coefficient must be a dolfin.Function or a String"
     self.coeff = coeff
     self.var = None 
     # Find the first occurance of the coeffcient
@@ -91,6 +93,8 @@ class ScalarParameter(DolfinAdjointParameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
   when one wishes to compute dJ/da, where a is a single scalar parameter.'''
   def __init__(self, a):
+    if not (isinstance(a, dolfin.Constant) or isinstance(a, str)):
+      raise TypeError, "The coefficient must be a dolfin.Constant or a String"
     self.a = a
 
   def __call__(self, adjointer, i, dependencies, values, variable):
