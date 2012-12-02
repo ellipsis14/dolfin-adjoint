@@ -8,6 +8,7 @@ import multiprocessing
 import multiprocessing.pool
 import threading
 import time
+from optparse import OptionParser
 
 test_cmds = {'tlm_simple': 'mpirun -n 2 python tlm_simple.py',
              'navier_stokes': 'mpirun -n 2 python navier_stokes.py',
@@ -27,25 +28,25 @@ test_cmds = {'tlm_simple': 'mpirun -n 2 python tlm_simple.py',
 chdirlock = threading.Lock()
 appendlock = threading.Lock()
 
-num_procs = 1
-if len(sys.argv) > 1:
-  if sys.argv[1] == "-n":
-    if len(sys.argv) > 2:
-      num_procs = int(sys.argv[2])
-    else:
-      num_procs = None
-  else:
-    print "Usage: test.py [-n THREADS]"
-    print "Run the dolfin-adjoint test suite."
-    print "To run on N cores, use -n N; to use all"
-    print "processors available, just run test.py -n."
-    sys.exit(0)
+parser = OptionParser()
+parser.add_option("-n", type="int", dest="num_procs", default = 1, help = "To run on N cores, use -n N; to use all processors available, run test.py -n 0.")
+parser.add_option("-t", type="string", dest="test_name", help = "To run one specific test, use -t TESTNAME. By default all test are run.")
+(options, args) = parser.parse_args(sys.argv)
 
-pool = multiprocessing.pool.ThreadPool(num_procs)
+if options.num_procs <= 0:
+  options.num_procs = None
+
+pool = multiprocessing.pool.ThreadPool(options.num_procs)
 fails = []
 
 basedir = os.path.dirname(os.path.abspath(sys.argv[0]))
 subdirs = [x for x in os.listdir(basedir) if os.path.isdir(os.path.join(basedir, x))]
+if options.test_name:
+  if not options.test_name in subdirs:
+    print "Specified test not found."
+    sys.exit(1)
+  else:
+    subdirs = [options.test_name]
 
 # Keep path variables (for buildbot's sake for instance)
 orig_pythonpath = os.getenv('PYTHONPATH', '')
@@ -60,7 +61,7 @@ def f(subdir):
 
     chdirlock.acquire()
     os.chdir(os.path.join(basedir, subdir))
-    if num_procs > 1:
+    if options.num_procs > 1:
       time.sleep(1)
 
     print "--------------------------------------------------------"
