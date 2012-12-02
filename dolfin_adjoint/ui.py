@@ -1,6 +1,6 @@
 from assembly import assemble, assemble_system
 from functional import Functional
-from parameter import InitialConditionParameter, ScalarParameter, ScalarParameters
+from parameter import InitialConditionParameter, ScalarParameter, ScalarParameters, TimeConstantParameter
 from lusolver import LUSolver
 #from matrix_free import down_cast, AdjointPETScKrylovSolver, AdjointKrylovMatrix
 from solving import solve, adj_html, adj_reset, adj_checkpointing
