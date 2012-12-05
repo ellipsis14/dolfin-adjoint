@@ -35,7 +35,7 @@ def minimize_scipy_generic(J, dJ, m, method, bounds = None, **kwargs):
 
     m_global = get_global(m)
 
-    # Shut up all processors but the first one.
+    # Shut up all processors except the first one.
     if MPI.process_number() != 0:
         if not "options" in kwargs:
             kwargs["options"] = {}
@@ -65,7 +65,7 @@ def minimize_scipy_slsqp(J, dJ, m, bounds = None, **kwargs):
 
     m_global = get_global(m)
 
-    # Shut up all processors but the first one.
+    # Shut up all processors except the first one.
     if MPI.process_number() != 0:
         kwargs['iprint'] = 0
 
@@ -90,7 +90,7 @@ def minimize_scipy_fmin_l_bfgs_b(J, dJ, m, bounds = None, **kwargs):
     
     m_global = get_global(m)
 
-    # Shut up all processors but the first one.
+    # Shut up all processors except the first one.
     if MPI.process_number() != 0:
         kwargs['iprint'] = -1
 
@@ -111,7 +111,7 @@ def minimize_scipy_tnc(J, dJ, m, bounds = None, **kwargs):
     
     m_global = get_global(m)
 
-    # Shut up all processors but the first one.
+    # Shut up all processors except the first one.
     if MPI.process_number() != 0:
         kwargs['iprint'] = -1
 
@@ -125,14 +125,14 @@ def minimize_scipy_tnc(J, dJ, m, bounds = None, **kwargs):
 def minimize_scipy_cg(J, dJ, m, **kwargs):
     # If possible use scipy's generic interface 
     try:
-        return minimize_scipy_generic(J, dJ, m, bounds = bounds, method = "CG", **kwargs)
+        return minimize_scipy_generic(J, dJ, m, method = "CG", **kwargs)
     except ImportError:
         pass
     from scipy.optimize import fmin_cg
     
     m_global = get_global(m)
 
-    # Shut up all processors but the first one.
+    # Shut up all processors except the first one.
     if MPI.process_number() != 0:
         kwargs['iprint'] = -1
     kwargs['full_output'] = True
@@ -144,14 +144,14 @@ def minimize_scipy_cg(J, dJ, m, **kwargs):
 def minimize_scipy_bfgs(J, dJ, m, **kwargs):
     # If possible use scipy's generic interface 
     try:
-        return minimize_scipy_generic(J, dJ, m, bounds = bounds, method = "BFGS", **kwargs)
+        return minimize_scipy_generic(J, dJ, m, method = "BFGS", **kwargs)
     except ImportError:
         pass
     from scipy.optimize import fmin_bfgs
     
     m_global = get_global(m)
 
-    # Shut up all processors but the first one.
+    # Shut up all processors except the first one.
     if MPI.process_number() != 0:
         kwargs['iprint'] = -1
 

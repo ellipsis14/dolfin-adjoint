@@ -62,7 +62,7 @@ if __name__ == "__main__":
     # scipt.optimize 0.11.0 introduced a new generic interface to the minimisation routines, 
     # which dolfin-adjoint.optimize automatically uses if available. Since the arguments changed, we need
     # to check for the version at this point.
-    new_scipy = StrictVersion(scipy.__version__) >= StrictVersion('0.11.0')
+    new_scipy = StrictVersion(scipy.__version__[0:4]) >= StrictVersion('0.11.0')
     if new_scipy:
         u_opt = minimize(reduced_functional, method = 'L-BFGS-B', bounds = (lb, 1), tol = 1e-6, options = {'disp': True})
     else:
