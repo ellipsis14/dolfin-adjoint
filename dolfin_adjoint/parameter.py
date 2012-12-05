@@ -170,7 +170,7 @@ class ScalarParameter(DolfinAdjointParameter):
       return None
 
   def data(self):
-    return self.a
+    return get_constant(self.a)
 
 class ScalarParameters(DolfinAdjointParameter):
   '''This Parameter is used as input to the tangent linear model (TLM)

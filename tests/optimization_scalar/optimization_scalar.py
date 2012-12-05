@@ -32,14 +32,14 @@ def main(nu):
     adj_inc_timestep()
 
 if __name__ == "__main__":
-  nu = Constant(0.0001)
+  nu = Constant(0.0001, name="Nu")
   # Run the forward model once to have the annotation
   main(nu)
 
   J = Functional(inner(u, u)*dx*dt[FINISH_TIME])
 
   # Run the optimisation 
-  reduced_functional = ReducedFunctional(J, ScalarParameter(nu))
+  reduced_functional = ReducedFunctional(J, ScalarParameter("Nu"))
   nu_opt = minimize(reduced_functional, 'SLSQP')
 
   tol = 1e-4
