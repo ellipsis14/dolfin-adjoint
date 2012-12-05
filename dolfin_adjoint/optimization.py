@@ -238,3 +238,6 @@ def maximize(reduced_func, method = 'L-BFGS-B', scale = 1.0, **kwargs):
         Additional arguments specific for the optimization methods can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimization method. For detailed information about which arguments are supported for each optimization method, please refer to the documentaton of the optimization algorithm.
         '''
     return minimize(reduced_func, method, scale = -scale, **kwargs)
+
+minimise = minimize
+maximise = maximize
