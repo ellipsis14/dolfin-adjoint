@@ -334,7 +334,7 @@ def test_initial_condition_adjoint_cdiff(J, ic, final_adjoint, seed=0.01, pertur
 
   return min(convergence_order(with_gradient))
 
-def compute_gradient(J, param, forget=True, ignore=[]):
+def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, output: None):
   try:
     scalar = False
     dJdparam = [None for i in range(len(param))]
@@ -364,6 +364,8 @@ def compute_gradient(J, param, forget=True, ignore=[]):
       continue
 
     (adj_var, output) = adjglobals.adjointer.get_adjoint_solution(i, J)
+
+    callback(adj_var, output.data)
 
     storage = libadjoint.MemoryStorage(output)
     adjglobals.adjointer.record_variable(adj_var, storage)
