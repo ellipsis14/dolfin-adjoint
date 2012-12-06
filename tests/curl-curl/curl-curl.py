@@ -3,7 +3,7 @@ from dolfin_adjoint import *
 
 # Create mesh
 def main(dbdt_c, annotate=False):
-  mesh = UnitSphere(8)
+  mesh = UnitCube(2, 2, 2)
 
   # Define function spaces
   PN = FunctionSpace(mesh, "Nedelec 1st kind H(curl)", 1)
