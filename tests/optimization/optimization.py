@@ -58,24 +58,22 @@ if __name__ == "__main__":
     # Define the reduced funtional
     reduced_functional = ReducedFunctional(J, InitialConditionParameter(u))
 
+    print "\n === Solving problem with L-BFGS-B. === \n"
     # Run the optimisation problem with gradient tests and L-BFGS-B
     # scipt.optimize 0.11.0 introduced a new generic interface to the minimisation routines, 
     # which dolfin-adjoint.optimize automatically uses if available. Since the arguments changed, we need
     # to check for the version at this point.
-    new_scipy = StrictVersion(scipy.__version__[0:4]) >= StrictVersion('0.11.0')
-    if new_scipy:
-        u_opt = minimize(reduced_functional, method = 'L-BFGS-B', bounds = (lb, 1), tol = 1e-6, options = {'disp': True})
-    else:
-        u_opt = minimize(reduced_functional, method = 'L-BFGS-B', pgtol=1e-6, factr=1e5, bounds = (lb, 1), iprint = 1)
-    ic = project(Expression("sin(2*pi*x[0])"),  V)
+    try:
+        from scipy.optimize import minimize as scipy_minimize
+        new_scipy = True
+    except ImportError:
+        new_scipy = False
+        pass
 
-    # Run the problem again with SQP, this time for performance reasons with the gradient test switched off
-    u_opt.assign(ic, annotate = False)
-    dolfin.parameters["optimization"]["test_gradient"] = False 
     if new_scipy:
-        u_opt = minimize(reduced_functional, method = 'SLSQP', bounds = (lb, 1), tol = 1e-10, options ={'disp': True})
+        u_opt = minimize(reduced_functional, method = 'L-BFGS-B', bounds = (lb, 1), tol = 1e-10, options = {'disp': True})
     else:
-        u_opt = minimize(reduced_functional, method = 'SLSQP', bounds = (lb, 1), iprint = 2, acc = 1e-10)
+        u_opt = minimize(reduced_functional, method = 'L-BFGS-B', pgtol=1e-10, factr=1e5, bounds = (lb, 1), iprint = 1)
 
     tol = 1e-9
     final_functional = reduced_functional(u_opt)
@@ -84,3 +82,30 @@ if __name__ == "__main__":
         print 'Test failed: Optimised functional value exceeds tolerance: ' , final_functional, ' > ', tol, '.'
         sys.exit(1)
 
+    # Run the problem again with SQP, this time for performance reasons with the gradient test switched off
+    dolfin.parameters["optimization"]["test_gradient"] = False 
+
+    if new_scipy:
+        # Method specific arguments:
+        options = {"SLSQP": {"bounds": (lb, 1)},
+                   "BFGS": {"bounds": None},
+                   "COBYLA": {"bounds": None, "rhobeg": 0.1},
+                   "TNC": {"bounds": None},
+                   "L-BFGS-B": {"bounds": (lb, 1)},
+                   "Newton-CG": {"bounds": None, "maxiter": 1},
+                   "Nelder-Mead": {"bounds": None }, 
+                   "Anneal": {"bounds": None, "lower": -0.1, "upper": 0.1},
+                   "CG": {"bounds": None},
+                   "Powell": {"bounds": None}
+                  }
+
+        for method in ["SLSQP", "BFGS", "COBYLA", "TNC", "L-BFGS-B", "Newton-CG", "Nelder-Mead", "Anneal", "CG"]: #, "Powell"]:
+            print "\n === Solving problem with %s. ===\n" % method
+            u_opt.assign(ic, annotate = False)
+            reduced_functional(u_opt)
+            u_opt = minimize(reduced_functional, 
+                             bounds = options[method].pop("bounds"), 
+                             method = method, tol = 1e-10, 
+                             options = dict({'disp': True, "maxiter": 2}, **options[method]))
+    else:
+        print "You do not have a recent scipy.optimize version installed. Without it I can not run the remaining optimisation tests."
