@@ -1,6 +1,6 @@
 import libadjoint
 import numpy
-from dolfin import cpp, info, project
+from dolfin import cpp, info, interpolate
 from dolfin_adjoint import adjlinalg, adjrhs, constant, utils 
 from dolfin_adjoint.adjglobals import adjointer
 
@@ -159,7 +159,7 @@ class ReducedFunctional(object):
             scaled_dfunc_value = []
             for df in list(dfunc_value):
                 if hasattr(df, "function_space"):
-                    scaled_dfunc_value.append(project(self.scale * df, df.function_space()))
+                    scaled_dfunc_value.append(interpolate(self.scale * df, df.function_space()))
                 else:
                     scaled_dfunc_value.append(self.scale * df)
 
