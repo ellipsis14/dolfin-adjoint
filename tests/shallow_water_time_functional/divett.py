@@ -34,7 +34,11 @@ class InitialConditions(Expression):
         return (3,)
 
 
-mesh = Rectangle(0, 0, basin_x, basin_y, nx, ny)
+try:
+  mesh = RectangleMesh(0, 0, basin_x, basin_y, nx, ny)
+except:
+  mesh = Rectangle(0, 0, basin_x, basin_y, nx, ny)
+
 mesh.order()
 mesh.init()
 
@@ -56,7 +60,10 @@ right = Right()
 sides = Sides()
 
 # Initialize mesh function for boundary domains
-boundaries = FacetFunction("uint", mesh)
+try:
+  boundaries = FacetFunction("sizet", mesh)
+except:
+  boundaries = FacetFunction("uint", mesh)
 boundaries.set_all(0)
 left.mark(boundaries, 1)
 right.mark(boundaries, 2)
