@@ -11,7 +11,7 @@ n = 100
 mesh = UnitInterval(n)
 V = FunctionSpace(mesh, "CG", 2)
 
-parameters["num_threads"] = 2
+#parameters["num_threads"] = 2
 
 dolfin.parameters["adjoint"]["test_derivative"] = True
 
