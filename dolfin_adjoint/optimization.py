@@ -31,7 +31,9 @@ def minimize_scipy_generic(J, dJ, m, method, bounds = None, **kwargs):
     try:
         from scipy.optimize import minimize as scipy_minimize
     except ImportError:
-        raise ImportError, "You need to install a scipy version >= 0.11 in order to use this optimisation method."
+        print "**************** Deprecated warning *****************"
+        print "You have a old version of scipy (<0.11). This version is only partly supported by dolfin-adjoint and many things will not work."
+        raise ImportError
 
     m_global = get_global(m)
 
