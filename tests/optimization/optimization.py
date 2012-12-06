@@ -4,7 +4,6 @@ import sys
 
 from dolfin import *
 from dolfin_adjoint import *
-from distutils.version import StrictVersion
 import scipy
 import libadjoint
 
@@ -109,3 +108,4 @@ if __name__ == "__main__":
                              options = dict({'disp': True, "maxiter": 2}, **options[method]))
     else:
         print "You do not have a recent scipy.optimize version installed. Without it I can not run the remaining optimisation tests."
+    info_green("Test passed")

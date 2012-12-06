@@ -18,10 +18,12 @@ def serialise_bounds(bounds, m):
     bounds_arr = [[], []]
     for i in range(2):
         for j in range(len(bounds[i])):
-            if type(bounds[i][j]) in [int,  float, numpy.int32, numpy.int64, numpy.float32, numpy.float64]:
-                bounds_arr[i] += (bounds[i][j]*numpy.ones(m[j].vector().size())).tolist()
+            bound = bounds[i][j]
+            if type(bound) in [int,  float, numpy.int32, numpy.int64, numpy.float32, numpy.float64]:
+                bound_len = len(get_global(m[j]))
+                bounds_arr[i] += (bound*numpy.ones(bound_len)).tolist()
             else:
-                bounds_arr[i] += get_global(bounds[i][j]).tolist()
+                bounds_arr[i] += get_global(bound).tolist()
 
     # Transpose and return the array to get the form [ [lower_bound1, upper_bound1], [lower_bound2, upper_bound2], ... ] 
     return numpy.array(bounds_arr).T

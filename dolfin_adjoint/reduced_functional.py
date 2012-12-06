@@ -149,14 +149,14 @@ class ReducedFunctional(object):
 
         self.current_func_value = func_value 
         if self.eval_cb:
-            self.eval_cb(func_value, delist(value))
+            self.eval_cb(self.scale * func_value, delist(value))
         return func_value
 
     def derivative(self):
         ''' Evaluates the derivative of the reduced functional for the lastly evaluated parameter value. ''' 
         dfunc_value = utils.compute_gradient(self.functional, self.parameter)
         if self.derivative_cb:
-            self.derivative_cb(self.current_func_value, delist(dfunc_value), delist([p.data() for p in self.parameter]))
+            self.derivative_cb(self.scale * self.current_func_value, self.scale * delist(dfunc_value), delist([p.data() for p in self.parameter]))
         return dfunc_value
 
     def eval_array(self, m_array):
