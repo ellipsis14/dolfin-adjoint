@@ -4,6 +4,13 @@ from dolfin import cpp, info
 from dolfin_adjoint import adjlinalg, adjrhs, constant, utils 
 from dolfin_adjoint.adjglobals import adjointer
 
+def delist(x):
+    ''' If x is a list of length 1, return its element. Otherwise return x. '''
+    if len(x) == 1:
+        return x[0]
+    else:
+        return x
+
 def get_global(m_list):
     ''' Takes a (optional a list of) distributed object(s) and returns one numpy array containing their global values '''
     if not isinstance(m_list, (list, tuple)):
@@ -66,12 +73,18 @@ class ReducedFunctional(object):
     ''' This class implements the reduced functional for a given functional/parameter combination. The core idea 
         of the reduced functional is to consider the problem as a pure function of the parameter value which 
         implicitly solves the recorded PDE. '''
-    def __init__(self, functional, parameter, scale = 1.0):
+    def __init__(self, functional, parameter, scale = 1.0, eval_cb = None, derivative_cb = None):
         ''' Creates a reduced functional object, that evaluates the functional value for a given parameter value.
             The arguments are as follows:
             * 'functional' must be a dolfin_adjoint.Functional object. 
             * 'parameter' must be a single or a list of dolfin_adjoint.DolfinAdjointParameter objects.
             * 'scale' is an additional scaling factor. 
+            * 'eval_cb' is an optional callback that is executed after each functional evaluation. 
+              The interace must be eval_cb(j, m) where j is the functional value and 
+              m is the parameter value at which the functional is evaluated.
+            * 'derivative_cb' is an optional callback that is executed after each functional gradient evaluation. 
+              The interace must be eval_cb(j, dj, m) where j and dj are the functional and functional gradient values, and 
+              m is the parameter value at which the gradient is evaluated.
             '''
         self.functional = functional
         if not isinstance(parameter, (list, tuple)):
@@ -81,18 +94,14 @@ class ReducedFunctional(object):
         self.replays_annotation = True
         self.eqns = []
         self.scale = scale
-
-    def eval_callback(self, value):
-        ''' This function is called before the reduced functional is evaluated.
-            It is intended to be overwritten by the user, for example to plot the control values 
-            that are passed into the callback as "value". ''' 
-        pass
+        self.eval_cb = eval_cb
+        self.derivative_cb = derivative_cb
+        self.current_func_value = None
 
     def __call__(self, value):
         ''' Evaluates the reduced functional for the given parameter value, by replaying the forward model.
             Note: before using this evaluation, make sure that the forward model has been annotated. '''
 
-        self.eval_callback(value)
         if not isinstance(value, (list, tuple)):
             value = [value]
         if len(value) != len(self.parameter):
@@ -137,11 +146,18 @@ class ReducedFunctional(object):
                 func_value += adjointer.evaluate_functional(self.functional, fwd_var.timestep)
 
             #adjglobals.adjointer.forget_forward_equation(i)
+
+        self.current_func_value = func_value 
+        if self.eval_cb:
+            self.eval_cb(func_value, delist(value))
         return func_value
 
     def derivative(self):
         ''' Evaluates the derivative of the reduced functional for the lastly evaluated parameter value. ''' 
-        return utils.compute_gradient(self.functional, self.parameter)
+        dfunc_value = utils.compute_gradient(self.functional, self.parameter)
+        if self.derivative_cb:
+            self.derivative_cb(self.current_func_value, delist(dfunc_value), delist([p.data() for p in self.parameter]))
+        return dfunc_value
 
     def eval_array(self, m_array):
         ''' An implementation of the reduced functional evaluation

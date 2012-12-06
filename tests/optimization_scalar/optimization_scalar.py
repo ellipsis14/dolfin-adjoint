@@ -31,6 +31,12 @@ def main(nu):
     t += float(timestep)
     adj_inc_timestep()
 
+def eval_cb(j, m):
+  print "j = %f, m = %f." % (j, float(m))
+
+def derivative_cb(j, dj, m):
+  print "j = %f, dj = %f, m = %f." % (j, dj, float(m))
+
 if __name__ == "__main__":
   nu = Constant(0.0001, name="Nu")
   # Run the forward model once to have the annotation
@@ -39,7 +45,7 @@ if __name__ == "__main__":
   J = Functional(inner(u, u)*dx*dt[FINISH_TIME])
 
   # Run the optimisation 
-  reduced_functional = ReducedFunctional(J, ScalarParameter("Nu"))
+  reduced_functional = ReducedFunctional(J, ScalarParameter("Nu"), eval_cb = eval_cb, derivative_cb = derivative_cb)
   nu_opt = minimize(reduced_functional, 'SLSQP')
 
   tol = 1e-4
