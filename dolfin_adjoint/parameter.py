@@ -87,6 +87,9 @@ class InitialConditionParameter(DolfinAdjointParameter):
       return None
 
   def data(self):
+    if isinstance(self.coeff, str):
+      self.coeff = adjglobals.adjointer.get_variable_value(self.var).data
+
     return self.coeff
 
 class ScalarParameter(DolfinAdjointParameter):
