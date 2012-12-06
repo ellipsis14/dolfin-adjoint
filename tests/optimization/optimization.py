@@ -40,6 +40,9 @@ def main(u, annotate=False):
         t += float(timestep)
         adj_inc_timestep(time=t, finished = t>end)
 
+def derivative_cb(j, dj, m):
+  print "j = %f, max(dj) = %f, max(m) = %f." % (j, dj.vector().max(), m.vector().max())
+
 if __name__ == "__main__":
 
     ic = project(Expression("sin(2*pi*x[0])"),  V)
@@ -55,7 +58,7 @@ if __name__ == "__main__":
     lb = project(Expression("-1"),  V)
     
     # Define the reduced funtional
-    reduced_functional = ReducedFunctional(J, InitialConditionParameter(u))
+    reduced_functional = ReducedFunctional(J, InitialConditionParameter(u), derivative_cb = derivative_cb)
 
     print "\n === Solving problem with L-BFGS-B. === \n"
     # Run the optimisation problem with gradient tests and L-BFGS-B

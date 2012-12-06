@@ -1,10 +1,10 @@
 import libadjoint
 import numpy
-from dolfin import cpp, info
+from dolfin import cpp, info, project
 from dolfin_adjoint import adjlinalg, adjrhs, constant, utils 
 from dolfin_adjoint.adjglobals import adjointer
 
-def delist(x):
+def unlist(x):
     ''' If x is a list of length 1, return its element. Otherwise return x. '''
     if len(x) == 1:
         return x[0]
@@ -31,7 +31,7 @@ def get_global(m_list):
                 m.vector().gather(m_a, numpy.arange(m_v.size(), dtype='I'))
                 m_global += m_a.array().tolist()
             except TypeError:
-                m_a = m.vector().gather(numpy.arange(m_v.size(), dtype='I'))
+                m_a = m.vector().gather(numpy.arange(m_v.size(), dtype='intc'))
                 m_global += m_a.tolist()
         # Parameters of type Constant 
         elif hasattr(m, "value_size"): 
@@ -149,14 +149,22 @@ class ReducedFunctional(object):
 
         self.current_func_value = func_value 
         if self.eval_cb:
-            self.eval_cb(self.scale * func_value, delist(value))
+            self.eval_cb(self.scale * func_value, unlist(value))
         return func_value
 
     def derivative(self):
         ''' Evaluates the derivative of the reduced functional for the lastly evaluated parameter value. ''' 
         dfunc_value = utils.compute_gradient(self.functional, self.parameter)
         if self.derivative_cb:
-            self.derivative_cb(self.scale * self.current_func_value, self.scale * delist(dfunc_value), delist([p.data() for p in self.parameter]))
+            scaled_dfunc_value = []
+            for df in list(dfunc_value):
+                if hasattr(df, "function_space"):
+                    scaled_dfunc_value.append(project(self.scale * df, df.function_space()))
+                else:
+                    scaled_dfunc_value.append(self.scale * df)
+
+            self.derivative_cb(self.scale * self.current_func_value, unlist(scaled_dfunc_value), unlist([p.data() for p in self.parameter]))
+
         return dfunc_value
 
     def eval_array(self, m_array):
