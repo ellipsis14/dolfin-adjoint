@@ -98,6 +98,6 @@ solver.parameters["relative_tolerance"] = 1.0e-14
 solver.parameters["nonzero_initial_guess"] = True
 solver.solve(U.vector(), bb)
 
-success = replay_dolfin(tol=1.0e-11)
+success = replay_dolfin(tol=1.0e-10)
 if not success:
   sys.exit(1)
