@@ -4,6 +4,7 @@ import assembly
 import libadjoint
 import adjglobals
 import adjlinalg
+import misc
 
 lu_solvers = {}
 adj_lu_solvers = {}
@@ -109,7 +110,7 @@ class LUSolver(dolfin.LUSolver):
           raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your RHS b has to have the .form attribute: was it assembled after from dolfin_adjoint import *?")
 
         try:
-          eq_bcs = list(set(self.op_bcs + args[1].bcs))
+          eq_bcs = misc.uniq(self.op_bcs + args[1].bcs)
         except AttributeError:
           eq_bcs = self.op_bcs
 
@@ -126,7 +127,7 @@ class LUSolver(dolfin.LUSolver):
           raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your RHS b has to have the .form attribute: was it assembled after from dolfin_adjoint import *?")
 
         try:
-          eq_bcs = list(set(self.op_bcs + args[2].bcs))
+          eq_bcs = misc.uniq(self.op_bcs + args[2].bcs)
         except AttributeError:
           eq_bcs = self.op_bcs
 

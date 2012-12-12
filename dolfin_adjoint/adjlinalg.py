@@ -5,6 +5,7 @@ import adjglobals
 import os
 import os.path
 import numpy
+import misc
 
 class Vector(libadjoint.Vector):
   '''This class implements the libadjoint.Vector abstract base class for the Dolfin adjoint.
@@ -322,7 +323,7 @@ class Matrix(libadjoint.Matrix):
 
     self.data+=alpha*x_form
     self.bcs += x.bcs # Err, I hope they are compatible ...
-    self.bcs = list(set(self.bcs))
+    self.bcs = misc.uniq(self.bcs)
 
   def test_function(self):
     '''test_function(self)

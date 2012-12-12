@@ -26,6 +26,7 @@ import coeffstore
 import adjrhs
 import adjglobals
 import adjlinalg
+import misc
 
 def annotate(*args, **kwargs):
   '''This routine handles all of the annotation, recording the solves as they
@@ -98,7 +99,7 @@ def annotate(*args, **kwargs):
       pass
 
     try:
-      eq_bcs = list(set(args[0].bcs + args[2].bcs))
+      eq_bcs = misc.uniq(args[0].bcs + args[2].bcs)
     except AttributeError:
       assert not hasattr(args[0], 'bcs') and not hasattr(args[2], 'bcs')
       eq_bcs = []
@@ -187,7 +188,7 @@ def annotate(*args, **kwargs):
       if len(adjoint_bcs) == 0: 
         adjoint_bcs = None
       else:
-        adjoint_bcs = list(set(adjoint_bcs))
+        adjoint_bcs = misc.uniq(adjoint_bcs)
 
       kwargs = {}
       kwargs['bcs'] = adjoint_bcs
@@ -204,7 +205,7 @@ def annotate(*args, **kwargs):
     else:
 
       kwargs = {}
-      kwargs['bcs'] = list(set(eq_bcs))
+      kwargs['bcs'] = misc.uniq(eq_bcs)
       kwargs['solver_parameters'] = solver_parameters
       kwargs['adjoint'] = False
 

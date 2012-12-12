@@ -4,6 +4,7 @@ import solving
 import libadjoint
 import adjlinalg
 import adjglobals
+import misc
 
 class KrylovSolver(dolfin.KrylovSolver):
   '''This object is overloaded so that solves using this class are automatically annotated,
@@ -51,7 +52,7 @@ class KrylovSolver(dolfin.KrylovSolver):
         bcs += A.bcs
       if hasattr(b, 'bcs'):
         bcs += b.bcs
-      bcs = list(set(bcs))
+      bcs = misc.uniq(bcs)
 
       assemble_system = A.assemble_system
 
