@@ -37,7 +37,7 @@ if __name__ == "__main__":
     vec[i] = random.random()
 
   out = main(ic, annotate=True)
-  success = replay_dolfin()
+  success = replay_dolfin(tol=1.0e-15)
 
   if not success:
     sys.exit(1)
