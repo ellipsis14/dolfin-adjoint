@@ -10,6 +10,7 @@
 
 from dolfin import *
 from dolfin_adjoint import *
+import ufl.algorithms
 
 parameters["adjoint"]["stop_annotating"] = True
 
@@ -41,10 +42,23 @@ def tlm(u, m, mdot):
   Fm = F(m)
   dFmdu = derivative(Fm, u)
   dFmdm = derivative(Fm, m, mdot)
-  udot = Function(Vu)
+  u_tlm = Function(Vu)
 
-  solve(action(dFmdu, udot) + dFmdm == 0, udot, bcs=hbcs)
-  return udot
+  solve(action(dFmdu, u_tlm) + dFmdm == 0, u_tlm, bcs=hbcs)
+  return u_tlm
+
+def adj(u, m):
+  Fm = F(m)
+  dFmdu = derivative(Fm, u)
+  adFmdu = adjoint(dFmdu, reordered_arguments=ufl.algorithms.extract_arguments(dFmdu))
+
+  Jm = J(u, m)
+  dJdu = derivative(Jm, u, TestFunction(Vu))
+
+  u_adj = Function(Vu)
+
+  solve(action(adFmdu, u_adj) - dJdu == 0, u_adj, bcs=hbcs)
+  return u_adj
 
 if __name__ == "__main__":
   m = interpolate(Expression(("sin(x[0])", "cos(x[1])")), Vm)
@@ -54,3 +68,4 @@ if __name__ == "__main__":
   mdot = interpolate(Constant((1.0, 1.0)), Vm)
 
   u_tlm = tlm(u, m, mdot)
+  u_adj = adj(u, m)
