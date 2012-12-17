@@ -60,6 +60,30 @@ def adj(u, m):
   solve(action(adFmdu, u_adj) - dJdu == 0, u_adj, bcs=hbcs)
   return u_adj
 
+def soa(u, m, u_tlm, u_adj, mdot):
+  Fm = F(m)
+  dFmdu = derivative(Fm, u)
+  adFmdu = adjoint(dFmdu, reordered_arguments=ufl.algorithms.extract_arguments(dFmdu))
+
+  dFdudu = derivative(adFmdu, u, u_tlm)
+  dFdudm = derivative(adFmdu, m, mdot)
+
+  Jm = J(u, m)
+  dJdu = derivative(Jm, u, TestFunction(Vu))
+  dJdudu = derivative(dJdu, u, u_adj)
+  dJdudm = derivative(dJdu, m, mdot)
+
+  u_soa = Function(Vu)
+
+  # Implement the second-order adjoint equation
+  Fsoa = (action(dFdudu, u_adj) +
+          action(dFdudu, u_adj) + 
+          action(adFmdu, u_soa) + # <-- the lhs term
+         -dJdudu
+         -dJdudm)
+  solve(Fsoa == 0, u_soa, bcs=hbcs)
+  return u_soa
+
 if __name__ == "__main__":
   m = interpolate(Expression(("sin(x[0])", "cos(x[1])")), Vm)
   u = main(m)
@@ -69,3 +93,4 @@ if __name__ == "__main__":
 
   u_tlm = tlm(u, m, mdot)
   u_adj = adj(u, m)
+  u_soa = soa(u, m, u_tlm, u_adj, mdot)
