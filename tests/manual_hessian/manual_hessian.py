@@ -124,17 +124,19 @@ def HJ(u, m):
     # but UFL is pretty stupid here, and if the derivatives are null it
     # just crashes instead of gracefully dropping the terms
 
-    def action(A, x):
-      A = ufl.algorithms.expand_derivatives(A)
-      if A.integrals() != (): # form is not empty:
-        return ufl_action(A, x)
-      else:
-        return A # form is empty, doesn't matter anyway
+    #def action(A, x):
+    #  A = ufl.algorithms.expand_derivatives(A)
+    #  if A.integrals() != (): # form is not empty:
+    #    return ufl_action(A, x)
+    #  else:
+    #    return A # form is empty, doesn't matter anyway
 
-    FH = (-action(derivative(adFmdm, u, u_tlm), u_adj) +
-          -action(derivative(adFmdm, m, m_dot), u_adj) +
-          -action(adFmdm, u_soa) +
-           derivative(dJdm, u, u_tlm) +
+    #FH = (-action(derivative(adFmdm, u, u_tlm), u_adj) +
+    #      -action(derivative(adFmdm, m, m_dot), u_adj) +
+    #      -action(adFmdm, u_soa) +
+    #       derivative(dJdm, u, u_tlm) +
+    #       derivative(dJdm, m, m_dot))
+    FH = (-action(adFmdm, u_soa) +
            derivative(dJdm, m, m_dot))
 
     result = assemble(FH)
@@ -159,5 +161,5 @@ if __name__ == "__main__":
 
   HJm = HJ(u, m)
   info_green("Applying Taylor test to Hessian computed with second-order adjoint ... ")
-  minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, HJm=HJm, value=m)
+  minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, HJm=HJm, value=m, perturbation_direction=m_dot)
   assert minconv > 2.9
