@@ -38,6 +38,11 @@ def main(m):
 def J(u, m):
   return inner(u, u)*dx + 0.5*inner(m, m)*dx
 
+def Jhat(m):
+  u = main(m)
+  Jm = J(u, m)
+  return assemble(Jm)
+
 def tlm(u, m, mdot):
   Fm = F(m)
   dFmdu = derivative(Fm, u)
@@ -59,6 +64,20 @@ def adj(u, m):
 
   solve(action(adFmdu, u_adj) - dJdu == 0, u_adj, bcs=hbcs)
   return u_adj
+
+def dJ(u, m, u_adj):
+  Fm = F(m)
+  Jm = J(u, m)
+  dFmdm = derivative(Fm, m)
+  adFmdm = adjoint(dFmdm) # the args argument to adjoint is the biggest time-waster ever. Everything else about the system is so beautiful :-/
+  current_args = ufl.algorithms.extract_arguments(adFmdm)
+  correct_args = [TestFunction(Vm), TrialFunction(Vu)]
+  adFmdm = replace(adFmdm, dict(zip(current_args, correct_args)))
+
+  dJdm = derivative(Jm, m, TestFunction(Vm))
+
+  result = assemble(-action(adFmdm, u_adj) + dJdm)
+  return Function(Vm, result)
 
 def soa(u, m, u_tlm, u_adj, mdot):
   Fm = F(m)
@@ -87,10 +106,16 @@ def soa(u, m, u_tlm, u_adj, mdot):
 if __name__ == "__main__":
   m = interpolate(Expression(("sin(x[0])", "cos(x[1])")), Vm)
   u = main(m)
-  Jm = J(u, m)
+  Jm = assemble(J(u, m))
 
   mdot = interpolate(Constant((1.0, 1.0)), Vm)
 
   u_tlm = tlm(u, m, mdot)
   u_adj = adj(u, m)
+
+  dJdm = dJ(u, m, u_adj)
+
+  minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, value=m)
+  assert minconv > 1.9
+
   u_soa = soa(u, m, u_tlm, u_adj, mdot)
