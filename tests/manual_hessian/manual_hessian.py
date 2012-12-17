@@ -37,7 +37,8 @@ def main(m):
   return u
 
 def J(u, m):
-  return inner(u, u)*dx + 0.5*inner(m, m)*dx
+  #return inner(u, u)*dx + 0.5*inner(m, m)*dx
+  return inner(u, u)*dx
 
 def Jhat(m):
   u = main(m)
@@ -161,7 +162,7 @@ def grad_J_adj_m(m, m_dot):
   u_soa = soa(u, m, u_tlm, u_adj, m_dot)
   return 2 * u_adj.vector().inner(u_soa.vector())
 
-def little_taylor_test(m):
+def little_taylor_test_dlambdadm(m):
   '''Implement my own Taylor test quickly for the above two functions.'''
   m_dot = interpolate(Constant((1.0, 1.0)), Vm)
   seed = 0.2
@@ -183,8 +184,55 @@ def little_taylor_test(m):
 
   assert min(convergence_order(with_gradient)) > 1.9
 
+def J_u_m(m):
+  '''J(u) = inner(u, u)*dx
+  considered as a pure function of m
+  for the purposes of Taylor verification'''
+  u = main(m)
+  return assemble(inner(u, u)*dx)
+
+def grad_J_u_m(m, m_dot):
+  '''Gradient of the above function in the direction mdot.
+  Correct if and only if the TLM solution is correct.'''
+  u = main(m)
+  u_tlm = tlm(u, m, m_dot)
+  dJ_tlm = 2 * u.vector().inner(u_tlm.vector())
+  print "TLM: ", dJ_tlm
+  u_adj = adj(u, m)
+  dJdm = dJ(u, m, u_adj)
+  dJ_adj = dJdm.vector().inner(m_dot.vector())
+  print "ADJ: ", dJ_adj
+  return dJ_tlm
+  return dJ_adj
+
+def little_taylor_test_dudm(m):
+  '''Implement my own Taylor test quickly for the above two functions.'''
+  m_dot = interpolate(Constant((1.0, 1.0)), Vm)
+  seed = 0.2
+  without_gradient = []
+  with_gradient = []
+  Jm = J_u_m(m)
+  for h in [seed * 2**-i for i in range(5)]:
+    m_ptb = Function(m_dot)
+    m_ptb.vector()[:] *= h
+    #print "m_ptb.vector(): ", m_ptb.vector().array()
+    m_tilde = Function(m)
+    m_tilde.vector()[:] += m_ptb.vector()
+    #print "m_tilde.vector(): ", m_tilde.vector().array()
+    without_gradient.append(J_u_m(m_tilde) - Jm)
+    correction = grad_J_u_m(m, m_ptb)
+    with_gradient.append(without_gradient[-1] - correction)
+
+  print "Taylor remainders for J(u(m)) without gradient information: ", without_gradient
+  print "Convergence orders for above Taylor remainders: ", convergence_order(without_gradient)
+  print "Taylor remainders for J(u(m)) with gradient information: ", with_gradient
+  print "Convergence orders for above Taylor remainders: ", convergence_order(with_gradient)
+
+  assert min(convergence_order(with_gradient)) > 1.9
+
 if __name__ == "__main__":
-  m = interpolate(Expression(("sin(x[0])", "cos(x[1])")), Vm)
+  #m = interpolate(Expression(("sin(x[0])", "cos(x[1])")), Vm)
+  m = interpolate(Constant((2.0, 2.0)), Vm)
   u = main(m)
   Jm = assemble(J(u, m))
 
@@ -198,8 +246,11 @@ if __name__ == "__main__":
   minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, value=m)
   assert minconv > 1.9
 
+  info_green("Applying Taylor test to du/dm ... ")
+  little_taylor_test_dudm(m)
+
   info_green("Applying Taylor test to dlambda/dm ... ")
-  little_taylor_test(m)
+  little_taylor_test_dlambdadm(m)
 
   HJm = HJ(u, m)
   info_green("Applying Taylor test to Hessian computed with second-order adjoint ... ")
