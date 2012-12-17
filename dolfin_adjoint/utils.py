@@ -581,6 +581,9 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
         vec[i] = random.random()
     else:
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to compute a perturbation direction")
+  else:
+    if isinstance(m, InitialConditionParameter):
+      ic = get_value(m, value)
 
   # So now compute the perturbations:
   if not isinstance(perturbation_direction, dolfin.Function):
