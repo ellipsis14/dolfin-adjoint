@@ -112,14 +112,14 @@ def HJ(u, m):
     u_soa = soa(u, m, u_tlm, u_adj, m_dot)
 
     Fm = F(u, m)
-    dFmdm = derivative(Fm, m)
+    dFmdm = ufl.algorithms.expand_derivatives(derivative(Fm, m))
     adFmdm = adjoint(dFmdm)
     current_args = ufl.algorithms.extract_arguments(adFmdm)
     correct_args = [TestFunction(Vm), TrialFunction(Vu)]
     adFmdm = replace(adFmdm, dict(zip(current_args, correct_args)))
 
     Jm = J(u, m)
-    dJdm = derivative(Jm, m, TestFunction(Vm))
+    dJdm = ufl.algorithms.expand_derivatives(derivative(Jm, m, TestFunction(Vm)))
 
     # The following expression SHOULD work without the action hack
     # but UFL is pretty stupid here, and if the derivatives are null it
@@ -245,5 +245,5 @@ if __name__ == "__main__":
 
   HJm = HJ(u, m)
   info_green("Applying Taylor test to Hessian computed with second-order adjoint ... ")
-  minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, HJm=HJm, value=m, perturbation_direction=m_dot)
+  minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, HJm=HJm, value=m, perturbation_direction=m_dot, seed=0.2)
   assert minconv > 2.9
