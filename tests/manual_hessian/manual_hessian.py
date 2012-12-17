@@ -17,12 +17,11 @@ parameters["adjoint"]["stop_annotating"] = True
 mesh = UnitSquare(10, 10)
 Vu = VectorFunctionSpace(mesh, "CG", 2)
 Vm = VectorFunctionSpace(mesh, "CG", 1)
-u = Function(Vu, name="Velocity")
 bcs = [DirichletBC(Vu, (1.0, 1.0), "on_boundary")]
 hbcs = [homogenize(bc) for bc in bcs]
 ufl_action = action
 
-def F(m):
+def F(u, m):
   u_test = TestFunction(Vu)
 
   F = (inner(dot(grad(u), u), u_test)*dx +
@@ -32,7 +31,8 @@ def F(m):
   return F
 
 def main(m):
-  Fm = F(m)
+  u = Function(Vu)
+  Fm = F(u, m)
   solve(Fm == 0, u, J=derivative(Fm, u), bcs=bcs)
   return u
 
@@ -45,7 +45,7 @@ def Jhat(m):
   return assemble(Jm)
 
 def tlm(u, m, m_dot):
-  Fm = F(m)
+  Fm = F(u, m)
   dFmdu = derivative(Fm, u)
   dFmdm = derivative(Fm, m, m_dot)
   u_tlm = Function(Vu)
@@ -54,7 +54,7 @@ def tlm(u, m, m_dot):
   return u_tlm
 
 def adj(u, m):
-  Fm = F(m)
+  Fm = F(u, m)
   dFmdu = derivative(Fm, u)
   adFmdu = adjoint(dFmdu, reordered_arguments=ufl.algorithms.extract_arguments(dFmdu))
 
@@ -67,7 +67,7 @@ def adj(u, m):
   return u_adj
 
 def dJ(u, m, u_adj):
-  Fm = F(m)
+  Fm = F(u, m)
   Jm = J(u, m)
   dFmdm = derivative(Fm, m)
   adFmdm = adjoint(dFmdm) # the args argument to adjoint is the biggest time-waster ever. Everything else about the system is so beautiful :-/
@@ -81,7 +81,7 @@ def dJ(u, m, u_adj):
   return Function(Vm, result)
 
 def soa(u, m, u_tlm, u_adj, m_dot):
-  Fm = F(m)
+  Fm = F(u, m)
   dFmdu = derivative(Fm, u)
   adFmdu = adjoint(dFmdu, reordered_arguments=ufl.algorithms.extract_arguments(dFmdu))
 
@@ -110,7 +110,7 @@ def HJ(u, m):
     u_adj = adj(u, m)
     u_soa = soa(u, m, u_tlm, u_adj, m_dot)
 
-    Fm = F(m)
+    Fm = F(u, m)
     dFmdm = derivative(Fm, m)
     adFmdm = adjoint(dFmdm)
     current_args = ufl.algorithms.extract_arguments(adFmdm)
@@ -155,9 +155,9 @@ if __name__ == "__main__":
   u_adj = adj(u, m)
 
   dJdm = dJ(u, m, u_adj)
-  #info_green("Applying Taylor test to gradient computed with adjoint ... ")
-  #minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, value=m)
-  #assert minconv > 1.9
+  info_green("Applying Taylor test to gradient computed with adjoint ... ")
+  minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, value=m)
+  assert minconv > 1.9
 
   HJm = HJ(u, m)
   info_green("Applying Taylor test to Hessian computed with second-order adjoint ... ")
