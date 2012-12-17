@@ -517,7 +517,7 @@ def test_gradient_array(J, dJdx, x, seed = 0.01, perturbation_direction = None, 
 
   return min(convergence_order(with_gradient))
 
-def taylor_test(J, m, Jm, dJdm, seed=None, perturbation_direction=None, value=None):
+def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None, value=None):
   '''J must be a function that takes in a parameter value m and returns the value
      of the functional:
 
@@ -528,7 +528,14 @@ def taylor_test(J, m, Jm, dJdm, seed=None, perturbation_direction=None, value=No
 
      This function returns the order of convergence of the Taylor
      series remainder, which should be 2 if the adjoint is working
-     correctly.'''
+     correctly.
+
+     If HJm is not None, the Taylor test will also attempt to verify the
+     correctness of the Hessian. HJm should be a callable which takes in a
+     direction and returns the Hessian of the functional in that direction
+     (i.e., takes in a vector and returns a vector). In that case, an additional
+     Taylor remainder is computed, which should converge at order 3 if the Hessian
+     is correct.'''
 
   info_blue("Running Taylor remainder convergence test ... ")
   import random
@@ -632,7 +639,26 @@ def taylor_test(J, m, Jm, dJdm, seed=None, perturbation_direction=None, value=No
   info("Taylor remainder with adjoint information: " + str(with_gradient))
   info("Convergence orders for Taylor remainder with adjoint information (should all be 2): " + str(convergence_order(with_gradient)))
 
-  return min(convergence_order(with_gradient))
+  if HJm is not None:
+    with_hessian = []
+    if isinstance(m, ScalarParameter):
+      for i in range(len(perturbations)):
+        remainder = abs(functional_values[i] - Jm - dJdm*perturbations[i] - 0.5*perturbations[i]*HJm(perturbations[i]))
+        with_hessian.append(remainder)
+    elif isinstance(m, ScalarParameters):
+      for i in range(len(perturbations)):
+        remainder = abs(functional_values[i] - Jm - numpy.dot(dJdm, perturbations[i]) - 0.5*numpy.dot(perturbations[i], HJm(perturbations[i])))
+        with_hessian.append(remainder)
+    elif isinstance(m, InitialConditionParameter):
+      for i in range(len(perturbations)):
+        remainder = abs(functional_values[i] - Jm - dJdm.vector().inner(perturbations[i].vector()) - 0.5*perturbations[i].vector().inner(HJm(perturbations[i]).vector()))
+        with_hessian.append(remainder)
+
+    info("Taylor remainder with Hessian information: " + str(with_hessian))
+    info("Convergence orders for Taylor remainder with Hessian information (should all be 3): " + str(convergence_order(with_hessian)))
+    return min(convergence_order(with_hessian))
+  else:
+    return min(convergence_order(with_gradient))
 
 def estimate_error(J, forget=True):
   err = 0.0
