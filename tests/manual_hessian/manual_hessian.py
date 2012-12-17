@@ -144,6 +144,45 @@ def HJ(u, m):
 
   return HJm
 
+def J_adj_m(m):
+  '''J(lambda) = inner(lambda, lambda)*dx
+  considered as a pure function of m
+  for the purposes of Taylor verification'''
+  u = main(m)
+  u_adj = adj(u, m)
+  return assemble(inner(u_adj, u_adj)*dx)
+
+def grad_J_adj_m(m, m_dot):
+  '''Gradient of the above function in the direction mdot.
+  Correct if and only if the SOA solution is correct.'''
+  u = main(m)
+  u_adj = adj(u, m)
+  u_tlm = tlm(u, m, m_dot)
+  u_soa = soa(u, m, u_tlm, u_adj, m_dot)
+  return 2 * u_adj.vector().inner(u_soa.vector())
+
+def little_taylor_test(m):
+  '''Implement my own Taylor test quickly for the above two functions.'''
+  m_dot = interpolate(Constant((1.0, 1.0)), Vm)
+  seed = 0.2
+  without_gradient = []
+  with_gradient = []
+  Jm = J_adj_m(m)
+  for h in [seed * 2**-i for i in range(5)]:
+    m_ptb = Function(m_dot)
+    m_ptb.vector()[:] *= h
+    m_tilde = Function(m)
+    m_tilde.vector()[:] += m_ptb.vector()
+    without_gradient.append(J_adj_m(m_tilde) - Jm)
+    with_gradient.append(without_gradient[-1] - grad_J_adj_m(m, m_ptb))
+
+  print "Taylor remainders for J(adj(m)) without gradient information: ", without_gradient
+  print "Convergence orders for above Taylor remainders: ", convergence_order(without_gradient)
+  print "Taylor remainders for J(adj(m)) with gradient information: ", with_gradient
+  print "Convergence orders for above Taylor remainders: ", convergence_order(with_gradient)
+
+  assert min(convergence_order(with_gradient)) > 1.9
+
 if __name__ == "__main__":
   m = interpolate(Expression(("sin(x[0])", "cos(x[1])")), Vm)
   u = main(m)
@@ -158,6 +197,9 @@ if __name__ == "__main__":
   info_green("Applying Taylor test to gradient computed with adjoint ... ")
   minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, value=m)
   assert minconv > 1.9
+
+  info_green("Applying Taylor test to dlambda/dm ... ")
+  little_taylor_test(m)
 
   HJm = HJ(u, m)
   info_green("Applying Taylor test to Hessian computed with second-order adjoint ... ")
