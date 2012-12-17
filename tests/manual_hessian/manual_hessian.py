@@ -151,7 +151,7 @@ def J_adj_m(m):
   for the purposes of Taylor verification'''
   u = main(m)
   u_adj = adj(u, m)
-  return assemble(inner(u_adj, u_adj)*dx)
+  return assemble(J(u_adj, m))
 
 def grad_J_adj_m(m, m_dot):
   '''Gradient of the above function in the direction mdot.
@@ -160,7 +160,9 @@ def grad_J_adj_m(m, m_dot):
   u_adj = adj(u, m)
   u_tlm = tlm(u, m, m_dot)
   u_soa = soa(u, m, u_tlm, u_adj, m_dot)
-  return 2 * u_adj.vector().inner(u_soa.vector())
+  Jadj = J(u_adj, m)
+  dJdadj = assemble(derivative(Jadj, u_adj))
+  return dJdadj.inner(u_soa.vector())
 
 def little_taylor_test_dlambdadm(m):
   '''Implement my own Taylor test quickly for the above two functions.'''
@@ -184,26 +186,15 @@ def little_taylor_test_dlambdadm(m):
 
   assert min(convergence_order(with_gradient)) > 1.9
 
-def J_u_m(m):
-  '''J(u) = inner(u, u)*dx
-  considered as a pure function of m
-  for the purposes of Taylor verification'''
-  u = main(m)
-  return assemble(inner(u, u)*dx)
-
 def grad_J_u_m(m, m_dot):
-  '''Gradient of the above function in the direction mdot.
+  '''Gradient of Jhat in the direction mdot, evaluated using the TLM.
   Correct if and only if the TLM solution is correct.'''
   u = main(m)
   u_tlm = tlm(u, m, m_dot)
-  dJ_tlm = 2 * u.vector().inner(u_tlm.vector())
-  print "TLM: ", dJ_tlm
-  u_adj = adj(u, m)
-  dJdm = dJ(u, m, u_adj)
-  dJ_adj = dJdm.vector().inner(m_dot.vector())
-  print "ADJ: ", dJ_adj
+  Jm = J(u, m)
+  dJdm = assemble(derivative(Jm, u))
+  dJ_tlm = dJdm.inner(u_tlm.vector())
   return dJ_tlm
-  return dJ_adj
 
 def little_taylor_test_dudm(m):
   '''Implement my own Taylor test quickly for the above two functions.'''
@@ -211,7 +202,7 @@ def little_taylor_test_dudm(m):
   seed = 0.2
   without_gradient = []
   with_gradient = []
-  Jm = J_u_m(m)
+  Jm = Jhat(m)
   for h in [seed * 2**-i for i in range(5)]:
     m_ptb = Function(m_dot)
     m_ptb.vector()[:] *= h
@@ -219,7 +210,7 @@ def little_taylor_test_dudm(m):
     m_tilde = Function(m)
     m_tilde.vector()[:] += m_ptb.vector()
     #print "m_tilde.vector(): ", m_tilde.vector().array()
-    without_gradient.append(J_u_m(m_tilde) - Jm)
+    without_gradient.append(Jhat(m_tilde) - Jm)
     correction = grad_J_u_m(m, m_ptb)
     with_gradient.append(without_gradient[-1] - correction)
 
