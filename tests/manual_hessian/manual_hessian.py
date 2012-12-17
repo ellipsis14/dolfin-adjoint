@@ -19,7 +19,15 @@ Vu = VectorFunctionSpace(mesh, "CG", 2)
 Vm = VectorFunctionSpace(mesh, "CG", 1)
 bcs = [DirichletBC(Vu, (1.0, 1.0), "on_boundary")]
 hbcs = [homogenize(bc) for bc in bcs]
+
+# Work around some UFL bugs -- action(A, x) doesn't like it if A is null
 ufl_action = action
+def action(A, x):
+  A = ufl.algorithms.expand_derivatives(A)
+  if A.integrals() != (): # form is not empty:
+    return ufl_action(A, x)
+  else:
+    return A # form is empty, doesn't matter anyway
 
 def F(u, m):
   u_test = TestFunction(Vu)
@@ -98,7 +106,7 @@ def soa(u, m, u_tlm, u_adj, m_dot):
 
   # Implement the second-order adjoint equation
   Fsoa = (action(dFdudu, u_adj) +
-          #action(dFdudm, u_adj) + 
+          action(dFdudm, u_adj) + 
           action(adFmdu, u_soa) + # <-- the lhs term
          -dJdudu
          -dJdudm)
@@ -121,23 +129,10 @@ def HJ(u, m):
     Jm = J(u, m)
     dJdm = ufl.algorithms.expand_derivatives(derivative(Jm, m, TestFunction(Vm)))
 
-    # The following expression SHOULD work without the action hack
-    # but UFL is pretty stupid here, and if the derivatives are null it
-    # just crashes instead of gracefully dropping the terms
-
-    #def action(A, x):
-    #  A = ufl.algorithms.expand_derivatives(A)
-    #  if A.integrals() != (): # form is not empty:
-    #    return ufl_action(A, x)
-    #  else:
-    #    return A # form is empty, doesn't matter anyway
-
-    #FH = (-action(derivative(adFmdm, u, u_tlm), u_adj) +
-    #      -action(derivative(adFmdm, m, m_dot), u_adj) +
-    #      -action(adFmdm, u_soa) +
-    #       derivative(dJdm, u, u_tlm) +
-    #       derivative(dJdm, m, m_dot))
-    FH = (-action(adFmdm, u_soa) +
+    FH = (-action(derivative(adFmdm, u, u_tlm), u_adj) +
+          -action(derivative(adFmdm, m, m_dot), u_adj) +
+          -action(adFmdm, u_soa) +
+           derivative(dJdm, u, u_tlm) +
            derivative(dJdm, m, m_dot))
 
     result = assemble(FH)
@@ -165,7 +160,7 @@ def grad_J_adj_m(m, m_dot):
   return dJdadj.inner(u_soa.vector())
 
 def little_taylor_test_dlambdadm(m):
-  '''Implement my own Taylor test quickly for the above two functions.'''
+  '''Implement my own Taylor test quickly for the SOA solution.'''
   m_dot = interpolate(Constant((1.0, 1.0)), Vm)
   seed = 0.2
   without_gradient = []
@@ -197,7 +192,7 @@ def grad_J_u_m(m, m_dot):
   return dJ_tlm
 
 def little_taylor_test_dudm(m):
-  '''Implement my own Taylor test quickly for the above two functions.'''
+  '''Implement my own Taylor test quickly for the TLM solution.'''
   m_dot = interpolate(Constant((1.0, 1.0)), Vm)
   seed = 0.2
   without_gradient = []
