@@ -20,6 +20,7 @@ Vm = VectorFunctionSpace(mesh, "CG", 1)
 u = Function(Vu, name="Velocity")
 bcs = [DirichletBC(Vu, (1.0, 1.0), "on_boundary")]
 hbcs = [homogenize(bc) for bc in bcs]
+ufl_action = action
 
 def F(m):
   u_test = TestFunction(Vu)
@@ -43,10 +44,10 @@ def Jhat(m):
   Jm = J(u, m)
   return assemble(Jm)
 
-def tlm(u, m, mdot):
+def tlm(u, m, m_dot):
   Fm = F(m)
   dFmdu = derivative(Fm, u)
-  dFmdm = derivative(Fm, m, mdot)
+  dFmdm = derivative(Fm, m, m_dot)
   u_tlm = Function(Vu)
 
   solve(action(dFmdu, u_tlm) + dFmdm == 0, u_tlm, bcs=hbcs)
@@ -79,18 +80,18 @@ def dJ(u, m, u_adj):
   result = assemble(-action(adFmdm, u_adj) + dJdm)
   return Function(Vm, result)
 
-def soa(u, m, u_tlm, u_adj, mdot):
+def soa(u, m, u_tlm, u_adj, m_dot):
   Fm = F(m)
   dFmdu = derivative(Fm, u)
   adFmdu = adjoint(dFmdu, reordered_arguments=ufl.algorithms.extract_arguments(dFmdu))
 
   dFdudu = derivative(adFmdu, u, u_tlm)
-  dFdudm = derivative(adFmdu, m, mdot)
+  dFdudm = derivative(adFmdu, m, m_dot)
 
   Jm = J(u, m)
   dJdu = derivative(Jm, u, TestFunction(Vu))
   dJdudu = derivative(dJdu, u, u_adj)
-  dJdudm = derivative(dJdu, m, mdot)
+  dJdudm = derivative(dJdu, m, m_dot)
 
   u_soa = Function(Vu)
 
@@ -103,19 +104,60 @@ def soa(u, m, u_tlm, u_adj, mdot):
   solve(Fsoa == 0, u_soa, bcs=hbcs)
   return u_soa
 
+def HJ(u, m):
+  def HJm(m_dot):
+    u_tlm = tlm(u, m, m_dot)
+    u_adj = adj(u, m)
+    u_soa = soa(u, m, u_tlm, u_adj, m_dot)
+
+    Fm = F(m)
+    dFmdm = derivative(Fm, m)
+    adFmdm = adjoint(dFmdm)
+    current_args = ufl.algorithms.extract_arguments(adFmdm)
+    correct_args = [TestFunction(Vm), TrialFunction(Vu)]
+    adFmdm = replace(adFmdm, dict(zip(current_args, correct_args)))
+
+    Jm = J(u, m)
+    dJdm = derivative(Jm, m, TestFunction(Vm))
+
+    # The following expression SHOULD work without the action hack
+    # but UFL is pretty stupid here, and if the derivatives are null it
+    # just crashes instead of gracefully dropping the terms
+
+    def action(A, x):
+      A = ufl.algorithms.expand_derivatives(A)
+      if A.integrals() != (): # form is not empty:
+        return ufl_action(A, x)
+      else:
+        return A # form is empty, doesn't matter anyway
+
+    FH = (-action(derivative(adFmdm, u, u_tlm), u_adj) +
+          -action(derivative(adFmdm, m, m_dot), u_adj) +
+          -action(adFmdm, u_soa) +
+           derivative(dJdm, u, u_tlm) +
+           derivative(dJdm, m, m_dot))
+
+    result = assemble(FH)
+    return Function(Vm, result)
+
+  return HJm
+
 if __name__ == "__main__":
   m = interpolate(Expression(("sin(x[0])", "cos(x[1])")), Vm)
   u = main(m)
   Jm = assemble(J(u, m))
 
-  mdot = interpolate(Constant((1.0, 1.0)), Vm)
+  m_dot = interpolate(Constant((1.0, 1.0)), Vm)
 
-  u_tlm = tlm(u, m, mdot)
+  u_tlm = tlm(u, m, m_dot)
   u_adj = adj(u, m)
 
   dJdm = dJ(u, m, u_adj)
+  #info_green("Applying Taylor test to gradient computed with adjoint ... ")
+  #minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, value=m)
+  #assert minconv > 1.9
 
-  minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, value=m)
-  assert minconv > 1.9
-
-  u_soa = soa(u, m, u_tlm, u_adj, mdot)
+  HJm = HJ(u, m)
+  info_green("Applying Taylor test to Hessian computed with second-order adjoint ... ")
+  minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, HJm=HJm, value=m)
+  assert minconv > 2.9
