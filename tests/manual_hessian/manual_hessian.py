@@ -91,14 +91,14 @@ def soa(u, m, u_tlm, u_adj, m_dot):
 
   Jm = J(u, m)
   dJdu = derivative(Jm, u, TestFunction(Vu))
-  dJdudu = derivative(dJdu, u, u_adj)
+  dJdudu = derivative(dJdu, u, u_tlm)
   dJdudm = derivative(dJdu, m, m_dot)
 
   u_soa = Function(Vu)
 
   # Implement the second-order adjoint equation
   Fsoa = (action(dFdudu, u_adj) +
-          action(dFdudu, u_adj) + 
+          #action(dFdudm, u_adj) + 
           action(adFmdu, u_soa) + # <-- the lhs term
          -dJdudu
          -dJdudm)
