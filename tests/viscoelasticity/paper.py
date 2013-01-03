@@ -28,7 +28,6 @@ import sys
 import pylab
 
 from dolfin import *
-from dolfin import div as d
 
 # Adjoint stuff
 from dolfin_adjoint import *
@@ -45,14 +44,10 @@ mu11 = Constant(2.39) # kPa
 lamda11 = Constant(10**3) # kPa
 params = [mu00, lamda00, mu10, lamda10, mu11, lamda11]
 
-# Vectorized div
-def div(v):
-    return as_vector((d(v[0]), d(v[1]), d(v[2])))
-
 # Vectorized skew
 def skw(tau):
     s = 2*skew(tau) # FIXME: Why did I put a 2 here?
-    return as_vector((s[0][1], s[0][2], s[1][2]))
+    return as_vector((s[0, 1], s[0, 2], s[1, 2]))
 
 # Compliance tensors (Semi-arbitrarily chosen values and units)
 def A00_tensor(tau, mu, lamda):
@@ -73,11 +68,18 @@ def A11_tensor(tau, mu, lamda):
 def get_box():
     "Use this for simple testing."
     n = 1
-    mesh = Box(0., 0., 0., 20., 20., 100., 2*n, 2*n, 10*n)
+    try:
+      mesh = BoxMesh(0., 0., 0., 20., 20., 100., 2*n, 2*n, 10*n)
+    except:
+      mesh = Box(0., 0., 0., 20., 20., 100., 2*n, 2*n, 10*n)
 
     # Mark all facets by 0, exterior facets by 1, and then top and
     # bottom by 2
-    boundaries = FacetFunction("uint", mesh)
+    try:
+      boundaries = FacetFunction("sizet", mesh)
+    except:
+      boundaries = FacetFunction("uint", mesh)
+
     boundaries.set_all(0)
     on_bdry = AutoSubDomain(lambda x, on_boundary: on_boundary)
     top = AutoSubDomain(lambda x, on_boundary: near(x[2], 100.))
@@ -298,7 +300,7 @@ if __name__ == "__main__":
     dtm = TimeMeasure()
     J = Functional(inner(sigma0[2], sigma0[2])*dx*dtm[FINISH_TIME])
     param = ScalarParameter(amplitude)
-    adjointer = solving.adjointer
+    adjointer = adjglobals.adjointer
 
 # Copy the code from compute_gradient:
     #dJdp = compute_gradient(J, ScalarParameter(amplitude))
