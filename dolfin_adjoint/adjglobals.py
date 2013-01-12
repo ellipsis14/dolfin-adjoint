@@ -6,6 +6,9 @@ import dolfin
 # as it happens.
 adjointer = libadjoint.Adjointer()
 
+mem_checkpoints = set()
+disk_checkpoints = set()
+
 adj_variables = coeffstore.CoeffStore()
 
 def adj_start_timestep(time=0.0):

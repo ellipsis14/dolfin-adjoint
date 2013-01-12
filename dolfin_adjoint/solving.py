@@ -441,6 +441,7 @@ def do_checkpoint(cs, var, rhs):
               dep = rdep
               break
 
+      adjglobals.mem_checkpoints.add(str(dep)) 
       adjglobals.adjointer.record_variable(dep, libadjoint.MemoryStorage(adjlinalg.Vector(coeff), cs=True))
 
   elif cs == int(libadjoint.constants.adj_constants["ADJ_CHECKPOINT_STORAGE_DISK"]):
@@ -459,5 +460,6 @@ def do_checkpoint(cs, var, rhs):
         else:
           continue
 
+      adjglobals.disk_checkpoints.add(str(dep)) 
       adjglobals.adjointer.record_variable(dep, libadjoint.DiskStorage(adjlinalg.Vector(coeff), cs=True))
 

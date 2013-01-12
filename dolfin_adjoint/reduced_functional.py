@@ -2,7 +2,7 @@ import libadjoint
 import numpy
 from dolfin import cpp, info, project
 from dolfin_adjoint import adjlinalg, adjrhs, constant, utils 
-from dolfin_adjoint.adjglobals import adjointer
+from dolfin_adjoint.adjglobals import adjointer, mem_checkpoints, disk_checkpoints
 
 def unlist(x):
     ''' If x is a list of length 1, return its element. Otherwise return x. '''
@@ -133,19 +133,40 @@ class ReducedFunctional(object):
             else:
                 raise NotImplementedError, "The ReducedFunctional class currently only works for parameters that are Functions"
 
-
         # Replay the annotation and evaluate the functional
         func_value = 0.
         for i in range(adjointer.equation_count):
             (fwd_var, output) = adjointer.get_forward_solution(i)
 
-            storage = libadjoint.MemoryStorage(output)
-            storage.set_overwrite(True)
-            adjointer.record_variable(fwd_var, storage)
+            # Check if we checkpointing is active and if yes
+            # record the exact same checkpoint variables as 
+            # in the initial forward run 
+            if adjointer.get_checkpoint_strategy() != None:
+                if str(fwd_var) in mem_checkpoints:
+                    storage = libadjoint.MemoryStorage(output, cs = True)
+                    storage.set_overwrite(True)
+                    adjointer.record_variable(fwd_var, storage)
+                if str(fwd_var) in disk_checkpoints:
+                    storage = libadjoint.MemoryStorage(output)
+                    adjointer.record_variable(fwd_var, storage)
+                    storage = libadjoint.DiskStorage(output, cs = True)
+                    storage.set_overwrite(True)
+                    adjointer.record_variable(fwd_var, storage)
+                if not str(fwd_var) in mem_checkpoints and not str(fwd_var) in disk_checkpoints:
+                    storage = libadjoint.MemoryStorage(output)
+                    storage.set_overwrite(True)
+                    adjointer.record_variable(fwd_var, storage)
+
+            # No checkpointing, so we record everything
+            else:
+                storage = libadjoint.MemoryStorage(output)
+                storage.set_overwrite(True)
+                adjointer.record_variable(fwd_var, storage)
+
             if i == adjointer.timestep_end_equation(fwd_var.timestep):
                 func_value += adjointer.evaluate_functional(self.functional, fwd_var.timestep)
-
-            #adjglobals.adjointer.forget_forward_equation(i)
+                if adjointer.get_checkpoint_strategy() != None:
+                    adjointer.forget_forward_equation(i)
 
         self.current_func_value = func_value 
         if self.eval_cb:
