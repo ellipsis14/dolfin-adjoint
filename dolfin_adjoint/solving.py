@@ -27,6 +27,7 @@ import adjrhs
 import adjglobals
 import adjlinalg
 import misc
+import lusolver
 
 def annotate(*args, **kwargs):
   '''This routine handles all of the annotation, recording the solves as they
@@ -355,6 +356,8 @@ def adj_reset():
   adjglobals.adjointer.reset()
   adjglobals.adj_variables.__init__()
   adjglobals.function_names.__init__()
+  lusolver.lu_solvers = {}
+  lusolver.adj_lu_solvers = {}
   
 def define_nonlinear_equation(F, u):
   # Given an F := 0,
