@@ -176,6 +176,7 @@ class ReducedFunctional(object):
     def derivative(self):
         ''' Evaluates the derivative of the reduced functional for the lastly evaluated parameter value. ''' 
         dfunc_value = utils.compute_gradient(self.functional, self.parameter)
+        adjointer.reset_revolve()
         if self.derivative_cb:
             scaled_dfunc_value = []
             for df in list(dfunc_value):
