@@ -68,7 +68,7 @@ height = 1.0
 length = 2.0
 nx = 40
 ny = 40
-mesh = Rectangle(0, 0, length, height, nx, ny)
+mesh = RectangleMesh(0, 0, length, height, nx, ny)
 
 # Containers for storage
 flow_series = File("bin-final/flow.pvd", "compressed")
@@ -127,11 +127,6 @@ def main(T_, annotate=False):
   (u_pr, p_pr) = split(w_pr)
   (u_, p_) = split(w_)
 
-  # Solver for the Stokes systems
-  solver = AdjointPETScKrylovSolver("gmres", "amg")
-  solver.parameters["relative_tolerance"] = 1.0e-14
-  solver.parameters["monitor_convergence"] = False
-
   while (t <= finish):
     message(t, dt)
 
@@ -143,12 +138,7 @@ def main(T_, annotate=False):
     eta = viscosity(T_pr)
     (a, L, precond) = momentum(W, eta, (Ra*T_pr)*g)
 
-    b = assemble(L); [bc.apply(b) for bc in bcs]
-    A = AdjointKrylovMatrix(a, bcs=bcs)
-
-    solver.set_operators(A, P)
-    solver.solve(w_pr.vector(), b, annotate=annotate)
-    #solve(a == L, w_pr, bcs, solver_parameters={"krylov_solver": {"relative_tolerance": 1.0e-14}}, annotate=annotate)
+    solve(a == L, w_pr, bcs, solver_parameters={"krylov_solver": {"relative_tolerance": 1.0e-14}}, annotate=annotate)
 
     # Solve for corrected temperature T in terms of predicted and previous velocity
     (a, L) = energy_correction(Q, Constant(dt), u_pr, u_, T_)
@@ -158,12 +148,7 @@ def main(T_, annotate=False):
     eta = viscosity(T)
     (a, L, precond) = momentum(W, eta, (Ra*T)*g)
 
-    b = assemble(L); [bc.apply(b) for bc in bcs]
-    A = AdjointKrylovMatrix(a, bcs=bcs)
-
-    solver.set_operators(A, P)
-    solver.solve(w.vector(), b, annotate=annotate)
-    #solve(a == L, w, bcs, solver_parameters={"krylov_solver": {"relative_tolerance": 1.0e-14}}, annotate=annotate)
+    solve(a == L, w, bcs, solver_parameters={"krylov_solver": {"relative_tolerance": 1.0e-14}}, annotate=annotate)
 
     # Store stuff
     if annotate:
@@ -186,7 +171,7 @@ def Nusselt():
 
     # Define markers (2) for top boundary, remaining facets are marked
     # by 0
-    markers = FacetFunction("uint", mesh)
+    markers = FacetFunction("sizet", mesh)
     markers.set_all(0)
     top = compile_subdomains("near(x[1], %s)" % height)
     top.mark(markers, 2)
@@ -221,7 +206,7 @@ if __name__ == "__main__":
 
   perturbation_direction = Function(Q)
   perturbation_direction.vector()[:] = 1.0
-  minconv = test_initial_condition_adjoint_cdiff(J, ic_copy, adjoint, seed=7.5e-3, perturbation_direction=perturbation_direction)
+  minconv = test_initial_condition_adjoint_cdiff(J, ic_copy, adjoint, seed=0.1, perturbation_direction=perturbation_direction)
 
   if minconv < 2.9:
     sys.exit(1)
