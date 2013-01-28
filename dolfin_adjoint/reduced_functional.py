@@ -84,11 +84,11 @@ def replace_tape_ic_value(variable, new_value):
         rhs = adjrhs.RHS(init_rhs)
         # Register the new rhs in the annotation
         eqn = DummyEquation() 
-        eqn_nb = variable.var.equation_nb(adjointer)
+        eqn_nb = variable.equation_nb(adjointer)
         eqn.equation = adjointer.adjointer.equations[eqn_nb]
         rhs.register(eqn)
         # Store the equation as a class variable in order to keep a python reference in the memory
-        global_eqn_list[variable.var.equation_nb] = eqn
+        global_eqn_list[variable.equation_nb] = eqn
     elif hasattr(new_value, "value_size"): 
         # Constants are not duplicated in the annotation. That is, changing a constant that occurs
         # in the forward model will also change the forward replay with libadjoint.
@@ -137,7 +137,7 @@ class ReducedFunctional(object):
 
         # Update the parameter values
         for i in range(len(value)):
-            replace_tape_ic_value(self.parameter[i], value[i])
+            replace_tape_ic_value(self.parameter[i].var, value[i])
 
         # Replay the annotation and evaluate the functional
         func_value = 0.
