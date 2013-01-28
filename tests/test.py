@@ -48,6 +48,10 @@ if options.test_name:
   else:
     subdirs = [options.test_name]
 
+long_tests = ["viscoelasticity"] # special case the very long tests for speed
+for test in long_tests:
+  subdirs.remove(test)
+
 # Keep path variables (for buildbot's sake for instance)
 orig_pythonpath = os.getenv('PYTHONPATH', '')
 pythonpath = os.pathsep.join([os.path.abspath(os.path.join(basedir,
@@ -78,7 +82,7 @@ def f(subdir):
       fails.append(subdir)
       appendlock.release()
 
-pool.map(f, sorted(subdirs))
+pool.map(f, long_tests + sorted(subdirs))
 
 if len(fails) > 0:
   print "Failures: ", set(fails)
