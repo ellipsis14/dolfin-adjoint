@@ -513,7 +513,7 @@ def test_gradient_array(J, dJdx, x, seed = 0.01, perturbation_direction = None, 
       with_gradient.append(remainder)
 
   if min(with_gradient + no_gradient) < 1e-16:
-    info_red("Warning: The Taylor remainders are close to machine precision (< %s). Try increasing the seed value in case the Taylor remainder test fails." % min(with_gradient + no_gradient))
+    info("Warning: The Taylor remainders are close to machine precision (< %s). Try increasing the seed value in case the Taylor remainder test fails." % min(with_gradient + no_gradient))
 
   info("Absolute functional evaluation differences with adjoint: %s" % str(with_gradient))
   info("Convergence orders for Taylor remainder with adjoint information (should all be 2): %s" % str(convergence_order(with_gradient)))
@@ -633,7 +633,7 @@ def taylor_test(J, m, Jm, dJdm, seed=None, perturbation_direction=None, value=No
       with_gradient.append(remainder)
 
   if min(with_gradient + no_gradient) < 1e-16:
-    info_red("Warning: The Taylor remainders are close to machine precision (< %s). Try increasing the seed value in case the Taylor remainder test fails." % min(with_gradient + no_gradient))
+    info("Warning: The Taylor remainders are close to machine precision (< %s). Try increasing the seed value in case the Taylor remainder test fails." % min(with_gradient + no_gradient))
 
   info("Taylor remainder with adjoint information: " + str(with_gradient))
   info("Convergence orders for Taylor remainder with adjoint information (should all be 2): " + str(convergence_order(with_gradient)))
