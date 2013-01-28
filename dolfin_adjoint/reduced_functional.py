@@ -137,7 +137,8 @@ class ReducedFunctional(object):
 
         # Update the parameter values
         for i in range(len(value)):
-            replace_tape_ic_value(self.parameter[i].var, value[i])
+            if hasattr(self.parameter[i], "var"):
+              replace_tape_ic_value(self.parameter[i].var, value[i])
 
         # Replay the annotation and evaluate the functional
         func_value = 0.

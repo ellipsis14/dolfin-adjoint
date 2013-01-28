@@ -89,6 +89,8 @@ class Functional(libadjoint.Functional):
 
     d = dolfin.derivative(functional_value, values[dependencies.index(variable)].data)
     d = ufl.algorithms.expand_derivatives(d)
+    if d.integrals() == ():
+      raise SystemExit, "This isn't supposed to happen -- your functional is supposed to depend on %s" % variable
     return adjlinalg.Vector(d)
 
   def _derivative_timesteps(self, adjointer, variable):
