@@ -114,7 +114,7 @@ class ScalarParameter(DolfinAdjointParameter):
       if diff_form is None:
         return None
 
-      return adjlinalg.adjlinalg.Vector(diff_form)
+      return adjlinalg.Vector(diff_form)
     else:
       return None
 
@@ -205,7 +205,7 @@ class ScalarParameters(DolfinAdjointParameter):
       else:
         diff_form += out_form
 
-    return adjlinalg.adjlinalg.Vector(diff_form)
+    return adjlinalg.Vector(diff_form)
 
   def __str__(self):
     return str(self.v) + ':ScalarParameters'
