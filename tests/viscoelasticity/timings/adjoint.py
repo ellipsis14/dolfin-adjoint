@@ -70,11 +70,11 @@ def A11(tau):
 def get_box():
     "Use this for simple testing."
     n = 2
-    mesh = Box(0., 0., 0., 20., 20., 100., 2*n, 2*n, 10*n)
+    mesh = BoxMesh(0., 0., 0., 20., 20., 100., 2*n, 2*n, 10*n)
 
     # Mark all facets by 0, exterior facets by 1, and then top and
     # bottom by 2
-    boundaries = FacetFunction("uint", mesh)
+    boundaries = FacetFunction("sizet", mesh)
     boundaries.set_all(0)
     on_bdry = AutoSubDomain(lambda x, on_boundary: on_boundary)
     top = AutoSubDomain(lambda x, on_boundary: near(x[2], 100.))
