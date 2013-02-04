@@ -6,7 +6,7 @@ import hashlib
 import solving
 import adjglobals
 import adjlinalg
-from timeforms import NoTime, StartTimeConstant, FinishTimeConstant
+from timeforms import NoTime, StartTimeConstant, FinishTimeConstant, dt, FINISH_TIME
 
 class Functional(libadjoint.Functional):
   '''This class implements the :py:class:`libadjoint.Functional` abstract base class for dolfin-adjoint.
@@ -66,6 +66,11 @@ class Functional(libadjoint.Functional):
     timestepping of your model with :py:func:`adj_inc_timestep`.'''
 
   def __init__(self, timeform, verbose=False, name=None):
+
+    if isinstance(timeform, ufl.form.Form):
+      if adjglobals.adjointer.adjointer.ntimesteps != 1:
+        dolfin.info_red("You are using a steady-state functional (without the *dt term) in a time-dependent simulation.\ndolfin-adjoint will assume that you want to evaluate the functional at the end of time.")
+      timeform = timeform*dt[FINISH_TIME]
 
     self.timeform = timeform
     self.verbose = verbose
