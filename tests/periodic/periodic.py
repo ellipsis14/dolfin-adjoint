@@ -6,7 +6,7 @@ dolfin.parameters["adjoint"]["record_all"] = True
 import random
 import sys
 
-mesh = UnitInterval(40)
+mesh = UnitIntervalMesh(40)
 V = FunctionSpace(mesh, "CG", 2)
 
 class PeriodicBoundary(SubDomain):

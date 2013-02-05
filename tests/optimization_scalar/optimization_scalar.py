@@ -6,7 +6,7 @@ dolfin.set_log_level(ERROR)
 dolfin.parameters["optimization"]["test_gradient"] = True
 
 n = 10
-mesh = UnitInterval(n)
+mesh = UnitIntervalMesh(n)
 V = FunctionSpace(mesh, "CG", 2)
 
 ic = project(Expression("sin(2*pi*x[0])"),  V)

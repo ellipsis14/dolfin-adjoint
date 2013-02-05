@@ -15,7 +15,7 @@ dolfin.parameters["adjoint"]["record_all"] = True
 dolfin.parameters["adjoint"]["fussy_replay"] = False
 
 n = 10
-mesh = UnitInterval(n)
+mesh = UnitIntervalMesh(n)
 V = FunctionSpace(mesh, "CG", 1)
 
 def Dt(u, u_, timestep):

@@ -8,7 +8,7 @@ adj_checkpointing(strategy='multistage', steps=4,
                   snaps_on_disk=5, snaps_in_ram=10, verbose=True)
 
 n = 30
-mesh = UnitInterval(n)
+mesh = UnitIntervalMesh(n)
 V = FunctionSpace(mesh, "CG", 2)
 
 ic = project(Expression("sin(2*pi*x[0])"),  V)

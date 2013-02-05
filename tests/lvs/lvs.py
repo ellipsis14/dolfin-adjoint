@@ -4,7 +4,7 @@ import sys
 
 dolfin.parameters["adjoint"]["record_all"] = True
 
-mesh = UnitSquare(4, 4)
+mesh = UnitSquareMesh(4, 4)
 V = FunctionSpace(mesh, "CG", 1)
 v = TestFunction(V)
 f = interpolate(Expression("sin(pi*x[0])"), V)

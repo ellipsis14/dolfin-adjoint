@@ -5,7 +5,7 @@ import sys
 
 dolfin.parameters["adjoint"]["record_all"] = True
 
-mesh = UnitSquare(4, 4)
+mesh = UnitSquareMesh(4, 4)
 V = FunctionSpace(mesh, 'CG', 1)
 bc = DirichletBC(V, Constant(0.0), lambda x, on_boundary: on_boundary)
 u = TrialFunction(V); v = TestFunction(V);

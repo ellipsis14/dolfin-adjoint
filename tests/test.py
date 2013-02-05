@@ -31,7 +31,7 @@ appendlock = threading.Lock()
 parser = OptionParser()
 parser.add_option("-n", type="int", dest="num_procs", default = 1, help = "To run on N cores, use -n N; to use all processors available, run test.py -n 0.")
 parser.add_option("-t", type="string", dest="test_name", help = "To run one specific test, use -t TESTNAME. By default all test are run.")
-parser.add_option("-s", type="int", dest="short_only", default = 0, help = "To run the short tests only, use -s 1. By default all test are run.")
+parser.add_option("-s", dest="short_only", default = False, action="store_true", help = "To run the short tests only, use -s. By default all test are run.")
 (options, args) = parser.parse_args(sys.argv)
 
 if options.num_procs <= 0:

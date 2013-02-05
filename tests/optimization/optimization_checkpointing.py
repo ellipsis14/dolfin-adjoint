@@ -13,7 +13,7 @@ dolfin.parameters["optimization"]["test_gradient"] = True
 n = 20
 end = 0.2
 timestep = Constant(1.0/n)
-mesh = UnitInterval(n)
+mesh = UnitIntervalMesh(n)
 V = FunctionSpace(mesh, "CG", 2)
 
 adj_checkpointing(strategy='multistage',

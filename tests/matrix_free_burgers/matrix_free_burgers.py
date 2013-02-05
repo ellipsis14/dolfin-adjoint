@@ -8,7 +8,7 @@ from dolfin import *
 from dolfin_adjoint import *
 
 n = 100
-mesh = UnitInterval(n)
+mesh = UnitIntervalMesh(n)
 V = FunctionSpace(mesh, "CG", 2)
 
 #parameters["num_threads"] = 2

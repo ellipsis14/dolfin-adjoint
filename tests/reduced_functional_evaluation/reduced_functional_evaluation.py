@@ -7,7 +7,7 @@ import sys
 # Global settings
 set_log_level(ERROR)
 
-mesh = UnitSquare(10, 10) 
+mesh = UnitSquareMesh(10, 10) 
 V = FunctionSpace(mesh, "DG", 1)
 
 u_new = Function(V, name = "u_new")

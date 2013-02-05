@@ -4,7 +4,7 @@ from dolfin import *
 from dolfin_adjoint import *
 import sys
 
-mesh = UnitSquare(4, 4)
+mesh = UnitSquareMesh(4, 4)
 V = FunctionSpace(mesh, "CG", 3)
 dolfin.parameters["adjoint"]["record_all"] = True
 a = Constant(2.0, name="a")

@@ -5,7 +5,7 @@ import random
 import libadjoint
 import sys
 
-mesh = UnitSquare(2, 2)
+mesh = UnitSquareMesh(2, 2)
 V2 = FunctionSpace(mesh, "CG", 2)
 V1 = FunctionSpace(mesh, "CG", 1)
 Z = MixedFunctionSpace([V2, V1])

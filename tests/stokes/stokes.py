@@ -51,7 +51,7 @@ def temperature_boundary_conditions(Q):
     return [bc]
 
 n = 16
-mesh = UnitSquare(n, n)
+mesh = UnitSquareMesh(n, n)
 X = FunctionSpace(mesh, "CG", 1)
 
 def main(ic, annotate=False):
