@@ -18,7 +18,7 @@ def solve_pde(u, V, m):
     solve(F == 0, u, bc)
 
 def solve_optimal_control(n):
-    mesh = UnitSquare(n, n)
+    mesh = UnitSquareMesh(n, n)
     V = FunctionSpace(mesh, "CG", 1)
     u = Function(V, name='State')
     W = FunctionSpace(mesh, "DG", 0)

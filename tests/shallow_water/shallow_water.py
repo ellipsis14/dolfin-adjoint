@@ -8,7 +8,7 @@ from dolfin_adjoint import *
 
 dolfin.parameters["adjoint"]["record_all"]=True
 
-mesh = UnitSquare(6, 6)
+mesh = UnitSquareMesh(6, 6)
 W=sw_lib.p1dgp2(mesh)
 
 state=Function(W)

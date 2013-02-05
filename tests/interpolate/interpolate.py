@@ -6,7 +6,7 @@ dolfin.parameters["adjoint"]["record_all"] = True
 import random
 import sys
 
-mesh = UnitInterval(5)
+mesh = UnitIntervalMesh(5)
 V2 = FunctionSpace(mesh, "CG", 2)
 V1 = FunctionSpace(mesh, "CG", 1)
 

@@ -5,7 +5,7 @@ from dolfin import *
 from dolfin_adjoint import *
 import libadjoint
 
-mesh = UnitSquare(4, 4)
+mesh = UnitSquareMesh(4, 4)
 V = FunctionSpace(mesh, "R", 0)
 f = Constant(1.0)
 g = Constant(2.0)

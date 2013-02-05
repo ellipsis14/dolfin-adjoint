@@ -4,7 +4,7 @@ from dolfin import *
 from dolfin_adjoint import *
 
 n = 100
-mesh = UnitInterval(n)
+mesh = UnitIntervalMesh(n)
 V = FunctionSpace(mesh, "CG", 2)
 
 dolfin.parameters["adjoint"]["record_all"] = True

@@ -9,7 +9,7 @@ from dolfin_adjoint import *
 from math import ceil
 
 n = 100
-mesh = UnitInterval(n)
+mesh = UnitIntervalMesh(n)
 V = FunctionSpace(mesh, "CG", 2)
 
 #dolfin.parameters["adjoint"]["record_all"] = True

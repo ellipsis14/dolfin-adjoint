@@ -3,7 +3,7 @@ from dolfin_adjoint import *
 import sys
 
 n = 30
-mesh = UnitInterval(n)
+mesh = UnitIntervalMesh(n)
 V = FunctionSpace(mesh, "CG", 2)
 
 def main(ic, nu):

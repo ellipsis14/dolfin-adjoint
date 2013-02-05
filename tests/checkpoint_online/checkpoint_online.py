@@ -7,7 +7,7 @@ parameters["adjoint"]["fussy_replay"] = True
 adj_checkpointing(strategy='online', snaps_on_disk=2, snaps_in_ram=2, verbose=True)
 
 n = 30
-mesh = UnitInterval(n)
+mesh = UnitIntervalMesh(n)
 V = FunctionSpace(mesh, "CG", 2)
 
 ic = project(Expression("sin(2*pi*x[0])"),  V)
