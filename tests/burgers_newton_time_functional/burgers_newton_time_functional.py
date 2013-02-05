@@ -29,7 +29,7 @@ def main(ic, annotate=False):
     timestep = Constant(1.0/n)
 
     F = (Dt(u, u_, timestep)*v
-         + u*grad(u)*v + nu*grad(u)*grad(v))*dx
+         + u*u.dx(0)*v + nu*u.dx(0)*v.dx(0))*dx
     bc = DirichletBC(V, 0.0, "on_boundary")
 
     t = 0.0

@@ -19,7 +19,7 @@ def main(ic, annotate=False):
     v = TestFunction(V)
 
     mass = assemble(inner(u, v) * dx)
-    advec = assemble(u_*grad(u)*v * dx)
+    advec = assemble(u_*u.dx(0)*v * dx)
     rhs = assemble(inner(ic, v) * dx)
 
     L = mass + advec

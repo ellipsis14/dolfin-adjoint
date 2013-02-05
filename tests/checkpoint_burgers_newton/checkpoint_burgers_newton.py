@@ -21,8 +21,8 @@ def main(nu):
   timestep = Constant(1.0/n)
 
   F = ((u_next - u)/timestep*v
-      + u_next*grad(u_next)*v 
-      + nu*grad(u_next)*grad(v))*dx
+      + u_next*u_next.dx(0)*v 
+      + nu*u_next.dx(0)*v.dx(0))*dx
   bc = DirichletBC(V, 0.0, "on_boundary")
 
   t = 0.0
