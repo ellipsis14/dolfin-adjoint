@@ -241,7 +241,7 @@ class Matrix(libadjoint.Matrix):
       x=b.duplicate()
       x.axpy(1.0, b)
     else:
-      if var.type in ['ADJ_TLM', 'ADJ_ADJOINT']:
+      if var.type in ['ADJ_TLM', 'ADJ_ADJOINT', 'ADJ_SOA']:
         dirichlet_bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.DirichletBC)]
         other_bcs  = [bc for bc in self.bcs if not isinstance(bc, dolfin.DirichletBC)]
         bcs = dirichlet_bcs + other_bcs

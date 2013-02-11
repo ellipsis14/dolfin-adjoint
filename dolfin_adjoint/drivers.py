@@ -53,6 +53,7 @@ def compute_adjoint(functional, forget=True, ignore=[]):
       (adj_var, output) = adjglobals.adjointer.get_adjoint_solution(i, functional)
 
       storage = libadjoint.MemoryStorage(output)
+      storage.set_overwrite(True)
       adjglobals.adjointer.record_variable(adj_var, storage)
 
       # forget is None: forget *nothing*.
@@ -172,7 +173,13 @@ class hessian(object):
       # now implement the Hessian action formula.
       out = self.m.inner_adjoint(adjglobals.adjointer, soa, i, soa_var.to_forward())
       if out is not None:
-        Hm.vector().axpy(1.0, out)
+        Hm.vector().axpy(1.0, out.vector())
+
+      storage = libadjoint.MemoryStorage(soa_vec)
+      storage.set_overwrite(True)
+      adjglobals.adjointer.record_variable(soa_var, storage)
+
+    return Hm
 
 def _add(value, increment):
   # Add increment to value correctly taking into account None.

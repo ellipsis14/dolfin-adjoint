@@ -99,7 +99,17 @@ class Functional(libadjoint.Functional):
     return adjlinalg.Vector(d)
 
   def second_derivative(self, adjointer, variable, dependencies, values, contraction):
-    raise NotImplementedError("Not implemented yet")
+    functional_value = None
+    for timestep in self._derivative_timesteps(adjointer, variable):
+      functional_value = _add(functional_value,
+                              self._substitute_form(adjointer, timestep, dependencies, values))
+
+    d = dolfin.derivative(functional_value, values[dependencies.index(variable)].data)
+    d = ufl.algorithms.expand_derivatives(d)
+    d = dolfin.derivative(d, values[dependencies.index(variable)].data, contraction.data)
+    if d.integrals() == ():
+      raise SystemExit, "This isn't supposed to happen -- your functional is supposed to depend on %s" % variable
+    return adjlinalg.Vector(d)
 
   def _derivative_timesteps(self, adjointer, variable):
     
