@@ -21,7 +21,7 @@ if __name__ == "__main__":
 
   parameters["adjoint"]["stop_annotating"] = True
 
-  J = Functional(inner(u, u)*dx, name="NormSquared")
+  J = Functional((inner(u, u))**2*dx, name="NormSquared")
   dJdm = compute_gradient(J, TimeConstantParameter(m), forget=False)
   HJm  = hessian(J, TimeConstantParameter(m))
 
@@ -29,8 +29,9 @@ if __name__ == "__main__":
 
   def Jhat(m):
     u = main(m)
-    return assemble(inner(u, u)*dx)
+    return assemble(inner(u, u)**2*dx)
 
   Jm = Jhat(m)
 
   minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, HJm=HJm)
+  assert minconv > 2.9
