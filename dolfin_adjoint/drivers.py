@@ -78,7 +78,7 @@ def compute_tlm(parameter, forget=False):
 
       # forget is None: forget *nothing*.
       # forget is True: forget everything we can, forward and adjoint
-      # forget is False: forget only unnecessary adjoint values
+      # forget is False: forget only unnecessary tlm values
       if forget is None:
         pass
       elif forget:
@@ -159,12 +159,12 @@ class hessian(object):
     Hm = dolfin.Function(m_dot.function_space())
 
     # run the tangent linear model
-    for output in compute_tlm(self.m_p, forget=False):
+    for output in compute_tlm(self.m_p, forget=None):
       pass
 
     # run the adjoint and second-order adjoint equations.
     i = adjglobals.adjointer.equation_count
-    for (adj, adj_var) in compute_adjoint(self.J, forget=False):
+    for (adj, adj_var) in compute_adjoint(self.J, forget=None):
       i = i - 1
       (soa_var, soa_vec) = adjglobals.adjointer.get_soa_solution(i, self.J, self.m_p)
       soa = soa_vec.data

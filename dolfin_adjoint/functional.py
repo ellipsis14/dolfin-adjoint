@@ -98,6 +98,9 @@ class Functional(libadjoint.Functional):
       raise SystemExit, "This isn't supposed to happen -- your functional is supposed to depend on %s" % variable
     return adjlinalg.Vector(d)
 
+  def second_derivative(self, adjointer, variable, dependencies, values, contraction):
+    raise NotImplementedError("Not implemented yet")
+
   def _derivative_timesteps(self, adjointer, variable):
     
     timestep = variable.timestep
@@ -328,10 +331,10 @@ class Functional(libadjoint.Functional):
 
   def __str__(self):
     if self.name is not None:
-      return self.name
+      return "Functional:" + self.name
     else:
       formstr = " ".join([str(term) for term in self.timeform.terms])
-      return hashlib.md5(formstr).hexdigest()
+      return "Functional:" + hashlib.md5(formstr).hexdigest()
 
 def _slice_intersect(slice1, slice2):
 
