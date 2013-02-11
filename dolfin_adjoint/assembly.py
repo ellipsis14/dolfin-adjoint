@@ -22,14 +22,15 @@ def assemble(*args, **kwargs):
 
   return output
 
-periodic_bc_apply = dolfin.PeriodicBC.apply
-def adjoint_periodic_bc_apply(self, *args, **kwargs):
-  for arg in args:
-    if not hasattr(arg, 'bcs'):
-      arg.bcs = []
-    arg.bcs.append(self)
-  return periodic_bc_apply(self, *args, **kwargs)
-dolfin.PeriodicBC.apply = adjoint_periodic_bc_apply
+if hasattr(dolfin, 'PeriodicBC'):
+  periodic_bc_apply = dolfin.PeriodicBC.apply
+  def adjoint_periodic_bc_apply(self, *args, **kwargs):
+    for arg in args:
+      if not hasattr(arg, 'bcs'):
+        arg.bcs = []
+      arg.bcs.append(self)
+    return periodic_bc_apply(self, *args, **kwargs)
+  dolfin.PeriodicBC.apply = adjoint_periodic_bc_apply
 
 dirichlet_bc_apply = dolfin.DirichletBC.apply
 def adjoint_dirichlet_bc_apply(self, *args, **kwargs):
