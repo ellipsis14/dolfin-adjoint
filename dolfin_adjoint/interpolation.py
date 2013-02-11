@@ -5,7 +5,7 @@ import ufl
 import adjglobals
 import adjlinalg
 
-def interpolate(v, V, annotate=True):
+def interpolate(v, V, annotate=True, name=None):
   '''The interpolate call changes Function data, and so it too must be annotated so that the
   adjoint and tangent linear models may be constructed automatically by libadjoint.
 
@@ -15,6 +15,8 @@ def interpolate(v, V, annotate=True):
   visualisation).'''
 
   out = dolfin.interpolate(v, V)
+  if name is not None:
+    out.adj_name = name
 
   if dolfin.parameters["adjoint"]["stop_annotating"]:
     annotate = False
