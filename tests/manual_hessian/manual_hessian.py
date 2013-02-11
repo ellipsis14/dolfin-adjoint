@@ -14,7 +14,7 @@ import ufl.algorithms
 
 parameters["adjoint"]["stop_annotating"] = True
 
-mesh = UnitSquare(10, 10)
+mesh = UnitSquareMesh(10, 10)
 Vu = VectorFunctionSpace(mesh, "CG", 2)
 Vm = VectorFunctionSpace(mesh, "CG", 1)
 bcs = [DirichletBC(Vu, (1.0, 1.0), "on_boundary")]

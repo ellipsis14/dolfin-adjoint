@@ -1,7 +1,7 @@
 from dolfin import *
 from dolfin_adjoint import *
 
-mesh = UnitInterval(10)
+mesh = UnitIntervalMesh(10)
 V = FunctionSpace(mesh, "CG", 1)
 
 def main(data):

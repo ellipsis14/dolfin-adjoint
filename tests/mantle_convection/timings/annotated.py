@@ -70,7 +70,7 @@ height = 1.0
 length = 2.0
 nx = 10
 ny = 10
-mesh = Rectangle(0, 0, length, height, nx, ny)
+mesh = RectangleMesh(0, 0, length, height, nx, ny)
 
 # Containers for storage
 flow_series = File("bin-final/flow.pvd", "compressed")

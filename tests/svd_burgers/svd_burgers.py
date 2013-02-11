@@ -15,7 +15,7 @@ dolfin.parameters["adjoint"]["record_all"] = True
 dolfin.parameters["adjoint"]["fussy_replay"] = False
 
 n = 10
-mesh = UnitInterval(n)
+mesh = UnitIntervalMesh(n)
 V = FunctionSpace(mesh, "CG", 1)
 
 def Dt(u, u_, timestep):
@@ -32,7 +32,7 @@ def main(ic, annotate=False):
     timestep = Constant(1.0/n)
 
     F = (Dt(u, u_, timestep)*v
-         + u*grad(u)*v + nu*grad(u)*grad(v))*dx
+         + u*u.dx(0)*v + nu*u.dx(0)*v.dx(0))*dx
     bc = DirichletBC(V, 0.0, "on_boundary")
 
     t = 0.0

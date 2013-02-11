@@ -51,9 +51,9 @@ def look_at_forwards(dirname):
         file = File("%s/forward_%d_%g.xml" % (dirname, k, t))
         file >> z
         (sigma0, sigma1, v, gamma) = z.split()
-        norms += [assemble(inner(sigma0[2], sigma0[2])*dx)]
+        norms += [assemble(inner(sigma0[2,:], sigma0[2,:])*dx)]
 
-        cg_s = project(sigma0[2], vCG1)
+        cg_s = project(sigma0[2,:], vCG1)
         print "Saving .vtu at t = %g" % t
         pvds << cg_s
 
@@ -61,7 +61,7 @@ def look_at_forwards(dirname):
 
 import pylab
 
-dirname = "fine-spinal-results"
+dirname = "fine-run-paper"
 #dirname = "test-results"
 
 # Write some norms to file

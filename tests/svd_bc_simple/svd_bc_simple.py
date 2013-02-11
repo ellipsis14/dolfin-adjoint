@@ -5,7 +5,7 @@ from dolfin_adjoint import *
 import sys
 import libadjoint.exceptions
 
-mesh = UnitSquare(10, 10)
+mesh = UnitSquareMesh(10, 10)
 V = FunctionSpace(mesh, "CG", 1)
 
 def main(ic, annotate=False):

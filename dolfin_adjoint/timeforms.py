@@ -89,11 +89,18 @@ class TimeForm(object):
         except TypeError:
             self.terms = [terms]
 
+    def __radd__(self, other):
+        return self.__add__(other)
+
     def __add__(self, other):
         # Adding occurs by concatenating terms in the forms list.
         
         if isinstance(other, TimeForm):
             sum = TimeForm(self.terms + other.terms)
+            return sum
+
+        elif isinstance(other, ufl.form.Form):
+            sum = TimeForm(self.terms + (other*dt[FINISH_TIME]).terms)
             return sum
 
         else:

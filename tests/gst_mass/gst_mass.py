@@ -5,7 +5,7 @@ from dolfin_adjoint import *
 import sys
 import libadjoint.exceptions
 
-mesh = UnitSquare(4, 4)
+mesh = UnitSquareMesh(4, 4)
 V = FunctionSpace(mesh, "CG", 1)
 dolfin.parameters["adjoint"]["record_all"] = True
 

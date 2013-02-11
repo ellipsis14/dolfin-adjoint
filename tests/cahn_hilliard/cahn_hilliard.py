@@ -30,7 +30,7 @@ parameters["std_out_all_processes"] = False;
 
 # Create mesh and define function spaces
 nodes = 96*96
-mesh = UnitSquare(int(sqrt(nodes)), int(sqrt(nodes)))
+mesh = UnitSquareMesh(int(sqrt(nodes)), int(sqrt(nodes)))
 V = FunctionSpace(mesh, "Lagrange", 1)
 ME = V*V
 

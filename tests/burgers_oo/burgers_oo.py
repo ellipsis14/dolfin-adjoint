@@ -12,7 +12,7 @@ dolfin.parameters["adjoint"]["record_all"] = True
 dolfin.parameters["adjoint"]["fussy_replay"] = False
 
 n = 30
-mesh = UnitInterval(n)
+mesh = UnitIntervalMesh(n)
 V = FunctionSpace(mesh, "CG", 2)
 
 def Dt(u, u_, timestep):
@@ -48,7 +48,7 @@ def main(ic, annotate=False):
     solver.parameters["relative_tolerance"] = 1e-6
 
     bc = DirichletBC(V, 0.0, "on_boundary")
-    burgers = BurgersProblem((Dt(u, u_, timestep)*v + u*grad(u)*v + nu*grad(u)*grad(v))*dx, u, bc)
+    burgers = BurgersProblem((Dt(u, u_, timestep)*v + u*u.dx(0)*v + nu*u.dx(0)*v.dx(0))*dx, u, bc)
 
     t = 0.0
     end = 0.2

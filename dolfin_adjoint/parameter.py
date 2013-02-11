@@ -114,7 +114,7 @@ class ScalarParameter(DolfinAdjointParameter):
       if diff_form is None:
         return None
 
-      return adjlinalg.adjlinalg.Vector(diff_form)
+      return adjlinalg.Vector(diff_form)
     else:
       return None
 
@@ -205,7 +205,7 @@ class ScalarParameters(DolfinAdjointParameter):
       else:
         diff_form += out_form
 
-    return adjlinalg.adjlinalg.Vector(diff_form)
+    return adjlinalg.Vector(diff_form)
 
   def __str__(self):
     return str(self.v) + ':ScalarParameters'
@@ -243,4 +243,11 @@ class TimeConstantParameter(InitialConditionParameter):
   confuses people to talk about initial conditions of data that doesn't change
   in time (like diffusivities, or bathymetries, or whatever), so hence this
   alias.'''
+  pass
+
+class SteadyParameter(InitialConditionParameter):
+  '''SteadyParameter is just another name for InitialConditionParameter,
+  since from dolfin-adjoint's point of view they're exactly the same. But it
+  confuses people to talk about initial conditions of data in steady state problems, 
+  so hence this alias.'''
   pass

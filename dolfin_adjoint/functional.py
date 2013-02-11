@@ -6,7 +6,7 @@ import hashlib
 import solving
 import adjglobals
 import adjlinalg
-from timeforms import NoTime, StartTimeConstant, FinishTimeConstant
+from timeforms import NoTime, StartTimeConstant, FinishTimeConstant, dt, FINISH_TIME
 
 class Functional(libadjoint.Functional):
   '''This class implements the :py:class:`libadjoint.Functional` abstract base class for dolfin-adjoint.
@@ -67,6 +67,11 @@ class Functional(libadjoint.Functional):
 
   def __init__(self, timeform, verbose=False, name=None):
 
+    if isinstance(timeform, ufl.form.Form):
+      if adjglobals.adjointer.adjointer.ntimesteps != 1:
+        dolfin.info_red("You are using a steady-state functional (without the *dt term) in a time-dependent simulation.\ndolfin-adjoint will assume that you want to evaluate the functional at the end of time.")
+      timeform = timeform*dt[FINISH_TIME]
+
     self.timeform = timeform
     self.verbose = verbose
     self.name = name
@@ -89,6 +94,8 @@ class Functional(libadjoint.Functional):
 
     d = dolfin.derivative(functional_value, values[dependencies.index(variable)].data)
     d = ufl.algorithms.expand_derivatives(d)
+    if d.integrals() == ():
+      raise SystemExit, "This isn't supposed to happen -- your functional is supposed to depend on %s" % variable
     return adjlinalg.Vector(d)
 
   def _derivative_timesteps(self, adjointer, variable):

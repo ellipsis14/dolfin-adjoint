@@ -27,6 +27,7 @@ import adjrhs
 import adjglobals
 import adjlinalg
 import misc
+import lusolver
 
 def annotate(*args, **kwargs):
   '''This routine handles all of the annotation, recording the solves as they
@@ -355,6 +356,8 @@ def adj_reset():
   adjglobals.adjointer.reset()
   adjglobals.adj_variables.__init__()
   adjglobals.function_names.__init__()
+  lusolver.lu_solvers = {}
+  lusolver.adj_lu_solvers = {}
   
 def define_nonlinear_equation(F, u):
   # Given an F := 0,
@@ -441,6 +444,7 @@ def do_checkpoint(cs, var, rhs):
               dep = rdep
               break
 
+      adjglobals.mem_checkpoints.add(str(dep)) 
       adjglobals.adjointer.record_variable(dep, libadjoint.MemoryStorage(adjlinalg.Vector(coeff), cs=True))
 
   elif cs == int(libadjoint.constants.adj_constants["ADJ_CHECKPOINT_STORAGE_DISK"]):
@@ -459,5 +463,6 @@ def do_checkpoint(cs, var, rhs):
         else:
           continue
 
+      adjglobals.disk_checkpoints.add(str(dep)) 
       adjglobals.adjointer.record_variable(dep, libadjoint.DiskStorage(adjlinalg.Vector(coeff), cs=True))
 

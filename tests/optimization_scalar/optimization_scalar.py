@@ -6,7 +6,7 @@ dolfin.set_log_level(ERROR)
 dolfin.parameters["optimization"]["test_gradient"] = True
 
 n = 10
-mesh = UnitInterval(n)
+mesh = UnitIntervalMesh(n)
 V = FunctionSpace(mesh, "CG", 2)
 
 ic = project(Expression("sin(2*pi*x[0])"),  V)
@@ -19,8 +19,8 @@ def main(nu):
   timestep = Constant(1.0/n)
 
   F = ((u_next - u)/timestep*v
-      + u_next*grad(u_next)*v 
-      + nu*grad(u_next)*grad(v))*dx
+      + u_next*u_next.dx(0)*v 
+      + nu*u_next.dx(0)*v.dx(0))*dx
   bc = DirichletBC(V, 0.0, "on_boundary")
 
   t = 0.0

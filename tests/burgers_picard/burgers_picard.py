@@ -8,7 +8,7 @@ from dolfin import *
 from dolfin_adjoint import *
 
 n = 100
-mesh = UnitInterval(n)
+mesh = UnitIntervalMesh(n)
 V = FunctionSpace(mesh, "CG", 2)
 
 #parameters["num_threads"] = 2
@@ -29,7 +29,7 @@ def main(ic, annotate=False):
     timestep = Constant(1.0/n)
 
     F = (Dt(u, u_, timestep)*v
-         + u_*grad(u)*v + nu*grad(u)*grad(v))*dx
+         + u_*u.dx(0)*v + nu*u.dx(0)*v.dx(0))*dx
 
     (a, L) = system(F)
 

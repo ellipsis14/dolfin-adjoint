@@ -13,11 +13,7 @@ def find_previous_variable(var):
 
     if adjglobals.adjointer.variable_known(prev_var):
       prev_var.var.iteration = prev_var.iteration_count(adjglobals.adjointer) - 1 
-
-      if prev_var.timestep == var.timestep and prev_var.iteration == 0:
-        continue
-      else: 
-        return prev_var
+      return prev_var
 
   raise libadjoint.exceptions.LibadjointErrorInvalidInputs, 'No previous variable found'
 

@@ -10,9 +10,17 @@ import libadjoint
 dolfin.set_log_level(ERROR)
 dolfin.parameters["optimization"]["test_gradient"] = True 
 
-n = 10
+n = 20
+end = 0.2
+timestep = Constant(1.0/n)
 mesh = UnitIntervalMesh(n)
 V = FunctionSpace(mesh, "CG", 2)
+
+adj_checkpointing(strategy='multistage',
+                  steps=int(end*n)+1,
+                  snaps_on_disk=2,
+                  snaps_in_ram=2,
+                  verbose=True)
 
 def Dt(u_next, u, timestep):
     return (u_next - u)/timestep
@@ -24,14 +32,11 @@ def main(u, annotate=False):
 
     nu = Constant(0.0001)
 
-    timestep = Constant(1.0/n)
-
     F = (Dt(u_next, u, timestep)*v
          + u_next*u_next.dx(0)*v + nu*u_next.dx(0)*v.dx(0))*dx
     bc = DirichletBC(V, 0.0, "on_boundary")
 
     t = 0.0
-    end = 0.2
     adjointer.time.start(t)
     while (t <= end):
         solve(F == 0, u_next, bc, annotate=annotate)

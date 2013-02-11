@@ -2,7 +2,7 @@ import libadjoint
 import numpy
 from dolfin import cpp, info, project
 from dolfin_adjoint import adjlinalg, adjrhs, constant, utils 
-from dolfin_adjoint.adjglobals import adjointer
+from dolfin_adjoint.adjglobals import adjointer, mem_checkpoints, disk_checkpoints
 
 def unlist(x):
     ''' If x is a list of length 1, return its element. Otherwise return x. '''
@@ -66,8 +66,36 @@ def set_local(m_list, m_global_array):
         else:
             raise TypeError, 'Unknown parameter type'
 
-class DummyEquation(object):
-    pass
+
+global_eqn_list = {}
+def replace_tape_ic_value(variable, new_value):
+    ''' Replaces the initial condition value of the given variable by registering a new equation of the rhs. '''
+    class DummyEquation(object):
+        pass
+
+    if hasattr(new_value, 'vector'):
+        # ... since these are duplicated and then occur as rhs in the annotation. 
+        # Therefore, we need to update the right hand side callbacks for
+        # the equation that targets the associated variable.
+
+        # Create a RHS object with the new control values
+        init_rhs = adjlinalg.Vector(new_value).duplicate()
+        init_rhs.axpy(1.0, adjlinalg.Vector(new_value))
+        rhs = adjrhs.RHS(init_rhs)
+        # Register the new rhs in the annotation
+        eqn = DummyEquation() 
+        eqn_nb = variable.equation_nb(adjointer)
+        eqn.equation = adjointer.adjointer.equations[eqn_nb]
+        rhs.register(eqn)
+        # Store the equation as a class variable in order to keep a python reference in the memory
+        global_eqn_list[variable.equation_nb] = eqn
+    elif hasattr(new_value, "value_size"): 
+        # Constants are not duplicated in the annotation. That is, changing a constant that occurs
+        # in the forward model will also change the forward replay with libadjoint.
+        # However, this is not the case for functions...
+        pass
+    else:
+        raise NotImplementedError, "Can only replace a dolfin.Functions or dolfin.Constants"
 
 class ReducedFunctional(object):
     ''' This class implements the reduced functional for a given functional/parameter combination. The core idea 
@@ -109,43 +137,43 @@ class ReducedFunctional(object):
 
         # Update the parameter values
         for i in range(len(value)):
-            if hasattr(value[i], 'vector'):
-                # ... since these are duplicated and then occur as rhs in the annotation. 
-                # Therefore, we need to update the right hand side callbacks for
-                # the equation that targets the associated variable.
-
-                # Create a RHS object with the new control values
-                init_rhs = adjlinalg.Vector(value[i]).duplicate()
-                init_rhs.axpy(1.0, adjlinalg.Vector(value[i]))
-                rhs = adjrhs.RHS(init_rhs)
-                # Register the new rhs in the annotation
-                eqn = DummyEquation() 
-                eqn_nb = self.parameter[i].var.equation_nb(adjointer)
-                eqn.equation = adjointer.adjointer.equations[eqn_nb]
-                # Store the equation as a class variable in order to keep a python reference in the memory
-                self.eqns.append(eqn)
-                rhs.register(self.eqns[-1])
-            elif hasattr(value[i], "value_size"): 
-                # Constants are not duplicated in the annotation. That is, changing a constant that occurs
-                # in the forward model will also change the forward replay with libadjoint.
-                # However, this is not the case for functions...
-                pass
-            else:
-                raise NotImplementedError, "The ReducedFunctional class currently only works for parameters that are Functions"
-
+            if hasattr(self.parameter[i], "var"):
+              replace_tape_ic_value(self.parameter[i].var, value[i])
 
         # Replay the annotation and evaluate the functional
         func_value = 0.
         for i in range(adjointer.equation_count):
             (fwd_var, output) = adjointer.get_forward_solution(i)
 
-            storage = libadjoint.MemoryStorage(output)
-            storage.set_overwrite(True)
-            adjointer.record_variable(fwd_var, storage)
+            # Check if we checkpointing is active and if yes
+            # record the exact same checkpoint variables as 
+            # in the initial forward run 
+            if adjointer.get_checkpoint_strategy() != None:
+                if str(fwd_var) in mem_checkpoints:
+                    storage = libadjoint.MemoryStorage(output, cs = True)
+                    storage.set_overwrite(True)
+                    adjointer.record_variable(fwd_var, storage)
+                if str(fwd_var) in disk_checkpoints:
+                    storage = libadjoint.MemoryStorage(output)
+                    adjointer.record_variable(fwd_var, storage)
+                    storage = libadjoint.DiskStorage(output, cs = True)
+                    storage.set_overwrite(True)
+                    adjointer.record_variable(fwd_var, storage)
+                if not str(fwd_var) in mem_checkpoints and not str(fwd_var) in disk_checkpoints:
+                    storage = libadjoint.MemoryStorage(output)
+                    storage.set_overwrite(True)
+                    adjointer.record_variable(fwd_var, storage)
+
+            # No checkpointing, so we record everything
+            else:
+                storage = libadjoint.MemoryStorage(output)
+                storage.set_overwrite(True)
+                adjointer.record_variable(fwd_var, storage)
+
             if i == adjointer.timestep_end_equation(fwd_var.timestep):
                 func_value += adjointer.evaluate_functional(self.functional, fwd_var.timestep)
-
-            #adjglobals.adjointer.forget_forward_equation(i)
+                if adjointer.get_checkpoint_strategy() != None:
+                    adjointer.forget_forward_equation(i)
 
         self.current_func_value = func_value 
         if self.eval_cb:
@@ -155,6 +183,7 @@ class ReducedFunctional(object):
     def derivative(self):
         ''' Evaluates the derivative of the reduced functional for the lastly evaluated parameter value. ''' 
         dfunc_value = utils.compute_gradient(self.functional, self.parameter)
+        adjointer.reset_revolve()
         if self.derivative_cb:
             scaled_dfunc_value = []
             for df in list(dfunc_value):

@@ -1,8 +1,9 @@
-dolfin-adjoint (0.6.2) unstable; urgency=low
+dolfin-adjoint (1.1.0) unstable; urgency=low
 
-  * New release.
+  * New release. Loads of new features.
+  * Change the version numbering to match DOLFIN's.
 
- -- Patrick Farrell <patrick.farrell06@imperial.ac.uk>  Mon, 03 Sep 2012 11:51:46 +0100
+ -- Patrick Farrell <patrick.farrell06@imperial.ac.uk>  Tue, 05 Feb 2013 10:17:28 +0000
 
 dolfin-adjoint (0.6.1) unstable; urgency=low
 
