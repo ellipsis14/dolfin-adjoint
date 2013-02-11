@@ -41,6 +41,11 @@ class DolfinAdjointParameter(libadjoint.Parameter):
     '''Return the data associated with the current values of the Parameter.'''
     raise NotImplementedError
 
+  def set_perturbation(self, m_dot):
+    '''Return another instance of the same class, representing the Parameter perturbed in a particular
+    direction m_dot.'''
+    raise NotImplementedError
+
 class InitialConditionParameter(DolfinAdjointParameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
   when one wishes to compute dJ/d(initial condition) in a particular direction (perturbation).'''
@@ -91,6 +96,9 @@ class InitialConditionParameter(DolfinAdjointParameter):
       self.coeff = adjglobals.adjointer.get_variable_value(self.var).data
 
     return self.coeff
+
+  def set_perturbation(self, m_dot):
+    return InitialConditionParameter(self.coeff, perturbation=m_dot)
 
 class ScalarParameter(DolfinAdjointParameter):
   '''This Parameter is used as input to the tangent linear model (TLM)

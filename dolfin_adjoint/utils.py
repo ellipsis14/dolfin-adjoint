@@ -8,28 +8,6 @@ import constant
 import adjresidual
 import ufl.algorithms
 
-def replay_dolfin(forget=False, tol=0.0, stop=False):
-  if not dolfin.parameters["adjoint"]["record_all"]:
-    info_red("Warning: your replay test will be much more effective with dolfin.parameters['adjoint']['record_all'] = True.")
-
-  success = True
-  for i in range(adjglobals.adjointer.equation_count):
-      (fwd_var, output) = adjglobals.adjointer.get_forward_solution(i)
-
-      storage = libadjoint.MemoryStorage(output)
-      storage.set_compare(tol=tol)
-      storage.set_overwrite(True)
-      out = adjglobals.adjointer.record_variable(fwd_var, storage)
-      success = success and out
-
-      if forget:
-        adjglobals.adjointer.forget_forward_equation(i)
-
-      if not out and stop:
-        return success
-
-  return success
-
 def convergence_order(errors, base = 2):
   import math
 
@@ -41,64 +19,6 @@ def convergence_order(errors, base = 2):
       orders[i] = numpy.nan
 
   return orders
-
-def compute_adjoint(functional, forget=True, ignore=[]):
-
-  ignorelist = []
-  for fn in ignore:
-    if isinstance(fn, dolfin.Function):
-      ignorelist.append(adjglobals.adj_variables[fn])
-    elif isinstance(fn, str):
-      ignorelist.append(libadjoint.Variable(fn, 0, 0))
-    else:
-      ignorelist.append(fn)
-
-  for i in range(adjglobals.adjointer.timestep_count):
-    adjglobals.adjointer.set_functional_dependencies(functional, i)
-
-  for i in range(adjglobals.adjointer.equation_count)[::-1]:
-      fwd_var = adjglobals.adjointer.get_forward_variable(i)
-      if fwd_var in ignorelist:
-        info("Ignoring the adjoint equation for %s" % fwd_var)
-        continue
-
-      (adj_var, output) = adjglobals.adjointer.get_adjoint_solution(i, functional)
-
-      storage = libadjoint.MemoryStorage(output)
-      adjglobals.adjointer.record_variable(adj_var, storage)
-
-      # forget is None: forget *nothing*.
-      # forget is True: forget everything we can, forward and adjoint
-      # forget is False: forget only unnecessary adjoint values
-      if forget is None:
-        pass
-      elif forget:
-        adjglobals.adjointer.forget_adjoint_equation(i)
-      else:
-        adjglobals.adjointer.forget_adjoint_values(i)
-
-      yield (output.data, adj_var)
-
-def compute_tlm(parameter, forget=False):
-
-  for i in range(adjglobals.adjointer.equation_count):
-      (tlm_var, output) = adjglobals.adjointer.get_tlm_solution(i, parameter)
-
-      storage = libadjoint.MemoryStorage(output)
-      storage.set_overwrite(True)
-      adjglobals.adjointer.record_variable(tlm_var, storage)
-
-      # forget is None: forget *nothing*.
-      # forget is True: forget everything we can, forward and adjoint
-      # forget is False: forget only unnecessary adjoint values
-      if forget is None:
-        pass
-      elif forget:
-        adjglobals.adjointer.forget_tlm_equation(i)
-      else:
-        adjglobals.adjointer.forget_tlm_values(i)
-
-      yield (output.data, tlm_var)
 
 def test_initial_condition_adjoint(J, ic, final_adjoint, seed=0.01, perturbation_direction=None):
   '''forward must be a function that takes in the initial condition (ic) as a dolfin.Function
@@ -333,65 +253,6 @@ def test_initial_condition_adjoint_cdiff(J, ic, final_adjoint, seed=0.01, pertur
   info("Gradient (adjoint): " + str(adjoint_vector.inner(perturbation_direction.vector())))
 
   return min(convergence_order(with_gradient))
-
-def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, output: None):
-  try:
-    scalar = False
-    dJdparam = [None for i in range(len(param))]
-    lparam = param
-  except TypeError:
-    scalar = True
-    dJdparam = [None]
-    lparam = [param]
-  last_timestep = adjglobals.adjointer.timestep_count
-
-  ignorelist = []
-  for fn in ignore:
-    if isinstance(fn, dolfin.Function):
-      ignorelist.append(adjglobals.adj_variables[fn])
-    elif isinstance(fn, str):
-      ignorelist.append(libadjoint.Variable(fn, 0, 0))
-    else:
-      ignorelist.append(fn)
-
-  for i in range(adjglobals.adjointer.timestep_count):
-    adjglobals.adjointer.set_functional_dependencies(J, i)
-
-  for i in range(adjglobals.adjointer.equation_count)[::-1]:
-    fwd_var = adjglobals.adjointer.get_forward_variable(i)
-    if fwd_var in ignorelist:
-      info("Ignoring the adjoint equation for %s" % fwd_var)
-      continue
-
-    (adj_var, output) = adjglobals.adjointer.get_adjoint_solution(i, J)
-
-    callback(adj_var, output.data)
-
-    storage = libadjoint.MemoryStorage(output)
-    adjglobals.adjointer.record_variable(adj_var, storage)
-    fwd_var = libadjoint.Variable(adj_var.name, adj_var.timestep, adj_var.iteration)
-
-    for j in range(len(lparam)):
-      out = lparam[j].inner_adjoint(adjglobals.adjointer, output.data, i, fwd_var)
-      dJdparam[j] = _add(dJdparam[j], out)
-
-      if last_timestep > adj_var.timestep:
-        # We have hit a new timestep, and need to compute this timesteps' \partial J/\partial m contribution
-        last_timestep = adj_var.timestep
-        out = lparam[j].partial_derivative(adjglobals.adjointer, J, adj_var.timestep)
-        dJdparam[j] = _add(dJdparam[j], out)
-
-    if forget is None:
-      pass
-    elif forget:
-      adjglobals.adjointer.forget_adjoint_equation(i)
-    else:
-      adjglobals.adjointer.forget_adjoint_values(i)
-
-  if scalar:
-    return dJdparam[0]
-  else:
-    return dJdparam
 
 def test_scalar_parameter_adjoint(J, a, dJda, seed=None):
   info_blue("Running Taylor remainder convergence analysis for the adjoint model ... ")
@@ -668,33 +529,4 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
     return min(convergence_order(with_hessian))
   else:
     return min(convergence_order(with_gradient))
-
-def estimate_error(J, forget=True):
-  err = 0.0
-  i = adjglobals.adjointer.equation_count - 1
-
-  for (adj, var) in compute_adjoint(J, forget=forget):
-    form = adjresidual.get_residual(i)
-    if form is not None:
-      Vplus = dolfin.increase_order(adj.function_space())
-      adj_h = dolfin.Function(Vplus)
-      adj_h.extrapolate(adj)
-
-      args = ufl.algorithms.extract_arguments(form)
-      assert len(args) == 1
-      estimator = dolfin.replace(form, {args[0]: adj_h})
-      err += dolfin.assemble(estimator)
-
-    i = i - 1
-
-  return err
-
-def _add(value, increment):
-  # Add increment to value correctly taking into account None.
-  if increment is None:
-    return value
-  elif value is None:
-    return increment
-  else:
-    return value+increment
 

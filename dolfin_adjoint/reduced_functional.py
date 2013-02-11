@@ -1,7 +1,7 @@
 import libadjoint
 import numpy
 from dolfin import cpp, info, project
-from dolfin_adjoint import adjlinalg, adjrhs, constant, utils 
+from dolfin_adjoint import adjlinalg, adjrhs, constant, utils, drivers
 from dolfin_adjoint.adjglobals import adjointer, mem_checkpoints, disk_checkpoints
 
 def unlist(x):
@@ -182,7 +182,7 @@ class ReducedFunctional(object):
 
     def derivative(self):
         ''' Evaluates the derivative of the reduced functional for the lastly evaluated parameter value. ''' 
-        dfunc_value = utils.compute_gradient(self.functional, self.parameter)
+        dfunc_value = drivers.compute_gradient(self.functional, self.parameter)
         adjointer.reset_revolve()
         if self.derivative_cb:
             scaled_dfunc_value = []
