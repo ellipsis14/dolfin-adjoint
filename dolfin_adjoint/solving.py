@@ -295,6 +295,42 @@ def annotate(*args, **kwargs):
       return adjlinalg.Vector(output)
     diag_block.derivative_action = derivative_action
 
+    def second_derivative_action(dependencies, values, inner_variable, inner_contraction_vector, outer_variable, outer_contraction_vector, hermitian, input, coefficient, context):
+      dolfin_inner_variable = values[dependencies.index(inner_variable)].data
+      dolfin_outer_variable = values[dependencies.index(outer_variable)].data
+      dolfin_values = [val.data for val in values]
+      expressions.update_expressions(frozen_expressions_dict)
+
+      current_form = dolfin.replace(eq_lhs, dict(zip(diag_coeffs, dolfin_values)))
+
+      deriv = dolfin.derivative(current_form, dolfin_inner_variable)
+      args = ufl.algorithms.extract_arguments(deriv)
+      deriv = dolfin.replace(deriv, {args[1]: inner_contraction_vector.data}) # contract over the middle index
+
+      deriv = dolfin.derivative(deriv, dolfin_outer_variable)
+      args = ufl.algorithms.extract_arguments(deriv)
+      deriv = dolfin.replace(deriv, {args[1]: outer_contraction_vector.data}) # contract over the middle index
+
+      # Assemble the G-matrix now, so that we can apply the Dirichlet BCs to it
+      if len(ufl.algorithms.extract_arguments(ufl.algorithms.expand_derivatives(coefficient*deriv))) == 0:
+        return adjlinalg.Vector(None)
+
+      G = dolfin.assemble(coefficient * deriv)
+      # Zero the rows of G corresponding to Dirichlet rows of the form
+      bcs = [bc for bc in eq_bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
+      for bc in bcs:
+        bc.zero(G)
+
+      if hermitian:
+        output = dolfin.Function(dolfin_outer_variable.function_space()) # output lives in the function space of the differentiating variable
+        G.transpmult(input.data.vector(), output.vector())
+      else:
+        output = dolfin.Function(ufl.algorithms.extract_arguments(eq_lhs)[-1].function_space()) # output lives in the function space of the TestFunction
+        G.mult(input.data.vector(), output.vector())
+
+      return adjlinalg.Vector(output)
+    diag_block.second_derivative_action = second_derivative_action
+
   eqn = libadjoint.Equation(var, blocks=[diag_block], targets=[var], rhs=rhs)
 
   cs = adjglobals.adjointer.register_equation(eqn)
