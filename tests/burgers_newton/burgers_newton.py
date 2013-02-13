@@ -64,5 +64,7 @@ if __name__ == "__main__":
       forward = main(ic, annotate=False)
       return assemble(forward*forward*dx)
 
-    minconv = taylor_test(Jfunc, InitialConditionParameter("Velocity"), Jic, dJdic, seed=1.0e-3)
-    assert minconv > 1.9
+    HJic = hessian(J, InitialConditionParameter("Velocity"))
+
+    minconv = taylor_test(Jfunc, InitialConditionParameter("Velocity"), Jic, dJdic, HJm=HJic, seed=1.0e-3)
+    assert minconv > 2.8
