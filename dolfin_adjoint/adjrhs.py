@@ -92,6 +92,10 @@ class RHS(libadjoint.RHS):
 
       d_rhs = dolfin.derivative(current_form, dolfin_inner_variable, inner_contraction_vector.data)
       d_rhs = dolfin.derivative(d_rhs, dolfin_outer_variable, trial)
+      d_rhs = ufl.algorithms.expand_derivatives(d_rhs)
+
+      if d_rhs.integrals() == ():
+        return None
 
       if hermitian:
         action = dolfin.action(dolfin.adjoint(d_rhs), action_vector.data)

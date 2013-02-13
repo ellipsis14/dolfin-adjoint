@@ -2,16 +2,15 @@ from dolfin import *
 from dolfin_adjoint import *
 
 mesh = UnitSquareMesh(3, 3)
-V = FunctionSpace(mesh, "CG", 1)
+V = FunctionSpace(mesh, "R", 0)
 
 test = TestFunction(V)
-trial = TrialFunction(V)
 
 def main(m):
-  u = Function(V, name="Solution")
+  u = interpolate(Constant(0.1), V, name="Solution")
 
-  F = inner(trial, test)*dx - inner(m, test)*dx
-  solve(lhs(F) == rhs(F), u)
+  F = inner(u*u, test)*dx - inner(m, test)*dx
+  solve(F == 0, u)
 
   return u
 
@@ -21,7 +20,7 @@ if __name__ == "__main__":
 
   parameters["adjoint"]["stop_annotating"] = True
 
-  J = Functional((inner(u, u))**2*dx, name="NormSquared")
+  J = Functional((inner(u, u))**6*dx, name="NormSquared")
   dJdm = compute_gradient(J, TimeConstantParameter(m), forget=False)
   HJm  = hessian(J, TimeConstantParameter(m))
 
@@ -29,7 +28,7 @@ if __name__ == "__main__":
 
   def Jhat(m):
     u = main(m)
-    return assemble(inner(u, u)**2*dx)
+    return assemble(inner(u, u)**6*dx)
 
   Jm = Jhat(m)
 
