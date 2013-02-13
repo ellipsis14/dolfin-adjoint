@@ -46,11 +46,7 @@ def main(ic, annotate=False):
 if __name__ == "__main__":
 
     ic = project(Expression("sin(2*pi*x[0])"),  V)
-    ic_copy = Function(ic)
     forward = main(ic, annotate=True)
-    forward_copy = Function(forward)
-    ic = forward
-    ic.vector()[:] = ic_copy.vector()
 
     adj_html("burgers_newton_forward.html", "forward")
     adj_html("burgers_newton_adjoint.html", "adjoint")
@@ -61,20 +57,12 @@ if __name__ == "__main__":
     print "Running adjoint ... "
 
     J = Functional(forward*forward*dx*dt[FINISH_TIME])
-    dJdic = compute_gradient(J, InitialConditionParameter(ic), forget=False)
+    Jic = assemble(forward*forward*dx)
+    dJdic = compute_gradient(J, InitialConditionParameter("Velocity"), forget=False)
 
     def Jfunc(ic):
       forward = main(ic, annotate=False)
       return assemble(forward*forward*dx)
 
-    minconv = test_initial_condition_adjoint(Jfunc, ic, dJdic, seed=1.0e-3)
-    if minconv < 1.9:
-      sys.exit(1)
-
-    dJ = assemble(derivative(forward_copy*forward_copy*dx, forward_copy))
-
-    ic = forward
-    ic.vector()[:] = ic_copy.vector()
-    minconv = test_initial_condition_tlm(Jfunc, dJ, ic, seed=1.0e-3)
-    if minconv < 1.9:
-      sys.exit(1)
+    minconv = taylor_test(Jfunc, InitialConditionParameter("Velocity"), Jic, dJdic, seed=1.0e-3)
+    assert minconv > 1.9
