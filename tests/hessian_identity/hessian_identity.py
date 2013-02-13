@@ -5,12 +5,15 @@ mesh = UnitSquareMesh(3, 3)
 V = FunctionSpace(mesh, "R", 0)
 
 test = TestFunction(V)
+trial = TrialFunction(V)
 
 def main(m):
   u = interpolate(Constant(0.1), V, name="Solution")
 
   F = inner(u*u, test)*dx - inner(m, test)*dx
   solve(F == 0, u)
+  F = inner(u*trial, test)*dx - inner(u**4, test)*dx
+  solve(lhs(F) == rhs(F), u)
 
   return u
 
