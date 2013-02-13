@@ -40,6 +40,9 @@ class IdentityRHS(libadjoint.RHS):
   def derivative_action(self, dependencies, values, variable, contraction_vector, hermitian):
     return adjlinalg.Vector(contraction_vector.data)
 
+  def second_derivative_action(self, dependencies, values, inner_variable, inner_contraction_vector, outer_variable, hermitian, action):
+    return None
+
   def dependencies(self):
     return [self.dep]
 
