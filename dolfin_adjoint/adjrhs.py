@@ -64,18 +64,44 @@ class RHS(libadjoint.RHS):
       current_form = dolfin.replace(self.form, dict(zip(dolfin_dependencies, dolfin_values)))
       trial = dolfin.TrialFunction(dolfin_variable.function_space())
 
-      d_rhs=dolfin.derivative(current_form, dolfin_variable, trial)
+      d_rhs = dolfin.derivative(current_form, dolfin_variable, trial)
 
       if hermitian:
-        action = dolfin.action(dolfin.adjoint(d_rhs),contraction_vector.data)
+        action = dolfin.action(dolfin.adjoint(d_rhs), contraction_vector.data)
       else:
-        action = dolfin.action(d_rhs,contraction_vector.data)
+        action = dolfin.action(d_rhs, contraction_vector.data)
 
       return adjlinalg.Vector(action)
     else:
       # RHS is a adjlinalg.Vector. Its derivative is therefore zero.
       raise exceptions.LibadjointErrorNotImplemented("No derivative method for constant RHS.")
 
+  def second_derivative_action(self, dependencies, values, inner_variable, inner_contraction_vector, outer_variable, hermitian, action_vector):
+
+    if isinstance(self.form, ufl.form.Form):
+      # Find the dolfin Function corresponding to variable.
+      dolfin_inner_variable = values[dependencies.index(inner_variable)].data
+      dolfin_outer_variable = values[dependencies.index(outer_variable)].data
+
+      dolfin_dependencies = [dep for dep in ufl.algorithms.extract_coefficients(self.form) if hasattr(dep, "function_space")]
+
+      dolfin_values = [val.data for val in values]
+
+      current_form = dolfin.replace(self.form, dict(zip(dolfin_dependencies, dolfin_values)))
+      trial = dolfin.TrialFunction(dolfin_outer_variable.function_space())
+
+      d_rhs = dolfin.derivative(current_form, dolfin_inner_variable, inner_contraction_vector.data)
+      d_rhs = dolfin.derivative(d_rhs, dolfin_outer_variable, trial)
+
+      if hermitian:
+        action = dolfin.action(dolfin.adjoint(d_rhs), action_vector.data)
+      else:
+        action = dolfin.action(d_rhs, action_vector.data)
+
+      return adjlinalg.Vector(action)
+    else:
+      # RHS is a adjlinalg.Vector. Its derivative is therefore zero.
+      raise exceptions.LibadjointErrorNotImplemented("No derivative method for constant RHS.")
 
   def dependencies(self):
 
@@ -169,6 +195,19 @@ class NonlinearRHS(RHS):
       return adjlinalg.Vector(None, fn_space=deriv_value.function_space())
     else:
       return RHS.derivative_action(self, dependencies, values, variable, contraction_vector, hermitian)
+
+  def second_derivative_action(self, dependencies, values, inner_variable, inner_contraction_vector, outer_variable, hermitian, action):
+    '''If variable is the variable for the initial condition, we want to ignore it,
+    and set the derivative to zero. Assuming the solver converges, the sensitivity of
+    the solution to the initial condition should be extremely small, and computing it
+    is very difficult (one would have to do a little adjoint solve to compute it).
+    Even I'm not that fussy.'''
+
+    if inner_variable == self.ic_var or outer_variable == self.ic_var:
+      deriv_value = values[dependencies.index(outer_variable)].data
+      return adjlinalg.Vector(None, fn_space=deriv_value.function_space())
+    else:
+      return RHS.second_derivative_action(self, dependencies, values, inner_variable, inner_contraction_vector, outer_variable, hermitian, action)
 
   def derivative_assembly(self, dependencies, values, variable, hermitian):
     replace_map = {}
