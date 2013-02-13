@@ -39,11 +39,15 @@ def minimize_scipy_generic(J, dJ, m, method, bounds = None, **kwargs):
 
     m_global = get_global(m)
 
-    # Shut up all processors except the first one.
+    if not "options" in kwargs:
+        kwargs["options"] = {}
     if MPI.process_number() != 0:
-        if not "options" in kwargs:
-            kwargs["options"] = {}
+        # Shut up all processors except the first one.
         kwargs["options"]["disp"] = False
+    else:
+        # Print out progress information by default
+        if not "disp" in kwargs["options"]:
+            kwargs["options"]["disp"] = True
 
     # For gradient-based methods add the derivative function to the argument list 
     if method not in ["COBYLA", "Nelder-Mead", "Anneal", "Powell"]:
