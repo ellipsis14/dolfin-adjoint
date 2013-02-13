@@ -107,21 +107,14 @@ def main(ic, annotate=False):
   return u0, j
 
 if __name__ == "__main__":
-  ic = Function(ME)
-  init = InitialConditions()
-  ic.interpolate(init)
-  ic_copy = Function(ic)
-
+  ic = interpolate(InitialConditions(), ME)
   forward, j = main(ic, annotate=True)
-  forward_copy = Function(forward)
-  ic = forward
-  ic.vector()[:] = ic_copy.vector()
 
   adj_html("forward.html", "forward")
 
   dtm = TimeMeasure()
   J = Functional((1.0/(4*eps)) * (pow( (-1.0/eps) * forward[1], 2))*dx*dtm)
-  dJdic = compute_gradient(J, InitialConditionParameter(ic), forget=False)
+  dJdic = compute_gradient(J, InitialConditionParameter("Solution"), forget=False)
 
   print "Functional value: ", j
 
@@ -129,6 +122,5 @@ if __name__ == "__main__":
     u, j = main(ic, annotate=False)
     return j
 
-  minconv = test_initial_condition_adjoint(J, ic_copy, dJdic, seed=1.0e-5)
-  if minconv < 1.9:
-    sys.exit(1)
+  minconv = taylor_test(J, InitialConditionParameter("Solution"), j, dJdic, seed=1.0e-5)
+  assert minconv > 1.9
