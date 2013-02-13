@@ -19,6 +19,9 @@ def project(v, V=None, bcs=None, mesh=None, solver_type="cg", preconditioner_typ
   if isinstance(v, dolfin.Expression):
     annotate = False
 
+  if isinstance(v, dolfin.Constant):
+    annotate = False
+
   out = dolfin.project(v, V, bcs, mesh, solver_type, preconditioner_type, form_compiler_parameters)
   if name is not None:
     out.adj_name = name
