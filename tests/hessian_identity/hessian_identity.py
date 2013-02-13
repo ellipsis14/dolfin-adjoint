@@ -12,7 +12,7 @@ def main(m):
 
   F = inner(u*u, test)*dx - inner(m, test)*dx
   solve(F == 0, u)
-  F = inner(u*trial, test)*dx - inner(u**4, test)*dx
+  F = inner(u*u*trial, test)*dx - inner(u**4, test)*dx
   solve(lhs(F) == rhs(F), u)
 
   return u
