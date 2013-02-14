@@ -19,6 +19,10 @@ class Constant(dolfin.Constant):
     dolfin.Constant.__init__(self, value, cell)
     if name is not None:
       self.adj_name = name
+
+      if name in constant_values:
+        dolfin.info_red("Warning: redefing constant with name %s" % name)
+
       constant_values[name] = value
       constant_objects[name] = self
 

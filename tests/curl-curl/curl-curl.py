@@ -2,8 +2,8 @@ from dolfin import *
 from dolfin_adjoint import *
 
 # Create mesh
-def main(dbdt_c, annotate=False):
-  mesh = UnitCube(2, 2, 2)
+def main(dbdt, annotate=False):
+  mesh = UnitCubeMesh(2, 2, 2)
 
   # Define function spaces
   PN = FunctionSpace(mesh, "Nedelec 1st kind H(curl)", 1)
@@ -16,7 +16,7 @@ def main(dbdt_c, annotate=False):
   u1 = TrialFunction(P1)
 
   # Define functions
-  dbdt = as_vector([0.0, 0.0, Constant(dbdt_c, name="dbdt")])
+  dbdt_v = as_vector([0.0, 0.0, dbdt])
   zero = Expression(("0.0", "0.0", "0.0"), degree=1)
   T = Function(PN)
   J = Function(P1)
@@ -30,7 +30,7 @@ def main(dbdt_c, annotate=False):
   bc = DirichletBC(PN, zero, DirichletBoundary())
 
   # Solve eddy currents equation (using potential T)
-  solve(inner(curl(v0), curl(u0))*dx == -inner(v0, dbdt)*dx, T, bc, annotate=annotate)
+  solve(inner(curl(v0), curl(u0))*dx == -inner(v0, dbdt_v)*dx, T, bc, annotate=annotate)
 
   # Solve density equation
   solve(inner(v1, u1)*dx == dot(v1, curl(T))*dx, J, annotate=annotate)
@@ -38,17 +38,17 @@ def main(dbdt_c, annotate=False):
   return J
 
 if __name__ == "__main__":
-  J = main(1.0, annotate=True)
-  Jc = assemble(inner(J, J)*dx)
-  dJdc = compute_gradient(Functional(inner(J, J)*dx*dt[FINISH_TIME]), ScalarParameter("dbdt"))
+  dbdt = Constant(1.0, name="dbdt")
+  J = main(dbdt, annotate=True)
+  Jc = assemble(inner(J, J)**2*dx)
+  Jf = Functional(inner(J, J)**2*dx*dt[FINISH_TIME]); m = ScalarParameter("dbdt")
+  dJdc = compute_gradient(Jf, m, forget=False)
+  HJc = hessian(Jf, m)
 
   def J(c):
-    j = main(c)
-    return assemble(inner(j, j)*dx)
+    j = main(c, annotate=False)
+    return assemble(inner(j, j)**2*dx)
 
-  minconv = taylor_test(J, ScalarParameter("dbdt"), Jc, dJdc)
+  minconv = taylor_test(J, ScalarParameter("dbdt"), Jc, dJdc, HJm=HJc)
 
-  if minconv < 1.9:
-    import sys
-    sys.exit(1)
-
+  assert minconv > 2.8

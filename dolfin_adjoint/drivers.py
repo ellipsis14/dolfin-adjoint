@@ -153,14 +153,19 @@ class hessian(object):
     self.J = J
     self.m = m
 
-    if not isinstance(m, InitialConditionParameter):
-      raise libadjoint.exceptions.LibadjointErrorNotImplemented("Sorry, Hessian computation only works for InitialConditionParameter|SteadyParameter|TimeConstantParameter so far.")
+    if not isinstance(m, (InitialConditionParameter, ScalarParameter)):
+      raise libadjoint.exceptions.LibadjointErrorNotImplemented("Sorry, Hessian computation only works for InitialConditionParameter|SteadyParameter|TimeConstantParameter|ScalarParameter so far.")
 
   def __call__(self, m_dot):
 
     self.m_p = self.m.set_perturbation(m_dot)
 
-    Hm = dolfin.Function(m_dot.function_space())
+    if hasattr(m_dot, 'function_space'):
+      Hm = dolfin.Function(m_dot.function_space())
+    elif isinstance(m_dot, float):
+      Hm = 0.0
+    else:
+      raise NotImplementedError("Sorry, don't know how to handle this")
 
     # run the tangent linear model
     for output in compute_tlm(self.m_p, forget=None):
@@ -176,7 +181,10 @@ class hessian(object):
       # now implement the Hessian action formula.
       out = self.m.inner_adjoint(adjglobals.adjointer, soa, i, soa_var.to_forward())
       if out is not None:
-        Hm.vector().axpy(1.0, out.vector())
+        if isinstance(Hm, dolfin.Function):
+          Hm.vector().axpy(1.0, out.vector())
+        elif isinstance(Hm, float):
+          Hm += out
 
       storage = libadjoint.MemoryStorage(soa_vec)
       storage.set_overwrite(True)

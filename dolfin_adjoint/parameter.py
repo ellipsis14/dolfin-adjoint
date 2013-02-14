@@ -103,10 +103,11 @@ class InitialConditionParameter(DolfinAdjointParameter):
 class ScalarParameter(DolfinAdjointParameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
   when one wishes to compute dJ/da, where a is a single scalar parameter.'''
-  def __init__(self, a):
+  def __init__(self, a, coeff=1):
     if not (isinstance(a, dolfin.Constant) or isinstance(a, str)):
       raise TypeError, "The coefficient must be a dolfin.Constant or a String"
     self.a = a
+    self.coeff = coeff
 
   def __call__(self, adjointer, i, dependencies, values, variable):
     form = adjresidual.get_residual(i)
@@ -115,7 +116,7 @@ class ScalarParameter(DolfinAdjointParameter):
 
       fn_space = ufl.algorithms.extract_arguments(form)[0].function_space()
       dparam = dolfin.Function(dolfin.FunctionSpace(fn_space.mesh(), "R", 0))
-      dparam.vector()[:] = 1.0
+      dparam.vector()[:] = 1.0 * self.coeff
 
       diff_form = ufl.algorithms.expand_derivatives(dolfin.derivative(form, get_constant(self.a), dparam))
 
@@ -127,7 +128,7 @@ class ScalarParameter(DolfinAdjointParameter):
       return None
 
   def __str__(self):
-    return str(self.a) + ':ScalarParameter'
+    return str(self.coeff) + '*' + str(self.a) + ':ScalarParameter'
 
   def inner_adjoint(self, adjointer, adjoint, i, variable):
     form = adjresidual.get_residual(i)
@@ -137,7 +138,7 @@ class ScalarParameter(DolfinAdjointParameter):
       mesh = ufl.algorithms.extract_arguments(form)[0].function_space().mesh()
       fn_space = dolfin.FunctionSpace(mesh, "R", 0)
       dparam = dolfin.Function(fn_space)
-      dparam.vector()[:] = 1.0
+      dparam.vector()[:] = 1.0 * self.coeff
 
       diff_form = ufl.algorithms.expand_derivatives(dolfin.derivative(form, get_constant(self.a), dparam))
 
@@ -171,7 +172,7 @@ class ScalarParameter(DolfinAdjointParameter):
         pass
 
     dparam = dolfin.Function(fn_space)
-    dparam.vector()[:] = 1.0
+    dparam.vector()[:] = 1.0 * self.coeff
 
     d = dolfin.derivative(form, get_constant(self.a), dparam)
     d = ufl.algorithms.expand_derivatives(d)
@@ -182,6 +183,11 @@ class ScalarParameter(DolfinAdjointParameter):
 
   def data(self):
     return get_constant(self.a)
+
+  def set_perturbation(self, m_dot):
+    '''Return another instance of the same class, representing the Parameter perturbed in a particular
+    direction m_dot.'''
+    return ScalarParameter(self.a, coeff=m_dot)
 
 class ScalarParameters(DolfinAdjointParameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
