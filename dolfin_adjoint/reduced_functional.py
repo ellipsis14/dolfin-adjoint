@@ -63,9 +63,11 @@ def set_local(m_list, m_global_array):
         elif hasattr(m, "value_size"): 
             m.assign(constant.Constant(numpy.reshape(m_global_array[offset:offset+m.value_size()], m.shape())))
             offset += m.value_size()    
+        elif isinstance(m, numpy.ndarray): 
+            m[:] = m_global_array[offset:offset+len(m)]
+            offset += len(m)
         else:
             raise TypeError, 'Unknown parameter type'
-
 
 global_eqn_list = {}
 def replace_tape_ic_value(variable, new_value):
