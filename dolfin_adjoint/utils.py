@@ -429,7 +429,7 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
     else:
       seed = 0.01
 
-  perturbation_sizes = [seed/(2**i) for i in range(5)]
+  perturbation_sizes = [seed/(2.0**i) for i in range(5)]
 
   # Next, compute the perturbation direction.
   if perturbation_direction is None:

@@ -43,15 +43,15 @@ if __name__ == "__main__":
   adj_html("forward.html", "forward")
   adj_html("adjoint.html", "adjoint")
 
-  J = Functional(u*u*dx*dt[FINISH_TIME])
+  J = Functional(u*u*u*u*dx*dt[FINISH_TIME])
   m = InitialConditionParameter(u)
-  Jm = assemble(u*u*dx)
+  Jm = assemble(u*u*u*u*dx)
   dJdm = compute_gradient(J, m, forget=False)
   HJm  = hessian(J, m)
 
   def J(ic):
     u = main(ic, annotate=False)
-    return assemble(u*u*dx)
+    return assemble(u*u*u*u*dx)
 
-  minconv = taylor_test(J, m, Jm, dJdm, seed=10.0)
+  minconv = taylor_test(J, m, Jm, dJdm, HJm=HJm, seed=100)
   assert minconv > 1.9
