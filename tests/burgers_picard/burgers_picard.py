@@ -11,8 +11,6 @@ n = 100
 mesh = UnitIntervalMesh(n)
 V = FunctionSpace(mesh, "CG", 2)
 
-#parameters["num_threads"] = 2
-
 dolfin.parameters["adjoint"]["test_derivative"] = True
 
 def Dt(u, u_, timestep):
@@ -20,7 +18,7 @@ def Dt(u, u_, timestep):
 
 def main(ic, annotate=False):
 
-    u_ = ic
+    u_ = Function(V, ic, name="Solution")
     u = TrialFunction(V)
     v = TestFunction(V)
 
@@ -47,36 +45,26 @@ def main(ic, annotate=False):
         u_.assign(u, annotate=annotate)
 
         t += float(timestep)
-        #plot(u)
 
-    #interactive()
     return u_
 
 if __name__ == "__main__":
 
     ic = project(Expression("sin(2*pi*x[0])"),  V)
-    ic_copy = Function(ic)
     forward = main(ic, annotate=True)
-    forward_copy = Function(forward)
+
     adj_html("burgers_picard_forward.html", "forward")
     adj_html("burgers_picard_adjoint.html", "adjoint")
-    print "Running adjoint ... "
 
     J = Functional(forward*forward*dx*dt[FINISH_TIME])
-    for (adjoint, var) in compute_adjoint(J, forget=False):
-      pass
+    m = InitialConditionParameter("Solution")
+
+    Jm = assemble(forward*forward*dx)
+    dJdm = compute_gradient(J, m, forget=False)
 
     def Jfunc(ic):
       forward = main(ic, annotate=False)
       return assemble(forward*forward*dx)
 
-    ic.vector()[:] = ic_copy.vector()
-    minconv = test_initial_condition_adjoint_cdiff(Jfunc, ic, adjoint, seed=5.0e-2)
-    if minconv < 2.9:
-      sys.exit(1)
-
-    ic.vector()[:] = ic_copy.vector()
-    dJ = assemble(derivative(forward_copy*forward_copy*dx, forward_copy))
-    minconv = test_initial_condition_tlm(Jfunc, dJ, ic, seed=1.0e-5)
-    if minconv < 1.9:
-      sys.exit(1)
+    minconv = taylor_test(Jfunc, m, Jm, dJdm, seed=5.0e-2)
+    assert minconv > 1.9
