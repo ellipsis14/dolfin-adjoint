@@ -28,9 +28,6 @@ on an L-shaped domain using Chorin's splitting method."""
 from dolfin import *
 from dolfin_adjoint import *
 
-# Record all variables solved for
-dolfin.parameters["adjoint"]["record_all"] = True
-
 # Print log messages only from the root process in parallel
 parameters["std_out_all_processes"] = False;
 
@@ -69,9 +66,9 @@ def main(ic, annotate=False):
   bcp = [inflow, outflow]
 
   # Create functions
-  u0 = Function(ic)
-  u1 = Function(V)
-  p1 = Function(Q)
+  u0 = Function(ic, name="Velocity")
+  u1 = Function(V, name="VelocityNext")
+  p1 = Function(Q, name="Pressure")
 
   # Define coefficients
   k = Constant(dt)
@@ -137,23 +134,20 @@ if __name__ == "__main__":
   import sys
 
   ic = Function(V)
-  final_soln = main(ic, annotate=True)
-  adj_html("navier_stokes_forward.html", "forward")
-  adj_html("navier_stokes_adjoint.html", "adjoint")
+  soln = main(ic, annotate=True)
+
+  adj_html("forward.html", "forward")
+  adj_html("adjoint.html", "adjoint")
   replay_dolfin(forget=False)
 
-  J = Functional(inner(final_soln, final_soln)*dx*dt[FINISH_TIME])
-  for (final_adj, var) in compute_adjoint(J, forget=False):
-    pass
-
-  j = assemble(inner(final_soln, final_soln)*dx)
-
-  print "Functional value: ", j
+  J = Functional(inner(soln, soln)*dx*dt[FINISH_TIME])
+  m = InitialConditionParameter(soln)
+  Jm = assemble(inner(soln, soln)*dx)
+  dJdm = compute_gradient(J, m, forget=False)
 
   def J(ic):
     soln = main(ic)
     return assemble(inner(soln, soln)*dx)
 
-  minconv = test_initial_condition_adjoint(J, ic, final_adj, seed=1.0e-3)
-  if minconv < 1.9:
-    sys.exit(1)
+  minconv = taylor_test(J, m, Jm, dJdm)
+  assert minconv > 1.9
