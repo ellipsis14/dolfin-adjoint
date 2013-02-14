@@ -3,21 +3,18 @@ import sys
 from dolfin import *
 from dolfin_adjoint import *
 
-dolfin.parameters["adjoint"]["record_all"] = True
-
 f = Expression("x[0]*(x[0]-1)*x[1]*(x[1]-1)")
 mesh = UnitSquareMesh(4, 4)
 V = FunctionSpace(mesh, "CG", 1)
 
-def run_forward(initial_condition=None, annotate=True, dump=True):
+def main(ic, annotate=True):
   u = TrialFunction(V)
   v = TestFunction(V)
 
-  u_0 = Function(V)
-  if initial_condition is not None:
-    u_0.assign(initial_condition)
+  u_0 = Function(V, name="Solution")
+  u_0.assign(ic, annotate=False)
 
-  u_1 = Function(V)
+  u_1 = Function(V, name="NextSolution")
 
   dt = Constant(0.1)
 
@@ -31,48 +28,30 @@ def run_forward(initial_condition=None, annotate=True, dump=True):
   T = 1.0
   n = 1
 
-  if dump:
-    u_out = File("u.pvd", "compressed")
-    u_out << u_0
-
   while t <= T:
 
       solve(a == L, u_0, bc, annotate=annotate)
-      #solve(a == L, u_0, annotate=annotate)
-
       t += float(dt)
-      if dump:
-        u_out << u_0
 
   return u_0
 
 if __name__ == "__main__":
 
-  final_forward = run_forward()
+  ic = Function(V, name="InitialCondition")
+  u = main(ic)
 
-  adj_html("heat_forward.html", "forward")
-  adj_html("heat_adjoint.html", "adjoint")
+  adj_html("forward.html", "forward")
+  adj_html("adjoint.html", "adjoint")
 
-  # The functional is only a function of final state.
-  functional=Functional(final_forward*final_forward*dx*dt[FINISH_TIME])
-  dJdic = compute_gradient(functional, InitialConditionParameter(final_forward), forget=False)
+  J = Functional(u*u*dx*dt[FINISH_TIME])
+  m = InitialConditionParameter(u)
+  Jm = assemble(u*u*dx)
+  dJdm = compute_gradient(J, m, forget=False)
+  HJm  = hessian(J, m)
 
   def J(ic):
-    perturbed_u0 = run_forward(initial_condition=ic, annotate=False, dump=False)
-    return assemble(perturbed_u0*perturbed_u0*dx)
+    u = main(ic, annotate=False)
+    return assemble(u*u*dx)
 
-  minconv = test_initial_condition_adjoint(J, Function(V), dJdic, seed=10.0)
-
-  if minconv < 1.9:
-    sys.exit(1)
-
-  dJ = assemble(derivative(final_forward*final_forward*dx, final_forward))
-
-  ic = final_forward
-  ic.vector()[:] = 0
-
-  minconv = test_initial_condition_tlm(J, dJ, ic, seed=1.0)
-
-  if minconv < 1.9:
-    sys.exit(1)
-
+  minconv = taylor_test(J, m, Jm, dJdm, seed=10.0)
+  assert minconv > 1.9
