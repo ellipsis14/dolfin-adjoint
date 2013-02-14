@@ -212,9 +212,9 @@ def main(ic, params, amplitude, T=1.0, dt=0.01, annotate=False):
 
     # Define functions for previous timestep (z_), half-time (z_star)
     # and current (z)
-    z_ = Function(ic)
-    z_star = Function(Z)
-    z = Function(Z)
+    z_ = Function(ic, name="Solution")
+    z_star = Function(Z, name="SolutionStar")
+    z = Function(Z, name="SolutionNext")
 
     # Boundary conditions
     v_D_mid = Function(V) # Velocity condition at half time
@@ -287,10 +287,7 @@ if __name__ == "__main__":
     dt = 0.01
     set_log_level(PROGRESS)
 
-    dolfin.parameters["adjoint"]["record_all"] = True
     ic = Function(Z)
-    ic_copy = Function(ic)
-
     # Play forward run
     info_blue("Running forward ... ")
     z = main(ic, params, amplitude, T=T, dt=dt, annotate=True)
@@ -302,58 +299,19 @@ if __name__ == "__main__":
 
     # Use elastic/viscous traction on vertical plane as goal
     (sigma0, sigma1, v, gamma) = split(z)
-    sigma = sigma0 + sigma1
     dtm = TimeMeasure()
+
     J = Functional(inner(sigma0[2], sigma0[2])*dx*dtm[FINISH_TIME])
-    param = ScalarParameter(amplitude)
-    adjointer = adjglobals.adjointer
-
-# Copy the code from compute_gradient:
-    #dJdp = compute_gradient(J, ScalarParameter(amplitude))
-# as we want to also dump out norms of the adjoint solution.
-#   --------------------------------------------------------------
-    norm0s = []
-    norm1s = []
-    dJdparam = None
-
-    for i in range(adjointer.equation_count)[::-1]:
-      (adj_var, output) = adjointer.get_adjoint_solution(i, J)
-
-      storage = libadjoint.MemoryStorage(output)
-      adjointer.record_variable(adj_var, storage)
-      fwd_var = libadjoint.Variable(adj_var.name, adj_var.timestep, adj_var.iteration)
-
-      out = param.inner_adjoint(adjointer, output.data, i, fwd_var)
-      if dJdparam is None:
-        dJdparam = out
-      elif dJdparam is not None and out is not None:
-        dJdparam += out
-
-      if adj_var.name == "w_{10}":
-        (adj_sigma0, adj_sigma1, adj_v, adj_gamma) = output.data.split()
-        norm0s += [norm(adj_sigma0)]
-        norm1s += [norm(adj_sigma1)]
-
-      adjointer.forget_adjoint_equation(i)
-    dJdp = dJdparam
-#   --------------------------------------------------------------
-
-    print "dJ/dp: ", dJdp
-    #print "norm0s: ", norm0s
-    #print "norm1s: ", norm1s
+    Jm = assemble(inner(sigma0[2], sigma0[2])*dx)
+    m = ScalarParameter(amplitude)
+    dJdm = compute_gradient(J, ScalarParameter(amplitude))
 
     def Jfunc(amplitude):
-      ic.vector()[:] = ic_copy.vector()
       z = main(ic, params, amplitude, T=T, dt=dt, annotate=False)
       (sigma0, sigma1, v, gamma) = split(z)
-      sigma = sigma0 + sigma1
       J = assemble(inner(sigma0[2], sigma0[2])*dx)
-      print "J(.): ", J
       return J
 
     info_blue("Checking adjoint correctness ... ")
-    minconv = test_scalar_parameter_adjoint(Jfunc, amplitude, dJdp)
-
-    if minconv < 1.8:
-      sys.exit(1)
-
+    minconv = taylor_test(Jfunc, m, Jm, dJdm)
+    assert minconv > 1.8
