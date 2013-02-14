@@ -153,8 +153,13 @@ class hessian(object):
     self.J = J
     self.m = m
 
+    dolfin.info_red("Warning: Hessian computation is still experimental and is known to not work for some problems. Please Taylor test thoroughly.")
+
     if not isinstance(m, (InitialConditionParameter, ScalarParameter)):
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Sorry, Hessian computation only works for InitialConditionParameter|SteadyParameter|TimeConstantParameter|ScalarParameter so far.")
+
+    if isinstance(m, ScalarParameter):
+      dolfin.info_red("Warning: Hessian computation with ScalarParameter will only work if your equations depend *linearly* on your parameter. This is not checked.")
 
   def __call__(self, m_dot):
 

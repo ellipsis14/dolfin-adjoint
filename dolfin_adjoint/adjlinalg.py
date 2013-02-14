@@ -186,8 +186,8 @@ class Vector(libadjoint.Vector):
   def write(self, var):
     filename = str(var)
     suffix = "xml"
-    if not os.path.isfile(filename+".%s" % suffix):
-      dolfin.info_red("Warning: Overwriting checkpoint file "+filename+"."+suffix)
+    #if not os.path.isfile(filename+".%s" % suffix):
+    #  dolfin.info_red("Warning: Overwriting checkpoint file "+filename+"."+suffix)
     file = dolfin.File(filename+".%s" % suffix)
     file << self.data
 
