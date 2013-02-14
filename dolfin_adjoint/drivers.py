@@ -153,6 +153,9 @@ class hessian(object):
     self.J = J
     self.m = m
 
+    if not isinstance(m, InitialConditionParameter):
+      raise libadjoint.exceptions.LibadjointErrorNotImplemented("Sorry, Hessian computation only works for InitialConditionParameter|SteadyParameter|TimeConstantParameter so far.")
+
   def __call__(self, m_dot):
 
     self.m_p = self.m.set_perturbation(m_dot)
