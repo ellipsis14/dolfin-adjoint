@@ -35,5 +35,5 @@ if __name__ == "__main__":
 
   Jm = Jhat(m)
 
-  minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, HJm=HJm)
+  minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, HJm=HJm, perturbation_direction=interpolate(Constant(0.1), V))
   assert minconv > 2.9

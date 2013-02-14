@@ -151,5 +151,5 @@ if __name__ == "__main__":
     soln = main(ic)
     return assemble(inner(soln, soln)**1*dx)
 
-  minconv = taylor_test(J, m, Jm, dJdm, HJm=HJm)
-  assert minconv > 2.8
+  minconv = taylor_test(J, m, Jm, dJdm, HJm=HJm, perturbation_direction=interpolate(Constant((1.0, 1.0)), V))
+  assert minconv > 2.7
