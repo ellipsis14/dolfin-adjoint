@@ -34,10 +34,8 @@ def main(ic, annotate=False):
     end = float(timestep) - 1.0e-14 # only do one timestep please
     u = Function(V)
 
-    solver_parameters = {"linear_solver": "default", "preconditioner": "none",
-                         "krylov_solver": {"relative_tolerance": 1.0e-10}}
     while (t <= end):
-        solve(a == L, u, bc, solver_parameters=solver_parameters, annotate=annotate)
+        solve(a == L, u, bc, annotate=annotate)
 
         u_.assign(u, annotate=annotate)
         t += float(timestep)

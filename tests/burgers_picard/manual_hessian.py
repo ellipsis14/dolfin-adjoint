@@ -51,7 +51,10 @@ def tlm(u, m, m_dot):
   dFmdm = derivative(Fm, m, m_dot)
   u_tlm = Function(V)
 
-  solve(action(dFmdu, u_tlm) + dFmdm == 0, u_tlm, bcs=hbcs)
+  tlm_F = action(dFmdu, u_tlm) + dFmdm
+  tlm_F = replace(tlm_F, {u_tlm: TrialFunction(V)})
+
+  solve(lhs(tlm_F) == rhs(tlm_F), u_tlm, bcs=hbcs)
   return u_tlm
 
 def adj(u, m):
@@ -64,7 +67,10 @@ def adj(u, m):
 
   u_adj = Function(V)
 
-  solve(action(adFmdu, u_adj) - dJdu == 0, u_adj, bcs=hbcs)
+  adj_F = action(adFmdu, u_adj) - dJdu
+  adj_F = replace(adj_F, {u_adj: TrialFunction(V)})
+
+  solve(lhs(adj_F) == rhs(adj_F), u_adj, bcs=hbcs)
   return u_adj
 
 def dJ(u, m, u_adj):
@@ -97,12 +103,14 @@ def soa(u, m, u_tlm, u_adj, m_dot):
   u_soa = Function(V)
 
   # Implement the second-order adjoint equation
-  Fsoa = (action(dFdudu, u_adj) +
+  soa_F = (action(dFdudu, u_adj) +
           action(dFdudm, u_adj) + 
           action(adFmdu, u_soa) + # <-- the lhs term
          -dJdudu
          -dJdudm)
-  solve(Fsoa == 0, u_soa, bcs=hbcs)
+  soa_F = replace(soa_F, {u_soa: TrialFunction(V)})
+
+  solve(lhs(soa_F) == rhs(soa_F), u_soa, bcs=hbcs)
   return u_soa
 
 def HJ(u, m):
