@@ -11,8 +11,6 @@ n = 100
 mesh = UnitIntervalMesh(n)
 V = FunctionSpace(mesh, "CG", 2)
 
-dolfin.parameters["adjoint"]["test_derivative"] = True
-
 def Dt(u, u_, timestep):
     return (u - u_)/timestep
 
@@ -23,8 +21,7 @@ def main(ic, annotate=False):
     v = TestFunction(V)
 
     nu = Constant(0.0001)
-
-    timestep = Constant(1.0/n)
+    timestep = Constant(1.0)
 
     F = (Dt(u, u_, timestep)*v
          + u_*u.dx(0)*v + nu*u.dx(0)*v.dx(0))*dx
@@ -34,7 +31,7 @@ def main(ic, annotate=False):
     bc = DirichletBC(V, 0.0, "on_boundary")
 
     t = 0.0
-    end = 0.025
+    end = float(timestep) - 1.0e-14 # only do one timestep please
     u = Function(V)
 
     solver_parameters = {"linear_solver": "default", "preconditioner": "none",
@@ -43,7 +40,6 @@ def main(ic, annotate=False):
         solve(a == L, u, bc, solver_parameters=solver_parameters, annotate=annotate)
 
         u_.assign(u, annotate=annotate)
-
         t += float(timestep)
 
     return u_
@@ -53,8 +49,8 @@ if __name__ == "__main__":
     ic = project(Expression("sin(2*pi*x[0])"),  V)
     forward = main(ic, annotate=True)
 
-    adj_html("burgers_picard_forward.html", "forward")
-    adj_html("burgers_picard_adjoint.html", "adjoint")
+    adj_html("forward.html", "forward")
+    adj_html("adjoint.html", "adjoint")
 
     J = Functional(forward*forward*dx*dt[FINISH_TIME])
     m = InitialConditionParameter("Solution")
