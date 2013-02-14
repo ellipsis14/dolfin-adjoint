@@ -40,7 +40,7 @@ if not has_linear_algebra_backend("PETSc") and not has_linear_algebra_backend("E
     sys.exit(0)
 
 # Load mesh
-mesh = UnitCube(4, 4, 4)
+mesh = UnitCubeMesh(4, 4, 4)
 
 # Define function spaces
 V = VectorFunctionSpace(mesh, "CG", 2)
