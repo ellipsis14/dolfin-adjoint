@@ -62,5 +62,5 @@ if __name__ == "__main__":
       forward = main(ic, annotate=False)
       return assemble(inner(forward, forward)**2*dx)
 
-    minconv = taylor_test(Jfunc, m, Jm, dJdm, perturbation_direction=m_dot, seed=0.2)
-    assert minconv > 1.9
+    minconv = taylor_test(Jfunc, m, Jm, dJdm, HJm=HJm, perturbation_direction=m_dot, seed=0.2)
+#    assert minconv > 1.9
