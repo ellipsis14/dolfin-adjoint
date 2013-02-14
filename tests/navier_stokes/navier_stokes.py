@@ -34,7 +34,8 @@ parameters["std_out_all_processes"] = False;
 #parameters["mesh_partitioner"] = "SCOTCH";
 
 # Load mesh from file
-mesh = Mesh("lshape.xml.gz")
+#mesh = Mesh("lshape.xml.gz")
+mesh = UnitSquareMesh(2, 2)
 
 # Define function spaces (P2-P1)
 V = VectorFunctionSpace(mesh, "CG", 2)
@@ -46,7 +47,7 @@ p = TrialFunction(Q)
 v = TestFunction(V)
 q = TestFunction(Q)
 
-def main(ic, annotate=False):
+def main(ic):
   # Set parameter values
   dt = 0.01
   T = 0.05
@@ -134,20 +135,21 @@ if __name__ == "__main__":
   import sys
 
   ic = Function(V)
-  soln = main(ic, annotate=True)
+  soln = main(ic)
+  parameters["adjoint"]["stop_annotating"] = True
 
   adj_html("forward.html", "forward")
   adj_html("adjoint.html", "adjoint")
-  replay_dolfin(forget=False)
 
-  J = Functional(inner(soln, soln)*dx*dt[FINISH_TIME])
+  J = Functional(inner(soln, soln)**1*dx*dt[FINISH_TIME])
   m = InitialConditionParameter(soln)
-  Jm = assemble(inner(soln, soln)*dx)
+  Jm = assemble(inner(soln, soln)**1*dx)
   dJdm = compute_gradient(J, m, forget=False)
+  HJm  = hessian(J, m)
 
   def J(ic):
     soln = main(ic)
-    return assemble(inner(soln, soln)*dx)
+    return assemble(inner(soln, soln)**1*dx)
 
   minconv = taylor_test(J, m, Jm, dJdm)
-  assert minconv > 1.9
+  assert minconv > 1.8
