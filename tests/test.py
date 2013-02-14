@@ -32,6 +32,7 @@ parser = OptionParser()
 parser.add_option("-n", type="int", dest="num_procs", default = 1, help = "To run on N cores, use -n N; to use all processors available, run test.py -n 0.")
 parser.add_option("-t", type="string", dest="test_name", help = "To run one specific test, use -t TESTNAME. By default all test are run.")
 parser.add_option("-s", dest="short_only", default = False, action="store_true", help = "To run the short tests only, use -s. By default all test are run.")
+parser.add_option("--timings", dest="timings", default=False, action="store_true", help = "Print timings of tests.")
 (options, args) = parser.parse_args(sys.argv)
 
 if options.num_procs <= 0:
@@ -49,7 +50,7 @@ if options.test_name:
   else:
     subdirs = [options.test_name]
 
-long_tests = ["viscoelasticity"] # special case the very long tests for speed
+long_tests = ["viscoelasticity", "cahn_hilliard", "optimization", "svd_burgers_perturb", "supg", "mpec"] # special case the very long tests for speed
 for test in long_tests:
   subdirs.remove(test)
 
@@ -59,6 +60,8 @@ pythonpath = os.pathsep.join([os.path.abspath(os.path.join(basedir,
                                                            os.path.pardir)),
                               orig_pythonpath])
 os.putenv('PYTHONPATH', pythonpath)
+
+timings = {}
 
 def f(subdir):
   test_cmd = test_cmds.get(subdir, 'python %s.py' % subdir)
@@ -75,7 +78,10 @@ def f(subdir):
 
     chdirlock.release()
 
+    start_time = time.time()
     exit = os.system(test_cmd)
+    end_time   = time.time()
+    timings[subdir] = end_time - start_time
     if exit != 0:
       print "subdir: ", subdir
       print "exit: ", exit
@@ -87,6 +93,10 @@ tests = sorted(subdirs)
 if not options.short_only:
   tests = long_tests + tests
 pool.map(f, tests)
+
+if options.timings:
+  for subdir in sorted(timings, key=timings.get, reverse=True):
+    print "%s : %s s" % (subdir, timings[subdir])
 
 if len(fails) > 0:
   print "Failures: ", set(fails)
