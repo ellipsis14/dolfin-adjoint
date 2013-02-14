@@ -31,7 +31,7 @@ def main(ic, annotate=False):
     bc = DirichletBC(V, 0.0, "on_boundary")
 
     t = 0.0
-    end = float(timestep) - 1.0e-14 # only do one timestep please
+    end = 3.0 # set to 1.0 - eps to compare against manual_hessian.py
     u = Function(V)
 
     while (t <= end):
