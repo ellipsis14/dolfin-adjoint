@@ -66,5 +66,5 @@ if __name__ == "__main__":
 
     HJic = hessian(J, InitialConditionParameter("Velocity"))
 
-    minconv = taylor_test(Jfunc, InitialConditionParameter("Velocity"), Jic, dJdic, HJm=HJic, seed=1.0e-2)
+    minconv = taylor_test(Jfunc, InitialConditionParameter("Velocity"), Jic, dJdic, HJm=HJic, seed=1.0e-3, perturbation_direction=interpolate(Expression("cos(x[0])"), V))
     assert minconv > 2.7
