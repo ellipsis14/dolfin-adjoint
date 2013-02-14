@@ -43,7 +43,6 @@ def J(u, m):
 def Jhat(m):
   u = main(m)
   Jm = J(u, m)
-  print "Jhat returning: ", assemble(Jm)
   return assemble(Jm)
 
 def tlm(u, m, m_dot):
@@ -221,17 +220,18 @@ if __name__ == "__main__":
   u_adj = adj(u, m)
 
   dJdm = dJ(u, m, u_adj)
-  info_green("Applying Taylor test to gradient computed with adjoint ... ")
-  minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, value=m)
-  assert minconv > 1.8
+  #info_green("Applying Taylor test to gradient computed with adjoint ... ")
+  #minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, value=m)
+  #assert minconv > 1.8
 
-  info_green("Applying Taylor test to du/dm ... ")
-  little_taylor_test_dudm(m)
+  #info_green("Applying Taylor test to du/dm ... ")
+  #little_taylor_test_dudm(m)
 
-  info_green("Applying Taylor test to dlambda/dm ... ")
-  little_taylor_test_dlambdadm(m)
+  #info_green("Applying Taylor test to dlambda/dm ... ")
+  #little_taylor_test_dlambdadm(m)
 
   HJm = HJ(u, m)
   info_green("Applying Taylor test to Hessian computed with second-order adjoint ... ")
-  minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, HJm=HJm, value=m, perturbation_direction=m_dot, seed=0.2)
+  #minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, HJm=HJm, value=m, perturbation_direction=m_dot, seed=0.2)
+  minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, value=m, perturbation_direction=m_dot, seed=0.2)
   assert minconv > 2.8

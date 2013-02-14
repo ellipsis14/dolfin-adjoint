@@ -7,9 +7,9 @@ import sys
 from dolfin import *
 from dolfin_adjoint import *
 
-n = 100
+n = 2
 mesh = UnitIntervalMesh(n)
-V = FunctionSpace(mesh, "CG", 2)
+V = FunctionSpace(mesh, "CG", 1)
 
 def Dt(u, u_, timestep):
     return (u - u_)/timestep
@@ -46,21 +46,23 @@ def main(ic, annotate=False):
 
 if __name__ == "__main__":
 
-    ic = project(Expression("sin(2*pi*x[0])"),  V)
+    ic = project(Constant(1.0),  V)
     forward = main(ic, annotate=True)
 
     adj_html("forward.html", "forward")
     adj_html("adjoint.html", "adjoint")
 
-    J = Functional(forward*forward*dx*dt[FINISH_TIME])
+    J = Functional(inner(forward, forward)**2*dx*dt[FINISH_TIME])
     m = InitialConditionParameter("Solution")
 
-    Jm = assemble(forward*forward*dx)
+    Jm   = assemble(inner(forward, forward)**2*dx)
     dJdm = compute_gradient(J, m, forget=False)
+    HJm  = hessian(J, m)
+    m_dot = interpolate(Constant(1.0), V)
 
     def Jfunc(ic):
       forward = main(ic, annotate=False)
-      return assemble(forward*forward*dx)
+      return assemble(inner(forward, forward)**2*dx)
 
-    minconv = taylor_test(Jfunc, m, Jm, dJdm, seed=5.0e-2)
+    minconv = taylor_test(Jfunc, m, Jm, dJdm, perturbation_direction=m_dot, seed=0.2)
     assert minconv > 1.9
