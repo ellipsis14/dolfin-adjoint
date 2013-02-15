@@ -144,8 +144,9 @@ if __name__ == "__main__":
   J = Functional(inner(soln, soln)**1*dx*dt[FINISH_TIME] + inner(soln, soln)*dx*dt[START_TIME])
   m = InitialConditionParameter(soln)
   Jm = assemble(inner(soln, soln)**1*dx + inner(ic, ic)*dx)
-  dJdm = compute_gradient(J, m, forget=False)
-  HJm  = hessian(J, m)
+  rf = ReducedFunctional(J, m)
+  dJdm = rf.derivative(forget=None)[0]
+  HJm  = lambda m_dot: rf.hessian(m_dot)[0]
 
   def J(ic):
     soln = main(ic)

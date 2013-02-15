@@ -24,16 +24,14 @@ if __name__ == "__main__":
   parameters["adjoint"]["stop_annotating"] = True
 
   J = Functional((inner(u, u))**6*dx, name="NormSquared")
-  dJdm = compute_gradient(J, TimeConstantParameter(m), forget=False)
-  HJm  = hessian(J, TimeConstantParameter(m))
-
-  adj_html("forward.html", "forward")
+  Jm = assemble(inner(u, u)**6*dx)
+  rf = ReducedFunctional(J, TimeConstantParameter(m))
+  dJdm = rf.derivative(forget=None)[0]
+  HJm  = lambda m_dot: rf.hessian(m_dot)[0]
 
   def Jhat(m):
     u = main(m)
     return assemble(inner(u, u)**6*dx)
-
-  Jm = Jhat(m)
 
   minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, HJm=HJm, perturbation_direction=interpolate(Constant(0.1), V))
   assert minconv > 2.9

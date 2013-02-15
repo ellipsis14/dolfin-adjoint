@@ -11,6 +11,14 @@ def unlist(x):
     else:
         return x
 
+def copy_data(m):
+    if hasattr(m, "vector"): 
+        return Function(m.functionspace())
+    elif hasattr(m, "value_size"): 
+        return Constant(m(()))
+    else:
+        raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
+
 def get_global(m_list):
     ''' Takes a (optional a list of) distributed object(s) and returns one numpy array containing their global values '''
     if not isinstance(m_list, (list, tuple)):
@@ -128,6 +136,9 @@ class ReducedFunctional(object):
         self.derivative_cb = derivative_cb
         self.current_func_value = None
 
+        assert(len(parameter) == 1)
+        self.H = drivers.hessian(functional, parameter[0])
+
     def __call__(self, value):
         ''' Evaluates the reduced functional for the given parameter value, by replaying the forward model.
             Note: before using this evaluation, make sure that the forward model has been annotated. '''
@@ -182,9 +193,9 @@ class ReducedFunctional(object):
             self.eval_cb(self.scale * func_value, unlist(value))
         return self.scale * func_value
 
-    def derivative(self):
+    def derivative(self, forget=True):
         ''' Evaluates the derivative of the reduced functional for the lastly evaluated parameter value. ''' 
-        dfunc_value = drivers.compute_gradient(self.functional, self.parameter)
+        dfunc_value = drivers.compute_gradient(self.functional, self.parameter, forget=forget)
         adjointer.reset_revolve()
         scaled_dfunc_value = []
         for df in list(dfunc_value):
@@ -200,15 +211,13 @@ class ReducedFunctional(object):
 
     def hessian(self, m_dot):
         ''' Evaluates the Hessian action in direction m_dot. '''
-        assert(len(self.m) == 1)
+        assert(len(self.parameter) == 1)
 
-        H = drivers.hessian(self.J, self.m[0])
-
-        Hm = H(m_dot)
+        Hm = self.H(m_dot)
         if hasattr(Hm, 'function_space'):
-            return dolfin.Function(Hm.vector() * self.scale, Hm.function_space())
+            return [Function(Hm.function_space(), Hm.vector() * self.scale)]
         else:
-            return self.scale * Hm
+            return [self.scale * Hm]
 
     def eval_array(self, m_array):
         ''' An implementation of the reduced functional evaluation
@@ -252,3 +261,26 @@ class ReducedFunctional(object):
             self.eval_array(m_array) 
 
         return dJdm_global 
+
+    def hessian_array(self, m_array, m_dot_array):
+        ''' An implementation of the reduced functional hessian action evaluation 
+            that accepts the parameter as an array of scalars. ''' 
+
+        # In the case that the parameter values have changed since the last forward run, 
+        # we first need to rerun the forward model with the new parameters to have the 
+        # correct forward solutions
+        m = [p.data() for p in self.parameter]
+        if (m_array != get_global(m)).any():
+            self.eval_array(m_array) 
+
+            # Clear the adjoint solution as we need to recompute them 
+            for i in range(adjglobals.adjointer.equation_count):
+                adjglobals.adjointer.forget_adjoint_values(i)
+
+        set_local(m, m_array)
+        self.H.update(m)
+
+        m_dot = [copy_data(p.data()) for p in self.parameter] 
+        set_local(m_dot, m_dot_array)
+
+        return get_global(self.hessian(m_dot)) 
