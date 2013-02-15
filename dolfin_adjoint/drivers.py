@@ -161,6 +161,9 @@ class hessian(object):
     if isinstance(m, ScalarParameter):
       dolfin.info_red("Warning: Hessian computation with ScalarParameter will only work if your equations depend *linearly* on your parameter. This is not checked.")
 
+  def update(self, m):
+    pass
+
   def __call__(self, m_dot):
 
     m_p = self.m.set_perturbation(m_dot)

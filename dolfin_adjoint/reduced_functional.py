@@ -13,7 +13,7 @@ def unlist(x):
 
 def copy_data(m):
     if hasattr(m, "vector"): 
-        return Function(m.functionspace())
+        return Function(m.function_space())
     elif hasattr(m, "value_size"): 
         return Constant(m(()))
     else:
@@ -213,7 +213,7 @@ class ReducedFunctional(object):
         ''' Evaluates the Hessian action in direction m_dot. '''
         assert(len(self.parameter) == 1)
 
-        Hm = self.H(m_dot)
+        Hm = self.H(m_dot[0])
         if hasattr(Hm, 'function_space'):
             return [Function(Hm.function_space(), Hm.vector() * self.scale)]
         else:
@@ -232,7 +232,7 @@ class ReducedFunctional(object):
         set_local(m, m_array)
         return self(m)
 
-    def derivative_array(self, m_array, taylor_test = False, seed = 0.001):
+    def derivative_array(self, m_array, taylor_test = False, seed = 0.001, forget = True):
         ''' An implementation of the reduced functional derivative evaluation 
             that accepts the parameter as an array of scalars  
             If taylor_test = True, the derivative is automatically verified 
@@ -247,7 +247,7 @@ class ReducedFunctional(object):
         if (m_array != get_global(m)).any():
             self.eval_array(m_array) 
 
-        dJdm = self.derivative() 
+        dJdm = self.derivative(forget=forget) 
         dJdm_global = get_global(dJdm)
 
         # Perform the gradient test

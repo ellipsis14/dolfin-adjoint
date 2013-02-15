@@ -6,9 +6,8 @@ import numpy
 import sys
 
 def serialise_bounds(bounds, m):
-    ''' Converts bounds to an array of (min, max) tuples and serialises it in a parallel environment. '''
+    ''' Converts bounds to an array of (min, max) tuples and serialises it in a parallel environment. ''' 
 
-    # Convert the bounds into the canoncial array form [ [lower_bound1, lower_bound2, ... ], [upper_bound1, upper_bound2, ...] ]
     if len(numpy.array(bounds).shape) == 1:
         bounds = numpy.array([[b] for b in bounds])
 
@@ -28,13 +27,14 @@ def serialise_bounds(bounds, m):
     # Transpose and return the array to get the form [ [lower_bound1, upper_bound1], [lower_bound2, upper_bound2], ... ] 
     return numpy.array(bounds_arr).T
 
-def minimize_scipy_generic(J, dJ, m, method, bounds = None, **kwargs):
+def minimize_scipy_generic(J, dJ, m, method, bounds = None, H = None, **kwargs):
     ''' Interface to the generic minimize method in scipy '''
+
     try:
         from scipy.optimize import minimize as scipy_minimize
     except ImportError:
         print "**************** Deprecated warning *****************"
-        print "You have a old version of scipy (<0.11). This version is only partly supported by dolfin-adjoint and many things will not work."
+        print "You have a old version of scipy (<0.11). This version is only partially supported by dolfin-adjoint and many things will not work."
         raise ImportError
 
     m_global = get_global(m)
@@ -52,6 +52,10 @@ def minimize_scipy_generic(J, dJ, m, method, bounds = None, **kwargs):
     # For gradient-based methods add the derivative function to the argument list 
     if method not in ["COBYLA", "Nelder-Mead", "Anneal", "Powell"]:
         kwargs["jac"] = dJ
+
+    # For Hessian-based methods add the Hessian action function to the argument list
+    if method in ["Newton-CG"]:
+        kwargs["hessp"] = H
 
     if bounds != None:
         bounds = serialise_bounds(bounds, m)
@@ -218,8 +222,15 @@ def minimize(reduced_func, method = 'L-BFGS-B', scale = 1.0, **kwargs):
     if algorithm == minimize_scipy_generic:
         kwargs["method"] = method 
 
-    dj = lambda m: reduced_func.derivative_array(m, taylor_test = dolfin.parameters["optimization"]["test_gradient"], seed = dolfin.parameters["optimization"]["test_gradient_seed"])
-    opt = algorithm(reduced_func.eval_array, dj, [p.data() for p in reduced_func.parameter], **kwargs)
+    if method in ["Newton-CG"]:
+        dj = lambda m: reduced_func.derivative_array(m, taylor_test = dolfin.parameters["optimization"]["test_gradient"], 
+                                                        seed = dolfin.parameters["optimization"]["test_gradient_seed"],
+                                                        forget = False)
+    else:
+        dj = lambda m: reduced_func.derivative_array(m, taylor_test = dolfin.parameters["optimization"]["test_gradient"], 
+                                                        seed = dolfin.parameters["optimization"]["test_gradient_seed"])
+
+    opt = algorithm(reduced_func.eval_array, dj, [p.data() for p in reduced_func.parameter], H = reduced_func.hessian_array, **kwargs)
     if len(opt) == 1:
         return opt[0]
     else:
