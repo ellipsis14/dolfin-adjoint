@@ -94,7 +94,7 @@ if __name__ == "__main__":
                    "COBYLA": {"bounds": None, "rhobeg": 0.1},
                    "TNC": {"bounds": None},
                    "L-BFGS-B": {"bounds": (lb, 1)},
-                   "Newton-CG": {"bounds": None, "maxiter": 1},
+                   "Newton-CG": {"bounds": None},
                    "Nelder-Mead": {"bounds": None }, 
                    "Anneal": {"bounds": None, "lower": -0.1, "upper": 0.1},
                    "CG": {"bounds": None},
