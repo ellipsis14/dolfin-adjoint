@@ -1,6 +1,6 @@
 import libadjoint
 import numpy
-from dolfin import cpp, info, project
+from dolfin import cpp, info, project, Function
 from dolfin_adjoint import adjlinalg, adjrhs, constant, utils, drivers
 from dolfin_adjoint.adjglobals import adjointer, mem_checkpoints, disk_checkpoints
 
@@ -180,23 +180,35 @@ class ReducedFunctional(object):
         self.current_func_value = func_value 
         if self.eval_cb:
             self.eval_cb(self.scale * func_value, unlist(value))
-        return func_value
+        return self.scale * func_value
 
     def derivative(self):
         ''' Evaluates the derivative of the reduced functional for the lastly evaluated parameter value. ''' 
         dfunc_value = drivers.compute_gradient(self.functional, self.parameter)
         adjointer.reset_revolve()
-        if self.derivative_cb:
-            scaled_dfunc_value = []
-            for df in list(dfunc_value):
-                if hasattr(df, "function_space"):
-                    scaled_dfunc_value.append(project(self.scale * df, df.function_space()))
-                else:
-                    scaled_dfunc_value.append(self.scale * df)
+        scaled_dfunc_value = []
+        for df in list(dfunc_value):
+            if hasattr(df, "function_space"):
+                scaled_dfunc_value.append(Function(df.function_space(), self.scale * df.vector()))
+            else:
+                scaled_dfunc_value.append(self.scale * df)
 
+        if self.derivative_cb:
             self.derivative_cb(self.scale * self.current_func_value, unlist(scaled_dfunc_value), unlist([p.data() for p in self.parameter]))
 
-        return dfunc_value
+        return scaled_dfunc_value
+
+    def hessian(self, m_dot):
+        ''' Evaluates the Hessian action in direction m_dot. '''
+        assert(len(self.m) == 1)
+
+        H = drivers.hessian(self.J, self.m[0])
+
+        Hm = H(m_dot)
+        if hasattr(Hm, 'function_space'):
+            return dolfin.Function(Hm.vector() * self.scale, Hm.function_space())
+        else:
+            return self.scale * Hm
 
     def eval_array(self, m_array):
         ''' An implementation of the reduced functional evaluation
@@ -209,7 +221,7 @@ class ReducedFunctional(object):
         # Set the parameter values and execute the reduced functional
         m = [p.data() for p in self.parameter]
         set_local(m, m_array)
-        return self.scale * self(m)
+        return self(m)
 
     def derivative_array(self, m_array, taylor_test = False, seed = 0.001):
         ''' An implementation of the reduced functional derivative evaluation 
@@ -239,4 +251,4 @@ class ReducedFunctional(object):
                 info("Gradient test succesfull.")
             self.eval_array(m_array) 
 
-        return self.scale * dJdm_global 
+        return dJdm_global 
