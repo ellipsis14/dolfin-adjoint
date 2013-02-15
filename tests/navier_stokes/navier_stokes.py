@@ -141,15 +141,15 @@ if __name__ == "__main__":
   adj_html("forward.html", "forward")
   adj_html("adjoint.html", "adjoint")
 
-  J = Functional(inner(soln, soln)**1*dx*dt[FINISH_TIME])
+  J = Functional(inner(soln, soln)**1*dx*dt[FINISH_TIME] + inner(soln, soln)*dx*dt[START_TIME])
   m = InitialConditionParameter(soln)
-  Jm = assemble(inner(soln, soln)**1*dx)
+  Jm = assemble(inner(soln, soln)**1*dx + inner(ic, ic)*dx)
   dJdm = compute_gradient(J, m, forget=False)
   HJm  = hessian(J, m)
 
   def J(ic):
     soln = main(ic)
-    return assemble(inner(soln, soln)**1*dx)
+    return assemble(inner(soln, soln)**1*dx + inner(ic, ic)*dx)
 
   minconv = taylor_test(J, m, Jm, dJdm, HJm=HJm, perturbation_direction=interpolate(Constant((1.0, 1.0)), V))
   assert minconv > 2.7

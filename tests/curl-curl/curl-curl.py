@@ -40,14 +40,14 @@ def main(dbdt, annotate=False):
 if __name__ == "__main__":
   dbdt = Constant(1.0, name="dbdt")
   J = main(dbdt, annotate=True)
-  Jc = assemble(inner(J, J)**2*dx)
-  Jf = Functional(inner(J, J)**2*dx*dt[FINISH_TIME]); m = ScalarParameter("dbdt")
+  Jc = assemble(inner(J, J)**2*dx + inner(dbdt, dbdt)*dx)
+  Jf = Functional(inner(J, J)**2*dx*dt[FINISH_TIME] + inner(dbdt, dbdt)*dx*dt[START_TIME]); m = ScalarParameter("dbdt")
   dJdc = compute_gradient(Jf, m, forget=False)
   HJc = hessian(Jf, m)
 
   def J(c):
     j = main(c, annotate=False)
-    return assemble(inner(j, j)**2*dx)
+    return assemble(inner(j, j)**2*dx + inner(c, c)*dx)
 
   minconv = taylor_test(J, ScalarParameter("dbdt"), Jc, dJdc, HJm=HJc)
 

@@ -163,7 +163,8 @@ class hessian(object):
 
   def __call__(self, m_dot):
 
-    self.m_p = self.m.set_perturbation(m_dot)
+    m_p = self.m.set_perturbation(m_dot)
+    last_timestep = adjglobals.adjointer.timestep_count
 
     if hasattr(m_dot, 'function_space'):
       Hm = dolfin.Function(m_dot.function_space())
@@ -173,14 +174,14 @@ class hessian(object):
       raise NotImplementedError("Sorry, don't know how to handle this")
 
     # run the tangent linear model
-    for output in compute_tlm(self.m_p, forget=None):
+    for output in compute_tlm(m_p, forget=None):
       pass
 
     # run the adjoint and second-order adjoint equations.
     i = adjglobals.adjointer.equation_count
     for (adj, adj_var) in compute_adjoint(self.J, forget=None):
       i = i - 1
-      (soa_var, soa_vec) = adjglobals.adjointer.get_soa_solution(i, self.J, self.m_p)
+      (soa_var, soa_vec) = adjglobals.adjointer.get_soa_solution(i, self.J, m_p)
       soa = soa_vec.data
 
       # now implement the Hessian action formula.
@@ -190,6 +191,16 @@ class hessian(object):
           Hm.vector().axpy(1.0, out.vector())
         elif isinstance(Hm, float):
           Hm += out
+
+      if last_timestep > adj_var.timestep:
+        # We have hit a new timestep, and need to compute this timesteps' \partial^2 J/\partial m^2 contribution
+        last_timestep = adj_var.timestep
+        out = self.m.partial_second_derivative(adjglobals.adjointer, self.J, adj_var.timestep, m_dot)
+        if out is not None:
+          if isinstance(Hm, dolfin.Function):
+            Hm.vector().axpy(1.0, out.vector())
+          elif isinstance(Hm, float):
+            Hm += out
 
       storage = libadjoint.MemoryStorage(soa_vec)
       storage.set_overwrite(True)

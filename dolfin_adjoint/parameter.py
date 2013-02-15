@@ -25,7 +25,7 @@ class DolfinAdjointParameter(libadjoint.Parameter):
     associated with a particular equation.
 
     Given the adjoint solution adjoint, this function is to compute
-    inner(adjoint, diff(F, m))
+    inner(adjoint, derivative(F, m))
 
     where F is a particular equation (i is its number, variable is the forward
     variable associated with it)
@@ -33,8 +33,13 @@ class DolfinAdjointParameter(libadjoint.Parameter):
     raise NotImplementedError
 
   def partial_derivative(self, adjointer, J, timestep):
-    '''Given a functional J, compute diff(J, m) -- the partial derivative of
+    '''Given a functional J, compute derivative(J, m) -- the partial derivative of
     J with respect to m. This is necessary to compute correct functional gradients.'''
+    pass
+
+  def partial_second_derivative(self, adjointer, J, timestep, m_dot):
+    '''Given a functional J, compute derivative(derivative(J, m), m, m_dot) -- the partial second derivative of
+    J with respect to m in the direction m_dot. This is necessary to compute correct functional Hessians.'''
     pass
 
   def data(self):
@@ -176,6 +181,37 @@ class ScalarParameter(DolfinAdjointParameter):
 
     d = dolfin.derivative(form, get_constant(self.a), dparam)
     d = ufl.algorithms.expand_derivatives(d)
+    if d.integrals() != ():
+      return dolfin.assemble(d)
+    else:
+      return None
+
+  def partial_second_derivative(self, adjointer, J, timestep, m_dot):
+    form = J.get_form(adjointer, timestep)
+
+    if form is None:
+      return None
+
+    for coeff in ufl.algorithms.extract_coefficients(form):
+      try:
+        mesh = coeff.function_space().mesh()
+        fn_space = dolfin.FunctionSpace(mesh, "R", 0)
+        break
+      except:
+        pass
+
+    dparam = dolfin.Function(fn_space)
+    dparam.vector()[:] = 1.0 * self.coeff
+
+    d = dolfin.derivative(form, get_constant(self.a), dparam)
+    d = ufl.algorithms.expand_derivatives(d)
+
+    d2param = dolfin.Function(fn_space)
+    d2param.vector()[:] = 1.0 * self.coeff * m_dot
+
+    d = dolfin.derivative(d, get_constant(self.a), d2param)
+    d = ufl.algorithms.expand_derivatives(d)
+
     if d.integrals() != ():
       return dolfin.assemble(d)
     else:
