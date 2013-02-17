@@ -213,7 +213,12 @@ class ReducedFunctional(object):
         ''' Evaluates the Hessian action in direction m_dot. '''
         assert(len(self.parameter) == 1)
 
-        Hm = self.H(m_dot[0])
+        if isinstance(m_dot, list):
+          assert len(m_dot) == 1
+          Hm = self.H(m_dot[0])
+        else:
+          Hm = self.H(m_dot)
+
         if hasattr(Hm, 'function_space'):
             return [Function(Hm.function_space(), Hm.vector() * self.scale)]
         else:
