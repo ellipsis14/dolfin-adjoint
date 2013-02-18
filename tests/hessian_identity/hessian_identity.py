@@ -25,9 +25,8 @@ if __name__ == "__main__":
 
   J = Functional((inner(u, u))**6*dx, name="NormSquared")
   Jm = assemble(inner(u, u)**6*dx)
-  rf = ReducedFunctional(J, TimeConstantParameter(m))
-  dJdm = rf.derivative(forget=None)[0]
-  HJm  = lambda m_dot: rf.hessian(m_dot)[0]
+  dJdm = compute_gradient(J, TimeConstantParameter(m), forget=None)
+  HJm  = hessian(J, TimeConstantParameter(m), policy="default")
 
   def Jhat(m):
     u = main(m)

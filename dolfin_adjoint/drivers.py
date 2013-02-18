@@ -150,7 +150,10 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
 
 def hessian(J, m, policy="default"):
   '''Choose which Hessian the user wants.'''
-  return BasicHessian(J, m)
+  if policy == "caching":
+    return CachingHessian(J, m)
+  else:
+    return BasicHessian(J, m)
 
 class BasicHessian(object):
   '''A basic implementation of the Hessian class that recomputes the tangent linear, adjoint and second-order adjoint
@@ -185,6 +188,120 @@ class BasicHessian(object):
     # run the tangent linear model
     for output in compute_tlm(m_p, forget=None):
       pass
+
+    # run the adjoint and second-order adjoint equations.
+    i = adjglobals.adjointer.equation_count
+    for (adj, adj_var) in compute_adjoint(self.J, forget=None):
+      i = i - 1
+      (soa_var, soa_vec) = adjglobals.adjointer.get_soa_solution(i, self.J, m_p)
+      soa = soa_vec.data
+
+      # now implement the Hessian action formula.
+      out = self.m.inner_adjoint(adjglobals.adjointer, soa, i, soa_var.to_forward())
+      if out is not None:
+        if isinstance(Hm, dolfin.Function):
+          Hm.vector().axpy(1.0, out.vector())
+        elif isinstance(Hm, float):
+          Hm += out
+
+      if last_timestep > adj_var.timestep:
+        # We have hit a new timestep, and need to compute this timesteps' \partial^2 J/\partial m^2 contribution
+        last_timestep = adj_var.timestep
+        out = self.m.partial_second_derivative(adjglobals.adjointer, self.J, adj_var.timestep, m_dot)
+        if out is not None:
+          if isinstance(Hm, dolfin.Function):
+            Hm.vector().axpy(1.0, out.vector())
+          elif isinstance(Hm, float):
+            Hm += out
+
+      storage = libadjoint.MemoryStorage(soa_vec)
+      storage.set_overwrite(True)
+      adjglobals.adjointer.record_variable(soa_var, storage)
+
+    return Hm
+
+class CachingHessian(BasicHessian):
+  '''An implementation of the Hessian class that caches not only the adjoint solutions, but also
+  the LU decompositions of the relevant operators.
+  Requires the most memory, but should be much much faster.
+  '''
+  def __init__(self, J, m):
+    BasicHessian.__init__(self, J, m)
+    self.update(m)
+
+  def update(self, m):
+    # FIXME: how do we decide when to update, based on comparing m with the m we evaluated at previously?
+    # For now, always do it.
+    # Something like:
+    # if m == self.old_m: return
+
+    self.old_m = m
+    self.factorisations = {}
+
+    for i in range(adjglobals.adjointer.equation_count)[::-1]:
+      (adj_var, adj_lhs, adj_rhs) = adjglobals.adjointer.get_adjoint_equation(i, self.J)
+
+      if isinstance(adj_lhs.data, adjlinalg.IdentityMatrix):
+        adj_output = adj_rhs.duplicate()
+        adj_output.axpy(1.0, adj_rhs)
+      else:
+        dirichlet_bcs = [dolfin.homogenize(bc) for bc in adj_lhs.bcs if isinstance(bc, dolfin.DirichletBC)]
+        other_bcs = [bc for bc in adj_lhs.bcs if not isinstance(bc, dolfin.DirichletBC)]
+        bcs = dirichlet_bcs + other_bcs
+
+        adj_output = adjlinalg.Vector(dolfin.Function(adj_lhs.test_function().function_space()))
+        assembled_lhs = dolfin.assemble(adj_lhs.data)
+        [bc.apply(assembled_lhs) for bc in bcs]
+        if isinstance(adj_rhs.data, ufl.Form):
+          assembled_rhs = dolfin.assemble(adj_rhs.data)
+        else:
+          assembled_rhs = adj_rhs.data.vector()
+        [bc.apply(assembled_rhs) for bc in bcs]
+
+        self.factorisations[i] = dolfin.LUSolver(assembled_lhs)
+        self.factorisations[i].parameters["reuse_factorization"] = True
+        self.factorisations[i].solve(adj_output.data.vector(), assembled_rhs)
+
+      storage = libadjoint.MemoryStorage(adj_output)
+      storage.set_overwrite(True)
+      adjglobals.adjointer.record_variable(adj_var, storage)
+
+  def __call__(self, m_dot):
+
+    m_p = self.m.set_perturbation(m_dot)
+    last_timestep = adjglobals.adjointer.timestep_count
+
+    if hasattr(m_dot, 'function_space'):
+      Hm = dolfin.Function(m_dot.function_space())
+    elif isinstance(m_dot, float):
+      Hm = 0.0
+    else:
+      raise NotImplementedError("Sorry, don't know how to handle this")
+
+    # run the tangent linear model
+    for i in range(adjglobals.adjointer.equation_count):
+      (tlm_var, tlm_lhs, tlm_rhs) = adjglobals.adjointer.get_tlm_equation(i, m_p)
+
+      if isinstance(tlm_lhs.data, adjlinalg.IdentityMatrix):
+        tlm_output = tlm_rhs.duplicate()
+        tlm_output.axpy(1.0, tlm_rhs)
+      else:
+        dirichlet_bcs = [dolfin.homogenize(bc) for bc in tlm_lhs.bcs if isinstance(bc, dolfin.DirichletBC)]
+        other_bcs = [bc for bc in tlm_lhs.bcs if not isinstance(bc, dolfin.DirichletBC)]
+        bcs = dirichlet_bcs + other_bcs
+
+        tlm_output = adjlinalg.Vector(dolfin.Function(tlm_lhs.test_function().function_space()))
+        if isinstance(tlm_rhs.data, ufl.Form):
+          assembled_rhs = dolfin.assemble(tlm_rhs.data)
+        else:
+          assembled_rhs = tlm_rhs.data.vector()
+        [bc.apply(assembled_rhs) for bc in bcs]
+
+        self.factorisations[i].solve_transpose(tlm_output.data.vector(), assembled_rhs)
+
+      storage = libadjoint.MemoryStorage(tlm_output)
+      storage.set_overwrite(True)
+      adjglobals.adjointer.record_variable(tlm_var, storage)
 
     # run the adjoint and second-order adjoint equations.
     i = adjglobals.adjointer.equation_count
