@@ -278,7 +278,7 @@ class CachingHessian(BasicHessian):
     else:
       raise NotImplementedError("Sorry, don't know how to handle this")
 
-    # run the tangent linear model
+    # run the tangent linear model using the cached factorisations
     for i in range(adjglobals.adjointer.equation_count):
       (tlm_var, tlm_lhs, tlm_rhs) = adjglobals.adjointer.get_tlm_equation(i, m_p)
 
@@ -303,32 +303,46 @@ class CachingHessian(BasicHessian):
       storage.set_overwrite(True)
       adjglobals.adjointer.record_variable(tlm_var, storage)
 
-    # run the adjoint and second-order adjoint equations.
-    i = adjglobals.adjointer.equation_count
-    for (adj, adj_var) in compute_adjoint(self.J, forget=None):
-      i = i - 1
-      (soa_var, soa_vec) = adjglobals.adjointer.get_soa_solution(i, self.J, m_p)
-      soa = soa_vec.data
+    # run the second-order adjoint model, again using the cached factorisations
+    for i in range(adjglobals.adjointer.equation_count)[::-1]:
+      (soa_var, soa_lhs, soa_rhs) = adjglobals.adjointer.get_soa_equation(i, self.J, m_p)
+
+      if isinstance(soa_lhs.data, adjlinalg.IdentityMatrix):
+        soa_output = soa_rhs.duplicate()
+        soa_output.axpy(1.0, soa_rhs)
+      else:
+        dirichlet_bcs = [dolfin.homogenize(bc) for bc in soa_lhs.bcs if isinstance(bc, dolfin.DirichletBC)]
+        other_bcs = [bc for bc in soa_lhs.bcs if not isinstance(bc, dolfin.DirichletBC)]
+        bcs = dirichlet_bcs + other_bcs
+
+        soa_output = adjlinalg.Vector(dolfin.Function(soa_lhs.test_function().function_space()))
+        if isinstance(soa_rhs.data, ufl.Form):
+          assembled_rhs = dolfin.assemble(soa_rhs.data)
+        else:
+          assembled_rhs = soa_rhs.data.vector()
+        [bc.apply(assembled_rhs) for bc in bcs]
+
+        self.factorisations[i].solve(soa_output.data.vector(), assembled_rhs)
 
       # now implement the Hessian action formula.
-      out = self.m.inner_adjoint(adjglobals.adjointer, soa, i, soa_var.to_forward())
+      out = self.m.inner_adjoint(adjglobals.adjointer, soa_output.data, i, soa_var.to_forward())
       if out is not None:
         if isinstance(Hm, dolfin.Function):
           Hm.vector().axpy(1.0, out.vector())
         elif isinstance(Hm, float):
           Hm += out
 
-      if last_timestep > adj_var.timestep:
+      if last_timestep > soa_var.timestep:
         # We have hit a new timestep, and need to compute this timesteps' \partial^2 J/\partial m^2 contribution
-        last_timestep = adj_var.timestep
-        out = self.m.partial_second_derivative(adjglobals.adjointer, self.J, adj_var.timestep, m_dot)
+        last_timestep = soa_var.timestep
+        out = self.m.partial_second_derivative(adjglobals.adjointer, self.J, last_timestep, m_dot)
         if out is not None:
           if isinstance(Hm, dolfin.Function):
             Hm.vector().axpy(1.0, out.vector())
           elif isinstance(Hm, float):
             Hm += out
 
-      storage = libadjoint.MemoryStorage(soa_vec)
+      storage = libadjoint.MemoryStorage(soa_output)
       storage.set_overwrite(True)
       adjglobals.adjointer.record_variable(soa_var, storage)
 
