@@ -148,7 +148,13 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
   else:
     return dJdparam
 
-class hessian(object):
+def hessian(J, m, policy="default"):
+  '''Choose which Hessian the user wants.'''
+  return BasicHessian(J, m)
+
+class BasicHessian(object):
+  '''A basic implementation of the Hessian class that recomputes the tangent linear, adjoint and second-order adjoint
+  equations on each action. Should be the slowest, but safest, with the lowest memory requirements.'''
   def __init__(self, J, m):
     self.J = J
     self.m = m
