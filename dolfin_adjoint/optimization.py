@@ -49,6 +49,10 @@ def minimize_scipy_generic(J, dJ, m, method, bounds = None, H = None, **kwargs):
         if not "disp" in kwargs["options"]:
             kwargs["options"]["disp"] = True
 
+    # Make the default SLSLQP options more verbose
+    if method == "SLSQP" and "iprint" not in kwargs["options"]:
+        kwargs["options"]["iprint"] = 2
+
     # For gradient-based methods add the derivative function to the argument list 
     if method not in ["COBYLA", "Nelder-Mead", "Anneal", "Powell"]:
         kwargs["jac"] = dJ
