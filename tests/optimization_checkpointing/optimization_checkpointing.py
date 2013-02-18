@@ -106,7 +106,7 @@ if __name__ == "__main__":
                    "Powell": {"bounds": None}
                   }
 
-        for method in ["SLSQP", "BFGS", "COBYLA", "TNC", "L-BFGS-B", "Newton-CG", "Nelder-Mead", "Anneal", "CG"]: #, "Powell"]:
+        for method in ["SLSQP", "BFGS", "COBYLA", "TNC", "L-BFGS-B", "Nelder-Mead", "Anneal", "CG"]: #, "Powell"]:
             print "\n === Solving problem with %s. ===\n" % method
             u_opt.assign(ic, annotate = False)
             reduced_functional(u_opt)
