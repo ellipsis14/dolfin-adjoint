@@ -75,7 +75,7 @@ def set_local(m_list, m_global_array):
             m[:] = m_global_array[offset:offset+len(m)]
             offset += len(m)
         else:
-            raise TypeError, 'Unknown parameter type'
+            raise TypeError, 'Unknown parameter type %s' % m.__class__
 
 global_eqn_list = {}
 def replace_tape_ic_value(variable, new_value):
