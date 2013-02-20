@@ -136,8 +136,9 @@ class ReducedFunctional(object):
         self.derivative_cb = derivative_cb
         self.current_func_value = None
 
-        assert(len(parameter) == 1)
-        self.H = drivers.hessian(functional, parameter[0])
+        # TODO: implement a drivers.hessian function that supports a list of parameters
+        if len(parameter) == 1:
+            self.H = drivers.hessian(functional, parameter[0])
 
     def __call__(self, value):
         ''' Evaluates the reduced functional for the given parameter value, by replaying the forward model.

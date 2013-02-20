@@ -36,15 +36,7 @@ def solve_optimal_control(n):
     # Run the optimisation 
     rf = ReducedFunctional(J, InitialConditionParameter(m))
 
-    # Run the optimisation problem with gradient tests and L-BFGS-B
-    # scipt.optimize 0.11.0 introduced a new generic interface to the minimisation routines, 
-    # which dolfin-adjoint.optimize automatically uses if available. Since the arguments changed, we need
-    # to check for the version at this point.
-    new_scipy = StrictVersion(scipy.__version__[:6]) >= StrictVersion('0.11.0')
-    if new_scipy:
-        minimize(rf, method = 'Newton-CG', tol = 1e-16, options = {'disp': True})
-    else:
-        minimize(rf, method = 'Newton-CG')
+    minimize(rf, method = 'Newton-CG', tol = 1e-16, options = {'disp': True})
     solve_pde(u, V, m)
 
     # Define the analytical expressions

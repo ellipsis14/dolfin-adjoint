@@ -34,7 +34,7 @@ def minimize_scipy_generic(J, dJ, m, method, bounds = None, H = None, **kwargs):
         from scipy.optimize import minimize as scipy_minimize
     except ImportError:
         print "**************** Deprecated warning *****************"
-        print "You have a old version of scipy (<0.11). This version is only partially supported by dolfin-adjoint and many things will not work."
+        print "You have a old version of scipy (<0.11). This version is not supported by dolfin-adjoint."
         raise ImportError
 
     m_global = get_global(m)
@@ -70,116 +70,11 @@ def minimize_scipy_generic(J, dJ, m, method, bounds = None, H = None, **kwargs):
     set_local(m, numpy.array(res["x"]))
     return m
 
-def minimize_scipy_slsqp(J, dJ, m, bounds = None, **kwargs):
-    ''' Interface to the SQP algorithm in scipy '''
-    # If possible use scipy's generic interface 
-    try:
-        return minimize_scipy_generic(J, dJ, m, bounds = bounds, method = "SLSQP", **kwargs)
-    except ImportError:
-        pass
-    from scipy.optimize import fmin_slsqp
-
-    m_global = get_global(m)
-
-    # Shut up all processors except the first one.
-    if MPI.process_number() != 0:
-        kwargs['iprint'] = 0
-
-    if bounds != None:
-        bounds = serialise_bounds(bounds, m)
-        mopt = fmin_slsqp(J, m_global, fprime = dJ, bounds = bounds, **kwargs)
-    else:
-        mopt = fmin_slsqp(J, m_global, fprime = dJ, **kwargs)
-    if type(mopt) == list:
-        mopt = mopt[0]
-    set_local(m, numpy.array(mopt))
-    return m
-
-def minimize_scipy_fmin_l_bfgs_b(J, dJ, m, bounds = None, **kwargs):
-    ''' Interface to the L-BFGS-B algorithm in scipy '''
-    # If possible use scipy's generic interface 
-    try:
-        return minimize_scipy_generic(J, dJ, m, bounds = bounds, method = "L-BFGS-B", **kwargs)
-    except ImportError:
-        pass
-    from scipy.optimize import fmin_l_bfgs_b
-    
-    m_global = get_global(m)
-
-    # Shut up all processors except the first one.
-    if MPI.process_number() != 0:
-        kwargs['iprint'] = -1
-
-    if bounds != None:
-        bounds = serialise_bounds(bounds, m)
-
-    mopt, f, d = fmin_l_bfgs_b(J, m_global, fprime = dJ, bounds = bounds, **kwargs)
-    set_local(m, mopt)
-    return m
-
-def minimize_scipy_tnc(J, dJ, m, bounds = None, **kwargs):
-    # If possible use scipy's generic interface 
-    try:
-        return minimize_scipy_generic(J, dJ, m, bounds = bounds, method = "TNC", **kwargs)
-    except ImportError:
-        pass
-    from scipy.optimize import fmin_tnc
-    
-    m_global = get_global(m)
-
-    # Shut up all processors except the first one.
-    if MPI.process_number() != 0:
-        kwargs['iprint'] = -1
-
-    if bounds != None:
-        bounds = serialise_bounds(bounds, m)
-
-    mopt, nfeval, rc = fmin_tnc(J, m_global, fprime = dJ, bounds = bounds, **kwargs)
-    set_local(m, mopt)
-    return m
-
-def minimize_scipy_cg(J, dJ, m, **kwargs):
-    # If possible use scipy's generic interface 
-    try:
-        return minimize_scipy_generic(J, dJ, m, method = "CG", **kwargs)
-    except ImportError:
-        pass
-    from scipy.optimize import fmin_cg
-    
-    m_global = get_global(m)
-
-    # Shut up all processors except the first one.
-    if MPI.process_number() != 0:
-        kwargs['iprint'] = -1
-    kwargs['full_output'] = True
-
-    result = fmin_cg(J, m_global, fprime = dJ, **kwargs)
-    set_local(m, result[0])
-    return m
-
-def minimize_scipy_bfgs(J, dJ, m, **kwargs):
-    # If possible use scipy's generic interface 
-    try:
-        return minimize_scipy_generic(J, dJ, m, method = "BFGS", **kwargs)
-    except ImportError:
-        pass
-    from scipy.optimize import fmin_bfgs
-    
-    m_global = get_global(m)
-
-    # Shut up all processors except the first one.
-    if MPI.process_number() != 0:
-        kwargs['iprint'] = -1
-
-    mopt, fopt, gopt, Bopt, func_calls, grad_calls, warnflag, allvecs = fmin_bfgs(J, m_global, fprime = dJ, **kwargs)
-    set_local(m, mopt)
-    return m
-
-optimization_algorithms_dict = {'L-BFGS-B': ('The L-BFGS-B implementation in scipy.', minimize_scipy_fmin_l_bfgs_b),
-                                'SLSQP': ('The SLSQP implementation in scipy.', minimize_scipy_slsqp),
-                                'TNC': ('The truncated Newton algorithm implemented in scipy.', minimize_scipy_tnc), 
-                                'CG': ('The nonlinear conjugate gradient algorithm implemented in scipy.', minimize_scipy_cg), 
-                                'BFGS': ('The BFGS implementation in scipy.', minimize_scipy_bfgs), 
+optimization_algorithms_dict = {'L-BFGS-B': ('The L-BFGS-B implementation in scipy.', minimize_scipy_generic),
+                                'SLSQP': ('The SLSQP implementation in scipy.', minimize_scipy_generic),
+                                'TNC': ('The truncated Newton algorithm implemented in scipy.', minimize_scipy_generic), 
+                                'CG': ('The nonlinear conjugate gradient algorithm implemented in scipy.', minimize_scipy_generic), 
+                                'BFGS': ('The BFGS implementation in scipy.', minimize_scipy_generic), 
                                 'Nelder-Mead': ('Gradient-free Simplex algorithm.', minimize_scipy_generic),
                                 'Powell': ('Gradient-free Powells method', minimize_scipy_generic),
                                 'Newton-CG': ('Newton-CG method', minimize_scipy_generic),
