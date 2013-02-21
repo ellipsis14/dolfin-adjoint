@@ -20,24 +20,36 @@ class DolfinAdjointParameter(libadjoint.Parameter):
     None if there's nothing to do.'''
     raise NotImplementedError
 
-  def inner_adjoint(self, adjointer, adjoint, i, variable):
+  def equation_partial_derivative(self, adjointer, adjoint, i, variable):
     '''This function computes the contribution to the functional gradient
     associated with a particular equation.
 
     Given the adjoint solution adjoint, this function is to compute
-    inner(adjoint, derivative(F, m))
+    -inner(adjoint, derivative(F, m))
 
     where F is a particular equation (i is its number, variable is the forward
     variable associated with it)
     and m is the Parameter.'''
     raise NotImplementedError
 
-  def partial_derivative(self, adjointer, J, timestep):
+  def equation_partial_second_derivative(self, adjointer, adjoint, i, variable, m_dot):
+    '''This function computes the contribution to the functional gradient
+    associated with a particular equation.
+
+    Given the adjoint solution adjoint, this function is to compute
+    -inner(adjoint, derivative(derivative(F, m), m_dot))
+
+    where F is a particular equation (i is its number, variable is the forward
+    variable associated with it)
+    and m is the Parameter.'''
+    pass
+
+  def functional_partial_derivative(self, adjointer, J, timestep):
     '''Given a functional J, compute derivative(J, m) -- the partial derivative of
     J with respect to m. This is necessary to compute correct functional gradients.'''
     pass
 
-  def partial_second_derivative(self, adjointer, J, timestep, m_dot):
+  def functional_partial_second_derivative(self, adjointer, J, timestep, m_dot):
     '''Given a functional J, compute derivative(derivative(J, m), m, m_dot) -- the partial second derivative of
     J with respect to m in the direction m_dot. This is necessary to compute correct functional Hessians.'''
     pass
@@ -90,7 +102,7 @@ class InitialConditionParameter(DolfinAdjointParameter):
   def __str__(self):
     return self.var.name + ':InitialCondition'
 
-  def inner_adjoint(self, adjointer, adjoint, i, variable):
+  def equation_partial_derivative(self, adjointer, adjoint, i, variable):
     if self.var == variable:
       return adjoint
     else:
@@ -135,7 +147,7 @@ class ScalarParameter(DolfinAdjointParameter):
   def __str__(self):
     return str(self.coeff) + '*' + str(self.a) + ':ScalarParameter'
 
-  def inner_adjoint(self, adjointer, adjoint, i, variable):
+  def equation_partial_derivative(self, adjointer, adjoint, i, variable):
     form = adjresidual.get_residual(i)
     if form is not None:
       form = -form
@@ -160,7 +172,37 @@ class ScalarParameter(DolfinAdjointParameter):
       else:
         return None # dF/dm is zero, return None
 
-  def partial_derivative(self, adjointer, J, timestep):
+  def equation_partial_second_derivative(self, adjointer, adjoint, i, variable, m_dot):
+    form = adjresidual.get_residual(i)
+    if form is not None:
+      form = -form
+
+      mesh = ufl.algorithms.extract_arguments(form)[0].function_space().mesh()
+      fn_space = dolfin.FunctionSpace(mesh, "R", 0)
+      dparam = dolfin.Function(fn_space)
+      dparam.vector()[:] = 1.0 * self.coeff
+      d2param = dolfin.Function(fn_space)
+      d2param.vector()[:] = 1.0 * self.coeff * m_dot
+
+      diff_form = ufl.algorithms.expand_derivatives(dolfin.derivative(form, get_constant(self.a), dparam))
+      if diff_form is None:
+        return None
+
+      diff_form  = ufl.algorithms.expand_derivatives(dolfin.derivative(diff_form, get_constant(self.a), d2param))
+      if diff_form is None:
+        return None
+
+      # Let's see if the form actually depends on the parameter m
+      if diff_form.integrals() != ():
+        dFdm = dolfin.assemble(diff_form) # actually - dF/dm
+        assert isinstance(dFdm, dolfin.GenericVector)
+
+        out = dFdm.inner(adjoint.vector())
+        return out
+      else:
+        return None # dF/dm is zero, return None
+
+  def functional_partial_derivative(self, adjointer, J, timestep):
     form = J.get_form(adjointer, timestep)
 
     if form is None:
@@ -186,7 +228,7 @@ class ScalarParameter(DolfinAdjointParameter):
     else:
       return None
 
-  def partial_second_derivative(self, adjointer, J, timestep, m_dot):
+  def functional_partial_second_derivative(self, adjointer, J, timestep, m_dot):
     form = J.get_form(adjointer, timestep)
 
     if form is None:
@@ -260,7 +302,7 @@ class ScalarParameters(DolfinAdjointParameter):
   def __str__(self):
     return str(self.v) + ':ScalarParameters'
 
-  def inner_adjoint(self, adjointer, adjoint, i, variable):
+  def equation_partial_derivative(self, adjointer, adjoint, i, variable):
     form = adjresidual.get_residual(i)
 
     if form is None:

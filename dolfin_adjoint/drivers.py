@@ -127,13 +127,13 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
     fwd_var = libadjoint.Variable(adj_var.name, adj_var.timestep, adj_var.iteration)
 
     for j in range(len(lparam)):
-      out = lparam[j].inner_adjoint(adjglobals.adjointer, output.data, i, fwd_var)
+      out = lparam[j].equation_partial_derivative(adjglobals.adjointer, output.data, i, fwd_var)
       dJdparam[j] = _add(dJdparam[j], out)
 
       if last_timestep > adj_var.timestep:
         # We have hit a new timestep, and need to compute this timesteps' \partial J/\partial m contribution
         last_timestep = adj_var.timestep
-        out = lparam[j].partial_derivative(adjglobals.adjointer, J, adj_var.timestep)
+        out = lparam[j].functional_partial_derivative(adjglobals.adjointer, J, adj_var.timestep)
         dJdparam[j] = _add(dJdparam[j], out)
 
     if forget is None:
@@ -167,9 +167,6 @@ class BasicHessian(object):
     if not isinstance(m, (InitialConditionParameter, ScalarParameter)):
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Sorry, Hessian computation only works for InitialConditionParameter|SteadyParameter|TimeConstantParameter|ScalarParameter so far.")
 
-    if isinstance(m, ScalarParameter):
-      dolfin.info_red("Warning: Hessian computation with ScalarParameter will only work if your equations depend *linearly* on your parameter. This is not checked.")
-
   def update(self, m):
     pass
 
@@ -186,7 +183,7 @@ class BasicHessian(object):
       raise NotImplementedError("Sorry, don't know how to handle this")
 
     # run the tangent linear model
-    for output in compute_tlm(m_p, forget=None):
+    for (tlm, tlm_var) in compute_tlm(m_p, forget=None):
       pass
 
     # run the adjoint and second-order adjoint equations.
@@ -197,7 +194,14 @@ class BasicHessian(object):
       soa = soa_vec.data
 
       # now implement the Hessian action formula.
-      out = self.m.inner_adjoint(adjglobals.adjointer, soa, i, soa_var.to_forward())
+      out = self.m.equation_partial_derivative(adjglobals.adjointer, soa, i, soa_var.to_forward())
+      if out is not None:
+        if isinstance(Hm, dolfin.Function):
+          Hm.vector().axpy(1.0, out.vector())
+        elif isinstance(Hm, float):
+          Hm += out
+
+      out = self.m.equation_partial_second_derivative(adjglobals.adjointer, adj, i, soa_var.to_forward(), m_dot)
       if out is not None:
         if isinstance(Hm, dolfin.Function):
           Hm.vector().axpy(1.0, out.vector())
@@ -207,7 +211,7 @@ class BasicHessian(object):
       if last_timestep > adj_var.timestep:
         # We have hit a new timestep, and need to compute this timesteps' \partial^2 J/\partial m^2 contribution
         last_timestep = adj_var.timestep
-        out = self.m.partial_second_derivative(adjglobals.adjointer, self.J, adj_var.timestep, m_dot)
+        out = self.m.functional_partial_second_derivative(adjglobals.adjointer, self.J, adj_var.timestep, m_dot)
         if out is not None:
           if isinstance(Hm, dolfin.Function):
             Hm.vector().axpy(1.0, out.vector())
@@ -236,7 +240,8 @@ class CachingHessian(BasicHessian):
     # if m == self.old_m: return
 
     self.old_m = m
-    self.factorisations = {}
+    self.factorisations_adj = {}
+    self.factorisations_tlm = {}
 
     for i in range(adjglobals.adjointer.equation_count)[::-1]:
       (adj_var, adj_lhs, adj_rhs) = adjglobals.adjointer.get_adjoint_equation(i, self.J)
@@ -250,17 +255,25 @@ class CachingHessian(BasicHessian):
         bcs = dirichlet_bcs + other_bcs
 
         adj_output = adjlinalg.Vector(dolfin.Function(adj_lhs.test_function().function_space()))
-        assembled_lhs = dolfin.assemble(adj_lhs.data)
-        [bc.apply(assembled_lhs) for bc in bcs]
         if isinstance(adj_rhs.data, ufl.Form):
           assembled_rhs = dolfin.assemble(adj_rhs.data)
         else:
           assembled_rhs = adj_rhs.data.vector()
         [bc.apply(assembled_rhs) for bc in bcs]
 
-        self.factorisations[i] = dolfin.LUSolver(assembled_lhs)
-        self.factorisations[i].parameters["reuse_factorization"] = True
-        self.factorisations[i].solve(adj_output.data.vector(), assembled_rhs)
+        # Also assemble the TLM LU decomposition too -- gah. There must be some clever way around this.
+        # The matrices are the same, except for the damn boundary conditions
+        assembled_lhs = dolfin.assemble(dolfin.adjoint(adj_lhs.data))
+        [bc.apply(assembled_lhs) for bc in bcs]
+        self.factorisations_tlm[i] = dolfin.LUSolver(assembled_lhs)
+        self.factorisations_tlm[i].parameters["reuse_factorization"] = True
+        self.factorisations_tlm[i].solve(adj_output.data.vector(), assembled_rhs) # do a dummy solve we don't need to compute the LU decomposition
+
+        assembled_lhs = dolfin.assemble(adj_lhs.data)
+        [bc.apply(assembled_lhs) for bc in bcs]
+        self.factorisations_adj[i] = dolfin.LUSolver(assembled_lhs)
+        self.factorisations_adj[i].parameters["reuse_factorization"] = True
+        self.factorisations_adj[i].solve(adj_output.data.vector(), assembled_rhs) # solve the adjoint system, which we'll keep
 
       storage = libadjoint.MemoryStorage(adj_output)
       storage.set_overwrite(True)
@@ -297,7 +310,7 @@ class CachingHessian(BasicHessian):
           assembled_rhs = tlm_rhs.data.vector()
         [bc.apply(assembled_rhs) for bc in bcs]
 
-        self.factorisations[i].solve_transpose(tlm_output.data.vector(), assembled_rhs)
+        self.factorisations_tlm[i].solve(tlm_output.data.vector(), assembled_rhs)
 
       storage = libadjoint.MemoryStorage(tlm_output)
       storage.set_overwrite(True)
@@ -322,10 +335,19 @@ class CachingHessian(BasicHessian):
           assembled_rhs = soa_rhs.data.vector()
         [bc.apply(assembled_rhs) for bc in bcs]
 
-        self.factorisations[i].solve(soa_output.data.vector(), assembled_rhs)
+        self.factorisations_adj[i].solve(soa_output.data.vector(), assembled_rhs)
 
       # now implement the Hessian action formula.
-      out = self.m.inner_adjoint(adjglobals.adjointer, soa_output.data, i, soa_var.to_forward())
+      out = self.m.equation_partial_derivative(adjglobals.adjointer, soa_output.data, i, soa_var.to_forward())
+      if out is not None:
+        if isinstance(Hm, dolfin.Function):
+          Hm.vector().axpy(1.0, out.vector())
+        elif isinstance(Hm, float):
+          Hm += out
+
+      adj_var = soa_var.to_adjoint(self.J)
+      adj_output = adjglobals.adjointer.get_variable_value(adj_var)
+      out = self.m.equation_partial_second_derivative(adjglobals.adjointer, adj_output.data, i, soa_var.to_forward(), m_dot)
       if out is not None:
         if isinstance(Hm, dolfin.Function):
           Hm.vector().axpy(1.0, out.vector())
@@ -335,7 +357,7 @@ class CachingHessian(BasicHessian):
       if last_timestep > soa_var.timestep:
         # We have hit a new timestep, and need to compute this timesteps' \partial^2 J/\partial m^2 contribution
         last_timestep = soa_var.timestep
-        out = self.m.partial_second_derivative(adjglobals.adjointer, self.J, last_timestep, m_dot)
+        out = self.m.functional_partial_second_derivative(adjglobals.adjointer, self.J, last_timestep, m_dot)
         if out is not None:
           if isinstance(Hm, dolfin.Function):
             Hm.vector().axpy(1.0, out.vector())
