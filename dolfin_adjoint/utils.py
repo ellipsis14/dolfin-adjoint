@@ -421,13 +421,20 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
         raise
 
   # First, compute perturbation sizes.
+  seed_default = 0.01
   if seed is None:
     if isinstance(m, ScalarParameter):
-      seed = get_const(m.a)/5.0
+      seed = get_const(m.a) / 5.0
 
       if seed == 0.0: seed = 0.1
+    elif isinstance(m, InitialConditionParameter):
+      ic = get_value(m, value)
+      if len(ic.vector()) == 1: # our parameter is in R
+        seed = float(ic) / 5.0
+      else:
+        seed = seed_default
     else:
-      seed = 0.01
+      seed = seed_default
 
   perturbation_sizes = [seed/(2.0**i) for i in range(5)]
 
