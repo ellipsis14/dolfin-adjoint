@@ -64,6 +64,12 @@ class VariableDict(dict):
   def __setitem__(self, x, y):
     return dict.__setitem__(self, str(x), y)
 
+  def __delitem__(self, x):
+    return dict.__delitem__(self, str(x))
+
+  def __contains__(self, x):
+    return dict.__contains__(self, str(x))
+
 lu_solvers = VariableDict()
 
 def clear_solver_cache():

@@ -235,7 +235,7 @@ class Matrix(libadjoint.Matrix):
     else:
       self.solver_parameters = {}
 
-  def solve(self, var, b):
+  def basic_solve(self, var, b):
 
     if isinstance(self.data, IdentityMatrix):
       x=b.duplicate()
@@ -280,19 +280,42 @@ class Matrix(libadjoint.Matrix):
           ksp = self.solver_parameters.get("linear_solver", "default")
           dolfin.fem.solving.solve(assembled_lhs, x.data.vector(), assembled_rhs, ksp, pc)
 
-          #solver_params = dict(self.solver_parameters) # take a copy
-
-          #if 'newton_solver' in solver_params:
-          #  del solver_params['newton_solver']
-          #if 'snes_solver' in solver_params:
-          #  del solver_params['snes_solver']
-          #if 'nonlinear_solver' in solver_params:
-          #  del solver_params['nonlinear_solver']
-
-          # Why is this 2x slower than the solve call above?
-          #dolfin.fem.solving.solve(self.data==b.data, x.data, bcs, solver_parameters=solver_params)
-
     return x
+
+  def caching_solve(self, var, b):
+    if isinstance(self.data, IdentityMatrix):
+        output = b.duplicate()
+        output.axpy(1.0, b)
+    else:
+        dirichlet_bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.DirichletBC)]
+        other_bcs  = [bc for bc in self.bcs if not isinstance(bc, dolfin.DirichletBC)]
+        bcs = dirichlet_bcs + other_bcs
+
+        output = Vector(dolfin.Function(self.test_function().function_space()))
+        if isinstance(b.data, ufl.Form):
+            assembled_rhs = dolfin.assemble(b.data)
+        else:
+            assembled_rhs = b.data.vector()
+        [bc.apply(assembled_rhs) for bc in bcs]
+
+        if not var in adjglobals.lu_solvers:
+          dolfin.info_red("Got a cache miss")
+          assembled_lhs = dolfin.assemble(dolfin.adjoint(self.data))
+          [bc.apply(assembled_lhs) for bc in bcs]
+          adjglobals.lu_solvers[var] = dolfin.LUSolver(assembled_lhs)
+          adjglobals.lu_solvers[var].parameters["reuse_factorization"] = True
+        else:
+          dolfin.info_green("Got a cache hit")
+
+        adjglobals.lu_solvers[var].solve(output.data.vector(), assembled_rhs)
+
+    return output
+
+  def solve(self, var, b):
+    if dolfin.parameters["adjoint"]["cache_factorisations"] and var.type != "ADJ_FORWARD":
+      return self.caching_solve(var, b)
+    else:
+      return self.basic_solve(var, b)
 
   def action(self, x, y):
     assert isinstance(x.data, dolfin.Function)
