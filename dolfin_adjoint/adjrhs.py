@@ -91,6 +91,10 @@ class RHS(libadjoint.RHS):
       trial = dolfin.TrialFunction(dolfin_outer_variable.function_space())
 
       d_rhs = dolfin.derivative(current_form, dolfin_inner_variable, inner_contraction_vector.data)
+      d_rhs = ufl.algorithms.expand_derivatives(d_rhs)
+      if d_rhs.integrals() == ():
+        return None
+
       d_rhs = dolfin.derivative(d_rhs, dolfin_outer_variable, trial)
       d_rhs = ufl.algorithms.expand_derivatives(d_rhs)
 
