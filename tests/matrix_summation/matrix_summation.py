@@ -14,7 +14,7 @@ def Dt(u, u_, timestep):
 
 def main(ic, annotate=False):
 
-    u_ = ic
+    u_ = Function(ic, name="Velocity")
     u = TrialFunction(V)
     v = TestFunction(V)
 
@@ -32,20 +32,17 @@ def main(ic, annotate=False):
 if __name__ == "__main__":
 
     ic = project(Expression("sin(2*pi*x[0])"),  V)
-    ic_copy = Function(ic)
     forward = main(ic, annotate=True)
-    forward_copy = Function(forward)
     print "Running adjoint ... "
 
     J = Functional(forward*forward*dx*dt[FINISH_TIME])
-    for (adjoint, var) in compute_adjoint(J, forget=False):
-      pass
+    m = InitialConditionParameter("Velocity")
+    Jm = assemble(forward*forward*dx)
+    dJdm = compute_gradient(J, m, forget=False)
 
     def Jfunc(ic):
       forward = main(ic, annotate=False)
       return assemble(forward*forward*dx)
 
-    ic.vector()[:] = ic_copy.vector()
-    minconv = test_initial_condition_adjoint_cdiff(Jfunc, ic, adjoint, seed=0.0001)
-    if minconv < 2.9:
-      sys.exit(1)
+    minconv = taylor_test(Jfunc, m, Jm, dJdm)
+    assert minconv > 1.8
