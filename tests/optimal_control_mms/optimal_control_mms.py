@@ -58,6 +58,7 @@ for i in range(2,6):
     state_errors.append(state_error)
     element_sizes.append(1./n)
     adj_reset()
+    parameters["adjoint"]["stop_annotating"] = False
 
 info_green("Control errors: " + str(control_errors))
 info_green("Control convergence: " + str(convergence_order(control_errors, base = 2)))
