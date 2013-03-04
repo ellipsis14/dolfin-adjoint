@@ -26,7 +26,7 @@ if __name__ == "__main__":
   J = Functional((inner(u, u))**6*dx, name="NormSquared")
   Jm = assemble(inner(u, u)**6*dx)
   dJdm = compute_gradient(J, TimeConstantParameter(m), forget=None)
-  HJm  = hessian(J, TimeConstantParameter(m), policy="default")
+  HJm  = hessian(J, TimeConstantParameter(m), policy="caching")
 
   def Jhat(m):
     u = main(m)

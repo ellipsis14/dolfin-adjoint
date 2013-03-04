@@ -90,6 +90,8 @@ def compute_tlm(parameter, forget=False):
       yield (output.data, tlm_var)
 
 def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, output: None):
+  dolfin.parameters["adjoint"]["stop_annotating"] = True
+
   try:
     scalar = False
     dJdparam = [None for i in range(len(param))]
@@ -150,6 +152,7 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
 
 def hessian(J, m, policy="default"):
   '''Choose which Hessian the user wants.'''
+  dolfin.parameters["adjoint"]["stop_annotating"] = True
   if policy == "caching":
     return CachingHessian(J, m)
   else:
@@ -240,8 +243,6 @@ class CachingHessian(BasicHessian):
     # if m == self.old_m: return
 
     self.old_m = m
-    self.factorisations_adj = {}
-    self.factorisations_tlm = {}
 
     for i in range(adjglobals.adjointer.equation_count)[::-1]:
       (adj_var, adj_lhs, adj_rhs) = adjglobals.adjointer.get_adjoint_equation(i, self.J)
@@ -263,17 +264,22 @@ class CachingHessian(BasicHessian):
 
         # Also assemble the TLM LU decomposition too -- gah. There must be some clever way around this.
         # The matrices are the same, except for the damn boundary conditions
-        assembled_lhs = dolfin.assemble(dolfin.adjoint(adj_lhs.data))
-        [bc.apply(assembled_lhs) for bc in bcs]
-        self.factorisations_tlm[i] = dolfin.LUSolver(assembled_lhs)
-        self.factorisations_tlm[i].parameters["reuse_factorization"] = True
-        self.factorisations_tlm[i].solve(adj_output.data.vector(), assembled_rhs) # do a dummy solve we don't need to compute the LU decomposition
+        tlm_var = adj_var.to_tlm(m)
+        if not tlm_var in adjglobals.lu_solvers:
+          assembled_lhs = dolfin.assemble(dolfin.adjoint(adj_lhs.data))
+          [bc.apply(assembled_lhs) for bc in bcs]
+          adjglobals.lu_solvers[tlm_var] = dolfin.LUSolver(assembled_lhs)
+          adjglobals.lu_solvers[tlm_var].parameters["reuse_factorization"] = True
+        adjglobals.lu_solvers[tlm_var].solve(adj_output.data.vector(), assembled_rhs) # do a dummy solve we don't need to compute the LU decomposition
 
-        assembled_lhs = dolfin.assemble(adj_lhs.data)
-        [bc.apply(assembled_lhs) for bc in bcs]
-        self.factorisations_adj[i] = dolfin.LUSolver(assembled_lhs)
-        self.factorisations_adj[i].parameters["reuse_factorization"] = True
-        self.factorisations_adj[i].solve(adj_output.data.vector(), assembled_rhs) # solve the adjoint system, which we'll keep
+        soa_var = adj_var.to_soa(self.J, m)
+        if not adj_var in adjglobals.lu_solvers:
+          assembled_lhs = dolfin.assemble(adj_lhs.data)
+          [bc.apply(assembled_lhs) for bc in bcs]
+          adjglobals.lu_solvers[adj_var] = dolfin.LUSolver(assembled_lhs)
+          adjglobals.lu_solvers[adj_var].parameters["reuse_factorization"] = True
+          adjglobals.lu_solvers[soa_var] = adjglobals.lu_solvers[adj_var]
+        adjglobals.lu_solvers[adj_var].solve(adj_output.data.vector(), assembled_rhs) # solve the adjoint system, which we'll keep
 
       storage = libadjoint.MemoryStorage(adj_output)
       storage.set_overwrite(True)
@@ -310,7 +316,7 @@ class CachingHessian(BasicHessian):
           assembled_rhs = tlm_rhs.data.vector()
         [bc.apply(assembled_rhs) for bc in bcs]
 
-        self.factorisations_tlm[i].solve(tlm_output.data.vector(), assembled_rhs)
+        adjglobals.lu_solvers[tlm_var].solve(tlm_output.data.vector(), assembled_rhs)
 
       storage = libadjoint.MemoryStorage(tlm_output)
       storage.set_overwrite(True)
@@ -335,7 +341,7 @@ class CachingHessian(BasicHessian):
           assembled_rhs = soa_rhs.data.vector()
         [bc.apply(assembled_rhs) for bc in bcs]
 
-        self.factorisations_adj[i].solve(soa_output.data.vector(), assembled_rhs)
+        adjglobals.lu_solvers[soa_var].solve(soa_output.data.vector(), assembled_rhs)
 
       # now implement the Hessian action formula.
       out = self.m.equation_partial_derivative(adjglobals.adjointer, soa_output.data, i, soa_var.to_forward())

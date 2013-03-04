@@ -54,3 +54,18 @@ function_names = set()
 
 def adj_check_checkpoints():
   adjointer.check_checkpoints()
+
+# For caching strategies: a dictionary that maps adj_variable to LUSolver
+# Not used by default
+class VariableDict(dict):
+  def __getitem__(self, x):
+    return dict.__getitem__(self, str(x))
+
+  def __setitem__(self, x, y):
+    return dict.__setitem__(self, str(x), y)
+
+lu_solvers = VariableDict()
+
+def clear_solver_cache():
+  for x in lu_solvers:
+    del lu_solvers[x]
