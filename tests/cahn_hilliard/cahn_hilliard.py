@@ -110,6 +110,8 @@ if __name__ == "__main__":
   ic = interpolate(InitialConditions(), ME)
   forward, j = main(ic, annotate=True)
 
+  parameters["adjoint"]["cache_factorisations"] = True
+
   adj_html("forward.html", "forward")
 
   dtm = TimeMeasure()

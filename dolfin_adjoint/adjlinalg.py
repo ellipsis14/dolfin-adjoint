@@ -300,7 +300,7 @@ class Matrix(libadjoint.Matrix):
 
         if not var in adjglobals.lu_solvers:
           dolfin.info_red("Got a cache miss")
-          assembled_lhs = dolfin.assemble(dolfin.adjoint(self.data))
+          assembled_lhs = dolfin.assemble(self.data)
           [bc.apply(assembled_lhs) for bc in bcs]
           adjglobals.lu_solvers[var] = dolfin.LUSolver(assembled_lhs)
           adjglobals.lu_solvers[var].parameters["reuse_factorization"] = True
@@ -313,9 +313,11 @@ class Matrix(libadjoint.Matrix):
 
   def solve(self, var, b):
     if dolfin.parameters["adjoint"]["cache_factorisations"] and var.type != "ADJ_FORWARD":
-      return self.caching_solve(var, b)
+      x = self.caching_solve(var, b)
     else:
-      return self.basic_solve(var, b)
+      x = self.basic_solve(var, b)
+
+    return x
 
   def action(self, x, y):
     assert isinstance(x.data, dolfin.Function)
