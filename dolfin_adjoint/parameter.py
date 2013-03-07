@@ -110,9 +110,11 @@ class InitialConditionParameter(DolfinAdjointParameter):
 
   def data(self):
     if isinstance(self.coeff, str):
-      self.coeff = adjglobals.adjointer.get_variable_value(self.var).data
+      coeff = adjglobals.adjointer.get_variable_value(self.var).data
+    else:
+      coeff = self.coeff
 
-    return self.coeff
+    return coeff
 
   def set_perturbation(self, m_dot):
     return InitialConditionParameter(self.coeff, perturbation=m_dot)
