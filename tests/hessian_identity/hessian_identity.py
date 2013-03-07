@@ -1,6 +1,8 @@
 from dolfin import *
 from dolfin_adjoint import *
 
+parameters["adjoint"]["cache_factorisations"] = True
+
 mesh = UnitSquareMesh(3, 3)
 V = FunctionSpace(mesh, "R", 0)
 
@@ -26,7 +28,7 @@ if __name__ == "__main__":
   J = Functional((inner(u, u))**6*dx, name="NormSquared")
   Jm = assemble(inner(u, u)**6*dx)
   dJdm = compute_gradient(J, TimeConstantParameter(m), forget=None)
-  HJm  = hessian(J, TimeConstantParameter(m), policy="caching")
+  HJm  = hessian(J, TimeConstantParameter(m), warn=False)
 
   def Jhat(m):
     u = main(m)

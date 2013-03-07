@@ -117,7 +117,7 @@ if __name__ == "__main__":
   dtm = TimeMeasure()
   J = Functional((1.0/(4*eps)) * (pow( (-1.0/eps) * forward[1], 2))*dx*dtm)
   dJdic = compute_gradient(J, InitialConditionParameter("Solution"), forget=False)
-  Hic = hessian(J, InitialConditionParameter("Solution"))
+  Hic = hessian(J, InitialConditionParameter("Solution"), warn=False)
 
   print "Functional value: ", j
 

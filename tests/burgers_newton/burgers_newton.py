@@ -8,8 +8,7 @@ import sys
 from dolfin import *
 from dolfin_adjoint import *
 
-dolfin.parameters["adjoint"]["record_all"] = True
-dolfin.parameters["adjoint"]["fussy_replay"] = False
+dolfin.parameters["adjoint"]["cache_factorisations"] = True
 
 n = 30
 mesh = UnitIntervalMesh(n)
@@ -64,7 +63,7 @@ if __name__ == "__main__":
       forward = main(ic, annotate=False)
       return assemble(forward*forward*dx)
 
-    HJic = hessian(J, InitialConditionParameter("Velocity"), policy="caching")
+    HJic = hessian(J, InitialConditionParameter("Velocity"), warn=False)
 
     minconv = taylor_test(Jfunc, InitialConditionParameter("Velocity"), Jic, dJdic, HJm=HJic, seed=1.0e-3, perturbation_direction=interpolate(Expression("cos(x[0])"), V))
     assert minconv > 2.7

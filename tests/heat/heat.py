@@ -47,7 +47,7 @@ if __name__ == "__main__":
   m = InitialConditionParameter(u)
   Jm = assemble(u*u*u*u*dx)
   dJdm = compute_gradient(J, m, forget=False)
-  HJm  = hessian(J, m)
+  HJm  = hessian(J, m, warn=False)
 
   def J(ic):
     u = main(ic, annotate=False)

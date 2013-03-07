@@ -150,22 +150,23 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
   else:
     return dJdparam
 
-def hessian(J, m, policy="default"):
+def hessian(J, m, policy="default", warn=True):
   '''Choose which Hessian the user wants.'''
   dolfin.parameters["adjoint"]["stop_annotating"] = True
   if policy == "caching":
-    return CachingHessian(J, m)
+    return CachingHessian(J, m, warn=warn)
   else:
-    return BasicHessian(J, m)
+    return BasicHessian(J, m, warn=warn)
 
 class BasicHessian(object):
   '''A basic implementation of the Hessian class that recomputes the tangent linear, adjoint and second-order adjoint
   equations on each action. Should be the slowest, but safest, with the lowest memory requirements.'''
-  def __init__(self, J, m):
+  def __init__(self, J, m, warn=True):
     self.J = J
     self.m = m
 
-    dolfin.info_red("Warning: Hessian computation is still experimental and is known to not work for some problems. Please Taylor test thoroughly.")
+    if warn:
+      dolfin.info_red("Warning: Hessian computation is still experimental and is known to not work for some problems. Please Taylor test thoroughly.")
 
     if not isinstance(m, (InitialConditionParameter, ScalarParameter)):
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Sorry, Hessian computation only works for InitialConditionParameter|SteadyParameter|TimeConstantParameter|ScalarParameter so far.")
@@ -232,8 +233,9 @@ class CachingHessian(BasicHessian):
   the LU decompositions of the relevant operators.
   Requires the most memory, but should be much much faster.
   '''
-  def __init__(self, J, m):
-    BasicHessian.__init__(self, J, m)
+  def __init__(self, J, m, warn=True):
+    dolfin.info_red("Don't use this.")
+    BasicHessian.__init__(self, J, m, warn=warn)
     self.update(m)
 
   def update(self, m):

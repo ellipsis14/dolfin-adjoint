@@ -1,6 +1,8 @@
 from dolfin import *
 from dolfin_adjoint import *
 
+parameters["adjoint"]["cache_factorisations"] = True
+
 # Create mesh
 def main(dbdt, annotate=False):
   mesh = UnitCubeMesh(2, 2, 2)
@@ -43,7 +45,7 @@ if __name__ == "__main__":
   Jc = assemble(inner(J, J)**2*dx + inner(dbdt, dbdt)*dx)
   Jf = Functional(inner(J, J)**2*dx*dt[FINISH_TIME] + inner(dbdt, dbdt)*dx*dt[START_TIME]); m = ScalarParameter("dbdt")
   dJdc = compute_gradient(Jf, m, forget=False)
-  HJc = hessian(Jf, m, policy="default")
+  HJc = hessian(Jf, m, warn=False)
 
   def J(c):
     j = main(c, annotate=False)

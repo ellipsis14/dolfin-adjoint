@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     Jm   = assemble(inner(forward, forward)**2*dx)
     dJdm = compute_gradient(J, m, forget=False)
-    HJm  = hessian(J, m)
+    HJm  = hessian(J, m, warn=False)
     m_dot = interpolate(Constant(1.0), V)
 
     def Jfunc(ic):
