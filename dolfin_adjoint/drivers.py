@@ -153,10 +153,7 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
 def hessian(J, m, policy="default", warn=True):
   '''Choose which Hessian the user wants.'''
   dolfin.parameters["adjoint"]["stop_annotating"] = True
-  if policy == "caching":
-    return CachingHessian(J, m, warn=warn)
-  else:
-    return BasicHessian(J, m, warn=warn)
+  return BasicHessian(J, m, warn=warn)
 
 class BasicHessian(object):
   '''A basic implementation of the Hessian class that recomputes the tangent linear, adjoint and second-order adjoint
