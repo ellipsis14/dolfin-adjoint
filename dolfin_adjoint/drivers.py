@@ -155,7 +155,7 @@ def hessian(J, m, policy="default", warn=True):
   dolfin.parameters["adjoint"]["stop_annotating"] = True
   return BasicHessian(J, m, warn=warn)
 
-class BasicHessian(object):
+class BasicHessian(libadjoint.Matrix):
   '''A basic implementation of the Hessian class that recomputes the tangent linear, adjoint and second-order adjoint
   equations on each action. Should be the slowest, but safest, with the lowest memory requirements.'''
   def __init__(self, J, m, warn=True):
@@ -226,6 +226,56 @@ class BasicHessian(object):
       adjglobals.adjointer.record_variable(soa_var, storage)
 
     return Hm
+
+  def action(self, x, y):
+    assert isinstance(x.data, dolfin.Function)
+    assert isinstance(y.data, dolfin.Function)
+
+    Hm = self.__call__(x.data)
+    y.data.assign(Hm)
+
+  def eigendecomposition(self, **kwargs):
+    '''Compute the eigendecomposition of the Hessian.'''
+
+    params = {'solver': 'krylovschur',
+              'spectrum': 'largest magnitude',
+              'type': 'hermitian',
+              'monitor': True,
+              'n': 1}
+
+    params.update(kwargs)
+
+    # We take in the options in "DOLFIN" syntax (the same
+    # as SLEPcEigenSolver. libadjoint uses a different
+    # syntax for the same things. Here we translate.
+    # Sorry for the confusion.
+
+    pairs = {'method': 'solver',
+             'type': 'type',
+             'which': 'spectrum',
+             'monitor': 'monitor',
+             'neigenpairs': 'n'}
+
+    options = {}
+    for key in pairs:
+      options[key] = params[pairs[key]]
+
+    # OK! Now add the model input and output vectors.
+    data = adjlinalg.Vector(self.m.data())
+    options['input'] = data
+    options['output'] = data
+
+    eps = adjglobals.adjointer.compute_eps(self, options)
+
+    retval = []
+    for i in range(eps.ncv):
+      (lamda, u) = eps.get_eps(i)
+      retval += [(lamda, u.data)]
+
+    if len(retval) == 1:
+      retval = retval[0]
+
+    return retval
 
 def _add(value, increment):
   # Add increment to value correctly taking into account None.
