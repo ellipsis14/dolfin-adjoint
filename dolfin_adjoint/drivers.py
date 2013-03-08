@@ -272,9 +272,6 @@ class BasicHessian(libadjoint.Matrix):
       (lamda, u) = eps.get_eps(i)
       retval += [(lamda, u.data)]
 
-    if len(retval) == 1:
-      retval = retval[0]
-
     return retval
 
 def _add(value, increment):

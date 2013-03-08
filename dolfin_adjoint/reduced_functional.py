@@ -138,7 +138,7 @@ class ReducedFunctional(object):
 
         # TODO: implement a drivers.hessian function that supports a list of parameters
         if len(parameter) == 1:
-            self.H = drivers.hessian(functional, parameter[0])
+            self.H = drivers.hessian(functional, parameter[0], warn=False)
 
     def __call__(self, value):
         ''' Evaluates the reduced functional for the given parameter value, by replaying the forward model.
