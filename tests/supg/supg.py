@@ -43,7 +43,7 @@ mesh = Mesh("mesh.xml.gz")
 try:
   sub_domains = MeshFunction("sizet", mesh, "subdomains.xml.gz");
 except:
-  sub_domains = MeshFunction("uint", mesh, "subdomains.xml.gz");
+  sub_domains = MeshFunction("size_t", mesh, "subdomains.xml.gz");
 h = CellSize(mesh)
 
 # Create FunctionSpaces

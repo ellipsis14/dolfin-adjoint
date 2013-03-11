@@ -79,7 +79,7 @@ def get_box():
     try:
       boundaries = FacetFunction("sizet", mesh)
     except:
-      boundaries = FacetFunction("uint", mesh)
+      boundaries = FacetFunction("size_t", mesh)
 
     boundaries.set_all(0)
     on_bdry = AutoSubDomain(lambda x, on_boundary: on_boundary)

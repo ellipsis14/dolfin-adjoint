@@ -77,7 +77,7 @@ def get_box():
 
     # Mark all facets by 0, exterior facets by 1, and then top and
     # bottom by 2
-    boundaries = FacetFunction("uint", mesh)
+    boundaries = FacetFunction("size_t", mesh)
     boundaries.set_all(0)
     on_bdry = AutoSubDomain(lambda x, on_boundary: on_boundary)
     top = AutoSubDomain(lambda x, on_boundary: near(x[2], 100.))

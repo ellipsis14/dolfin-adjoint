@@ -63,7 +63,7 @@ sides = Sides()
 try:
   boundaries = FacetFunction("sizet", mesh)
 except:
-  boundaries = FacetFunction("uint", mesh)
+  boundaries = FacetFunction("size_t", mesh)
 boundaries.set_all(0)
 left.mark(boundaries, 1)
 right.mark(boundaries, 2)

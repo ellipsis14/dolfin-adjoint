@@ -164,7 +164,7 @@ def Nusselt():
 
     # Define markers (2) for top boundary, remaining facets are marked
     # by 0
-    markers = FacetFunction("uint", mesh)
+    markers = FacetFunction("size_t", mesh)
     markers.set_all(0)
     top = compile_subdomains("near(x[1], %s)" % height)
     top.mark(markers, 2)
