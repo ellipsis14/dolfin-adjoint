@@ -125,6 +125,7 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
     callback(adj_var, output.data)
 
     storage = libadjoint.MemoryStorage(output)
+    storage.set_overwrite(True)
     adjglobals.adjointer.record_variable(adj_var, storage)
     fwd_var = libadjoint.Variable(adj_var.name, adj_var.timestep, adj_var.iteration)
 

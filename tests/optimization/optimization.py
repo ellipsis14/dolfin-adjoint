@@ -88,8 +88,7 @@ if __name__ == "__main__":
 
     for method in ["SLSQP", "BFGS", "COBYLA", "TNC", "L-BFGS-B", "Newton-CG", "Nelder-Mead", "Anneal", "CG"]: #, "Powell"]:
         print "\n === Solving problem with %s. ===\n" % method
-        u_opt.assign(ic, annotate = False)
-        reduced_functional(u_opt)
+        reduced_functional(ic)
         u_opt = minimize(reduced_functional, 
                          bounds = options[method].pop("bounds"), 
                          method = method, tol = 1e-10, 
