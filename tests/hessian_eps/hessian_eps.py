@@ -34,7 +34,7 @@ if __name__ == "__main__":
     output = HJm(m)
     residual = assemble(inner(lamda*m - output, lamda*m - output)*dx)
     print "(%s) eigenvector: " % i, m.vector().array()
-    print "(%s) lamda: " % i, lamda
+    print "(%s) lambda: " % i, lamda
     print "(%s) residual^2: " % i, residual
 
     assert residual < 1.0e-10
