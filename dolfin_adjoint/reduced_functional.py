@@ -2,7 +2,7 @@ import libadjoint
 import numpy
 from dolfin import cpp, info, project, Function
 from dolfin_adjoint import adjlinalg, adjrhs, constant, utils, drivers
-from dolfin_adjoint.adjglobals import adjointer, mem_checkpoints, disk_checkpoints
+from dolfin_adjoint.adjglobals import adjointer, mem_checkpoints, disk_checkpoints, adj_reset_cache
 
 def unlist(x):
     ''' If x is a list of length 1, return its element. Otherwise return x. '''
@@ -233,9 +233,13 @@ class ReducedFunctional(object):
         if not self.replays_annotation:
             solving.adj_reset()
 
-        # Set the parameter values and execute the reduced functional
+        # We move in parameter space, so we also need to recalulate the the Hessian cache
+        adj_reset_cache()
+
+        # Now its time to update the parameter values using the given array  
         m = [p.data() for p in self.parameter]
         set_local(m, m_array)
+
         return self(m)
 
     def derivative_array(self, m_array, taylor_test = False, seed = 0.001, forget = True):
