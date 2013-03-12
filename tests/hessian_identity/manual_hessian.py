@@ -56,7 +56,7 @@ if __name__ == "__main__":
   m = interpolate(Constant(1), V)
   u = main(m)
 
-  J = inner(u, u)**3*dx
+  J = inner(u, u)**3*dx + m*dx
   dJdu = derivative(J, u)
 
   u_adj = Function(V)
@@ -64,12 +64,12 @@ if __name__ == "__main__":
   dFdu = derivative(F, u)
   solve(adjoint(dFdu) == dJdu, u_adj)
   dFdm = ufl.algorithms.expand_derivatives(derivative(F, m))
-  dJdm_vec = assemble(-action(adjoint(dFdm), u_adj))
+  dJdm_vec = assemble(-action(adjoint(dFdm), u_adj)) + assemble(derivative(J, m))
   dJdm = Function(V, dJdm_vec)
 
   def Jhat(m):
     u = main(m)
-    return assemble(inner(u, u)**3*dx)
+    return assemble(inner(u, u)**3*dx + m*dx)
 
   Jm = Jhat(m)
 
