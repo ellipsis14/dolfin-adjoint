@@ -42,14 +42,21 @@ def HJ(u, m, J):
     correct_args = ufl.algorithms.extract_arguments(d2Jdu2)
     current_args = ufl.algorithms.extract_arguments(ad2Fdu2)
     ad2Fdu2 = replace(ad2Fdu2, dict(zip(current_args, correct_args)))
+    
+    # Mixed derivate term in SOA
+    d2Jdudm = derivative(dJdu, m, mdot)
 
-    solve(adjoint(dFdu) == d2Jdu2 - ad2Fdu2, u_soa)
+    solve(adjoint(dFdu) == d2Jdu2 - ad2Fdu2 + d2Jdudm, u_soa)
 
-    der = assemble(-action(adjoint(dFdm), u_soa))  
-
+    # Compute the Hessian action
     dJdm = derivative(J, m)
     d2Jd2m = derivative(dJdm, m)
+    # Mixed derivative term 
+    d2Jdmdu = derivative(dJdm, u, u_tlm)
+
+    der = assemble(-action(adjoint(dFdm), u_soa))  
     der += assemble(action(d2Jd2m, mdot))
+    der += assemble(d2Jdmdu)
 
     return Function(V, der)
 
@@ -60,7 +67,7 @@ if __name__ == "__main__":
   m = interpolate(Constant(1), V)
   u = main(m)
 
-  J = inner(u, u)**3*dx + inner(m, m)*dx
+  J = inner(u, u)**3*dx + inner(m, m)*dx + inner(u, m)*dx
   dJdu = derivative(J, u)
 
   u_adj = Function(V)
@@ -74,7 +81,7 @@ if __name__ == "__main__":
 
   def Jhat(m):
     u = main(m)
-    return assemble(inner(u, u)**3*dx + inner(m, m)*dx)
+    return assemble(inner(u, u)**3*dx + inner(m, m)*dx + inner(u, m)*dx)
 
   Jm = Jhat(m)
 
