@@ -110,7 +110,7 @@ if __name__ == "__main__":
   ic = interpolate(InitialConditions(), ME)
   forward, j = main(ic, annotate=True)
 
-  parameters["adjoint"]["cache_factorisations"] = True
+  parameters["adjoint"]["cache_factorizations"] = True
 
   adj_html("forward.html", "forward")
 

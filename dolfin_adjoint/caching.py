@@ -1,6 +1,6 @@
 import re
 
-soa_to_adj = re.compile(r'\[(?P<func>Functional:.*?):Solution:.*\]')
+soa_to_adj = re.compile(r'\[(?P<func>Functional:.*?):.*\]')
 
 # For caching strategies: a dictionary that maps adj_variable to LUSolver
 # Not used by default

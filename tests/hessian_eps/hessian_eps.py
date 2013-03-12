@@ -1,7 +1,7 @@
 from dolfin import *
 from dolfin_adjoint import *
 
-parameters["adjoint"]["cache_factorisations"] = True
+parameters["adjoint"]["cache_factorizations"] = True
 
 mesh = UnitSquareMesh(3, 3)
 V = FunctionSpace(mesh, "CG", 1)

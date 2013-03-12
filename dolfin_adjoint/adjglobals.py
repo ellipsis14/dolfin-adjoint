@@ -2,6 +2,7 @@ import coeffstore
 import caching
 import libadjoint
 import dolfin
+import lusolver
 
 # Create the adjointer, the central object that records the forward solve
 # as it happens.
@@ -59,4 +60,25 @@ def adj_check_checkpoints():
 lu_solvers = caching.LUCache()
 
 def adj_reset_cache():
+  if dolfin.parameters["adjoint"]["debug_cache"]:
+    dolfin.info_blue("Reseting solver cache")
+
   lu_solvers.clear()
+
+def adj_html(*args, **kwargs):
+  '''This routine dumps the current state of the adjglobals.adjointer to a HTML visualisation.
+  Use it like:
+
+    - adj_html("forward.html", "forward") # for the equations recorded on the forward run
+    - adj_html("adjoint.html", "adjoint") # for the equations to be assembled on the adjoint run
+  '''
+  return adjointer.to_html(*args, **kwargs)
+
+def adj_reset():
+  '''Forget all annotation, and reset the entire dolfin-adjoint state.'''
+  adjointer.reset()
+  adj_variables.__init__()
+  function_names.__init__()
+  lusolver.lu_solvers = {}
+  lusolver.adj_lu_solvers = {}
+  adj_reset_cache()

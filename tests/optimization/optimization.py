@@ -9,6 +9,7 @@ import libadjoint
 
 dolfin.set_log_level(ERROR)
 dolfin.parameters["optimization"]["test_gradient"] = True 
+dolfin.parameters["adjoint"]["cache_factorizations"] = True
 
 n = 10
 mesh = UnitIntervalMesh(n)

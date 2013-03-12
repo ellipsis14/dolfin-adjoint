@@ -24,7 +24,7 @@ if __name__ == "__main__":
   ic = project(Expression("x[0]*(x[0]-1)*x[1]*(x[1]-1)"), V)
   soln = main(ic, annotate=True)
 
-  parameters["adjoint"]["cache_factorisations"] = True
+  parameters["adjoint"]["cache_factorizations"] = True
 
   try:
     svd = compute_gst(ic, soln, 5, ic_norm="mass", final_norm="mass")

@@ -1,7 +1,7 @@
 from dolfin import *
 from dolfin_adjoint import *
 
-parameters["adjoint"]["cache_factorisations"] = True
+parameters["adjoint"]["cache_factorizations"] = True
 
 # Create mesh
 def main(dbdt, annotate=False):

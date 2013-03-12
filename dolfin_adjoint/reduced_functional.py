@@ -233,7 +233,7 @@ class ReducedFunctional(object):
         if not self.replays_annotation:
             solving.adj_reset()
 
-        # We move in parameter space, so we also need to recalulate the the Hessian cache
+        # We move in parameter space, so we also need to reset the factorisation cache
         adj_reset_cache()
 
         # Now its time to update the parameter values using the given array  

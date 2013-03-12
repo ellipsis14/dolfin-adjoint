@@ -8,6 +8,8 @@ import scipy
 
 dolfin.set_log_level(ERROR)
 parameters['std_out_all_processes'] = False
+parameters["adjoint"]["cache_factorizations"] = True
+parameters["adjoint"]["debug_cache"] = True
 
 x = triangle.x
 

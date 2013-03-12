@@ -2,9 +2,8 @@ from assembly import assemble, assemble_system
 from functional import Functional
 from parameter import InitialConditionParameter, ScalarParameter, ScalarParameters, TimeConstantParameter, SteadyParameter
 from lusolver import LUSolver
-#from matrix_free import down_cast, AdjointPETScKrylovSolver, AdjointKrylovMatrix
-from solving import solve, adj_html, adj_reset, adj_checkpointing
-from adjglobals import adj_start_timestep, adj_inc_timestep, adjointer, adj_check_checkpoints
+from solving import solve, adj_checkpointing
+from adjglobals import adj_start_timestep, adj_inc_timestep, adjointer, adj_check_checkpoints, adj_html, adj_reset
 from gst import compute_gst, compute_propagator_matrix, perturbed_replay
 from utils import convergence_order
 from utils import test_initial_condition_adjoint, test_initial_condition_adjoint_cdiff, test_initial_condition_tlm, test_scalar_parameter_adjoint, test_scalar_parameters_adjoint, taylor_test
