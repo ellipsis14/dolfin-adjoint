@@ -20,19 +20,19 @@ def main(m):
   return u
 
 if __name__ == "__main__":
-  m = interpolate(Constant(1), V, name="Parameter")
+  m = interpolate(Constant(2.13), V, name="Parameter")
   u = main(m)
 
   parameters["adjoint"]["stop_annotating"] = True
 
-  J = Functional((inner(u, u))**6*dx, name="NormSquared")
-  Jm = assemble(inner(u, u)**6*dx)
+  J = Functional((inner(u, u))**3*dx + inner(m, m)*dx, name="NormSquared")
+  Jm = assemble(inner(u, u)**3*dx + inner(m, m)*dx)
   dJdm = compute_gradient(J, TimeConstantParameter(m), forget=None)
   HJm  = hessian(J, TimeConstantParameter(m), warn=False)
 
   def Jhat(m):
     u = main(m)
-    return assemble(inner(u, u)**6*dx)
+    return assemble(inner(u, u)**3*dx + inner(m, m)*dx)
 
   minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, HJm=HJm, perturbation_direction=interpolate(Constant(0.1), V))
   assert minconv > 2.9

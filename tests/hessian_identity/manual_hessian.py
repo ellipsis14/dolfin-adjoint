@@ -45,9 +45,13 @@ def HJ(u, m, J):
 
     solve(adjoint(dFdu) == d2Jdu2 - ad2Fdu2, u_soa)
 
-    der = -action(adjoint(dFdm), u_soa) 
-    result = assemble(der)
-    return Function(V, result)
+    der = assemble(-action(adjoint(dFdm), u_soa))  
+
+    dJdm = derivative(J, m)
+    d2Jd2m = derivative(dJdm, m)
+    der += assemble(action(d2Jd2m, mdot))
+
+    return Function(V, der)
 
   return HJm
 
@@ -56,20 +60,21 @@ if __name__ == "__main__":
   m = interpolate(Constant(1), V)
   u = main(m)
 
-  J = inner(u, u)**3*dx + m*dx
+  J = inner(u, u)**3*dx + inner(m, m)*dx
   dJdu = derivative(J, u)
 
   u_adj = Function(V)
   F = Fm(u, m)
   dFdu = derivative(F, u)
   solve(adjoint(dFdu) == dJdu, u_adj)
+
   dFdm = ufl.algorithms.expand_derivatives(derivative(F, m))
   dJdm_vec = assemble(-action(adjoint(dFdm), u_adj)) + assemble(derivative(J, m))
   dJdm = Function(V, dJdm_vec)
 
   def Jhat(m):
     u = main(m)
-    return assemble(inner(u, u)**3*dx + m*dx)
+    return assemble(inner(u, u)**3*dx + inner(m, m)*dx)
 
   Jm = Jhat(m)
 
