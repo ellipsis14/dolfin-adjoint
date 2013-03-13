@@ -393,35 +393,3 @@ def _time_levels(adjointer, timestep):
       start = StartTimeConstant()
 
     return (start, end)
-
-def patch_ufl_form():
-  # To make Functional work, we need UFL greater than r1425.
-  # We need a Form to raise NotImplemented in its __mul__, so
-  # that it falls back to the __mul__ of our TimeMeasure.
-
-  # Essentially, this is a massive hack to get Functionals to
-  # work with dolfin 1.0.
-  # Feel free to delete at a later date
-
-  import ufl
-  from ufl.integral import is_scalar_constant_expression
-  from ufl.expr import Expr
-
-  def patched_form_rmul(self, scalar):
-    "Multiply all integrals in form with constant scalar value."
-    # This enables the handy "0*form" or "dt*form" syntax
-    if is_scalar_constant_expression(scalar):
-        return ufl.Form([scalar*itg for itg in self._integrals])
-    return NotImplemented
-
-  def patched_form_mul(self, coefficient):
-    "UFL form operator: Take the action of this form on the given coefficient."
-    if isinstance(coefficient, Expr): 
-        from ufl.formoperators import action
-        return action(self, coefficient)
-    return NotImplemented
-
-  ufl.Form.__rmul__ = patched_form_rmul
-  ufl.Form.__mul__ = patched_form_mul
-
-patch_ufl_form()
