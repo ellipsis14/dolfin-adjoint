@@ -3,10 +3,7 @@
 import os, os.path
 import sys
 import subprocess
-import sys
 import multiprocessing
-import multiprocessing.pool
-import threading
 import time
 from optparse import OptionParser
 
@@ -27,9 +24,6 @@ test_cmds = {'tlm_simple': 'mpirun -n 2 python tlm_simple.py',
              'matrix_free_simple': None,
              'mantle_convection': None}
 
-chdirlock = threading.Lock()
-appendlock = threading.Lock()
-
 parser = OptionParser()
 parser.add_option("-n", type="int", dest="num_procs", default = 1, help = "To run on N cores, use -n N; to use all processors available, run test.py -n 0.")
 parser.add_option("-t", type="string", dest="test_name", help = "To run one specific test, use -t TESTNAME. By default all test are run.")
@@ -39,9 +33,6 @@ parser.add_option("--timings", dest="timings", default=False, action="store_true
 
 if options.num_procs <= 0:
   options.num_procs = None
-
-pool = multiprocessing.pool.ThreadPool(options.num_procs)
-fails = []
 
 basedir = os.path.dirname(os.path.abspath(sys.argv[0]))
 subdirs = [x for x in os.listdir(basedir) if os.path.isdir(os.path.join(basedir, x))]
@@ -58,9 +49,7 @@ for test in long_tests:
 
 # Keep path variables (for buildbot's sake for instance)
 orig_pythonpath = os.getenv('PYTHONPATH', '')
-pythonpath = os.pathsep.join([os.path.abspath(os.path.join(basedir,
-                                                           os.path.pardir)),
-                              orig_pythonpath])
+pythonpath = os.pathsep.join([os.path.abspath(os.path.join(basedir, os.path.pardir)), orig_pythonpath])
 os.putenv('PYTHONPATH', pythonpath)
 
 timings = {}
@@ -69,32 +58,31 @@ def f(subdir):
   test_cmd = test_cmds.get(subdir, 'python %s.py' % subdir)
   if test_cmd is not None:
 
-    chdirlock.acquire()
-    os.chdir(os.path.join(basedir, subdir))
-    if options.num_procs > 1:
-      time.sleep(1)
-
     print "--------------------------------------------------------"
     print "Running %s " % subdir
     print "--------------------------------------------------------"
 
-    chdirlock.release()
-
     start_time = time.time()
-    exit = os.system(test_cmd)
+    handle = subprocess.Popen(test_cmd, shell=True, cwd=os.path.join(basedir, subdir))
+    exit = handle.wait()
     end_time   = time.time()
     timings[subdir] = end_time - start_time
     if exit != 0:
       print "subdir: ", subdir
       print "exit: ", exit
-      appendlock.acquire()
-      fails.append(subdir)
-      appendlock.release()
+      return subdir
+    else:
+      return None
 
 tests = sorted(subdirs)
 if not options.short_only:
   tests = long_tests + tests
-pool.map(f, tests)
+
+pool = multiprocessing.Pool(options.num_procs)
+
+fails = pool.map(f, tests)
+# Remove Nones
+fails = [fail for fail in fails if fail is not None]
 
 if options.timings:
   for subdir in sorted(timings, key=timings.get, reverse=True):
