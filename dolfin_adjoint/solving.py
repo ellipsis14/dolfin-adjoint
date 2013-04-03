@@ -254,19 +254,11 @@ def annotate(*args, **kwargs):
         return adjlinalg.Vector(None)
 
       G = coefficient * deriv
-      bcs = [bc for bc in eq_bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
 
       if hermitian:
-        input_copy = dolfin.Vector(input.data.vector())
-        #[dolfin.homogenize(bc).apply(input_copy) for bc in bcs]
-        input_copy = dolfin.Function(input.data.function_space(), input_copy)
-        output_vec = dolfin.assemble(dolfin.action(dolfin.adjoint(G), input_copy))
-        output = dolfin.Function(dolfin_variable.function_space(), output_vec) # output lives in the function space of the differentiating variable
+        output = dolfin.action(dolfin.adjoint(G), input.data)
       else:
-        output = dolfin.Function(ufl.algorithms.extract_arguments(eq_lhs)[-1].function_space()) # output lives in the function space of the TestFunction
-        output_vec = dolfin.assemble(dolfin.action(G, input.data))
-        #[dolfin.homogenize(bc).apply(output_vec) for bc in bcs]
-        output = dolfin.Function(ufl.algorithms.extract_arguments(eq_lhs)[-1].function_space(), output_vec) # output lives in the function space of the TestFunction
+        output = dolfin.action(G, input.data)
 
       return adjlinalg.Vector(output)
     diag_block.derivative_action = derivative_action
