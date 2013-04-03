@@ -224,34 +224,12 @@ def annotate(*args, **kwargs):
     expressions.update_expressions(frozen_expressions_dict)
     eq_l = dolfin.replace(eq_lhs, dict(zip(diag_coeffs, value_coeffs)))
 
-    if dolfin.parameters["adjoint"]["test_derivative"] is None:
-      if hermitian:
-        eq_l = dolfin.adjoint(eq_l)
+    if hermitian:
+      eq_l = dolfin.adjoint(eq_l)
 
-      output = coefficient * dolfin.action(eq_l, input.data)
+    output = coefficient * dolfin.action(eq_l, input.data)
 
-      return adjlinalg.Vector(output)
-    else:
-      # Let's do things the proper way. We're testing the order of convergence of the
-      # derivative against this action, so we need to apply the boundary conditions
-      # here too.
-
-      import os
-      import os.path
-
-      G = dolfin.assemble(eq_l)
-      [bc.apply(G) for bc in eq_bcs]
-
-      if hermitian:
-        fn_space = ufl.algorithms.extract_arguments(eq_l)[-1].function_space()
-        output = dolfin.Function(fn_space)
-        G.transpmult(input.data.vector(), output.vector())
-      else:
-        fn_space = ufl.algorithms.extract_arguments(eq_l)[-2].function_space()
-        output = dolfin.Function(fn_space)
-        G.mult(input.data.vector(), output.vector())
-
-      return adjlinalg.Vector(output)
+    return adjlinalg.Vector(output)
 
   diag_block.action = diag_action_cb
 
@@ -280,14 +258,14 @@ def annotate(*args, **kwargs):
 
       if hermitian:
         input_copy = dolfin.Vector(input.data.vector())
-        [dolfin.homogenize(bc).apply(input_copy) for bc in bcs]
+        #[dolfin.homogenize(bc).apply(input_copy) for bc in bcs]
         input_copy = dolfin.Function(input.data.function_space(), input_copy)
         output_vec = dolfin.assemble(dolfin.action(dolfin.adjoint(G), input_copy))
         output = dolfin.Function(dolfin_variable.function_space(), output_vec) # output lives in the function space of the differentiating variable
       else:
         output = dolfin.Function(ufl.algorithms.extract_arguments(eq_lhs)[-1].function_space()) # output lives in the function space of the TestFunction
         output_vec = dolfin.assemble(dolfin.action(G, input.data))
-        [dolfin.homogenize(bc).apply(output_vec) for bc in bcs]
+        #[dolfin.homogenize(bc).apply(output_vec) for bc in bcs]
         output = dolfin.Function(ufl.algorithms.extract_arguments(eq_lhs)[-1].function_space(), output_vec) # output lives in the function space of the TestFunction
 
       return adjlinalg.Vector(output)

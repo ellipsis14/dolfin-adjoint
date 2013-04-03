@@ -116,9 +116,7 @@ class Vector(libadjoint.Vector):
     if isinstance(self.data, dolfin.Function):
       return (abs(dolfin.assemble(dolfin.inner(self.data, self.data)*dolfin.dx)))**0.5
     elif isinstance(self.data, ufl.form.Form):
-      vec = dolfin.assemble(self.data)
-      n = scipy.linalg.norm(vec)
-      return n
+      return dolfin.assemble(self.data).norm("l2")
 
   def dot_product(self,y):
 
