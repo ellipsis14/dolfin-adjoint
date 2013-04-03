@@ -275,19 +275,20 @@ def annotate(*args, **kwargs):
       if len(ufl.algorithms.extract_arguments(ufl.algorithms.expand_derivatives(coefficient*deriv))) == 0:
         return adjlinalg.Vector(None)
 
-      G = dolfin.assemble(coefficient * deriv)
-      # Zero the rows of G corresponding to Dirichlet rows of the form
+      G = coefficient * deriv
       bcs = [bc for bc in eq_bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
 
       if hermitian:
-        output = dolfin.Function(dolfin_variable.function_space()) # output lives in the function space of the differentiating variable
         input_copy = dolfin.Vector(input.data.vector())
         [dolfin.homogenize(bc).apply(input_copy) for bc in bcs]
-        G.transpmult(input_copy, output.vector())
+        input_copy = dolfin.Function(input.data.function_space(), input_copy)
+        output_vec = dolfin.assemble(dolfin.action(dolfin.adjoint(G), input_copy))
+        output = dolfin.Function(dolfin_variable.function_space(), output_vec) # output lives in the function space of the differentiating variable
       else:
         output = dolfin.Function(ufl.algorithms.extract_arguments(eq_lhs)[-1].function_space()) # output lives in the function space of the TestFunction
-        G.mult(input.data.vector(), output.vector())
-        [dolfin.homogenize(bc).apply(output.vector()) for bc in bcs]
+        output_vec = dolfin.assemble(dolfin.action(G, input.data))
+        [dolfin.homogenize(bc).apply(output_vec) for bc in bcs]
+        output = dolfin.Function(ufl.algorithms.extract_arguments(eq_lhs)[-1].function_space(), output_vec) # output lives in the function space of the TestFunction
 
       return adjlinalg.Vector(output)
     diag_block.derivative_action = derivative_action
