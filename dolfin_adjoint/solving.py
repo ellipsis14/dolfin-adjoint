@@ -228,13 +228,9 @@ def annotate(*args, **kwargs):
       if hermitian:
         eq_l = dolfin.adjoint(eq_l)
 
-      output_vec = dolfin.assemble(coefficient * dolfin.action(eq_l, input.data))
-      output_fn = dolfin.Function(input.data.function_space())
-      vec = output_fn.vector()
-      for i in range(len(vec)):
-        vec[i] = output_vec[i]
+      output = coefficient * dolfin.action(eq_l, input.data)
 
-      return adjlinalg.Vector(output_fn)
+      return adjlinalg.Vector(output)
     else:
       # Let's do things the proper way. We're testing the order of convergence of the
       # derivative against this action, so we need to apply the boundary conditions
