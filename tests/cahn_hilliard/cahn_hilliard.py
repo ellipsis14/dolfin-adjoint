@@ -125,5 +125,5 @@ if __name__ == "__main__":
     u, j = main(ic, annotate=False)
     return j
 
-  minconv = taylor_test(J, InitialConditionParameter("Solution"), j, dJdic, HJm=Hic, seed=1.0e-2)
+  minconv = taylor_test(J, InitialConditionParameter("Solution"), j, dJdic, HJm=Hic, seed=1.0e-3)
   assert minconv > 1.9
