@@ -76,6 +76,8 @@ class Vector(libadjoint.Vector):
       else:
         # This occurs when adding a RHS derivative to an adjoint equation
         # corresponding to the initial conditions.
+        #print "axpy assembling FuncForm. self.data is a %s; x.data is a %s" % (self.data.__class__, x.data.__class__)
+        #import IPython; IPython.embed()
         self.data.vector().axpy(alpha, dolfin.assemble(x.data))
     elif isinstance(x.data, ufl.form.Form) and isinstance(self.data, ufl.form.Form):
 
@@ -96,6 +98,7 @@ class Vector(libadjoint.Vector):
 
       self.data+=alpha*x_form
     elif isinstance(self.data, ufl.form.Form) and isinstance(x.data, dolfin.Function):
+      #print "axpy assembling FormFunc. self.data is a %s; x.data is a %s" % (self.data.__class__, x.data.__class__)
       x_vec = x.data.vector().copy()
       self_vec = dolfin.assemble(self.data)
       self_vec.axpy(alpha, x_vec)
@@ -238,6 +241,8 @@ class Matrix(libadjoint.Matrix):
     if isinstance(self.data, IdentityMatrix):
       x=b.duplicate()
       x.axpy(1.0, b)
+      if isinstance(x.data, ufl.Form):
+        x = Vector(dolfin.Function(x.fn_space, dolfin.assemble(x.data)))
     else:
       if var.type in ['ADJ_TLM', 'ADJ_ADJOINT', 'ADJ_SOA']:
         dirichlet_bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.DirichletBC)]
@@ -284,12 +289,15 @@ class Matrix(libadjoint.Matrix):
     if isinstance(self.data, IdentityMatrix):
         output = b.duplicate()
         output.axpy(1.0, b)
+        if isinstance(output.data, ufl.Form):
+          output = Vector(dolfin.Function(output.fn_space, dolfin.assemble(output.data)))
     else:
         dirichlet_bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.DirichletBC)]
         other_bcs  = [bc for bc in self.bcs if not isinstance(bc, dolfin.DirichletBC)]
         bcs = dirichlet_bcs + other_bcs
 
         output = Vector(dolfin.Function(self.test_function().function_space()))
+        #print "b.data is a %s in the solution of %s" % (b.data.__class__, var)
         if isinstance(b.data, ufl.Form):
             assembled_rhs = dolfin.assemble(b.data)
         else:

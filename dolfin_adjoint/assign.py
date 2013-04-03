@@ -14,7 +14,7 @@ def register_assign(new, old):
 
   def identity_assembly_cb(variables, dependencies, hermitian, coefficient, context):
     assert coefficient == 1
-    return (adjlinalg.Matrix(adjlinalg.IdentityMatrix()), adjlinalg.Vector(dolfin.Function(fn_space)))
+    return (adjlinalg.Matrix(adjlinalg.IdentityMatrix()), adjlinalg.Vector(None, fn_space=fn_space))
 
   identity_block.assemble = identity_assembly_cb
   dep = adjglobals.adj_variables.next(new)
