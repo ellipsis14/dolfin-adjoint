@@ -278,15 +278,16 @@ def annotate(*args, **kwargs):
       G = dolfin.assemble(coefficient * deriv)
       # Zero the rows of G corresponding to Dirichlet rows of the form
       bcs = [bc for bc in eq_bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
-      for bc in bcs:
-        bc.zero(G)
 
       if hermitian:
         output = dolfin.Function(dolfin_variable.function_space()) # output lives in the function space of the differentiating variable
-        G.transpmult(input.data.vector(), output.vector())
+        input_copy = dolfin.Vector(input.data.vector())
+        [dolfin.homogenize(bc).apply(input_copy) for bc in bcs]
+        G.transpmult(input_copy, output.vector())
       else:
         output = dolfin.Function(ufl.algorithms.extract_arguments(eq_lhs)[-1].function_space()) # output lives in the function space of the TestFunction
         G.mult(input.data.vector(), output.vector())
+        [dolfin.homogenize(bc).apply(output.vector()) for bc in bcs]
 
       return adjlinalg.Vector(output)
     diag_block.derivative_action = derivative_action
