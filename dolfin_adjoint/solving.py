@@ -272,24 +272,18 @@ def annotate(*args, **kwargs):
 
       deriv = dolfin.derivative(current_form, dolfin_variable)
       args = ufl.algorithms.extract_arguments(deriv)
-      deriv = dolfin.replace(deriv, {args[2]: contraction_vector.data}) # contract over the *outer* index
+      deriv = dolfin.replace(deriv, {args[2]: contraction_vector.data}) # contract over the outer index
 
       # Assemble the G-matrix now, so that we can apply the Dirichlet BCs to it
       if len(ufl.algorithms.extract_arguments(ufl.algorithms.expand_derivatives(coefficient*deriv))) == 0:
         return adjlinalg.Vector(None)
 
-      G = dolfin.assemble(coefficient * deriv)
-      # Zero the rows of G corresponding to Dirichlet rows of the form
-      bcs = [bc for bc in eq_bcs if isinstance(bc, dolfin.cpp.DirichletBC)]
-      for bc in bcs:
-        bc.zero(G)
+      G = coefficient * deriv
 
       if hermitian:
-        output = dolfin.Function(dolfin_variable.function_space()) # output lives in the function space of the differentiating variable
-        G.transpmult(input.data.vector(), output.vector())
+        output = dolfin.action(dolfin.adjoint(G), input.data)
       else:
-        output = dolfin.Function(ufl.algorithms.extract_arguments(eq_lhs)[-1].function_space()) # output lives in the function space of the TestFunction
-        G.mult(input.data.vector(), output.vector())
+        output = dolfin.action(G, input.data)
 
       return adjlinalg.Vector(output)
     diag_block.derivative_outer_action = derivative_outer_action
