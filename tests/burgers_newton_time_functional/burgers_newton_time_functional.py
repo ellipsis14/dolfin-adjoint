@@ -73,17 +73,14 @@ if __name__ == "__main__":
 
     print "Running adjoint ... "
 
-    timestep = Constant(1.0/n)
     J = Functional(forward*forward*dx*dt)
-    dJdic = compute_gradient(J, InitialConditionParameter(ic), forget=False)
+    m = InitialConditionParameter(ic)
+    Jm = j
+    dJdm = compute_gradient(J, m, forget=False)
 
     def Jfunc(ic):
       j, forward = main(ic, annotate=False)
       return j 
 
-    minconv = test_initial_condition_adjoint(Jfunc, ic, dJdic, seed=1.0e-5)
-    if minconv < 1.9:
-      exit_code = 1
-    else:
-      exit_code = 0
-    sys.exit(exit_code)
+    minconv = taylor_test(Jfunc, m, Jm, dJdm, seed=1.0e-5)
+    assert minconv > 1.9
