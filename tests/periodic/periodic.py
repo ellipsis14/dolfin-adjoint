@@ -6,6 +6,9 @@ dolfin.parameters["adjoint"]["record_all"] = True
 import random
 import sys
 
+if dolfin.__version__[0:3] > '1.1':
+  sys.exit(0)
+
 mesh = UnitIntervalMesh(40)
 V = FunctionSpace(mesh, "CG", 2)
 
