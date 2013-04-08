@@ -35,7 +35,7 @@ def main(ic, annotate=False):
     t = 0.0
     end = 0.2
     j = 0
-    j += 0.5*float(timestep)*assemble(u_*u_*dx)
+    j += 0.5*float(timestep)*assemble(u_*u_*u_*u_*dx)
 
     if annotate:
       adjointer.time.start(0)
@@ -50,7 +50,7 @@ def main(ic, annotate=False):
           quad_weight = 0.5
         else:
           quad_weight = 1.0
-        j += quad_weight*float(timestep)*assemble(u_*u_*dx)
+        j += quad_weight*float(timestep)*assemble(u_*u_*u_*u_*dx)
         if annotate:
           adj_inc_timestep(time=t, finished=t>end)
 
@@ -73,14 +73,15 @@ if __name__ == "__main__":
 
     print "Running adjoint ... "
 
-    J = Functional(forward*forward*dx*dt)
+    J = Functional(forward*forward*forward*forward*dx*dt)
     m = InitialConditionParameter(ic)
     Jm = j
     dJdm = compute_gradient(J, m, forget=False)
+    HJm  = hessian(J, m)
 
     def Jfunc(ic):
       j, forward = main(ic, annotate=False)
       return j 
 
-    minconv = taylor_test(Jfunc, m, Jm, dJdm, seed=1.0e-5)
-    assert minconv > 1.9
+    minconv = taylor_test(Jfunc, m, Jm, dJdm, HJm=HJm, seed=5.0e-4)
+    assert minconv > 2.7
