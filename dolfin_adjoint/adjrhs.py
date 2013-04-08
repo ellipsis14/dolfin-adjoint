@@ -53,6 +53,9 @@ class RHS(libadjoint.RHS):
 
   def derivative_action(self, dependencies, values, variable, contraction_vector, hermitian):
 
+    if contraction_vector.data is None:
+      return adjlinalg.Vector(None)
+
     if isinstance(self.form, ufl.form.Form):
       # Find the dolfin Function corresponding to variable.
       dolfin_variable = values[dependencies.index(variable)].data
