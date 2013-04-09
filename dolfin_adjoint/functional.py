@@ -99,6 +99,10 @@ class Functional(libadjoint.Functional):
     return adjlinalg.Vector(d)
 
   def second_derivative(self, adjointer, variable, dependencies, values, contraction):
+
+    if contraction.data is None:
+      return adjlinalg.Vector(None)
+
     functional_value = None
     for timestep in self._derivative_timesteps(adjointer, variable):
       functional_value = _add(functional_value,
