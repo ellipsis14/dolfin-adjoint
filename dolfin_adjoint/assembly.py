@@ -56,7 +56,13 @@ def assemble_system(*args, **kwargs):
   """
   lhs = args[0]
   rhs = args[1]
-  bcs = args[2]
+
+  if 'bcs' in kwargs:
+    bcs = kwargs['bcs']
+  elif len(args) > 2:
+    bcs = args[2]
+  else:
+    bcs = []
 
   if not isinstance(bcs, list):
     bcs = [bcs]
