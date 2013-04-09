@@ -70,6 +70,28 @@ def minimize_scipy_generic(J, dJ, m, method, bounds = None, H = None, **kwargs):
     set_local(m, numpy.array(res["x"]))
     return m
 
+def minimize_custom(J, dJ, m, bounds = None, H = None, **kwargs):
+    ''' Interface to the user-provided minimisation method '''
+
+    try:
+        algo = kwargs["algorithm"]
+        del kwargs["algorithm"]
+    except KeyError:
+        raise KeyError, 'When using a "Custom" optimisation method, you must pass the optimisation function as the "algorithm" parameter. Make sure that this function accepts the same arguments as scipy.optimize.minimize.' 
+
+    m_global = get_global(m)
+
+    if bounds != None:
+        bounds = serialise_bounds(bounds, m)
+
+    res = algo(J, m_global, dJ, H, bounds, **kwargs)
+
+    try:
+        set_local(m, numpy.array(res))
+    except Exception as e:
+        raise e, "Failed to updated the optimised parameter value. Are you sure your custom optimisation algorithm returns an array containing the optimised values?" 
+    return m
+
 optimization_algorithms_dict = {'L-BFGS-B': ('The L-BFGS-B implementation in scipy.', minimize_scipy_generic),
                                 'SLSQP': ('The SLSQP implementation in scipy.', minimize_scipy_generic),
                                 'TNC': ('The truncated Newton algorithm implemented in scipy.', minimize_scipy_generic), 
@@ -79,7 +101,8 @@ optimization_algorithms_dict = {'L-BFGS-B': ('The L-BFGS-B implementation in sci
                                 'Powell': ('Gradient-free Powells method', minimize_scipy_generic),
                                 'Newton-CG': ('Newton-CG method', minimize_scipy_generic),
                                 'Anneal': ('Gradient-free simulated annealing', minimize_scipy_generic),
-                                'COBYLA': ('Gradient-free constrained optimization by linear approxition method', minimize_scipy_generic)
+                                'COBYLA': ('Gradient-free constrained optimization by linear approxition method', minimize_scipy_generic),
+                                'Custom': ('User-provided optimization algorithm', minimize_custom)
                                 }
 
 def print_optimization_methods():
@@ -104,7 +127,7 @@ def minimize(reduced_func, method = 'L-BFGS-B', scale = 1.0, **kwargs):
         The function arguments are as follows:
         * 'reduced_func' must be a ReducedFunctional object. 
         * 'method' specifies the optimization method to be used to solve the problem. The available methods can be listed with the print_optimization_methods function.
-        * 'scale' is a factor to scale to problem. Use a negative number to solve a maximisation problem.
+        * 'scale' is a factor to scale to problem (default: 1.0). 
         * 'bounds' is an optional keyword parameter to support control constraints: bounds = (lb, ub). lb and ub must be of the same type than the parameters m. 
         
         Additional arguments specific for the optimization algorithms can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimization algorithm. For detailed information about which arguments are supported for each optimization algorithm, please refer to the documentaton of the optimization algorithm.
@@ -117,11 +140,11 @@ def minimize(reduced_func, method = 'L-BFGS-B', scale = 1.0, **kwargs):
     except KeyError:
         raise KeyError, 'Unknown optimization method ' + method + '. Use print_optimization_methods() to get a list of the available methods.'
 
-    # For scipy's generic inteface we need to pass the optimisation method as a parameter. 
     if algorithm == minimize_scipy_generic:
+        # For scipy's generic inteface we need to pass the optimisation method as a parameter. 
         kwargs["method"] = method 
 
-    if method in ["Newton-CG"]:
+    if method in ["Newton-CG", "Custom"]:
         dj = lambda m: reduced_func.derivative_array(m, taylor_test = dolfin.parameters["optimization"]["test_gradient"], 
                                                         seed = dolfin.parameters["optimization"]["test_gradient_seed"],
                                                         forget = False)
@@ -150,7 +173,7 @@ def maximize(reduced_func, method = 'L-BFGS-B', scale = 1.0, **kwargs):
         The function arguments are as follows:
         * 'reduced_func' must be a ReducedFunctional object. 
         * 'method' specifies the optimization method to be used to solve the problem. The available methods can be listed with the print_optimization_methods function.
-        * 'scale' is a factor to scale to problem. Use a negative number to solve a maximisation problem.
+        * 'scale' is a factor to scale to problem (default: 1.0). 
         * 'bounds' is an optional keyword parameter to support control constraints: bounds = (lb, ub). lb and ub must be of the same type than the parameters m. 
         
         Additional arguments specific for the optimization methods can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimization method. For detailed information about which arguments are supported for each optimization method, please refer to the documentaton of the optimization algorithm.
