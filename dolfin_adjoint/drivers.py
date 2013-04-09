@@ -151,7 +151,7 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
   else:
     return dJdparam
 
-def hessian(J, m, policy="default", warn=True):
+def hessian(J, m, warn=True):
   '''Choose which Hessian the user wants.'''
   dolfin.parameters["adjoint"]["stop_annotating"] = True
   return BasicHessian(J, m, warn=warn)
