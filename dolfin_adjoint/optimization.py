@@ -147,7 +147,7 @@ def minimize(reduced_func, method = 'L-BFGS-B', scale = 1.0, **kwargs):
     if method in ["Newton-CG", "Custom"]:
         dj = lambda m: reduced_func.derivative_array(m, taylor_test = dolfin.parameters["optimization"]["test_gradient"], 
                                                         seed = dolfin.parameters["optimization"]["test_gradient_seed"],
-                                                        forget = False)
+                                                        forget = None)
     else:
         dj = lambda m: reduced_func.derivative_array(m, taylor_test = dolfin.parameters["optimization"]["test_gradient"], 
                                                         seed = dolfin.parameters["optimization"]["test_gradient_seed"])
