@@ -56,15 +56,15 @@ class IdentityRHS(libadjoint.RHS):
       V = contraction_vector.data.function_space()
       v = dolfin.TestFunction(V)
 
-      if V not in adjglobals.fsp_lu:
+      if str(V) not in adjglobals.fsp_lu:
         u = dolfin.TrialFunction(V)
         A = dolfin.assemble(dolfin.inner(u, v)*dolfin.dx)
         lusolver = dolfin.LUSolver(A)
         lusolver.parameters["symmetric_operator"] = True
         lusolver.parameters["reuse_factorization"] = True
-        adjglobals.fsp_lu[V] = lusolver
+        adjglobals.fsp_lu[str(V)] = lusolver
       else:
-        lusolver = adjglobals.fsp_lu[V]
+        lusolver = adjglobals.fsp_lu[str(V)]
 
       riesz = dolfin.Function(V)
       lusolver.solve(riesz.vector(), contraction_vector.data.vector())
