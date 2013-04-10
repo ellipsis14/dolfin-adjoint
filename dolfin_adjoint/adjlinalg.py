@@ -253,6 +253,7 @@ class Matrix(libadjoint.Matrix):
 
       x = Vector(dolfin.Function(self.test_function().function_space()))
 
+      #print "b.data is a %s in the solution of %s" % (b.data.__class__, var)
       if b.data is None and not hasattr(b, 'nonlinear_form'):
         # This means we didn't get any contribution on the RHS of the adjoint system. This could be that the
         # simulation ran further ahead than when the functional was evaluated, or it could be that the
@@ -298,7 +299,11 @@ class Matrix(libadjoint.Matrix):
 
         output = Vector(dolfin.Function(self.test_function().function_space()))
         #print "b.data is a %s in the solution of %s" % (b.data.__class__, var)
-        if isinstance(b.data, ufl.Form):
+        if dolfin.parameters["adjoint"]["symmetric_bcs"] and dolfin.__version__ > '1.2.0':
+            assembler = dolfin.SystemAssembler(self.data, b.data, bcs)
+            assembled_rhs = dolfin.Vector()
+            assembler.assemble(assembled_rhs)
+        elif isinstance(b.data, ufl.Form):
             assembled_rhs = dolfin.assemble(b.data)
         else:
             assembled_rhs = b.data.vector()
@@ -307,8 +312,14 @@ class Matrix(libadjoint.Matrix):
         if not var in adjglobals.lu_solvers:
           if dolfin.parameters["adjoint"]["debug_cache"]:
             dolfin.info_red("Got a cache miss for %s" % var)
-          assembled_lhs = dolfin.assemble(self.data)
-          [bc.apply(assembled_lhs) for bc in bcs]
+
+          if dolfin.parameters["adjoint"]["symmetric_bcs"] and dolfin.__version__ > '1.2.0':
+            assembled_lhs = dolfin.Matrix()
+            assembler.assemble(assembled_lhs)
+          else:
+            assembled_lhs = dolfin.assemble(self.data)
+            [bc.apply(assembled_lhs) for bc in bcs]
+
           adjglobals.lu_solvers[var] = dolfin.LUSolver(assembled_lhs, "mumps")
           adjglobals.lu_solvers[var].parameters["reuse_factorization"] = True
         else:
