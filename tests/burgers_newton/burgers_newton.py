@@ -9,6 +9,7 @@ from dolfin import *
 from dolfin_adjoint import *
 
 dolfin.parameters["adjoint"]["cache_factorizations"] = True
+dolfin.parameters["adjoint"]["symmetric_bcs"] = True
 
 n = 30
 mesh = UnitIntervalMesh(n)

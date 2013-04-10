@@ -38,7 +38,36 @@ class IdentityRHS(libadjoint.RHS):
     return adjlinalg.Vector(values[0].data)
 
   def derivative_action(self, dependencies, values, variable, contraction_vector, hermitian):
-    return adjlinalg.Vector(contraction_vector.data)
+
+    # If you want to apply boundary conditions symmetrically in the adjoint
+    # -- and you often do --
+    # then we need to have a UFL representation of all the terms in the adjoint equation.
+    # However!
+    # Since UFL cannot represent the identity map,
+    # we need to find an f such that when
+    # assemble(inner(f, v)*dx)
+    # we get the contraction_vector.data back.
+    # This involves inverting a mass matrix.
+
+    if dolfin.parameters["adjoint"]["symmetric_bcs"]:
+      V = contraction_vector.data.function_space()
+      v = dolfin.TestFunction(V)
+
+      if V not in adjglobals.fsp_lu:
+        u = dolfin.TrialFunction(V)
+        A = dolfin.assemble(dolfin.inner(u, v)*dolfin.dx)
+        lusolver = dolfin.LUSolver(A)
+        lusolver.parameters["symmetric_operator"] = True
+        lusolver.parameters["reuse_factorization"] = True
+        adjglobals.fsp_lu[V] = lusolver
+      else:
+        lusolver = adjglobals.fsp_lu[V]
+
+      riesz = dolfin.Function(V)
+      lusolver.solve(riesz.vector(), contraction_vector.data.vector())
+      return adjlinalg.Vector(dolfin.inner(riesz, v)*dolfin.dx)
+    else:
+      return adjlinalg.Vector(contraction_vector.data)
 
   def second_derivative_action(self, dependencies, values, inner_variable, inner_contraction_vector, outer_variable, hermitian, action):
     return None

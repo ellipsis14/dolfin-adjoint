@@ -82,3 +82,6 @@ def adj_reset():
   lusolver.lu_solvers = {}
   lusolver.adj_lu_solvers = {}
   adj_reset_cache()
+
+# Map from FunctionSpace to LUSolver that has factorised the fsp mass matrix
+fsp_lu = {}
