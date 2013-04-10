@@ -191,9 +191,19 @@ class BasicHessian(libadjoint.Matrix):
       pass
 
     # run the adjoint and second-order adjoint equations.
-    i = adjglobals.adjointer.equation_count
-    for (adj, adj_var) in compute_adjoint(self.J, forget=None):
-      i = i - 1
+    for i in range(adjglobals.adjointer.equation_count)[::-1]:
+      adj_var = adjglobals.adjointer.get_forward_variable(i).to_adjoint(self.J)
+      # Only recompute the adjoint variable if we do not have it yet
+      try:
+        adj = adjglobals.adjointer.get_variable_value(adj_var)
+      except (libadjoint.exceptions.LibadjointErrorHashFailed, libadjoint.exceptions.LibadjointErrorNeedValue):
+        adj = adjglobals.adjointer.get_adjoint_solution(i, self.J)[1]
+
+        storage = libadjoint.MemoryStorage(adj)
+        adjglobals.adjointer.record_variable(adj_var, storage)
+
+      adj = adj.data
+      
       (soa_var, soa_vec) = adjglobals.adjointer.get_soa_solution(i, self.J, m_p)
       soa = soa_vec.data
 
