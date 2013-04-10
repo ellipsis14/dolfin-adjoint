@@ -418,7 +418,14 @@ def register_initial_condition(coeff, dep):
     assert coefficient == 1
     return (adjlinalg.Matrix(adjlinalg.IdentityMatrix()), adjlinalg.Vector(dolfin.Function(fn_space)))
 
-  identity_block.assemble=identity_assembly_cb
+  identity_block.assemble = identity_assembly_cb
+
+  def identity_action_cb(variables, dependencies, hermitian, coefficient, input, context):
+    output = input.duplicate()
+    output.axpy(coefficient, input)
+    return output
+
+  identity_block.action = identity_action_cb
 
   if dolfin.parameters["adjoint"]["record_all"]:
     adjglobals.adjointer.record_variable(dep, libadjoint.MemoryStorage(adjlinalg.Vector(coeff)))
