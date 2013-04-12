@@ -12,6 +12,12 @@ from dolfin import *
 from dolfin_adjoint import *
 import ufl.algorithms
 
+if dolfin.__version__ == "1.2.0":
+  # work around UFL bug in dolfin 1.2.0
+  expand = ufl.algorithms.expand_derivatives
+else:
+  expand = lambda x: x
+
 parameters["adjoint"]["stop_annotating"] = True
 
 mesh = UnitSquareMesh(10, 10)
@@ -55,8 +61,8 @@ def Jhat(m):
 
 def tlm(u, m, m_dot):
   Fm = F(u, m)
-  dFmdu = derivative(Fm, u)
-  dFmdm = derivative(Fm, m, m_dot)
+  dFmdu = expand(derivative(Fm, u))
+  dFmdm = expand(derivative(Fm, m, m_dot))
   u_tlm = Function(Vu)
 
   solve(action(dFmdu, u_tlm) + dFmdm == 0, u_tlm, bcs=hbcs)
@@ -64,11 +70,11 @@ def tlm(u, m, m_dot):
 
 def adj(u, m):
   Fm = F(u, m)
-  dFmdu = derivative(Fm, u)
+  dFmdu = expand(derivative(Fm, u))
   adFmdu = adjoint(dFmdu, reordered_arguments=ufl.algorithms.extract_arguments(dFmdu))
 
   Jm = J(u, m)
-  dJdu = derivative(Jm, u, TestFunction(Vu))
+  dJdu = expand(derivative(Jm, u, TestFunction(Vu)))
 
   u_adj = Function(Vu)
 
@@ -78,29 +84,29 @@ def adj(u, m):
 def dJ(u, m, u_adj):
   Fm = F(u, m)
   Jm = J(u, m)
-  dFmdm = derivative(Fm, m)
+  dFmdm = expand(derivative(Fm, m))
   adFmdm = adjoint(dFmdm) # the args argument to adjoint is the biggest time-waster ever. Everything else about the system is so beautiful :-/
   current_args = ufl.algorithms.extract_arguments(adFmdm)
   correct_args = [TestFunction(Vm), TrialFunction(Vu)]
   adFmdm = replace(adFmdm, dict(zip(current_args, correct_args)))
 
-  dJdm = derivative(Jm, m, TestFunction(Vm))
+  dJdm = expand(derivative(Jm, m, TestFunction(Vm)))
 
   result = assemble(-action(adFmdm, u_adj) + dJdm)
   return Function(Vm, result)
 
 def soa(u, m, u_tlm, u_adj, m_dot):
   Fm = F(u, m)
-  dFmdu = derivative(Fm, u)
+  dFmdu = expand(derivative(Fm, u))
   adFmdu = adjoint(dFmdu, reordered_arguments=ufl.algorithms.extract_arguments(dFmdu))
 
-  dFdudu = derivative(adFmdu, u, u_tlm)
-  dFdudm = derivative(adFmdu, m, m_dot)
+  dFdudu = expand(derivative(adFmdu, u, u_tlm))
+  dFdudm = expand(derivative(adFmdu, m, m_dot))
 
   Jm = J(u, m)
-  dJdu = derivative(Jm, u, TestFunction(Vu))
-  dJdudu = derivative(dJdu, u, u_tlm)
-  dJdudm = derivative(dJdu, m, m_dot)
+  dJdu = expand(derivative(Jm, u, TestFunction(Vu)))
+  dJdudu = expand(derivative(dJdu, u, u_tlm))
+  dJdudm = expand(derivative(dJdu, m, m_dot))
 
   u_soa = Function(Vu)
 
