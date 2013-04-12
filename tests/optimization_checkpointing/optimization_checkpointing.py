@@ -66,7 +66,11 @@ if __name__ == "__main__":
     reduced_functional = ReducedFunctional(J, InitialConditionParameter(u), derivative_cb = derivative_cb)
 
     print "\n === Solving problem with L-BFGS-B. === \n"
-    u_opt = minimize(reduced_functional, method = 'L-BFGS-B', bounds = (lb, 1), tol = 1e-10, options = {'disp': True})
+    try:
+      u_opt = minimize(reduced_functional, method = 'L-BFGS-B', bounds = (lb, 1), tol = 1e-10, options = {'disp': True})
+    except ImportError:
+      info_red("No suitable scipy version found. Aborting test.")
+      from sys import exit; exit(0)
 
     tol = 1e-9
     final_functional = reduced_functional(u_opt)
@@ -100,3 +104,4 @@ if __name__ == "__main__":
                          method = method, tol = 1e-10, 
                          options = dict({'disp': True, "maxiter": 2}, **options[method]))
     info_green("Test passed")
+

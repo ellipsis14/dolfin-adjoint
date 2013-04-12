@@ -50,27 +50,31 @@ def solve_optimal_control(n):
     state_error = errornorm(u_analytic, u)
     return control_error, state_error
 
-control_errors = []
-state_errors = []
-element_sizes = []
-for i in range(2,6):
-    n = 2**i
-    control_error, state_error = solve_optimal_control(n)
-    control_errors.append(control_error)
-    state_errors.append(state_error)
-    element_sizes.append(1./n)
-    adj_reset()
-    parameters["adjoint"]["stop_annotating"] = False
+try:
+    control_errors = []
+    state_errors = []
+    element_sizes = []
+    for i in range(2,6):
+        n = 2**i
+        control_error, state_error = solve_optimal_control(n)
+        control_errors.append(control_error)
+        state_errors.append(state_error)
+        element_sizes.append(1./n)
+        adj_reset()
+        parameters["adjoint"]["stop_annotating"] = False
 
-info_green("Control errors: " + str(control_errors))
-info_green("Control convergence: " + str(convergence_order(control_errors, base = 2)))
-info_green("State errors: " + str(state_errors))
-info_green("State convergence: " + str(convergence_order(state_errors, base = 2)))
+    info_green("Control errors: " + str(control_errors))
+    info_green("Control convergence: " + str(convergence_order(control_errors, base = 2)))
+    info_green("State errors: " + str(state_errors))
+    info_green("State convergence: " + str(convergence_order(state_errors, base = 2)))
 
-if min(convergence_order(control_errors)) < 0.9:
-    info_red("Convergence order below tolerance") 
-    sys.exit(1)
-if min(convergence_order(state_errors)) < 1.9:
-    info_red("Convergence order below tolerance") 
-    sys.exit(1)
-info_green("Test passed")    
+    if min(convergence_order(control_errors)) < 0.9:
+        info_red("Convergence order below tolerance") 
+        sys.exit(1)
+    if min(convergence_order(state_errors)) < 1.9:
+        info_red("Convergence order below tolerance") 
+        sys.exit(1)
+    info_green("Test passed")    
+except ImportError:
+  info_red("No suitable scipy version found. Aborting test.")
+

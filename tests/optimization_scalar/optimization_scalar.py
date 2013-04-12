@@ -46,9 +46,14 @@ if __name__ == "__main__":
 
   # Run the optimisation 
   reduced_functional = ReducedFunctional(J, ScalarParameter("Nu"), eval_cb = eval_cb, derivative_cb = derivative_cb)
-  nu_opt = minimize(reduced_functional, 'SLSQP')
+  try:
+    nu_opt = minimize(reduced_functional, 'SLSQP')
 
-  tol = 1e-4
-  if reduced_functional(nu_opt) > tol:
-    print 'Test failed: Optimised functional value exceeds tolerance: ', reduced_functional(nu_opt), ' > ', tol, '.'
-    sys.exit(1)
+    tol = 1e-4
+    if reduced_functional(nu_opt) > tol:
+      print 'Test failed: Optimised functional value exceeds tolerance: ', reduced_functional(nu_opt), ' > ', tol, '.'
+      sys.exit(1)
+  except ImportError:
+    info_red("No suitable scipy version found. Aborting test.")
+
+
