@@ -28,7 +28,12 @@ if __name__ == "__main__":
   J = Functional((inner(u, u))**6*dx, name="NormSquared")
   HJm  = hessian(J, TimeConstantParameter(m), warn=False)
 
-  eps = HJm.eigendecomposition(n=3, solver='krylovschur')
+  try:
+    eps = HJm.eigendecomposition(n=3, solver='krylovschur')
+  except libadjoint.exceptions.LibadjointErrorSlepcError:
+    info_red("Not testing since SLEPc unavailable.")
+    import sys; sys.exit(0)
+
   for i in range(len(eps)):
     (lamda, m) = eps[i]
     output = HJm(m)
