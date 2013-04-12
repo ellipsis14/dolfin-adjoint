@@ -83,5 +83,5 @@ if __name__ == "__main__":
       j, forward = main(ic, annotate=False)
       return j 
 
-    minconv = taylor_test(Jfunc, m, Jm, dJdm, HJm=HJm, seed=5.0e-4)
+    minconv = taylor_test(Jfunc, m, Jm, dJdm, HJm=HJm, seed=5.0e-4, perturbation_direction=interpolate(Expression("x[0]"), V))
     assert minconv > 2.7
