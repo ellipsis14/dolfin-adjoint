@@ -30,7 +30,7 @@ def main(ic, annotate=True):
 
   while t <= T:
 
-      solve(a == L, u_0, bc, annotate=annotate)
+      solve(a == L, u_0, bc, annotate=annotate, solver_parameters={"linear_solver": "cg", "preconditioner": "ilu", "krylov_solver": {"absolute_tolerance": 1.0e-16, "relative_tolerance": 1.0e-200}})
       t += float(dt)
 
   return u_0

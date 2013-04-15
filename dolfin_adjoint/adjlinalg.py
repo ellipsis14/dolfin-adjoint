@@ -387,15 +387,19 @@ def wrap_solve(A, x, b, solver_parameters):
    if method in lu_solvers or method == "default":
      if method == "lu": method = "default"
      solver = dolfin.LUSolver(method)
-     safe_solver_parameters = {key:solver_parameters[key] for key in solver_parameters if key in solver.parameters}
-     solver.parameters.update(safe_solver_parameters)
+
+     if "lu_solver" in solver_parameters:
+       solver.parameters.update(solver_parameters["lu_solver"])
+
      solver.solve(A, x, b)
      return
    else:
      dangerous_parameters = ["preconditioner"]
      pc = solver_parameters.get("preconditioner", "default")
      solver = dolfin.KrylovSolver(method, pc)
-     safe_solver_parameters = {key:solver_parameters[key] for key in solver_parameters if key in solver.parameters and key not in dangerous_parameters}
-     solver.parameters.update(safe_solver_parameters)
+
+     if "krylov_solver" in solver_parameters:
+       solver.parameters.update(solver_parameters["krylov_solver"])
+
      solver.solve(A, x, b)
      return
