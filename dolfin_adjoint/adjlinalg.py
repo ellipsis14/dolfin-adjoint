@@ -266,9 +266,7 @@ class Matrix(libadjoint.Matrix):
         assembled_rhs = dolfin.Function(b.data).vector()
         [bc.apply(assembled_rhs) for bc in bcs]
 
-        pc = self.solver_parameters.get("preconditioner", "default")
-        ksp = self.solver_parameters.get("linear_solver", "default")
-        dolfin.fem.solving.solve(assembled_lhs, x.data.vector(), assembled_rhs, ksp, pc)
+        wrap_solve(assembled_lhs, x.data.vector(), assembled_rhs, self.solver_parameters)
       else:
         if hasattr(b, 'nonlinear_form'): # was a nonlinear solve
           x.data.vector()[:] = b.nonlinear_u.vector()
@@ -280,9 +278,7 @@ class Matrix(libadjoint.Matrix):
           assembled_rhs = dolfin.assemble(b.data)
           [bc.apply(assembled_rhs) for bc in bcs]
 
-          pc = self.solver_parameters.get("preconditioner", "default")
-          ksp = self.solver_parameters.get("linear_solver", "default")
-          dolfin.fem.solving.solve(assembled_lhs, x.data.vector(), assembled_rhs, ksp, pc)
+          wrap_solve(assembled_lhs, x.data.vector(), assembled_rhs, self.solver_parameters)
 
     return x
 
@@ -380,3 +376,26 @@ class IdentityMatrix(object):
   '''Placeholder object for identity matrices'''
   pass
 
+def wrap_solve(A, x, b, solver_parameters):
+   '''Make my own solve, since solve(A, x, b) can't handle other solver_parameters
+   like linear solver tolerances'''
+
+   # Comment. Why does list_lu_solver_methods() not return, a, uhm, list?
+   lu_solvers = ["lu", "mumps", "umfpack", "spooles", "superlu", "superlu_dist", "pastix", "petsc"]
+
+   method = solver_parameters.get("linear_solver", "default")
+   if method in lu_solvers or method == "default":
+     if method == "lu": method = "default"
+     solver = dolfin.LUSolver(method)
+     safe_solver_parameters = {key:solver_parameters[key] for key in solver_parameters if key in solver.parameters}
+     solver.parameters.update(safe_solver_parameters)
+     solver.solve(A, x, b)
+     return
+   else:
+     dangerous_parameters = ["preconditioner"]
+     pc = solver_parameters.get("preconditioner", "default")
+     solver = dolfin.KrylovSolver(method, pc)
+     safe_solver_parameters = {key:solver_parameters[key] for key in solver_parameters if key in solver.parameters and key not in dangerous_parameters}
+     solver.parameters.update(safe_solver_parameters)
+     solver.solve(A, x, b)
+     return
