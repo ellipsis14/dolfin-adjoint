@@ -176,6 +176,8 @@ class BasicHessian(libadjoint.Matrix):
 
   def __call__(self, m_dot):
 
+    hess_action_timer = dolfin.Timer("Hessian action")
+
     m_p = self.m.set_perturbation(m_dot)
     last_timestep = adjglobals.adjointer.timestep_count
 
@@ -186,9 +188,12 @@ class BasicHessian(libadjoint.Matrix):
     else:
       raise NotImplementedError("Sorry, don't know how to handle this")
 
+    tlm_timer = dolfin.Timer("Hessian action (TLM)")
     # run the tangent linear model
     for (tlm, tlm_var) in compute_tlm(m_p, forget=None):
       pass
+
+    tlm_timer.stop()
 
     # run the adjoint and second-order adjoint equations.
     for i in range(adjglobals.adjointer.equation_count)[::-1]:
@@ -197,16 +202,21 @@ class BasicHessian(libadjoint.Matrix):
       try:
         adj = adjglobals.adjointer.get_variable_value(adj_var)
       except (libadjoint.exceptions.LibadjointErrorHashFailed, libadjoint.exceptions.LibadjointErrorNeedValue):
+        adj_timer = dolfin.Timer("Hessian action (ADM)")
         adj = adjglobals.adjointer.get_adjoint_solution(i, self.J)[1]
+        adj_timer.stop()
 
         storage = libadjoint.MemoryStorage(adj)
         adjglobals.adjointer.record_variable(adj_var, storage)
 
       adj = adj.data
       
+      soa_timer = dolfin.Timer("Hessian action (SOA)")
       (soa_var, soa_vec) = adjglobals.adjointer.get_soa_solution(i, self.J, m_p)
+      soa_timer.stop()
       soa = soa_vec.data
 
+      func_timer = dolfin.Timer("Hessian action (derivative formula)")
       # now implement the Hessian action formula.
       out = self.m.equation_partial_derivative(adjglobals.adjointer, soa, i, soa_var.to_forward())
       if out is not None:
@@ -231,6 +241,8 @@ class BasicHessian(libadjoint.Matrix):
             Hm.vector().axpy(1.0, out.vector())
           elif isinstance(Hm, float):
             Hm += out
+
+      func_timer.stop()
 
       storage = libadjoint.MemoryStorage(soa_vec)
       storage.set_overwrite(True)
