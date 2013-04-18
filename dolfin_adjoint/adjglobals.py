@@ -65,6 +65,8 @@ def adj_reset_cache():
 
   lu_solvers.clear()
 
+  dolfin.parameters["adjoint"]["stop_annotating"] = False
+
 def adj_html(*args, **kwargs):
   '''This routine dumps the current state of the adjglobals.adjointer to a HTML visualisation.
   Use it like:
