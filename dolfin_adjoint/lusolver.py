@@ -56,29 +56,12 @@ class LUSolver(dolfin.LUSolver):
   def __init__(self, *args):
 
     if len(args) > 0:
-      try:
-        self.operator = args[0].form
-      except AttributeError:
-        raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your matrix A has to have the .form attribute: was it assembled after from dolfin_adjoint import *?")
-
-      try:
-        self.op_bcs = args[0].bcs
-      except AttributeError:
-        self.op_bcs = []
+      self.matrix = args[0]
 
     dolfin.LUSolver.__init__(self, *args)
 
   def set_operator(self, operator):
-    try:
-      self.operator = operator.form
-    except AttributeError:
-      raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your matrix A has to have the .form attribute: was it assembled after from dolfin_adjoint import *?")
-
-    try:
-      self.op_bcs = operator.bcs
-    except AttributeError:
-      self.op_bcs = []
-
+    self.matrix = operator
     dolfin.LUSolver.set_operator(self, operator)
 
   def solve(self, *args, **kwargs):
@@ -97,7 +80,15 @@ class LUSolver(dolfin.LUSolver):
 
     if annotate:
       if len(args) == 2:
-        A = self.operator
+        try:
+          A = self.matrix.form
+        except AttributeError:
+          raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your matrix A has to have the .form attribute: was it assembled after from dolfin_adjoint import *?")
+
+        try:
+          self.op_bcs = self.matrix.bcs
+        except AttributeError:
+          self.op_bcs = []
 
         try:
           x = args[0].function
