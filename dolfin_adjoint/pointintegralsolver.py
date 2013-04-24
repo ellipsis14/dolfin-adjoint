@@ -74,7 +74,9 @@ if dolfin.__version__ > '1.2.0':
       new_time = dolfin.Constant(0.0)
       new_scheme = self.scheme.__class__(new_form, new_solution, new_time)
       new_scheme.t().assign(self.time)
+
       new_solver = dolfin.PointIntegralSolver(new_scheme)
+      new_solver.parameters.update(self.solver.parameters)
 
       new_solver.step(self.dt)
 

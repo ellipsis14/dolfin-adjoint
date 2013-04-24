@@ -29,6 +29,8 @@ def main(u0, c, Solver):
   solver = PointIntegralSolver(scheme)
   dt = 0.2
 
+  solver.parameters["newton_solver"]["iterations_to_retabulate_jacobian"] = 1
+
   for i in range(1):
     solver.step(dt)
     xs.append(float(time))
