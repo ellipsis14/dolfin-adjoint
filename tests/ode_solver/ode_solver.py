@@ -60,9 +60,10 @@ if __name__ == "__main__":
     plt.legend(loc="best")
     plt.show()
 
-  replay = False
+  replay = True
 
   if replay:
     assert adjglobals.adjointer.equation_count > 0
-    success = replay_dolfin(tol=0.0, stop=True)
-    assert success
+    adj_html("forward.html", "forward")
+    #success = replay_dolfin(tol=0.0, stop=True)
+    #assert success

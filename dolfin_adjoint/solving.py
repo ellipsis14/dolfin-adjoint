@@ -406,29 +406,13 @@ def register_initial_conditions(coeffdeps, linear, var=None):
 
 def register_initial_condition(coeff, dep):
   fn_space = coeff.function_space()
-  block_name = "Identity: %s" % str(fn_space)
-  if len(block_name) > int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"]):
-    block_name = block_name[0:int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"])-1]
-  identity_block = libadjoint.Block(block_name)
-
-  init_rhs=adjlinalg.Vector(coeff).duplicate()
-  init_rhs.axpy(1.0,adjlinalg.Vector(coeff))
-
-  def identity_assembly_cb(variables, dependencies, hermitian, coefficient, context):
-    assert coefficient == 1
-    return (adjlinalg.Matrix(adjlinalg.IdentityMatrix()), adjlinalg.Vector(dolfin.Function(fn_space)))
-
-  identity_block.assemble = identity_assembly_cb
-
-  def identity_action_cb(variables, dependencies, hermitian, coefficient, input, context):
-    output = input.duplicate()
-    output.axpy(coefficient, input)
-    return output
-
-  identity_block.action = identity_action_cb
+  identity_block = get_identity(fn_space)
 
   if dolfin.parameters["adjoint"]["record_all"]:
     adjglobals.adjointer.record_variable(dep, libadjoint.MemoryStorage(adjlinalg.Vector(coeff)))
+
+  init_rhs=adjlinalg.Vector(coeff).duplicate()
+  init_rhs.axpy(1.0,adjlinalg.Vector(coeff))
 
   rhs = adjrhs.RHS(init_rhs)
   initial_eq = libadjoint.Equation(dep, blocks=[identity_block], targets=[dep], rhs=rhs)
@@ -478,4 +462,26 @@ def do_checkpoint(cs, var, rhs):
 
       adjglobals.disk_checkpoints.add(str(dep)) 
       adjglobals.adjointer.record_variable(dep, libadjoint.DiskStorage(adjlinalg.Vector(coeff), cs=True))
+
+
+def get_identity(fn_space):
+  block_name = "Identity: %s" % str(fn_space)
+  if len(block_name) > int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"]):
+    block_name = block_name[0:int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"])-1]
+  identity_block = libadjoint.Block(block_name)
+
+  def identity_assembly_cb(variables, dependencies, hermitian, coefficient, context):
+    assert coefficient == 1
+    return (adjlinalg.Matrix(adjlinalg.IdentityMatrix()), adjlinalg.Vector(dolfin.Function(fn_space)))
+
+  identity_block.assemble = identity_assembly_cb
+
+  def identity_action_cb(variables, dependencies, hermitian, coefficient, input, context):
+    output = input.duplicate()
+    output.axpy(coefficient, input)
+    return output
+
+  identity_block.action = identity_action_cb
+
+  return identity_block
 
