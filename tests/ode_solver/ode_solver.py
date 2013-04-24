@@ -7,6 +7,7 @@ except ImportError:
 
 from dolfin import *
 from dolfin_adjoint import *
+import ufl.algorithms
 
 mesh = UnitIntervalMesh(2)
 #R = FunctionSpace(mesh, "R", 0) # in my opinion, should work, but doesn't
@@ -65,5 +66,5 @@ if __name__ == "__main__":
   if replay:
     assert adjglobals.adjointer.equation_count > 0
     adj_html("forward.html", "forward")
-    #success = replay_dolfin(tol=0.0, stop=True)
-    #assert success
+    success = replay_dolfin(tol=0.0, stop=True)
+    assert success
