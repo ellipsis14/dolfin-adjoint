@@ -485,3 +485,5 @@ def get_identity(fn_space):
 
   return identity_block
 
+def record(val):
+  adjglobals.adjointer.record_variable(adjglobals.adj_variables[val], libadjoint.MemoryStorage(adjlinalg.Vector(val)))

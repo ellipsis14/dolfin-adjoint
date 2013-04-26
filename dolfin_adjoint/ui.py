@@ -2,7 +2,7 @@ from assembly import assemble, assemble_system
 from functional import Functional
 from parameter import InitialConditionParameter, ScalarParameter, ScalarParameters, TimeConstantParameter, SteadyParameter
 from lusolver import LUSolver
-from solving import solve, adj_checkpointing
+from solving import solve, adj_checkpointing, annotate, record
 from adjglobals import adj_start_timestep, adj_inc_timestep, adjointer, adj_check_checkpoints, adj_html, adj_reset
 from gst import compute_gst, compute_propagator_matrix, perturbed_replay
 from utils import convergence_order
