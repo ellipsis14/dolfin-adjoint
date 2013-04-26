@@ -60,7 +60,7 @@ class IdentityRHS(libadjoint.RHS):
         u = dolfin.TrialFunction(V)
         A = dolfin.assemble(dolfin.inner(u, v)*dolfin.dx)
         lusolver = dolfin.LUSolver(A, "mumps")
-        lusolver.parameters["symmetric_operator"] = True
+        lusolver.parameters["symmetric"] = True
         lusolver.parameters["reuse_factorization"] = True
         adjglobals.fsp_lu[str(V)] = lusolver
       else:
