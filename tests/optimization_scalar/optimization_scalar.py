@@ -16,7 +16,7 @@ def main(nu):
   u_next = Function(V)
   v = TestFunction(V)
 
-  timestep = Constant(1.0/n)
+  timestep = Constant(1.0/n, name="Timestep")
 
   F = ((u_next - u)/timestep*v
       + u_next*u_next.dx(0)*v 

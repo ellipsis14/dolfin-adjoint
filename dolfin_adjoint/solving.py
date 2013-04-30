@@ -22,6 +22,7 @@ import scipy.linalg
 
 import assembly
 import expressions
+import constant
 import coeffstore
 import adjrhs
 import adjglobals
@@ -169,7 +170,8 @@ def annotate(*args, **kwargs):
   # In expressions.py, we overloaded the Expression class to record all of the parameters
   # as they are set. We're now going to copy that dictionary as it is at the annotation time,
   # so that we can get back to this exact state:
-  frozen_expressions_dict = expressions.freeze_dict()
+  frozen_expressions = expressions.freeze_dict()
+  frozen_constants = constant.freeze_dict()
 
   def diag_assembly_cb(dependencies, values, hermitian, coefficient, context):
     '''This callback must conform to the libadjoint Python block assembly
@@ -179,7 +181,8 @@ def annotate(*args, **kwargs):
     assert coefficient == 1
 
     value_coeffs=[v.data for v in values]
-    expressions.update_expressions(frozen_expressions_dict)
+    expressions.update_expressions(frozen_expressions)
+    constant.update_constants(frozen_constants)
     eq_l=dolfin.replace(eq_lhs, dict(zip(diag_coeffs, value_coeffs)))
 
     if hermitian:
@@ -221,7 +224,8 @@ def annotate(*args, **kwargs):
 
   def diag_action_cb(dependencies, values, hermitian, coefficient, input, context):
     value_coeffs = [v.data for v in values]
-    expressions.update_expressions(frozen_expressions_dict)
+    expressions.update_expressions(frozen_expressions)
+    constant.update_constants(frozen_constants)
     eq_l = dolfin.replace(eq_lhs, dict(zip(diag_coeffs, value_coeffs)))
 
     if hermitian:
@@ -241,7 +245,8 @@ def annotate(*args, **kwargs):
     def derivative_action(dependencies, values, variable, contraction_vector, hermitian, input, coefficient, context):
       dolfin_variable = values[dependencies.index(variable)].data
       dolfin_values = [val.data for val in values]
-      expressions.update_expressions(frozen_expressions_dict)
+      expressions.update_expressions(frozen_expressions)
+      constant.update_constants(frozen_constants)
 
       current_form = dolfin.replace(eq_lhs, dict(zip(diag_coeffs, dolfin_values)))
 
@@ -266,7 +271,8 @@ def annotate(*args, **kwargs):
     def derivative_outer_action(dependencies, values, variable, contraction_vector, hermitian, input, coefficient, context):
       dolfin_variable = values[dependencies.index(variable)].data
       dolfin_values = [val.data for val in values]
-      expressions.update_expressions(frozen_expressions_dict)
+      expressions.update_expressions(frozen_expressions)
+      constant.update_constants(frozen_constants)
 
       current_form = dolfin.replace(eq_lhs, dict(zip(diag_coeffs, dolfin_values)))
 
@@ -292,7 +298,8 @@ def annotate(*args, **kwargs):
       dolfin_inner_variable = values[dependencies.index(inner_variable)].data
       dolfin_outer_variable = values[dependencies.index(outer_variable)].data
       dolfin_values = [val.data for val in values]
-      expressions.update_expressions(frozen_expressions_dict)
+      expressions.update_expressions(frozen_expressions)
+      constant.update_constants(frozen_constants)
 
       current_form = dolfin.replace(eq_lhs, dict(zip(diag_coeffs, dolfin_values)))
 

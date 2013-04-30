@@ -96,7 +96,7 @@ def main(kappa):
   return phi_h
 
 if __name__ == "__main__":
-  kappa = Constant(0.0)
+  kappa = Constant(0.0, name="Kappa")
 
   phi = main(kappa)
 

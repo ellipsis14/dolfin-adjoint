@@ -8,6 +8,7 @@ import adjglobals
 from adjrhs import adj_get_forward_equation
 import adjresidual
 from constant import get_constant
+import constant
 
 class DolfinAdjointParameter(libadjoint.Parameter):
   def __call__(self, adjointer, i, dependencies, values, variable):
@@ -127,6 +128,13 @@ class ScalarParameter(DolfinAdjointParameter):
       raise TypeError, "The coefficient must be a dolfin.Constant or a String"
     self.a = a
     self.coeff = coeff
+
+    # I can't believe I'm making this nauseous hack. I *hate* Constant.assign. It's
+    # either constant or it isn't! Make up your minds!
+    if isinstance(a, str):
+      constant.scalar_parameters.append(a)
+    else:
+      constant.scalar_parameters.append(a.adj_name)
 
   def __call__(self, adjointer, i, dependencies, values, variable):
     form = adjresidual.get_residual(i)

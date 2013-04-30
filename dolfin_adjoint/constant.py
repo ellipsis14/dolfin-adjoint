@@ -1,7 +1,9 @@
 import dolfin
+import copy
 
 constant_values = {}
 constant_objects = {}
+scalar_parameters = []
 
 class Constant(dolfin.Constant):
   '''The Constant class is overloaded so that you can give :py:class:`Constants` *names*. For example,
@@ -17,17 +19,36 @@ class Constant(dolfin.Constant):
 
   def __init__(self, value, cell=None, name=None):
     dolfin.Constant.__init__(self, value, cell)
-    if name is not None:
-      self.adj_name = name
+    if name is None:
+      name = hash(self)
 
-      if name in constant_values:
-        dolfin.info_red("Warning: redefing constant with name %s" % name)
+    self.adj_name = name
 
-      constant_values[name] = value
-      constant_objects[name] = self
+    if name in constant_values:
+      dolfin.info_red("Warning: redefing constant with name %s" % name)
+
+    constant_values[name] = value
+    constant_objects[name] = self
+
+  def assign(self, value):
+    dolfin.Constant.assign(self, value)
+    constant_values[self.adj_name] = value
 
 def get_constant(a):
   if isinstance(a, Constant):
     return a
   else:
     return constant_objects[a]
+
+def freeze_dict():
+  new_dict = {}
+  for name in constant_objects:
+    new_dict[constant_objects[name]] = copy.copy(constant_values[name])
+
+  return new_dict
+
+def update_constants(d):
+  for constant in d:
+    name = constant.adj_name
+    if name not in scalar_parameters:
+      dolfin.Constant.assign(constant_objects[name], dolfin.Constant(d[constant]))
