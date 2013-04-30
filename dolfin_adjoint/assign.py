@@ -49,9 +49,10 @@ class IdentityRHS(libadjoint.RHS):
     # we get the contraction_vector.data back.
     # This involves inverting a mass matrix.
 
-    if dolfin.parameters["adjoint"]["symmetric_bcs"]:
-      if dolfin.__version__ <= '1.2.0':
-        dolfin.info_red("Warning: symmetric BC application requested but unavailable in dolfin <= 1.2.0.")
+    if dolfin.parameters["adjoint"]["symmetric_bcs"] and dolfin.__version__ <= '1.2.0':
+      dolfin.info_red("Warning: symmetric BC application requested but unavailable in dolfin <= 1.2.0.")
+
+    if dolfin.parameters["adjoint"]["symmetric_bcs"] and dolfin.__version__ > '1.2.0':
 
       V = contraction_vector.data.function_space()
       v = dolfin.TestFunction(V)
