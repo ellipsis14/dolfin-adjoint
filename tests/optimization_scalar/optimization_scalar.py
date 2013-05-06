@@ -37,6 +37,10 @@ def eval_cb(j, m):
 def derivative_cb(j, dj, m):
   print "j = %f, dj = %f, m = %f." % (j, dj, float(m))
 
+def replay_cb(var, data, m):
+  #print "Got data for variable %s at m = %f." % (var, float(m))
+  pass
+
 if __name__ == "__main__":
   nu = Constant(0.0001, name="Nu")
   # Run the forward model once to have the annotation
@@ -45,7 +49,7 @@ if __name__ == "__main__":
   J = Functional(inner(u, u)*dx*dt[FINISH_TIME])
 
   # Run the optimisation 
-  reduced_functional = ReducedFunctional(J, ScalarParameter("Nu"), eval_cb = eval_cb, derivative_cb = derivative_cb)
+  reduced_functional = ReducedFunctional(J, ScalarParameter("Nu"), eval_cb = eval_cb, derivative_cb = derivative_cb, replay_cb = replay_cb)
   try:
     nu_opt = minimize(reduced_functional, 'SLSQP')
 

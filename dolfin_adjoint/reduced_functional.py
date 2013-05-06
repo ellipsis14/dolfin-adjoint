@@ -111,7 +111,7 @@ class ReducedFunctional(object):
     ''' This class implements the reduced functional for a given functional/parameter combination. The core idea 
         of the reduced functional is to consider the problem as a pure function of the parameter value which 
         implicitly solves the recorded PDE. '''
-    def __init__(self, functional, parameter, scale = 1.0, eval_cb = None, derivative_cb = None):
+    def __init__(self, functional, parameter, scale = 1.0, eval_cb = None, derivative_cb = None, replay_cb = None):
         ''' Creates a reduced functional object, that evaluates the functional value for a given parameter value.
             The arguments are as follows:
             * 'functional' must be a dolfin_adjoint.Functional object. 
@@ -134,6 +134,7 @@ class ReducedFunctional(object):
         self.scale = scale
         self.eval_cb = eval_cb
         self.derivative_cb = derivative_cb
+        self.replay_cb = replay_cb
         self.current_func_value = None
 
         # TODO: implement a drivers.hessian function that supports a list of parameters
@@ -158,6 +159,9 @@ class ReducedFunctional(object):
         func_value = 0.
         for i in range(adjointer.equation_count):
             (fwd_var, output) = adjointer.get_forward_solution(i)
+
+            if self.replay_cb is not None:
+              self.replay_cb(fwd_var, output.data, unlist(value))
 
             # Check if we checkpointing is active and if yes
             # record the exact same checkpoint variables as 
