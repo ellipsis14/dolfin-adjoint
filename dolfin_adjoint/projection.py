@@ -1,5 +1,6 @@
 import solving
 import dolfin
+import dolfin.fem.projection
 import libadjoint
 import adjglobals
 import adjlinalg
@@ -30,7 +31,7 @@ def project(v, V=None, bcs=None, mesh=None, solver_type="cg", preconditioner_typ
     # reproduce the logic from project. This probably isn't future-safe, but anyway
 
     if V is None:
-      V = dolfin._extract_function_space(v, mesh)
+      V = dolfin.fem.projection._extract_function_space(v, mesh)
 
     # Define variational problem for projection
     w = dolfin.TestFunction(V)
