@@ -1096,18 +1096,18 @@ def F(test, T):
 \end{lstlisting}
 where \verb+test+ is a spatial test function.
 
-\section{Explicit linear multi-step}
+\section{Adams-Bashforth}
 
-Explicit linear multi-step (or Adams-Bashforth) schemes take the form:
+Adams-Bashforth schemes take the form:
 \begin{equation}
   T^{n + 1} = T^n + \Delta t \sum_{i = 1}^N \gamma_i F( T^{n + 1 - i}),
 \end{equation}
-where the $\gamma_i$ are constants. Explicit linear multi-step schemes therefore
-require the values of $F(T)$ from $N$ previous time levels. Given a choice of
-$N$, the $\gamma_i$ are chosen so as to yield $N$th order accuracy. If $N > 1$
-then the scheme is not self starting, and care is required when initialising in
-order to maintain the accuracy of the method. Further details of explicit linear
-multi-step schemes can be found in \citet[section 2.1]{iserles2009} and
+where the $\gamma_i$ are constants. Adams-Bashforth schemes therefore require
+the values of $F(T)$ from $N$ previous time levels. Given a choice of $N$, the
+$\gamma_i$ are chosen so as to yield $N$th order accuracy. If $N > 1$ then the
+scheme is not self starting, and care is required when initialising in order to
+maintain the accuracy of the method. Further details of Adams-Bashforth schemes
+can be found in \citet[section 2.1]{iserles2009} and
 \citet[section III.1]{hairer1987}.
 
 \subsection{Forward Euler}\label{sect:fe}
@@ -1313,20 +1313,20 @@ system.add_solve(LinearCombination((1.0, T[n]),
 At the end of the simulation the final model solution is stored in
 \verb=T[N + 1]=.
 
-\section{Implicit linear multi-step}
+\section{Adams-Moulton}
 
-Implicit linear multi-step (or Adams-Moulton) schemes take the form:
+Adams-Moulton schemes take the form:
 \begin{equation}\label{eqn:adams_moulton}
-  T^{n + 1} = T^n + \Delta t \sum_{i = 0}^{N - 1} \gamma_i F( T^{n + 1 - i}),
+  T^{n + 1} = T^n + \Delta t \sum_{i = 0}^N \gamma_i F( T^{n + 1 - i}),
 \end{equation}
-where the $\gamma_i$ are constants. Implicit linear multi-step schemes therefore
-require the values of $F(T)$ from $N - 1$ previous time levels. Given a choice of
-$N$, the $\gamma_i$ are chosen so as to yield $N$th order accuracy. If $N > 2$
-then the scheme is not self starting, and care is required when initialising in
-order to maintain the accuracy of the method. Further details of implicit linear
-multi-step schemes can be found in \citet[section III.1]{hairer1987}.
+where the $\gamma_i$ are constants. For $n > 1$ Adams-Moulton schemes therefore
+require the values of $F(T)$ from $N - 1$ previous time levels. Given a choice
+of $N$, the $\gamma_i$ are chosen so as to yield $N$th order accuracy. If
+$N > 2$ then the scheme is not self starting, and care is required when
+initialising in order to maintain the accuracy of the method. Further details of
+Adams-Moulton schemes can be found in \citet[section III.1]{hairer1987}.
 
-In an implicit linear multi-step scheme the right-hand-side of equation
+In an Adams-Moulton scheme the right-hand-side of equation
 \eqref{eqn:adams_moulton} depends implicitly on the future solution $T^{n + 1}$.
 If $F(T)$ is linear then the implicit term contributes to the left-hand-side
 matrix in a linear solve for $T^{n + 1}$. If $F(T)$ is non-linear then the
@@ -1334,7 +1334,7 @@ a non-linear equation for $T^{n + 1}$ must be solved.
 
 \subsection{Backward Euler}\label{sect:be}
 
-For $N = 1$ the single coefficient $\gamma_0$ is chosen to be:
+For $N = 0$ the single coefficient $\gamma_0$ is chosen to be:
 \begin{equation}
   \gamma_0 = 1,
 \end{equation}
@@ -1362,7 +1362,7 @@ $F(T)$ is non-linear.
 
 \subsection{Implicit trapezium rule}\label{sect:implicit_trapezium}
 
-For $N = 2$ the $\gamma_i$ are chosen to be:
+For $N = 1$ the $\gamma_i$ are chosen to be:
 \begin{align}
   \gamma_0 = \frac{1}{2}, & & \gamma_1 = \frac{1}{2},
 \end{align}
@@ -1441,7 +1441,7 @@ found in \citet[section 3.2]{iserles2009}.
 
 \subsection{First order explicit Runge-Kutta}
 
-The first order explicit Runge-Kutta scheme is:
+The one stage first order explicit Runge-Kutta scheme is:
 \begin{subequations}
   \begin{equation}
     F^{n + 1,1} = F \left( T^n \right),
