@@ -328,6 +328,9 @@ def da_annotate_equation_solve(solve):
     if isinstance(rhs, (float, int, ufl.constantvalue.FloatValue, ufl.constantvalue.IntValue, ufl.constantvalue.Zero)):
       # This is a direct assignment, so register an assignment
       return da_annotate_assign(Constant(rhs), x_fn)
+    elif isinstance(rhs, (dolfin.Constant, dolfin.Function)):
+      # This is a direct assignment, so register an assignment
+      return da_annotate_assign(rhs, x_fn)
     # This is a LinearCombination assignment or expression assignment. For now
     # register this as a Galerkin projection.
     eq = dolfin.inner(dolfin.TestFunction(x.function_space()), dolfin.TrialFunction(x.function_space())) * dolfin.dx == \

@@ -152,8 +152,6 @@ Viper    & 1.0.0 \\
 \end{tabular}
 \end{center}
 
-DOLFIN $1.2$ is not supported by the \verb+timestepping+ library.
-
 \section{Library interfaces}
 
 The \verb+timestepping+ library can be divided into a primary high-level
@@ -1157,7 +1155,7 @@ yielding:
 \end{equation}
 This scheme cannot be used to perform the first model timestep as $T^{-1}$ is
 not available. In order to ensure global second order accuracy in time the
-method used to perform the first timestep, and compute $T^1$, must be a least
+method used to perform the first timestep, and compute $T^1$, must be at least
 first order accurate. Hence, for example, a single forward Euler step
 \ref{sect:fe} can be applied:
 \begin{equation}
@@ -1207,7 +1205,7 @@ yielding:
 This scheme cannot be used to perform the first two model timesteps as $T^{-1}$
 and $T^{-2}$ are not available. In order to ensure global third order accuracy
 in time the method used to perform the first two timesteps, and compute $T^0$
-and $T^1$, must be a least second order accurate. Hence, for example, second
+and $T^1$, must be at least second order accurate. Hence, for example, second
 order Runge-Kutta \ref{sect:rk2} and second order Adams-Bashforth \ref{sect:ab2}
 steps can be applied:
 \begin{subequations}
@@ -1279,7 +1277,7 @@ A centred discretisation in time leads to:
 This method is also known as the leapfrog scheme, and has second order accuracy.
 This scheme cannot be used to perform the first model timestep as $T^{-1}$ is
 not available. In order to ensure global second order accuracy in time the
-method used to perform the first timestep, and compute $T^1$, must be a least
+method used to perform the first timestep, and compute $T^1$, must be at least
 first order accurate. Hence, for example, a single forward Euler step
 \ref{sect:fe} can be applied:
 \begin{equation}
