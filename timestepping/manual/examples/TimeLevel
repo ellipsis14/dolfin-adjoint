@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+
+from timestepping import *
+from fractions import Fraction
+
+# Create a TimeLevel with an offset of 2
+n1 = TimeLevel(2)
+# Create a TimeLevel with an offset of -1/2
+n2 = TimeLevel(-Fraction(1, 2))  
+# Create a FinalTimeLevel with an offset of 0
+N1 = FinalTimeLevel()            
+
+# Create a TimeLevel with an offset of 2
+n3 = n + 2
+# Create a TimeLevel with an offset of -3/2
+n4 = n - Fraction(3, 2)
+
+# Create a FinalTimeLevel with an offset of 1
+N2 = N + 1
+
+print n1 == n2  # False
+print n1 > n2   # True
+print n1 == n3  # True
+print n1 >= n3  # True
+
+print N1 == N2  # False
+print N1 <= N2  # True
+
+assert(not n1 == n2)
+assert(n1 > n2)
+assert(n1 == n3)
+assert(n1 >= n3)
+
+assert(not N1 == N2)
+assert(N1 <= N2)

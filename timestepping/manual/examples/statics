@@ -1,0 +1,19 @@
+#!/usr/bin/env python
+
+from dolfin import *
+from timestepping import *
+
+# Create a constant which is declared as static
+c = StaticConstant(1.0, name = "c")
+
+# Define a simple structured mesh on the unit interval
+mesh = UnitIntervalMesh(10)
+# P1 function space
+space = FunctionSpace(mesh, "CG", 1)
+# Create a function which is declared as static
+F = StaticFunction(space, name = "F")
+# Initialise the static function
+F.interpolate(Expression("x[0]"))
+
+# Create a Dirichlet boundary condition which is declared as static
+bc = StaticDirichletBC(space, 0.0, "on_boundary")

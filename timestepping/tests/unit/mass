@@ -1,0 +1,84 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from dolfin import *
+from timestepping import *
+
+mesh = UnitSquareMesh(10, 10)
+space1 = FunctionSpace(mesh, "CG", 1)
+space2 = FunctionSpace(mesh, "CG", 2)
+test1, trial1 = TestFunction(space1), TrialFunction(space1)
+test2, trial2 = TestFunction(space2), TrialFunction(space2)
+
+levels = TimeLevels([n, n + 1, n + 2, n + 3], cycle_map = {n:n + 3})
+system = TimeSystem()
+
+S1 = StaticFunction(space2, name = "one")
+S1.assign(Constant(1.0))
+
+F1 = TimeFunction(levels, space1, name = "F1")
+F2 = TimeFunction(levels, space2, name = "F2")
+F3 = TimeFunction(levels, space2, name = "F3")
+F4 = TimeFunction(levels, space2, name = "F4")
+
+system.add_solve(inner(test1, trial1) * dx == inner(test1, StaticConstant(1.0)) * dx, F1[0])
+system.add_solve(inner(test1, trial1) * dx == inner(test1, F1[n    ]) * dx, F1[n + 1])
+system.add_solve(inner(test1, trial1) * dx == inner(test1, F1[n + 1]) * dx, F1[n + 2])
+system.add_solve(inner(test1, trial1) * dx == inner(test1, F1[n + 2]) * dx, F1[n + 3])
+
+system.add_solve(inner(test2, trial2) * dx == inner(test2, StaticConstant(2.0)) * dx, F2[0])
+system.add_solve(inner(test2, trial2) * dx == inner(test2, F2[n    ]) * dx, F2[n + 1])
+system.add_solve(inner(test2, trial2) * dx == inner(test2, F2[n + 1]) * dx, F2[n + 2])
+system.add_solve(inner(test2, trial2) * dx == inner(test2, F2[n + 2]) * dx, F2[n + 3])
+
+system.add_solve(inner(test2, trial2) * dx == inner(test2, S1) * dx + inner(test2, StaticConstant(2.0)) * dx, F3[0])
+system.add_solve(F3[n    ], F3[n + 1])
+system.add_solve(F3[n + 1], F3[n + 2])
+system.add_solve(F3[n + 2], F3[n + 3])
+
+system.add_solve(inner(test2, trial2) * dx == inner(test2, StaticConstant(4.0)) * dx, F4[0])
+system.add_solve(S1 * inner(test2, trial2) * dx == S1 * inner(test2, F4[n    ]) * dx, F4[n + 1])
+system.add_solve(S1 * inner(test2, trial2) * dx == S1 * inner(test2, F4[n + 1]) * dx, F4[n + 2])
+system.add_solve(S1 * inner(test2, trial2) * dx == S1 * inner(test2, F4[n + 2]) * dx, F4[n + 3])
+
+system = system.assemble(adjoint = True)
+
+for solve in system._AdjoinedTimeSystem__forward._AssembledTimeSystem__init_solves \
+  + system._AdjoinedTimeSystem__forward._AssembledTimeSystem__solves \
+  + system._AdjoinedTimeSystem__forward._AssembledTimeSystem__final_solves:
+  if isinstance(solve, PAEquationSolver):
+    a, L = solve._PAEquationSolver__a, solve._PAEquationSolver__L
+    assert(isinstance(a, PABilinearForm))
+    assert(isinstance(L, PALinearForm))
+    print solve.x().name(), a.n_pre_assembled(), a.n_non_pre_assembled(), L.n_pre_assembled(), L.n_non_pre_assembled()
+    assert(a.n_non_pre_assembled() == 0)
+    assert(L.n_non_pre_assembled() == 0)
+
+system.timestep()
+system.timestep()
+system.timestep()
+
+system.finalise()
+def check(F, ref, tol):
+  val = assemble(F[N] * dx)
+  err = abs(val - ref)
+  print val, err
+  assert(err < tol)
+  return
+check(F1, 1.0, 2.0e-15)
+check(F2, 2.0, 9.0e-15)
+check(F3, 3.0, 2.0e-14)
+check(F4, 4.0, 8.0e-14)

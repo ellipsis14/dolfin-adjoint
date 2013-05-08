@@ -1,0 +1,1618 @@
+\documentclass[a4paper]{book}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{longtable}
+\usepackage{natbib}
+\usepackage{nicefrac}
+\usepackage{ulem}
+
+\newcommand{\version}{1.2.0}
+
+\begin{document}
+
+\begin{titlepage}
+\begin{center}
+
+\Huge{\verb+timestepping+ Manual} \\[0.02\textheight]
+\large{The high-level representation of transient finite element models with DOLFIN} \\[0.02\textheight]
+\Huge{Version \version} \\[0.15\textheight]
+\vfill
+\large{\today}
+
+\end{center}
+\end{titlepage}
+
+\tableofcontents
+
+\chapter{Introduction}
+
+\section{Overview}
+
+The \verb+timestepping+ Python library is an extension for DOLFIN, adding a
+high-level representation for time dependent finite element models.
+Specifically, the \verb+timestepping+ library enables the rapid development of
+efficient timestepping finite element models using a symbolic representation of
+the entire model discretisation. The FEniCS system (for which DOLFIN acts as a
+front-end) uses automated code generation to convert a symbolic representation
+of a finite element spatial discretisation into a working model. The
+\verb+timestepping+ library builds on this principle, adding a syntax to enable
+a symbolic representation of a temporal discretisation.
+
+A machine interpretable representation of a discretisation is amenable to
+automated analysis and manipulation. In particular, if a symbolic representation
+of a model time discretisation is available then a number of optimisation
+strategies can be applied automatically. This enables time independent data,
+which may be expensive to recompute, to be computed once and cached ahead of the
+execution of the main model time loop. Moreover, the FEniCS system supplies
+symbolic manipulation tools which enable one to differentiate and adjoin
+spatially discretised equations. This functionality can be combined with a
+high-level representation of the temporal discretisation to enable the automatic
+derivation of an associated discrete adjoint model. Since the resulting adjoint
+model itself has a symbolic representation, it is also amenable to the
+application of optimisation strategies. Combined, the approach allows the entire
+model to be specified using only a symbolic representation of model equations,
+yields an efficient implementation of the forward model code, and enables the
+automated derivation and efficient implementation of an associated discrete
+adjoint model code.
+
+Since the \verb+timestepping+ library builds upon the FEniCS system, it inherits
+benefits associated with the application of automated code generation
+techniques. In particular, automated code generation can be used to separate the
+specification of a numerical model from the details of its implementation. The
+\verb+timestepping+ library inherits much of the portability of the FEniCS
+system: architectures and parallelisation strategies supported by the FEniCS
+system can be used in combination with the \verb+timestepping+ library.
+
+This manual describes the functionality and interfaces provided by the
+\linebreak \verb+timestepping+ Python library. This library makes extensive use
+of the DOLFIN Python library, but the functionality and interfaces provided by
+DOLFIN will not be described in detail here. For further details of DOLFIN and
+the FEniCS system the reader is instead referred to \citet{logg2012}. In
+addition, some familiarity with the Python language, the finite element method,
+simple time discretisations, and adjoint modelling is assumed.
+
+\section{General principles}\label{sect:principles}
+
+The \verb+timestepping+ library works on the principle that a timestepping
+model can be broken into three key stages:
+\begin{enumerate}
+  \item The initialisation stage: A series of equations which are solved
+        exactly once.
+  \item The timestepping stage: A series of equations which are solved
+        repeatedly, and potentially a very large number of times.
+  \item The finalisation stage: A series of equations which are solved
+        exactly once.
+\end{enumerate}
+The library further assumes that the timestepping stage can be sub-divided into
+two key stages:
+\begin{enumerate}
+  \item The timestep solve stage: A series of timestep equations are solved,
+        using earlier time data as input and yielding future time data as
+        output.
+  \item The timestep variable cycle stage: Past time data is replaced using
+        later time data.
+\end{enumerate}
+The interfaces provided by the library mimic this structure: the library
+provides a syntax for the description of each of these key stages. The
+\verb+timestepping+ library may not be suitable for problems which are
+incompatible with this representation.
+
+The implementation of the \verb+timestepping+ library makes a series of
+additional assumptions regarding the performance demands of the timestepping
+model. While these are not in principle essential to the development of time
+discretisation specific optimisations, they have nevertheless generally been
+applied in the development of the library. The assumptions are:
+\begin{enumerate}
+  \item Model initialisation is cheap.
+  \item Work performed on every model timestep is expensive.
+  \item Caching of data is preferable to recalculation.
+\end{enumerate}
+Since it is assumed that model initialisation is cheap, it is generally assumed
+that the cost associated with the manipulation and analysis of model equations
+is negligible. The timestepping model itself is optimised, but the process of
+generating the optimised model is not. It is further generally assumed that
+all work performed by a model timestep should be minimised, and therefore
+that aggressive caching strategies should be applied. It is assumed that
+sufficient memory is available for such caching\footnote{Storage of the forward
+model solution, for the purposes of performing an adjoint calculation, is a
+notable exception to this principle.}
+
+\section{Dependencies}
+
+The \verb+timestepping+ library has been tested with the following dependency
+versions:
+
+\begin{center}
+\begin{tabular}{| c | c | }
+\hline
+Dependency  & Tested dependency versions \\
+\hline
+Python  & 2.7.3, 2.7.4 \\
+\hline
+NumPy  & 1.6.1, 1.7.1 \\
+SciPy  & 0.9.0, 0.11.0 \\
+VTK    & 5.8.0 \\
+PETSc  & 3.1.0p8, 3.2.0p5 \\
+\hline
+DOLFIN   & 1.0.0, 1.1.1+, 1.2.0 \\
+FIAT     & 1.0.0, 1.1.0 \\
+FErari   & 1.0.0 \\
+FFC      & 1.0.0, 1.1.0, 1.2.0 \\
+Instant  & 1.0.0, 1.1.0, 1.2.0 \\
+SyFi     & 1.0 \\
+UFC      & 2.0.5, 2.1.1, 2.2.0 \\
+UFL      & 1.0.0, 1.1.0, 1.2.0 \\
+Viper    & 1.0.0 \\
+\hline
+\end{tabular}
+\end{center}
+
+DOLFIN $1.2$ is not supported by the \verb+timestepping+ library.
+
+\section{Library interfaces}
+
+The \verb+timestepping+ library can be divided into a primary high-level
+interface and a secondary low-level interface. The high-level interface requires
+interaction with high-level data types representing features such as model time
+levels, functions, and model equations, and provides a syntax enabling the
+description and implementation of a model with the structure discussed in
+section \ref{sect:principles}. The low-level interface provides additional
+advanced features, for example relating to the definition of explicit time
+dependency, but requires interaction with the internal structure of the
+\verb+timestepping+ library.
+
+This manual documents only the primary high-level interface. Further
+documentation relating to all functions and classes in the \verb+timestepping+
+library can be accessed via the online documentation. For example, in a Python
+shell:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+>>> import timestepping
+>>> help(timestepping)
+\end{lstlisting}
+will display the online documentation.
+
+\chapter{The high-level interface}
+
+This chapter details the primary high-level interface provided by the \linebreak
+\verb+timestepping+ library. This interface provides a syntax enabling the
+description and implementation of a model with the structure discussed in
+section \ref{sect:principles}.
+
+\section{Accessing the library}
+
+The \verb+timestepping+ library is intended to be used in combination with
+DOLFIN. The \verb+timestepping+ library overrides some aspects of the DOLFIN
+interface, and hence the standard way of accessing the library is via:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+from dolfin import *
+from timestepping import *
+\end{lstlisting}
+
+\section{Changes to DOLFIN interfaces}\label{sect:wrappers}
+
+The \verb+timestepping+ library provides \verb+Constant+ and \verb+Function+
+functions, which wrap the DOLFIN \verb+dolfin.Constant+ and
+\verb+dolfin.Function+ constructors. The arguments accepted by these functions
+are identical to the arguments accepted by the DOLFIN constructors, except that
+each accepts an optional string \verb+name+ keyword argument defining the
+\verb+Constant+ or \verb+Function+ name.
+
+\subsection*{Examples}
+
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+from dolfin import *
+from timestepping import *
+
+# A named Constant
+c = Constant(1.0, name = "c")
+
+# Define a simple structured mesh on the unit interval
+mesh = UnitIntervalMesh(10)
+# P1 function space
+space = FunctionSpace(mesh, "CG", 1)
+# A named Function
+F = Function(space, name = "F")
+\end{lstlisting}
+
+\section{Time level abstraction}
+
+Model time levels are represented in the following way:
+\begin{enumerate}
+  \item Initialisation stage time levels: Via an integer or
+        \verb+fractions.Fraction+.
+  \item Timestep stage time levels: Via a \verb+TimeLevel+ object.
+  \item Finalisation stage time levels: Via a \verb+FinalTimeLevel+ object.
+\end{enumerate}
+
+In the initialisation stage time levels are represented using an integer
+or a \verb+fractions.Fraction+. The value zero is used to indicate the
+transition point between the initialisation stage and the timestepping stage.
+
+In the timestepping stage time levels are represented using a \verb+TimeLevel+
+object. A \verb+TimeLevel+ has an associated integer or
+\verb+fractions.Fraction+ ``offset'', enabling the logical comparison of
+different \verb+TimeLevel+ objects. The \verb+timestepping+ library provides
+an abstract handle \verb+n+, which is a \linebreak \verb+TimeLevel+ assigned an
+offset value of zero.
+
+In the finalisation stage time levels are represented using a
+\verb+FinalTimeLevel+ object. A \verb+FinalTimeLevel+ has an associated integer
+or \verb+fractions.Fraction+ ``offset'' enabling the logical comparison of
+different \verb+FinalTimeLevel+ objects. The \verb+timestepping+ library
+provides an abstract handle \verb+N+, which is a \linebreak
+\verb+FinalTimeLevel+ assigned an offset value of zero. An offset value of zero
+is used to indicate the transition point between the timestepping stage and the
+finalisation stage.
+
+In the initialisation stage levels represented using an integer or \linebreak
+\verb+fractions.Fraction+ are well defined, but those represented using a
+\verb+TimeLevel+ or \verb+FinalTimeLevel+ are not. Immediately after
+initialisation levels represented using an integer, \verb+fractions.Fraction+,
+or \verb+TimeLevel+ are well defined, but those represented using a
+\verb+FinalTimeLevel+ are not. After the first timestep levels represented using
+a \verb+TimeLevel+ are well defined, but those represented using an integer,
+\verb+fractions.Fraction+, or \verb+FinalTimeLevel+ are not. After finalisation
+levels represented using a \verb+TimeLevel+ or \verb+FinalTimeLevel+ are well
+defined, but those represented using an integer or \verb+fractions.Fraction+ are
+not.
+
+Immediately after initialisation levels represented using an integer or
+\linebreak \verb+fractions.Fraction+ with value \verb+i+ are equivalent to
+levels represented using a \verb+TimeLevel+ with value \verb=n + i=. After
+finalisation levels represented using a \verb+TimeLevel+ with value \verb=n + i=
+are equivalent to those represented using a \linebreak \verb+FinalTimeLevel+
+with value \verb=N + i=.
+
+New \verb+TimeLevel+ and \verb+FinalTimeLevel+ objects can be instantiated
+directly. The high-level constructor arguments are:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+  n_custom = TimeLevel(arg)
+  N_custom = FinalTimeLevel(arg)
+\end{lstlisting}
+where the optional argument is an integer or \verb+fractions.Fraction+ defining
+the offset. If this argument is not supplied then a default value of zero is
+used. New \verb+TimeLevel+ and \verb+FinalTimeLevel+ objects can also be
+instantiated via the addition or subtraction of an integer or
+\verb+fractions.Fraction+ from an existing \verb+TimeLevel+ or
+\verb+FinalTimeLevel+:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+n_custom = n + offset_1
+N_custom = N - offset_2
+\end{lstlisting}
+
+\subsection*{Examples}
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+from timestepping import *
+from fractions import Fraction
+
+# Create a TimeLevel with an offset of 2
+n1 = TimeLevel(2)
+# Create a TimeLevel with an offset of -1/2
+n2 = TimeLevel(-Fraction(1, 2))
+# Create a FinalTimeLevel with an offset of 0
+N1 = FinalTimeLevel()
+
+# Create a TimeLevel with an offset of 2
+n3 = n + 2
+# Create a TimeLevel with an offset of -3/2
+n4 = n - Fraction(3, 2)
+
+# Create a FinalTimeLevel with an offset of 1
+N2 = N + 1
+
+print n1 == n2  # False
+print n1 > n2   # True
+print n1 == n3  # True
+print n1 >= n3  # True
+
+print N1 == N2  # False
+print N1 <= N2  # True
+\end{lstlisting}
+
+\section{Function time levels}
+
+A \verb+TimeLevels+ object represents a unique set of model time levels,
+combined with a ``cycle map'' defining how data is to be re-assigned during the
+timestep variable cycle stage. A \verb+TimeLevels+ also defines the ``present''
+point, defining which levels are to be treated as being in the past and which
+levels are to be treated as being in the future.
+
+A \verb+TimeLevels+ object is instantiated via:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+time_levels = TimeLevels(levels, cycle_map, last_past_level)
+\end{lstlisting}
+where \verb+levels+ is a list containing \verb+TimeLevel+ objects,
+\verb+cycle_map+ is a dictionary with \verb+TimeLevel+ keys and values, and the
+optional \verb+last_past_level+ is a \verb+TimeLevel+.
+
+\verb+levels+ defines the model time levels which are to be represented by the
+\verb+TimeLevels+ object. The elements of \verb+levels+ must be unique.
+
+\verb+cycle_map+ defines the timestep variable cycle. At the end of a model
+timestep data corresponding to each key in \verb+cycle_map+ is replaced with
+data corresponding to the associated value in the \verb+cycle_map+. The
+replacement of data is performed in order, with earlier (lower offset) keys in
+\verb+cycle_map+ replaced before later keys. All keys in \verb+cycle_map+ must
+be earlier (have a lower offset) than their associated values. The elements in
+\verb+cycle_map.values()+ must be unique.
+
+The optional \verb+last_past_level+ defines the ``present'' point associated
+with the \verb+TimeLevels+. Time levels before or equal to
+\verb+last_past_level+ (with a lower or equal offset) are treated as being in
+the past, while other levels are treated as being in the future. If
+\verb+last_past_level+ is not supplied then a default value of \verb+n+ is used.
+All keys in \verb+cycle_map+ must be in the past.
+
+\subsection*{Examples}
+
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+from timestepping import *
+from fractions import *
+
+# Create a TimeLevels with one past level and one future level, with
+# the past level data replaced by the future level data during the
+# timestep variable cycle. Suitable for use with forward Euler,
+# backward Euler, or Crank-Nicolson schemes.
+levels_1 = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+
+# Create a TimeLevels with one future level
+levels_2 = TimeLevels(levels = [n], cycle_map = {},
+  last_past_level = n - 1)
+
+# Create a TimeLevels with one past level and two future levels,
+# with the past level data replaced by the latest future level data
+# during the timestep variable cycle. Suitable for use with a
+# second order Runge-Kutta scheme.
+levels_3 = TimeLevels(levels = [n, n + Fraction(1, 2), n + 1],
+  cycle_map = {n:n + 1})
+
+# Create a TimeLevels with three past levels and one future level,
+# with the past levels replaced by the nearest later level during
+# the timestep variable cycle. Suitable for use with a third order
+# Adams-Bashforth scheme.
+levels_4 = TimeLevels(levels = [n - 2, n - 1, n, n + 1],
+  cycle_map = {n - 2:n - 1, n - 1:n, n:n + 1})
+\end{lstlisting}
+
+\section{Time dependent functions}
+
+A \verb+TimeFunction+ object defines a series of \verb+dolfin.Function+ objects,
+each specified on an individual time level.
+
+A \verb+TimeFunction+ object is instantiated via:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+tfn = TimeFunction(levels, *args, name = name, **kwargs)
+\end{lstlisting}
+where \verb+levels+ is a \verb+TimeLevels+, \verb+args+ and \verb+kwargs+ are
+arguments as accepted by a \verb+dolfin.Function+ constructor, and \verb+name+
+is an optional string representing the function name.
+
+A symbolic representation of a single function, defined on a single time level,
+can be accessed by indexing into the \verb+TimeFunction+ using an integer,
+\verb+fractions.Fraction+, \verb+TimeLevel+, or \verb+FinalTimeLevel+. For
+example:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+tfn[0]      # Representation of the function at time level 0
+tfn[n + 1]  # Representation of the function at time level n + 1
+tfn[N - 2]  # Representation of the function at time level N - 2
+\end{lstlisting}
+The index provided must match a level that, given the \verb+TimeLevels+ used to
+instantiate the \verb+TimeFunction+, is well defined at some point in the model
+execution.
+
+Prior to initialisation a \verb+dolfin.Function+ returned by indexing into the
+\verb+TimeFunction+ can be used for expressing equations symbolically, but
+cannot be used to access model data. Immediately after initialisation the
+\linebreak \verb+dolfin.Function+ returned by indexing into the
+\verb+TimeFunction+ with an integer, \verb+fractions.Fraction+ or
+\verb+TimeLevel+ can be used to access model data, provided the time level is in
+the past. After the first timestep the \verb+dolfin.Function+ returned by
+indexing into the \verb+TimeFunction+ with a \verb+TimeLevel+ can be used to
+access model data, provided the time level is in the past. After finalisation
+the \verb+dolfin.Function+ returned by indexing into the \verb+TimeFunction+
+with a \verb+TimeLevel+ or a \verb+FinalTimeLevel+ can be used to access model
+data. In all other cases, the data associated with \verb+dolfin.Function+
+objects returned by indexing into the \verb+TimeFunction+ are in an undefined
+state.
+
+\subsection*{Examples}
+
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+from dolfin import *
+from timestepping import *
+
+# Define a simple structured mesh on the unit square
+mesh = UnitSquareMesh(10, 10)
+# P1 function space
+space_p1 = FunctionSpace(mesh, "CG", 1)
+# P2_{DG} function space
+space_p2dg = FunctionSpace(mesh, "DG", 2)
+
+# Define two different sets of time levels
+levels_1 = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+levels_2 = TimeLevels(levels = [n], cycle_map = {},
+  last_past_level = n - 1)
+
+# Define time dependent functions on the levels
+F1 = TimeFunction(levels_1, space_p1, name = "F1")
+F2 = TimeFunction(levels_2, space_p2dg, name = "F2")
+
+# An equation involving the two time dependent functions
+test_p1 = TestFunction(space_p1)
+eq = inner(test_p1, F1[n + 1]) * dx == inner(test_p1, F2[n]) * dx
+\end{lstlisting}
+
+\section{Model equations}
+
+A \verb+TimeSystem+ object is used to keep a record of model equations.
+Model equations can be registered with a \verb+TimeSystem+ by calling the
+\verb+add_assignment+ or \verb+add_solve+ methods.
+
+A \verb+TimeSystem+ is instantiated without arguments:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+system = TimeSystem()
+\end{lstlisting}
+
+\subsection{Registering assignments}
+
+An assignment can be registered via the \verb+add_assignment+ method:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+system.add_assignment(y, x)
+\end{lstlisting}
+Here \verb+x+ is a \verb+dolfin.Function+ corresponding to a time level of a
+\verb+TimeFunction+, and \verb+y+ is a float, a \verb+dolfin.Constant+, a
+\verb+dolfin.Function+, a \verb+LinearCombination+ (explained below), or a
+general \verb+ufl.expr.Expr+ (an arbitrary expression). This call corresponds to
+an equation in which \verb+x+ is set equal to the value of \verb+y+. The value
+of \verb+y+ must correspond to a either a constant value or a function defined
+in the function space of \verb+x+. The assignment must also be linear, with
+\verb+y+ independent of \verb+x+.
+
+A \verb+LinearCombination+ is instantiated via:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+lc = LinearCombination(*args)
+\end{lstlisting}
+where the arguments \verb+args+ are an arbitrary list of tuples
+\verb+(alpha, y)+. Each \verb+alpha+ is a float, a \verb+dolfin.Constant+, a
+\verb+dolfin.Function+, or a general \linebreak \verb+ufl.expr.Expr+. The
+\verb+LinearCombination+ then represents the value of $\sum_i \alpha_i y_i$.
+Note that the \verb+LinearCombination+ constructor does not check that all the
+\verb+alpha+ are independent of all the \verb+y+, and consequently does not
+check that the object represents a true linear combination. All the \verb+y+
+must be in the same function space, and all the \verb+alpha+ must correspond
+either to a constant value or a function defined in the function space of the
+\verb+y+.
+
+Constant real \verb+dolfin.Function+ objects (i.e. functions defined in a
+DOLFIN function space \verb+FunctionSpace(mesh, "R", 0)+) are, when used in
+general expressions (\verb+y+ in the \verb+add_solve+ method or an \verb+alpha+
+in the \verb+LinearCombination+ constructor), treated as corresponding to a
+single constant value.
+
+\subsection{Registering finite element variational problems}
+
+An equation representing a finite element spatial discretisation can be
+registered via the \verb+add_solve+ method. The arguments of this method are
+largely based upon the arguments accepted by the \verb+dolfin.solve+ function.
+The following are the high-level interfaces offered by this method:
+
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+system.add_solve(y, x)
+\end{lstlisting}
+where \verb+y+ and \verb+x+ are as expected by the \verb+add_assignment+ method.
+This calls the \verb+add_assignment+ method.
+
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+system.add_solve(a == L, x, bcs,
+  solver_parameters = solver_parameters,
+  adjoint_solver_parameters = adjoint_solver_parameters)
+\end{lstlisting}
+where \verb+a+ is a rank 2 \verb+dolfin.Form+, \verb+L+ is a rank 1 \linebreak
+\verb+dolfin.Form+, and \verb+x+ is a \verb+dolfin.Function+ corresponding to a
+time level of a \linebreak \verb+TimeFunction+. This registers a (possibly
+non-linear) variational problem. Alternatively, one may use:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+system.add_solve(eq, x, bcs,
+  solver_parameters = solver_parameters,
+  adjoint_solver_parameters = adjoint_solver_parameters)
+\end{lstlisting}
+where \verb+eq+ is a (possibly non-linear) \verb+dolfin.Equation+ depending on
+\verb+x+, and \verb+x+ is a \verb+dolfin.Function+ corresponding to a time level
+of a \verb+TimeFunction+. This registers a (possibly non-linear) variational
+problem represented by the equation \verb+eq+.
+
+If a registered variational problem is non-linear then the problem is solved
+using a Newton solver. The optional \verb+bcs+ is a \verb+dolfin.DirichletBC+ or
+a list of \verb+dolfin.DirichletBC+ objects, defining Dirichlet boundary
+conditions to be applied when solving the variational problem. The optional
+\verb+solver_parameters+ is a dictionary of DOLFIN solver parameters for use in
+solving the variational problem, while the optional
+\verb+adjoint_solver_parameters+ is a dictionary of DOLFIN solver parameters for
+use in solving an associated adjoint variational problem. If
+\verb+solver_parameters+ is not supplied then the default parameters defined in
+\verb+dolfin.parameters+ (at the time of the \verb+TimeSystem.assemble+ call --
+see section \ref{sect:assembly}) are used. If \verb+adjoint_solver_parameters+
+is not supplied then the forward solver parameters are used in solving an
+associated adjoint variational problem.
+
+\subsection{Permitted equation dependencies}
+
+The solution \verb+dolfin.Function+ of a registered equation, \verb+x+,
+corresponds either to an initialisation stage time level, a timestep stage time
+level, or a finalisation stage time level. Any time level dependencies of the
+equation must be in this stage. For example, any time level dependencies of an
+equation which solves for an initialisation stage time level must themselves
+correspond to an initialisation stage time level. The following is a valid
+registration:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+system.add_solve(F[-1], F[0])
+\end{lstlisting}
+(provide that \verb+F+ is defined on the relevant levels), while the following
+is an \emph{invalid} registration:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+system.add_solve(F[n], F[0])
+\end{lstlisting}
+
+If the solution \verb+dolfin.Function+ of a registered equation, \verb+x+,
+corresponds to an initialisation stage time level, then the time level must be
+in the past. If \verb+x+ corresponds to a timestep stage or finalisation stage
+time level, then the time level must be in the future. No dependencies of a
+registered equation can correspond to time levels later than \verb+x+.
+
+Note that the order of equation registration is irrelevant, and that
+circular dependencies are not permitted -- dependency resolution is applied in
+the analysis and optimisation step (see section \ref{sect:assembly}).
+
+\subsection*{Examples}
+
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+from dolfin import *
+from timestepping import *
+
+# Define a simple structured mesh on the unit interval
+mesh = UnitIntervalMesh(10)
+# P1 function space
+space = FunctionSpace(mesh, "CG", 1)
+
+# Model parameters and boundary conditions
+dt = Constant(0.05)
+bc1 = DirichletBC(space, 1.0, "on_boundary && near(x[0], 0.0)")
+bc2 = DirichletBC(space, 0.0, "on_boundary && near(x[0], 1.0)")
+bcs = [bc1, bc2]
+nu = Constant(0.01)
+
+# Define time levels
+levels = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+# A time dependent function
+u = TimeFunction(levels, space, name = "u")
+
+# Initialise a TimeSystem
+system = TimeSystem()
+
+# Add an initial assignment
+u_ic = Function(space, name = "u_ic")
+u_ic.assign(Constant(0.0))
+bc1.apply(u_ic.vector())
+system.add_solve(u_ic, u[0])
+# Register a simple diffusion equation, discretised in time
+# using forward Euler
+test = TestFunction(space)
+system.add_solve(
+  inner(test, (1.0 / dt) * (u[n + 1] - u[n])) * dx ==
+    -nu * inner(grad(test), grad(u[n])) * dx,
+  u[n + 1], bcs,
+  solver_parameters = {"linear_solver":"lu"})
+\end{lstlisting}
+See also section \ref{sect:statics} for a modification of this example,
+declaring static data.
+
+\section{Static data}\label{sect:statics}
+
+Many optimisations of the timestepping model require the identification of
+static data, which does not vary throughout the model execution. Additional
+functions are provided to facilitate such optimisations.
+
+The \verb+StaticConstant+ function returns a \verb+dolfin.Constant+ that is
+declared as ``static'. The arguments are identical to the \verb+Constant+
+wrapper (see section \ref{sect:wrappers}). The \verb+StaticFunction+ function
+returns a \verb+dolfin.Function+ that is declared as ``static'. The arguments
+are identical to the \verb+Function+ wrapper (see section
+\ref{sect:wrappers}). The \verb+StaticDirichletBC+ class defines a
+\verb+dolfin.DirichletBC+ that is declared as ``static''. The constructor
+arguments are identical to the \verb+dolfin.DirichletBC+ constructor.
+
+Objects that are declared as ``static'' in this way should not be modified
+during the model execution -- doing so leads to undefined behaviour. Objects
+declared as static may be modified before the initialisation stage.
+
+\subsection*{Examples}
+
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+from dolfin import *
+from timestepping import *
+
+# Create a constant which is declared as static
+c = StaticConstant(1.0, name = "c")
+
+# Define a simple structured mesh on the unit interval
+mesh = UnitIntervalMesh(10)
+# P1 function space
+space = FunctionSpace(mesh, "CG", 1)
+# Create a function which is declared as static
+F = StaticFunction(space, name = "F")
+# Initialise the static function
+F.interpolate(Expression("x[0]"))
+
+# Create a Dirichlet boundary condition which is declared as static
+bc = StaticDirichletBC(space, 0.0, "on_boundary")
+\end{lstlisting}
+
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+from dolfin import *
+from timestepping import *
+
+# Define a simple structured mesh on the unit interval
+mesh = UnitIntervalMesh(10)
+# P1 function space
+space = FunctionSpace(mesh, "CG", 1)
+
+# Model parameters and boundary conditions
+dt = StaticConstant(0.05)
+bc1 = StaticDirichletBC(space, 1.0,
+  "on_boundary && near(x[0], 0.0)")
+bc2 = StaticDirichletBC(space, 0.0,
+  "on_boundary && near(x[0], 1.0)")
+bcs = [bc1, bc2]
+nu = StaticConstant(0.01)
+
+# Define time levels
+levels = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+# A time dependent function
+u = TimeFunction(levels, space, name = "u")
+
+# Initialise a TimeSystem
+system = TimeSystem()
+
+# Add an initial assignment
+u_ic = StaticFunction(space, name = "u_ic")
+u_ic.assign(Constant(0.0))
+bc1.apply(u_ic.vector())
+system.add_solve(u_ic, u[0])
+# Register a simple diffusion equation, discretised in time
+# using forward Euler
+test = TestFunction(space)
+system.add_solve(
+  inner(test, (1.0 / dt) * (u[n + 1] - u[n])) * dx ==
+    -nu * inner(grad(test), grad(u[n])) * dx,
+  u[n + 1], bcs,
+  solver_parameters = {"linear_solver":"lu"})
+\end{lstlisting}
+
+\section{Analysis and optimisation}\label{sect:assembly}
+
+The \verb+assemble+ method of a \verb+TimeSystem+ analyses the model, performs
+time discretisation specific optimisations, and (by default) performs the
+initialisation stage, returning an object suitable for execution of the model
+time loop. An adjoint model is enabled by supplying additional arguments to the
+\verb+assemble+ method.
+
+The \verb+assemble+ method returns an \verb+AssembledTimeSystem+ if no adjoint
+model is enabled, and an \verb+AdjoinedTimeSystem+ otherwise. Note that there is
+a fairly strong assumption that at most one \verb+AssembledTimeSystem+ or
+\linebreak \verb+AdjoinedTimeSystem+ is instantiated at once. Instantiating two
+or more at the same time leads to undefined behaviour.
+
+\subsection{Forward model only}\label{sect:forward_assembly}
+
+If an adjoint model is not enabled, the \verb+assemble+ method has high-level
+arguments:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+asystem = system.assemble(initialise = initialise)
+\end{lstlisting}
+This returns an \verb+AssembledTimeSystem+. If the optional \verb+initialise+ is
+not supplied or is \verb+True+ then, immediately after the \verb+assemble+ call,
+the initialisation stage is complete. Otherwise, the initialisation stage can be
+performed via a subsequent call to the \verb+initialise+ method:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+asystem.initialise()
+\end{lstlisting}
+
+\subsection{Enabling an adjoint model}\label{sect:adjoint_assembly}
+
+An adjoint model is enabled by calling the \verb+assemble+ method with the
+optional \verb+adjoint+ boolean argument set equal to \verb+True+. The remaining
+high-level arguments are:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+asystem = system.assemble(adjoint = adjoint,
+  disk_period = disk_period, functional = functional,
+  initialise = initialise)
+\end{lstlisting}
+This returns an \verb+AdjoinedTimeSystem+. If the optional \verb+initialise+ is
+not supplied or is \verb+True+ then, immediately after the \verb+assemble+ call,
+the initialisation stage is complete. Otherwise, the initialisation stage can be
+performed via a subsequent call to the \verb+initialise+ method:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+asystem.initialise()
+\end{lstlisting}
+The optional integer \verb+disk_period+ defines how often the forward model
+solution is to be checkpointed to disk. Data is checkpointed every
+\verb+disk_period+ timesteps, and is stored in a directory \verb+checkpoints~+
+relative to the current working directory. If \verb+disk_period+ is not supplied
+then the entire forward model solution is stored in memory. In the high-level
+interface the optional \verb+functional+ is a rank 0 form.
+\verb+dolfin.Function+ dependencies of the functional which correspond to levels
+of a \verb+TimeFunction+ must correspond to finalisation stage time levels. If
+\verb+functional+ is not supplied to the \verb+assemble+ method then a
+functional can instead be specified via the \verb+set_functional+ method:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+asystem.set_functional(functional)
+\end{lstlisting}
+
+\section{Timestepping}
+
+The model is timestepped by calling the \verb+timestep+ method of an \linebreak
+\verb+AssembledTimeSystem+ or \verb+AdjoinedTimeSystem+:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+asystem.timestep(s = s)
+\end{lstlisting}
+where the optional integer \verb+s+ is the number of timesteps to perform. If
+\verb+s+ is not supplied then a single timestep is performed. The
+\verb+timestep+ method performs both the timestep solve and timestep cycle
+stages. At the model end the finalisation stage is performed by calling the
+\verb+finalise+ method:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+asystem.finalise()
+\end{lstlisting}
+
+The initialisation stage should be complete before calling the \verb+timestep+
+method (see section \ref{sect:assembly}). If an adjoint model is not enabled
+then the model can, after a \verb+finalise+ call, be restarted via a call to the
+\verb+initialise+ method (see section \ref{sect:forward_assembly}). In this case
+the \verb+timestep+ and \verb+finalise+ methods should not be called between the
+\verb+finalise+ and \verb+initialise+ calls. If the model is not restarted, or
+if an adjoint model is enabled, then the \verb+timestep+ and \verb+finalise+
+methods should not be called after the \verb+finalise+ call.
+
+\subsection*{Examples}
+
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+from dolfin import *
+from timestepping import *
+
+# Define a simple structured mesh on the unit interval
+mesh = UnitIntervalMesh(10)
+# P1 function space
+space = FunctionSpace(mesh, "CG", 1)
+
+# Model parameters and boundary conditions
+dt = StaticConstant(0.05)
+bc1 = StaticDirichletBC(space, 1.0,
+  "on_boundary && near(x[0], 0.0)")
+bc2 = StaticDirichletBC(space, 0.0,
+  "on_boundary && near(x[0], 1.0)")
+bcs = [bc1, bc2]
+nu = StaticConstant(0.01)
+
+# Define time levels
+levels = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+# A time dependent function
+u = TimeFunction(levels, space, name = "u")
+
+# Initialise a TimeSystem
+system = TimeSystem()
+
+# Add an initial assignment
+u_ic = StaticFunction(space, name = "u_ic")
+u_ic.assign(Constant(0.0))
+bc1.apply(u_ic.vector())
+system.add_solve(u_ic, u[0])
+# Register a simple diffusion equation, discretised in time
+# using forward Euler
+test = TestFunction(space)
+system.add_solve(
+  inner(test, (1.0 / dt) * (u[n + 1] - u[n])) * dx ==
+    -nu * inner(grad(test), grad(u[n])) * dx,
+  u[n + 1], bcs,
+  solver_parameters = {"linear_solver":"lu"})
+
+# Assemble the TimeSystem
+system = system.assemble()
+
+# Timestep the model
+t = 0.0
+while t * (1.0 + 1.0e-9) < 1.0:
+  system.timestep()
+  t += float(dt)
+# Finalise
+system.finalise()
+\end{lstlisting}
+
+\section{Adjoint modelling}
+
+Given a forward model described using a \verb+TimeSystem+, the associated
+discrete adjoint model can be derived in the analysis and optimisation step (see
+section \ref{sect:adjoint_assembly}). The resulting \verb+AdjoinedTimeSystem+
+returned can be used to perform a model constrained derivative calculation.
+
+\subsection{Checkpointing and storage}
+
+An adjoint model calculation requires knowledge of the forward model solution
+and, as a result, forward model data must be stored. It is often infeasible to
+store all required data in memory, and hence disk checkpointing and recovery
+must be used. In this procedure forward model data, sufficient to restart the
+forward model, are checkpointed periodically, and forward model data required
+between checkpoints are re-computed and stored. Forward model checkpointing and
+storage is configured in the analysis and optimisation step (see section
+\ref{sect:adjoint_assembly}).
+
+After the forward model finalisation stage (after the \linebreak
+\verb+AdjoinedTimeSystem.finalise+ call) stored forward model data can be
+verified via the \verb+verify_checkpoints+ method:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+asystem.verify_checkpoints(tolerance = tolerance)
+\end{lstlisting}
+where the optional \verb+tolerance+ argument is a positive float defining the
+tolerance used in comparisons. The \verb+verify_checkpoints+ method raises an
+exception on failure. For serial calculations the forward model data should be
+exactly reproducible, and verification should succeed with a tolerance of zero.
+For parallel calculations the verification may fail with a zero or small value
+for the tolerance. Note that the \verb+verify_checkpoints+ method re-runs the
+entire forward model, and hence this should only be used for debugging purposes.
+
+\subsection{Derivative calculation}
+
+A model constrained derivative can be computed via the \verb+compute_gradient+
+method. The high-level arguments for this method are:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+grad = asystem.compute_gradient(parameters = parameters,
+  project = project,
+  project_solver_parameters = project_solver_parameters)
+\end{lstlisting}
+where \verb+parameters+ is a \verb+dolfin.Constant+, a \verb+dolfin.Function+,
+or a list of \verb+dolfin.Constant+ or \verb+dolfin.Function+ objects, the
+optional \verb+project+ is a \linebreak boolean, and the optional
+\verb+project_solver_parameters+ is a dictionary of solver parameters. If
+\verb+parameters+ is a \verb+dolfin.Constant+ or \verb+dolfin.Function+ then it
+must have been declared as static (see section \ref{sect:statics}). If
+\verb+parameters+ is a list of \verb+dolfin.Constant+ or \verb+dolfin.Function+
+objects then all elements must have been declared as static. This method returns
+the model constrained derivative of the registered functional (see section
+\ref{sect:adjoint_assembly}). If \verb+parameters+ is a list, then the
+\verb+i+th element of the return value contains the derivative with respect to
+the \verb+i+th element of \verb+parameters+. The derivative with respect to a
+\verb+Constant+ parameter is returned as a \verb+Constant+. If \verb+project+ is
+\verb+False+ (the default) then the derivative with respect to a \verb+Function+
+parameter is returned as a \verb+GenericVector+. If \verb+project+ is
+\verb+True+ then the derivative with respect to a \verb+Function+ parameter is
+returned as a \verb+(GenericVector, Function)+ pair, where the \verb+Function+
+contains the derivative projected onto the parameter trial space, and where
+\verb+project_solver_parameters+ defines solver options for the associated mass
+matrix inversion.
+
+The \verb+compute_gradient+ method must be called after the forward model
+finalisation stage (after the \verb+AdjoinedTimeSystem.finalise+ call), and a
+functional must be registered.
+
+\subsection{Adjoint verification}
+
+Let $\vec{m}$ correspond to the degrees of freedom associated with a parameter,
+and define a functional
+$J \left( \vec{x} \left( \vec{m} \right), \vec{m} \right)$, where $\vec{x}$
+corresponds to the degrees of freedom associated with the forward model solution.
+Then:
+\begin{equation}
+  \left| J \left( \vec{x} \left( \vec{m} + \epsilon \vec{\delta m} \right), \vec{m} + \epsilon \vec{\delta m} \right)
+    - J \left( \vec{x} \left( \vec{m} \right), \vec{m} \right) \right|
+    = {\cal O} \epsilon,
+\end{equation}
+converges asymptotically at first order in perturbations of the parameter
+$\vec{m}$. However:
+\begin{equation}
+  \left| J \left( \vec{x} \left( \vec{m} + \epsilon \vec{\delta m} \right), \vec{m} + \epsilon \vec{\delta m} \right)
+    - J \left( \vec{x} \left( \vec{m} \right), \vec{m} \right)
+    - \epsilon \left< \frac{d J}{d \vec{m}}, \vec{\delta m} \right> \right|
+    = {\cal O} \epsilon^2,
+\end{equation}
+converges asymptotically at second order. Hence the result of a model
+constrained derivative calculation, yielding $d J / d \vec{m}$, can be verified
+using repeated forward model calculations, each with a small perturbation of the
+parameter $\vec{m}$.
+
+The \verb+taylor_test+ method performs such a verification. The high-level
+arguments for this method are:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+orders = asystem.taylor_test(parameter, grad = grad,
+  ntest = ntest, fact  = fact)
+\end{lstlisting}
+\verb+parameter+ is a \verb+dolfin.Constant+ or \verb+dolfin.Function+ that has
+been declared as static (see section \ref{sect:statics}) and the optional
+\verb+grad+ is the corresponding derivative returned by the
+\verb+compute_gradient+ method. If \verb+grad+ is not supplied then the
+model constrained derivative is computed using the adjoint model. The optional
+\verb+ntest+ argument is the number of forward model calculations to perform in
+the verification. This must be greater than or equal to 2, and a default value
+of 6 is used if this is not supplied. The optional \verb+fact+ is a positive
+float and sets the magnitude of the perturbations. Let $N$ be the value of
+\verb+ntest+ and \verb+f+ be the value of \verb+fact+. If \verb+parameter+ is a
+\verb+dolfin.Constant+ with value $m$ then the perturbations applied are
+$\epsilon_i \delta m$, where:
+\begin{subequations}
+  \begin{equation}
+    \epsilon_i = 2^{N - i}, \quad i \in \left\{1, \ldots, N \right\},
+  \end{equation}
+  \begin{equation}
+    \delta m = \left\{ \begin{array}{l} f \left| m \right| \quad \textrm{if } \left| m \right| > 0 \\ f \qquad \quad \textrm{otherwise} \end{array} \right. .
+  \end{equation}
+\end{subequations}
+If \verb+parameter+ is a \verb+dolfin.Function+ with degrees of freedom
+with associated values $\vec{m}$ then the perturbations applies are
+$\epsilon_i \vec{\delta m}$, where:
+\begin{subequations}
+  \begin{equation}
+    \epsilon_i = 2^{N - i}, \quad i \in \left\{1, \ldots, N \right\},
+  \end{equation}
+  \begin{equation}
+    \vec{\delta m} = \left\{ \begin{array}{l} \vec{F} \left|\left| \vec{m} \right|\right|_\infty \quad \textrm{if } \left|\left| \vec{m} \right|\right|_\infty > 0 \\ \vec{F} \qquad \qquad \textrm{otherwise} \end{array} \right.
+  \end{equation}
+\end{subequations}
+where the values of $\vec{F}$ are randomly generated values in the range
+$\left[ -f/2, +f/2 \right)$, with a uniform probability distribution. If
+\verb+fact+ is not supplied then a default value of $10^{-4}$ is used.
+
+The \verb+taylor_test+ method returns a list of relative orders of
+convergence. The elements of the returned list have values:
+\begin{equation}
+  o_i = \textrm{log}_2 \frac{r_{i + 1}}{r_i},
+\end{equation}
+where:
+\begin{subequations}
+  \begin{equation}
+    \epsilon_i = 2^{N - i}, \quad i \in \left\{1, \ldots, N \right\},
+  \end{equation}
+  \begin{equation}
+    r_i = \left| J \left( \vec{x} \left( \vec{m} + \epsilon_i \vec{\delta m} \right), \vec{m} + \epsilon_i \vec{\delta m} \right)
+      - J \left( \vec{x} \left( \vec{m} \right), \vec{m} \right)
+      - \epsilon_i \left< \frac{d J}{d \vec{m}}, \vec{\delta m} \right> \right|.
+  \end{equation}
+\end{subequations}
+The elements of the returned list should be close to 2 in a successful
+verification.
+
+It is recommended that new adjoint models should be verified using a Taylor
+remainder convergence test. Since the test involves repeated running of the
+forward model it may be necessary to test the adjoint on a small problem,
+for example using a reduced number of model timesteps. The Taylor remainder
+convergence test may fail if:
+\begin{enumerate}
+  \item The perturbations are too large, meaning that the asymptotic convergence
+        of the remainder is not observed.
+  \item The perturbations are too small, meaning that the convergence test is
+        polluted by machine precision errors.
+  \item The forward model is not differentiable, meaning that a model
+        constrained derivative does not exists.
+  \item Iterative solver tolerances are too large.
+  \item The adjoint model is inconsistent with the forward model.
+\end{enumerate}
+The first two cases can be avoided by decreasing or increasing \verb+fact+
+(assuming that these two cases do not both apply simultaneously, in which
+case a Taylor remainder convergence test cannot be used). The final case may
+occur if forward model data is modified manually during the model execution, or
+may indicate a bug in the \verb+timestepping+ library.
+
+\subsection*{Examples}
+
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+from dolfin import *
+from timestepping import *
+
+# Define a simple structured mesh on the unit interval
+mesh = UnitIntervalMesh(10)
+# P1 function space
+space = FunctionSpace(mesh, "CG", 1)
+
+# Model parameters and boundary conditions
+dt = StaticConstant(0.05)
+bc1 = StaticDirichletBC(space, 1.0,
+  "on_boundary && near(x[0], 0.0)")
+bc2 = StaticDirichletBC(space, 0.0,
+  "on_boundary && near(x[0], 1.0)")
+bcs = [bc1, bc2]
+nu = StaticConstant(0.01)
+
+# Define time levels
+levels = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+# A time dependent function
+u = TimeFunction(levels, space, name = "u")
+
+# Initialise a TimeSystem
+system = TimeSystem()
+
+# Add an initial assignment
+u_ic = StaticFunction(space, name = "u_ic")
+u_ic.assign(Constant(0.0))
+bc1.apply(u_ic.vector())
+system.add_solve(u_ic, u[0])
+# Register a simple diffusion equation, discretised in time
+# using forward Euler
+test = TestFunction(space)
+system.add_solve(
+  inner(test, (1.0 / dt) * (u[n + 1] - u[n])) * dx ==
+    -nu * inner(grad(test), grad(u[n])) * dx,
+  u[n + 1], bcs,
+  solver_parameters = {"linear_solver":"lu"})
+
+# Assemble the TimeSystem, enabling the adjoint. Set the
+# functional to be equal to spatial integral of the final u.
+system = system.assemble(adjoint = True, functional = u[N] * dx)
+
+# Timestep the model
+t = 0.0
+while t * (1.0 + 1.0e-9) < 1.0:
+  system.timestep()
+  t += float(dt)
+# Finalise
+system.finalise()
+
+# Perform a model constrained derivative calculation
+dJdm = system.compute_gradient(nu)
+
+# Verify the stored forward model data
+system.verify_checkpoints()
+# Verify the computed derivative using a Taylor remainder
+# convergence test
+orders = system.taylor_test(nu, grad = dJdm)
+# Check the convergence order
+assert((orders > 1.99).all())
+\end{lstlisting}
+
+\chapter{Time discretisation examples}
+
+This chapter describes the implementation of a number of simple time
+discretisations using the \verb+timestepping+ library. The provided examples are
+largely illustrative, and may not be stable.
+
+All examples in this chapter consider
+the discretisation of the following system:
+\begin{subequations}
+  \begin{equation}\label{eqn:t_timestep}
+    \partial_t T = F(T),
+  \end{equation}
+  \begin{equation}\label{eqn:t_init}
+    \left. T \right|_{t = 0} = T_0.
+  \end{equation}
+\end{subequations}
+It is assumed that $T_0$ is defined using a DOLFIN variable \verb+T_0+, which
+may for example be a \verb+dolfin.Constant+ or \verb+dolfin.Function+. It is
+further assumed that some Python function for approximating
+$\int_\Omega \phi_i F(T)$ over the space $\Omega$ and with test functions
+$\phi_i$ is provided, with the following form:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+def F(test, T):
+  rhs = ... # Insert definition here
+  return rhs
+\end{lstlisting}
+where \verb+test+ is a spatial test function.
+
+\section{Explicit linear multi-step}
+
+Explicit linear multi-step (or Adams-Bashforth) schemes take the form:
+\begin{equation}
+  T^{n + 1} = T^n + \Delta t \sum_{i = 1}^N \gamma_i F( T^{n + 1 - i}),
+\end{equation}
+where the $\gamma_i$ are constants. Explicit linear multi-step schemes therefore
+require the values of $F(T)$ from $N$ previous time levels. Given a choice of
+$N$, the $\gamma_i$ are chosen so as to yield $N$th order accuracy. If $N > 1$
+then the scheme is not self starting, and care is required when initialising in
+order to maintain the accuracy of the method. Further details of explicit linear
+multi-step schemes can be found in \citet[section 2.1]{iserles2009} and
+\citet[section III.1]{hairer1987}.
+
+\subsection{Forward Euler}\label{sect:fe}
+
+For $N = 1$ the single coefficient $\gamma_1$ is chosen to be:
+\begin{equation}
+  \gamma_1 = 1,
+\end{equation}
+yielding:
+\begin{equation}
+  T^{n + 1} = T^n + \Delta t F(T^n).
+\end{equation}
+This is the forward Euler scheme, and has first order accuracy.
+
+This discretisation can be implemented via:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+levels    = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+levels_dT = TimeLevels(levels = [n], cycle_map = {},
+  last_past_level = n - 1)
+T  = TimeFunction(levels,    space, name = "T")
+dT = TimeFunction(levels_dT, space, name = "dT")
+
+system = TimeSystem()
+
+system.add_solve(T_ic, T[0])
+
+system.add_solve(inner(test, dT[n]) * dx == dt * F(test, T[n]),
+  dT[n], solver_parameters = solver_parameters)
+system.add_solve(LinearCombination((1.0, T[n]), (1.0, dT[n])),
+  T[n + 1])
+\end{lstlisting}
+where \verb+space+ defines the function space for $T$, \verb+dt+ defines the
+timestep size, and \verb+solver_parameters+ is a dictionary of solver
+parameters.
+
+\subsection{Second order Adams-Bashforth}\label{sect:ab2}
+
+For $N = 2$ the $\gamma_i$ are chosen to be:
+\begin{align}
+  \gamma_1 = \frac{3}{2}, & & \gamma_2 = -\frac{1}{2},
+\end{align}
+yielding:
+\begin{equation}
+  T^{n + 1} = T^n + \Delta t \left[ \frac{3}{2} F(T^n) - \frac{1}{2} F(T^{n - 1}) \right].
+\end{equation}
+This scheme cannot be used to perform the first model timestep as $T^{-1}$ is
+not available. In order to ensure global second order accuracy in time the
+method used to perform the first timestep, and compute $T^1$, must be a least
+first order accurate. Hence, for example, a single forward Euler step
+\ref{sect:fe} can be applied:
+\begin{equation}
+  T^1 = T^0 + \Delta t F(T^0).
+\end{equation}
+
+This discretisation can be implemented via:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+levels    = TimeLevels(levels = [n, n + 1, n + 2],
+  cycle_map = {n:n + 1, n + 1:n + 2}, last_past_level = n + 1)
+levels_dT = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1},
+  last_past_level = n)
+T  = TimeFunction(levels,    space, name = "T")
+dT = TimeFunction(levels_dT, space, name = "dT")
+
+system = TimeSystem()
+
+system.add_solve(T_ic, T[0])
+
+system.add_solve(inner(test, dT[0]) * dx == dt * F(test, T[0]),
+  dT[0], solver_parameters = solver_parameters)
+system.add_solve(LinearCombination((1.0, T[0]),
+                                   (1.0, dT[0])),
+  T[1])
+
+system.add_solve(inner(test, dT[n + 1]) * dx ==
+  dt * F(test, T[n + 1]),
+  dT[n + 1], solver_parameters = solver_parameters)
+system.add_solve(LinearCombination((1.0, T[n + 1]),
+                                   (3.0 / 2.0, dT[n + 1]),
+                                   (-1.0 / 2.0, dT[n])),
+  T[n + 2])
+\end{lstlisting}
+At the end of the simulation the final model solution is stored in
+\verb=T[N + 1]=.
+
+\subsection{Third order Adams-Bashforth}
+
+For $N = 3$ the $\gamma_i$ are chosen to be:
+\begin{align}
+  \gamma_1 = \frac{23}{12}, & & \gamma_2 = -\frac{4}{3}, & & \gamma_3 = \frac{5}{12},
+\end{align}
+yielding:
+\begin{equation}
+  T^{n + 1} = T^n + \Delta t \left[ \frac{23}{12} F(T^n) - \frac{4}{3} F(T^{n - 1}) + \frac{5}{12} F(T^{n - 2}) \right].
+\end{equation}
+This scheme cannot be used to perform the first two model timesteps as $T^{-1}$
+and $T^{-2}$ are not available. In order to ensure global third order accuracy
+in time the method used to perform the first two timesteps, and compute $T^0$
+and $T^1$, must be a least second order accurate. Hence, for example, second
+order Runge-Kutta \ref{sect:rk2} and second order Adams-Bashforth \ref{sect:ab2}
+steps can be applied:
+\begin{subequations}
+  \begin{equation}
+    T^{\frac{1}{2}} = T^0 + \frac{1}{2} \Delta t F(T^0).
+  \end{equation}
+  \begin{equation}
+    T^1 = T^0 + \Delta t F(T^{\frac{1}{2}}).
+  \end{equation}
+  \begin{equation}
+    T^2 = T^1 + \Delta t \left[ \frac{3}{2} F(T^1) - \frac{1}{2} F(T^0) \right].
+  \end{equation}
+\end{subequations}
+
+This discretisation can be implemented via:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+from fractions import Fraction
+hf = Fraction(1, 2)
+
+levels    = TimeLevels(levels = [n, n + hf, n + 1, n + 2, n + 3],
+  cycle_map = {n:n + 1, n + 1:n + 2, n + 2:n + 3},
+  last_past_level = n + 2)
+levels_dT = TimeLevels(levels = [n, n + hf, n + 1, n + 2],
+  cycle_map = {n:n + 1, n + 1:n + 2}, last_past_level = n + 1)
+T  = TimeFunction(levels,    space, name = "T")
+dT = TimeFunction(levels_dT, space, name = "dT")
+
+system = TimeSystem()
+
+system.add_solve(T_ic, T[0])
+
+system.add_solve(inner(test, dT[0]) * dx == dt * F(test, T[0]),
+  dT[0], solver_parameters = solver_parameters)
+system.add_solve(LinearCombination((1.0, T[0]),
+                                   (0.5, dT[0])),
+  T[hf])
+
+system.add_solve(inner(test, dT[hf]) * dx == dt * F(test, T[hf]),
+  dT[hf], solver_parameters = solver_parameters)
+system.add_solve(LinearCombination((1.0, T[0]),
+                                   (1.0, dT[hf])),
+  T[1])
+
+system.add_solve(inner(test, dT[1]) * dx == dt * F(test, T[1]),
+  dT[1], solver_parameters = solver_parameters)
+system.add_solve(LinearCombination((1.0, T[1]),
+                                   (3.0 / 2.0, dT[1]),
+                                   (-1.0 / 2.0, dT[0])),
+  T[2])
+
+system.add_solve(inner(test, dT[n + 2]) * dx ==
+  dt * F(test, T[n + 2]),
+  dT[n + 2], solver_parameters = solver_parameters)
+system.add_solve(LinearCombination((1.0, T[n + 2]),
+                                   (23.0 / 12.0, dT[n + 2]),
+                                   (-4.0 / 3.0, dT[n + 1]),
+                                   (5.0 / 12.0, dT[n])),
+  T[n + 3])
+\end{lstlisting}
+At the end of the simulation the final model solution is stored in
+\verb=T[N + 2]=.
+
+\section{Leapfrog}
+
+A centred discretisation in time leads to:
+\begin{equation}
+  T^{n + 1} = T^{n - 1} + 2 \Delta t F( T^n ).
+\end{equation}
+This method is also known as the leapfrog scheme, and has second order accuracy.
+This scheme cannot be used to perform the first model timestep as $T^{-1}$ is
+not available. In order to ensure global second order accuracy in time the
+method used to perform the first timestep, and compute $T^1$, must be a least
+first order accurate. Hence, for example, a single forward Euler step
+\ref{sect:fe} can be applied:
+\begin{equation}
+  T^1 = T^0 + \Delta t F(T^0).
+\end{equation}
+
+This discretisation can be implemented via:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+levels    = TimeLevels(levels = [n, n + 1, n + 2],
+  cycle_map = {n:n + 1, n + 1:n + 2}, last_past_level = n + 1)
+levels_dT = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1},
+  last_past_level = n)
+T  = TimeFunction(levels,    space, name = "T")
+dT = TimeFunction(levels_dT, space, name = "dT")
+
+system = TimeSystem()
+
+system.add_solve(T_ic, T[0])
+
+system.add_solve(inner(test, dT[0]) * dx == dt * F(test, T[0]),
+  dT[0], solver_parameters = solver_parameters)
+system.add_solve(LinearCombination((1.0, T[0]),
+                                   (1.0, dT[0])),
+  T[1])
+
+system.add_solve(inner(test, dT[n + 1]) * dx ==
+  dt * F(test, T[n + 1]),
+  dT[n + 1], solver_parameters = solver_parameters)
+system.add_solve(LinearCombination((1.0, T[n]),
+                                   (2.0, dT[n + 1])),
+  T[n + 2])
+\end{lstlisting}
+At the end of the simulation the final model solution is stored in
+\verb=T[N + 1]=.
+
+\section{Implicit linear multi-step}
+
+Implicit linear multi-step (or Adams-Moulton) schemes take the form:
+\begin{equation}\label{eqn:adams_moulton}
+  T^{n + 1} = T^n + \Delta t \sum_{i = 0}^{N - 1} \gamma_i F( T^{n + 1 - i}),
+\end{equation}
+where the $\gamma_i$ are constants. Implicit linear multi-step schemes therefore
+require the values of $F(T)$ from $N - 1$ previous time levels. Given a choice of
+$N$, the $\gamma_i$ are chosen so as to yield $N$th order accuracy. If $N > 2$
+then the scheme is not self starting, and care is required when initialising in
+order to maintain the accuracy of the method. Further details of implicit linear
+multi-step schemes can be found in \citet[section III.1]{hairer1987}.
+
+In an implicit linear multi-step scheme the right-hand-side of equation
+\eqref{eqn:adams_moulton} depends implicitly on the future solution $T^{n + 1}$.
+If $F(T)$ is linear then the implicit term contributes to the left-hand-side
+matrix in a linear solve for $T^{n + 1}$. If $F(T)$ is non-linear then the
+a non-linear equation for $T^{n + 1}$ must be solved.
+
+\subsection{Backward Euler}\label{sect:be}
+
+For $N = 1$ the single coefficient $\gamma_0$ is chosen to be:
+\begin{equation}
+  \gamma_0 = 1,
+\end{equation}
+yielding:
+\begin{equation}
+  T^{n + 1} = T^n + \Delta t F(T^{n + 1}).
+\end{equation}
+This is the backward Euler scheme, and has first order accuracy.
+
+This discretisation can be implemented via:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+levels = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+T = TimeFunction(levels, space, name = "T")
+
+system = TimeSystem()
+
+system.add_solve(T_ic, T[0])
+
+system.add_solve(inner(test, T[n + 1]) * dx ==
+  inner(test, T[n]) * dx + dt * F(test, T[n + 1]),
+  T[n + 1], solver_parameters = solver_parameters)
+\end{lstlisting}
+Note that \verb+solver_parameters+ should define Newton solver parameters if
+$F(T)$ is non-linear.
+
+\subsection{Implicit trapezium rule}\label{sect:implicit_trapezium}
+
+For $N = 2$ the $\gamma_i$ are chosen to be:
+\begin{align}
+  \gamma_0 = \frac{1}{2}, & & \gamma_1 = \frac{1}{2},
+\end{align}
+yielding:
+\begin{equation}
+  T^{n + 1} = T^n + \Delta t \left[ \frac{1}{2} F(T^{n + 1}) + \frac{1}{2} F(T^n) \right].
+\end{equation}
+This is the implicit trapezium rule, and has second order accuracy. If $F(T)$ is
+linear then this scheme is identical to the implicit midpoint rule
+\ref{sect:implicit_midpoint}. This method is also known as the Crank-Nicolson
+scheme \citep[e.g.][section 3.4]{donea2003}, (although, confusingly,
+``Crank-Nicolson'' can refer to the implicit midpoint rule).
+
+This discretisation can be implemented via:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+levels = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+T = TimeFunction(levels, space, name = "T")
+
+system = TimeSystem()
+
+system.add_solve(T_ic, T[0])
+
+system.add_solve(inner(test, T[n + 1]) * dx ==
+  inner(test, T[n]) * dx +
+  dt * (0.5 * F(test, T[n + 1]) + 0.5 * F(test, T[n])),
+  T[n + 1], solver_parameters = solver_parameters)
+\end{lstlisting}
+Note that \verb+solver_parameters+ should define Newton solver parameters if
+$F(T)$ is non-linear.
+
+\section{Implicit midpoint rule}\label{sect:implicit_midpoint}.
+
+The implicit midpoint rule takes the form:
+\begin{equation}
+  T^{n + 1} = T^n + \Delta t F \left( \frac{1}{2} T^{n + 1} + \frac{1}{2} T^n \right).
+\end{equation}
+This has second order accuracy. If $F(T)$ is linear then this scheme is
+identical to the implicit trapezium rule \ref{sect:implicit_trapezium}. This
+method is also known as the Crank-Nicolson scheme
+\citep[e.g.][section 2.22]{mitchell1980} (although, confusingly,
+``Crank-Nicolson'' can refer to the implicit trapezium rule).
+
+This discretisation can be implemented via:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+levels = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+T = TimeFunction(levels, space, name = "T")
+
+system = TimeSystem()
+
+system.add_solve(T_ic, T[0])
+
+system.add_solve(inner(test, T[n + 1]) * dx ==
+  inner(test, T[n]) * dx +
+  dt * F(test, 0.5 * T[n + 1] + 0.5 * T[n]),
+  T[n + 1], solver_parameters = solver_parameters)
+\end{lstlisting}
+Note that \verb+solver_parameters+ should define Newton solver parameters if
+$F(T)$ is non-linear.
+
+\section{Explicit Runge-Kutta}
+
+Runge-Kutta schemes are a class of multi-stage integration schemes. In the
+context of equation \eqref{eqn:t_timestep} an $S$-stage explicit Runge-Kutta
+scheme takes the form:
+\begin{subequations}
+  \begin{equation}
+    F^{n + 1,i} = F \left( T^n + \Delta t \sum_{j = 1}^{i - 1} \gamma_{ij} F^{n + 1,j} \right) \quad \textrm{ for } i \in \left\{ 1, \ldots, S \right\},
+  \end{equation}
+  \begin{equation}
+    T^{n + 1} = T^n + \Delta t \sum_{j = 1}^S b_j F^{n + 1,j}.
+  \end{equation}
+\end{subequations}
+The $\gamma_{ij}$ and $b_j$ are chosen so as to yield desired accuracy and
+stability properties. Further details of explicit Runge-Kutta schemes can be
+found in \citet[section 3.2]{iserles2009}.
+
+\subsection{First order explicit Runge-Kutta}
+
+The first order explicit Runge-Kutta scheme is:
+\begin{subequations}
+  \begin{equation}
+    F^{n + 1,1} = F \left( T^n \right),
+  \end{equation}
+  \begin{equation}
+    T^{n + 1} = T^n + \Delta t F^{n + 1,1}.
+  \end{equation}
+\end{subequations}
+This is the forward Euler scheme \ref{sect:fe}.
+
+\subsection{Second order explicit Runge-Kutta}\label{sect:rk2}
+
+A simple second order explicit Runge-Kutta scheme takes the form:
+\begin{subequations}
+  \begin{equation}
+    F^{n + 1,1} = F \left( T^n \right),
+  \end{equation}
+  \begin{equation}
+    F^{n + 1,2} = F \left( T^n + \Delta t \frac{1}{2} F^{n + 1,1} \right),
+  \end{equation}
+  \begin{equation}
+    T^{n + 1} = T^n + \Delta t F^{n + 1,2}.
+  \end{equation}
+\end{subequations}
+
+This discretisation can be implemented via:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+from fractions import Fraction
+hf = Fraction(1, 2)
+
+levels   = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+levels_F = TimeLevels(levels = [n, n + hf], cycle_map = {},
+  last_past_level = n - hf)
+T    = TimeFunction(levels,   space, name = "T")
+F_s  = TimeFunction(levels_F, space, name = "F_s")
+
+system = TimeSystem()
+
+system.add_solve(T_ic, T[0])
+
+system.add_solve(inner(test, F_s[n]) * dx == F(test, T[n]),
+  F_s[n], solver_parameters = solver_parameters)
+system.add_solve(inner(test, F_s[n + hf]) * dx ==
+  F(test, T[n] + 0.5 * dt * F_s[n]),
+  F_s[n + hf], solver_parameters = solver_parameters)
+  
+system.add_solve(LinearCombination((1.0, T[n]),
+                                   (dt, F_s[n + hf])),
+  T[n + 1])
+\end{lstlisting}
+
+\section{Discontinuous Galerkin Finite Element}
+
+Let a time interval $(0, T)$ be divided into a series of $N$ elements
+$( (n - 1) \Delta t, n \Delta t )$,
+$n \in \left\{ 1, \ldots, N \right\}$. Equip this one dimensional mesh with
+discontinuous Lagrange basis functions, thus defining a discrete function
+space $V^\delta \in L^2$ on $(0, T)$. A temporal discontinuous Galerkin
+discretisation of equation \eqref{eqn:t_timestep} yields:
+\begin{align}\label{eqn:t_timestep_dg}
+  \left[ \phi^\delta T^{\delta,-} \right]_{(n - 1) \Delta t}^{n \Delta t}
+    - \int_{(n - 1) \Delta t}^{n \Delta t} d_t \phi^\delta T^\delta dt
+    = \int_{(n - 1) \Delta t}^{n \Delta t} \phi^\delta F \left( T^\delta \right) dt \nonumber \\
+    \forall \phi^\delta \in V^\delta, \quad \forall n \in \left\{ 1, \ldots, N \right\},
+\end{align}
+where $T^\delta \in V^\delta$ and
+$T^{\delta,-} = \lim_{t \rightarrow \left[ (n - 1) \Delta t \right]^{-}} T^{\delta}$.
+The time derivative has been integrated by parts and an ``upwind flux''
+approximation applied.
+
+\subsection{$P0$}
+
+Consider discontinuous Lagrange elements of degree zero. Introduce basis
+functions:
+\begin{equation}
+  \phi^n = \left\{ \begin{array}{l} 1 \quad \textrm{ if } t \in \left( (n - 1) \Delta t, n \Delta t \right) \\
+                                    0 \quad \textrm{ otherwise}\end{array} \right. ,
+\end{equation}
+and let $T^\delta = \sum_{n = 1}^N T^n \phi^n$. Then equation
+\eqref{eqn:t_timestep_dg} leads to:
+\begin{equation}
+  T^{n + 1} - T^n
+    = \int_{n \Delta t}^{(n + 1) \Delta t} \phi^{n + 1} F \left( T^\delta \right) dt \quad \forall n \in \left\{ 0, \ldots, N - 1 \right\}.
+\end{equation}
+Application of the midpoint rule to the right-hand-side yields:
+\begin{equation}
+  T^{n + 1} - T^n = \Delta t F \left( T^{n + 1} \right).
+\end{equation}
+This is the backward Euler scheme \ref{sect:be}, and has first order accuracy
+in time.
+
+\subsection{$P1_{DG}$}
+
+Consider discontinuous Lagrange elements of degree one. Introduce basis
+functions:
+\begin{subequations}
+  \begin{align}
+    \phi^{n,1} & = \left\{ \begin{array}{l} 1 - \frac{n \Delta t - t}{\Delta t} \\ 0 \end{array}\begin{array}{l} \textrm{ if } t \in \left( (n - 1) \Delta t, n \Delta t \right) \\ \textrm{ otherwise} \end{array} \right. , \\
+    \phi^{n,2} & = \left\{ \begin{array}{l} \frac{t - (n - 1) \Delta t}{\Delta t} \\ 0 \end{array}\begin{array}{l} \textrm{ if } t \in \left( (n - 1) \Delta t, n \Delta t \right) \\ \textrm{ otherwise} \end{array} \right. ,
+  \end{align}
+\end{subequations}
+and let $T^\delta = \sum_{n = 1}^N T^{n,1} \phi^{n,1} + T^{n,2} \phi^{n,2}$.
+Then equation \eqref{eqn:t_timestep_dg} leads to:
+\begin{subequations}
+  \begin{align}
+    -T^{n,2} + \frac{1}{2} \left( T^{n + 1,1} + T^{n + 1,2} \right)
+      = \int_{n \Delta t}^{(n + 1) \Delta t} \phi^{n + 1,1} F \left( T^\delta \right) dt \nonumber \\ \forall n \in \left\{ 0, \ldots, N - 1 \right\},
+  \end{align}
+  \begin{align}
+    T^{n + 1,2} - \frac{1}{2} \left( T^{n + 1,1} + T^{n + 1,2} \right)
+      = \int_{n \Delta t}^{(n + 1) \Delta t} \phi^{n + 1,2} F \left( T^\delta \right) dt \nonumber \\ \forall n \in \left\{ 0, \ldots, N - 1 \right\},
+  \end{align}
+\end{subequations}
+The right-hand-sides can be integrated to second order accuracy in time via
+application of the trapezium rule to yield:
+\begin{subequations}
+  \begin{align}
+    -T^{n,2} + \frac{1}{2} \left( T^{n + 1,1} + T^{n + 1,2} \right)
+      = \Delta t \left[ \frac{1}{3} F \left( T^{n + 1,1} \right) + \frac{1}{6} F \left( T^{n + 1,2} \right) \right] \nonumber \\ \forall n \in \left\{ 0, \ldots, N - 1 \right\},
+  \end{align}
+  \begin{align}
+    T^{n + 1,2} - \frac{1}{2} \left( T^{n + 1,1} + T^{n + 1,2} \right)
+      = \Delta t \left[ \frac{1}{6} F \left( T^{n + 1,1} \right) + \frac{1}{3} F \left( T^{n + 1,2} \right) \right]  \nonumber \\ \forall n \in \left\{ 0, \ldots, N - 1 \right\},
+  \end{align}
+\end{subequations}
+The complete discretisation, including the initial condition, becomes:
+\begin{subequations}
+  \begin{align}
+    \frac{1}{2} T^{n + 1,2} + \frac{1}{2} T^{n + 1,1} - T^{n,2}
+      = \Delta t \left[ \frac{1}{3} F \left( T^{n + 1,1} \right) + \frac{1}{6} F \left( T^{n + 1,2} \right) \right] \nonumber \\ \forall n \in \left\{ 0, \ldots, N - 1 \right\},
+  \end{align}
+  \begin{align}
+    \frac{1}{2} T^{n + 1,2} - \frac{1}{2} T^{n + 1,1}
+      = \Delta t \left[ \frac{1}{6} F \left( T^{n + 1,1} \right) + \frac{1}{3} F \left( T^{n + 1,2} \right) \right]  \nonumber \\ \forall n \in \left\{ 0, \ldots, N - 1 \right\},
+  \end{align}
+  \begin{equation}
+    T^{0,2} = T_0.
+  \end{equation}
+\end{subequations}
+Each timestep involves the implicit solution for two new values, $T^{n + 1,1}$
+and $T^{n + 1,2}$, given one previous value, $T^{n,2}$.
+
+This discretisation can be implemented via:
+\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+spaces = space * space
+tests = TestFunction(spaces)
+test1, test2 = split(tests)
+
+levels = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+T = TimeFunction(levels, spaces, name = "T")
+
+system = TimeSystem()
+
+system.add_solve(inner(tests, T[0]) * dx == inner(test2, T_ic) * dx,
+  T[0], solver_parameters = solver_parameters)
+
+m_11 = m_22 = 1.0 / 3.0
+m_12 = m_21 = 1.0 / 6.0
+system.add_solve(
+  inner(test1, 0.5 * T[n + 1][1] + 0.5 * T[n + 1][0] - T[n][1])*dx +
+  inner(test2, 0.5 * T[n + 1][1] - 0.5 * T[n + 1][0]) * dx ==
+  dt*(m_11 * F(test1, T[n + 1][0]) + m_12 * F(test1, T[n + 1][1]) +
+      m_21 * F(test2, T[n + 1][0]) + m_22 * F(test2, T[n + 1][1])),
+  T[n + 1], solver_parameters = {"linear_solver":"lu"})
+\end{lstlisting}
+Note that \verb+solver_parameters+ should define Newton solver parameters if
+$F(T)$ is non-linear.
+
+\bibliography{bibliography}
+\bibliographystyle{plainnat}
+
+\end{document}

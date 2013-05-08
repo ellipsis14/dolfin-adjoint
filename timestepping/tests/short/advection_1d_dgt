@@ -1,0 +1,126 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2008 Johan Hake
+# Copyright (C) 2011-2012 by Imperial College London
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Copyright (C) 2008 Johan Hake from dolfin-adjoint file tests/upwind/upwind.py,
+# bzr trunk revision 638
+
+import numpy
+
+from dolfin import *
+from timestepping import *
+
+Constant = StaticConstant
+
+u_mag = Constant(1.0)
+T_bc = Constant(1.0)
+ngrid = 32
+dt = Constant(0.25 * float(u_mag) / ngrid)
+
+mesh = UnitIntervalMesh(ngrid)
+space = FunctionSpace(mesh, "DG", 1)
+spaces = space * space
+test = TestFunction(space)
+tests = TestFunction(spaces)
+test1, test2 = split(tests)
+
+u = StaticFunction(space, name = "u")
+u.assign(Constant(u_mag))
+U = as_vector([u])
+
+nm = FacetNormal(mesh)
+# DG advection upwinding based on dolfin-adjoint upwind test
+Un = 0.5 * (dot(U, nm) + abs(dot(U, nm)))
+Un2 = 0.5 * (dot(U, nm) - abs(dot(U, nm)))
+
+class DirichletBCBoundary(SubDomain):
+  def inside(self, x, on_boundary):
+    return on_boundary and (near(x[0], 0.0) or near(x[0], 1.0))
+bcs = MeshFunction("size_t", mesh, 0)
+bcs.set_all(0)
+DirichletBCBoundary().mark(bcs, 1)
+
+# DG advection upwinding based on dolfin-adjoint upwind test
+def F(test, T):
+  return inner(grad(test), U * T) * dx \
+    - jump(test) * jump(Un * T) * dS \
+    - test * (Un * T + Un2 * T_bc) * ds[bcs](1) \
+    - test * Un * T * ds[bcs](0)
+
+levels = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+T = TimeFunction(levels, spaces, name = "T")
+
+system = TimeSystem()
+
+T_ic = StaticFunction(space, name = "T_ic")
+system.add_solve(inner(tests, T[0]) * dx == inner(test1, numpy.NAN) * dx + inner(test2, T_ic) * dx,
+  T[0], solver_parameters = {"linear_solver":"lu"})
+
+m_11 = m_22 = 1.0 / 3.0
+m_12 = m_21 = 1.0 / 6.0
+system.add_solve((1.0 / dt) * inner(test1, 0.5 * T[n + 1][1] + 0.5 * T[n + 1][0] - T[n][1]) * dx + (1.0 / dt) * inner(test2, 0.5 * T[n + 1][1] - 0.5 * T[n + 1][0]) * dx ==
+  m_11 * F(test1, T[n + 1][0]) + m_12 * F(test1, T[n + 1][1]) +
+  m_21 * F(test2, T[n + 1][0]) + m_22 * F(test2, T[n + 1][1]),
+  T[n + 1], solver_parameters = {"linear_solver":"lu"})
+
+dt_orig = Constant(dt)
+dt.assign(float(dt_orig) / 1000.0)
+asystem = system.assemble()
+asystem.timestep(1000)
+asystem.finalise()
+T_ref = Function(spaces, name = "T_ref")
+T_ref.assign(T[N])
+errs = numpy.empty(6)
+for i in range(6):
+  dt.assign(float(dt_orig) / (2 ** i))
+  asystem.reassemble(dt)
+  asystem.initialise()
+  asystem.timestep(2 ** i)
+  asystem.finalise()
+  errs[i] = sqrt(assemble((T[N][1] - T_ref[1]) * (T[N][1] - T_ref[1]) * dx))
+  
+orders = numpy.array([-numpy.log(errs[i + 1] / errs[i]) / numpy.log(2.0) for i in range(len(errs) - 1)])
+print errs
+print orders
+assert((orders > 2.86).all())
+assert(orders[-1] > 2.98)
+
+dt.assign(float(dt_orig))
+clear_caches(dt)
+
+system = system.assemble(adjoint = True, functional = T[N][1] * T[N][1] * dx, reassemble = True)
+  
+t = 0.0
+index = 0
+#write_vtu("advection_1d_dgt", T[n], index = index, t = t)
+while t * (1.0 + 1.0e-9) < 1.0:
+  system.timestep()
+  t += float(dt)
+  index += 1
+#  write_vtu("advection_1d_dgt", T[n], index = index, t = t)
+system.finalise()
+
+system.verify_checkpoints()
+
+J = system.compute_functional()
+g = system.compute_gradient([T_ic, T_bc])
+
+orders = system.taylor_test(T_ic, J = J, grad = g[0], fact = 1.0e-4)
+assert((orders > 1.99).all())
+
+orders = system.taylor_test(T_bc, J = J, grad = g[1], fact = 5.0e-6)
+assert((orders > 1.99).all())

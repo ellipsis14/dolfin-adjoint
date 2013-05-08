@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from dolfin import *
+from timestepping import *
+
+mesh = UnitIntervalMesh(1)
+space = FunctionSpace(mesh, "R", 0)
+
+levels = TimeLevels(levels = [n - 1, n], cycle_map = {})
+T = TimeFunction(levels, space, name = "T")
+
+system = TimeSystem()
+system.add_solve(1.0, T[-1])
+system.add_solve(2, T[0])
+
+system = system.assemble()
+
+comp = T[-1].vector().array()[0]
+ref = 1.0
+err = abs(comp - ref)
+print "%.17e" % comp
+print "%.17e" % ref
+print "%.17e" % err
+assert(err < 1.0e-16)
+
+comp = T[0].vector().array()[0]
+ref = 2.0
+err = abs(comp - ref)
+print "%.17e" % comp
+print "%.17e" % ref
+print "%.17e" % err
+assert(err < 1.0e-16)

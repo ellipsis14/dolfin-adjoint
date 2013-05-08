@@ -1,0 +1,135 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from dolfin import *
+from timestepping import *
+
+ngrid = 1
+a = StaticConstant(1.0)
+
+mesh = UnitIntervalMesh(ngrid)
+space = FunctionSpace(mesh, "R", 0)
+test, trial = TestFunction(space), TrialFunction(space)
+
+one = StaticFunction(space, name = "one")
+one.assign(Constant(1.0))
+
+system = TimeSystem()
+levels = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+u = TimeFunction(levels, space, name = "u")
+system.add_solve(1.0, u[0])
+system.add_solve(LinearCombination((a, u[n]), (1.0, one)), u[n + 1])
+
+class Functional(TimeFunctional):
+  def __init__(self, min_s):
+    TimeFunctional.__init__(self)
+    self.set_min_s(min_s)
+    self.__u = u[n]
+    return
+  def initialise(self, val = 0.0):
+    self.__val = val
+    return
+  def value(self):
+    return self.__val
+  def addto(self, s):
+    if s >= self.__min_s:
+      self.__val += assemble(self.__u * dx)
+    return
+  def dependencies(self, s = None, non_symbolic = False):
+    if s is None or s >= self.__min_s:
+      return [self.__u]
+    else:
+      return []
+  def derivative(self, param, s):
+    if s >= self.__min_s:
+      return derivative(self.__u * dx, param)
+    else:
+      return Form([])
+  def set_min_s(self, min_s):
+    self.__min_s = min_s
+    return
+
+f = Functional(min_s = 2)
+system = system.assemble(adjoint = True, functional = f)
+system.timestep()
+system.timestep()
+system.timestep()
+system.finalise()
+
+system.verify_checkpoints()
+
+J = system.compute_functional()
+err = abs(J - 7.0)
+print J, err
+assert(err < 1.0e-16)
+
+grad = system.compute_gradient(one)
+err = abs(grad.array()[0] - 5.0)
+print grad.array()[0], err
+assert(err < 1.0e-16)
+
+f.set_min_s(1)
+J = system.compute_functional(rerun_forward = True)
+err = abs(J - 9.0)
+print J, err
+assert(err < 1.0e-16)
+
+grad = system.compute_gradient(one)
+err = abs(grad.array()[0] - 6.0)
+print grad.array()[0], err
+assert(err < 1.0e-16)
+
+class Functional(TimeFunctional):
+  def __init__(self, min_s):
+    TimeFunctional.__init__(self)
+    self.set_min_s(min_s)
+    self.__u = u[n]
+    return
+  def initialise(self, val = 0.0):
+    self.__val = val
+    return
+  def value(self):
+    return self.__val
+  def addto(self, s):
+    if s >= self.__min_s:
+      self.__val += s * assemble(self.__u * dx)
+    return
+  def dependencies(self, s = None, non_symbolic = False):
+    if s is None or s >= self.__min_s:
+      return [self.__u]
+    else:
+      return []
+  def derivative(self, param, s):
+    if s >= self.__min_s:
+      return derivative(s * self.__u * dx, param)
+    else:
+      return Form([])
+  def set_min_s(self, min_s):
+    self.__min_s = min_s
+    return
+
+f = Functional(min_s = 2)
+system.set_functional(f)
+
+J = system.compute_functional(rerun_forward = True)
+err = abs(J - 18.0)
+print J, err
+assert(err < 1.0e-16)
+
+grad = system.compute_gradient(one)
+err = abs(grad.array()[0] - 13.0)
+print grad.array()[0], err
+assert(err < 1.0e-16)

@@ -1,0 +1,104 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2008 Johan Hake
+# Copyright (C) 2011-2012 by Imperial College London
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Copyright (C) 2008 Johan Hake from dolfin-adjoint file tests/upwind/upwind.py,
+# bzr trunk revision 638
+
+from dolfin import *
+from timestepping import *
+
+import numpy
+
+Constant = StaticConstant
+
+if "reorder_dofs_serial" in parameters:
+  parameters["reorder_dofs_serial"] = False
+
+u_mag = Constant(1.0)
+T_bc = Constant(1.0)
+ngrid = 32
+dt = Constant(0.01 * float(u_mag) / ngrid)
+lu_solver = {"linear_solver":"lu"}
+
+mesh = UnitIntervalMesh(ngrid)
+space = FunctionSpace(mesh, "DG", 1)
+test, trial = TestFunction(space), TrialFunction(space)
+
+levels = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+T = TimeFunction(levels, space, name = "T")
+
+u = StaticFunction(space, name = "u")
+u.assign(Constant(u_mag))
+U = as_vector([u])
+
+system = TimeSystem()
+
+system.add_solve(0.0, T[0])
+
+nm = FacetNormal(mesh)
+# DG advection upwinding based on dolfin-adjoint upwind test
+Un = 0.5 * (dot(U, nm) + abs(dot(U, nm)))
+Un2 = 0.5 * (dot(U, nm) - abs(dot(U, nm)))
+
+class DirichletBCBoundary(SubDomain):
+  def inside(self, x, on_boundary):
+    return on_boundary and (near(x[0], 0.0) or near(x[0], 1.0))
+bcs = MeshFunction("size_t", mesh, 0)
+bcs.set_all(0)
+DirichletBCBoundary().mark(bcs, 1)
+
+# DG advection upwinding based on dolfin-adjoint upwind test
+system.add_solve(inner(test, trial) * dx == inner(test, T[n]) * dx - (- dt * inner(grad(test), U * T[n]) * dx
+  + jump(test) * jump(dt * Un * T[n]) * dS
+  + dt * test * (Un * T[n] + Un2 * T_bc) * ds[bcs](1)
+  + dt * test * Un * T[n] * ds[bcs](0)), T[n + 1], solver_parameters = lu_solver)
+
+system = system.assemble(adjoint = True, disk_period = 100, functional = T[N] * T[N] * dx)
+
+t = 0.0
+#index = 0
+while t * (1.0 + 1.0e-9) < 1.0:
+  system.timestep()
+  t += float(dt)
+#  index += 1
+#  write_vtu("advection_1d_fe", T[n], index = index, t = t)
+
+system.finalise()
+
+ref = numpy.array(map(float, """1.          1.          1.          1.          1.          1.          1.
+  1.          1.          1.          1.          1.          1.          1.
+  1.          1.          1.          1.          1.          1.          1.
+  1.          1.          1.          1.          1.          1.          1.
+  1.          1.          1.          1.          1.          1.
+  0.99999998  1.00000002  1.00000003  1.00000015  1.00000045  0.99999969
+  0.99999982  0.99999645  0.99999153  0.99999974  0.99999     1.00005551
+  1.00009977  1.00011245  1.00029715  0.99957539  0.99952914  0.99790891
+  0.99638359  0.99898198  0.99610197  1.0137207   1.01591248  1.04088385
+  1.05864021  1.02638688  1.05746125  0.86963521  0.88879619  0.535155""".split()))
+err = abs(T[N].vector().array() - ref).max()
+print T[N].vector().array(), err
+assert(err < 5.0e-9)
+
+system.verify_checkpoints()
+
+J = system.compute_functional()
+g = system.compute_gradient(T_bc)
+print float(g)
+
+orders = system.taylor_test(T_bc, J = J, grad = g)
+assert((orders > 1.99).all())

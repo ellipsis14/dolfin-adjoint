@@ -1,0 +1,123 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import copy
+import glob
+import optparse
+import os
+import subprocess
+import sys
+
+optionParser = optparse.OptionParser( \
+  usage = "%prog [OPTIONS] DIR", \
+  add_help_option = True, \
+  description = "Run timestepping tests")
+optionParser.add_option("-c", "--custom-tests", action = "store_true", dest = "local", help = "Enable custom local tests", default = False)
+optionParser.add_option("-l", "--long-tests", action = "store_true", dest = "long", help = "Enable long tests", default = False)
+optionParser.add_option("-S", "--no-short-tests", action = "store_false", dest = "short", help = "Disable short tests", default = True)
+opts, args = optionParser.parse_args()
+if len(args) > 0:
+  print "Unexpected trailing argument"
+  sys.exit(1)
+
+path = os.path.abspath(os.path.dirname(__file__))
+def find_tests(rel_path, exclude = []):
+  def lfind_tests(rel_path):
+    tests = glob.glob(os.path.join(path, rel_path, "*"))
+    for test in copy.copy(tests):
+      if os.path.isdir(test):
+        tests.remove(test)
+        tests += lfind_tests(os.path.join(rel_path, test))
+    for test in copy.copy(tests):
+      if not os.access(test, os.X_OK):
+        tests.remove(test)
+    return tests
+
+  tests = lfind_tests(rel_path)
+  rel_path_len = len(os.path.join(path, rel_path, ""))
+  for test in copy.copy(tests):
+    if test[rel_path_len:] in exclude:
+      tests.remove(test)
+
+  def cmp(a, b):
+    a_basename = os.path.basename(a)
+    b_basename = os.path.basename(b)
+    if a_basename < b_basename:
+      return -1
+    elif a_basename == b_basename:
+      return 0
+    else:
+      return 1
+  tests.sort(cmp = cmp)
+
+  ntests = []
+  for test in tests:
+    handle = open(test, "r")
+    n = 1
+    for i in range(2):
+      line = handle.readline()
+      if line.startswith("#NP "):
+        try:
+          n = int(line[4:])
+          break
+        except ValueError:
+          pass
+    ntests.append((n, test))
+
+  return ntests
+
+if opts.short:
+  tests = find_tests(os.path.join("manual", "examples"), exclude = "test") \
+        + find_tests(os.path.join("tests", "fenics")) \
+        + find_tests(os.path.join("tests", "unit")) \
+        + find_tests(os.path.join("tests", "short"))
+else:
+  tests = []
+if opts.long:
+  tests += find_tests(os.path.join("tests", "long"))
+if opts.local:
+  tests += find_tests(os.path.join("tests", "local"))
+
+successes = 0
+failures = []
+for np, test in tests:
+  print "Running test: %s" % test
+  try:
+    if not np == 1:
+      proc = subprocess.Popen(("mpirun -np %i %s" % (np, test)).split())
+    else:
+      proc = subprocess.Popen(("%s" % test).split())
+    proc.wait()
+  except:
+    raise Exception("Failed to run test: %s" % test)
+  if proc.returncode == 0:
+    print "Test success: %s" % test
+    successes += 1
+  else:
+    sys.stderr.write("Test failure: %s\n" % test)
+    failures.append(test)
+print \
+"""\
+----------------------------------------------------------------------
+Summary:
+
+Successes: %i
+Failures: %i""" % (successes, len(failures))
+if len(failures) > 0:
+  print "Failures:"
+  for failure in failures:
+    print failure
+  sys.exit(1)

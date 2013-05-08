@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import numpy;  numpy.random.seed(0)
+
+from dolfin import *
+from timestepping import *
+
+mesh = UnitSquareMesh(10, 10)
+space = FunctionSpace(mesh, "DG", 0)
+test = TestFunction(space)
+
+F = Function(space, name = "F")
+G = Function(space, name = "G")
+H = Function(space, name = "H")
+
+F.vector().set_local(numpy.random.random(F.vector().local_size()));  F.vector().apply("insert")
+
+pa_solve(inner(test, G) * dx == inner(test, F) * dx, G, solver_parameters = {"linear_solver":"lu"})
+pa_solve(lumped_mass(space) == inner(test, F) * dx, H)
+
+err = (G.vector() - F.vector()).norm("linf")
+print "%.17e" % err
+assert(err < 3.0e-16)
+
+err = (H.vector() - F.vector()).norm("linf")
+print "%.17e" % err
+assert(err < 2.0e-16)
+
+del(space, test, F, G, H)
+
+space = FunctionSpace(mesh, "DG", 1)
+test = TestFunction(space)
+
+F = Function(space, name = "F")
+H = Function(space, name = "H")
+
+F.vector().set_local(numpy.random.random(F.vector().local_size()));  F.vector().apply("insert")
+
+pa_solve(lumped_mass(space) == inner(test, F) * dx, H)
+
+comp = assemble(F * dx)
+ref = assemble(H * dx)
+err = abs(comp - ref)
+print "%.17e" % comp
+print "%.17e" % ref
+print "%.17e" % err
+assert(err < 2.0e-15)
