@@ -89,7 +89,7 @@ def compute_tlm(parameter, forget=False):
 
       yield (output.data, tlm_var)
 
-def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, output: None):
+def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, output: None, project=False):
   dolfin.parameters["adjoint"]["stop_annotating"] = True
 
   try:
@@ -146,10 +146,28 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
     else:
       adjglobals.adjointer.forget_adjoint_values(i)
 
+  def project(func):
+    if isinstance(func, dolfin.Function):
+      V = func.function_space()
+      u = dolfin.TrialFunction(V)
+      v = dolfin.TestFunction(V)
+      M = dolfin.assemble(dolfin.inner(u, v)*dolfin.dx)
+      proj = dolfin.Function(V)
+      dolfin.solve(M, proj.vector(), func.vector())
+      return proj
+    else:
+      return func
+
   if scalar:
-    return dJdparam[0]
+    if project is False:
+      return dJdparam[0]
+    else:
+      return project(dJdparam[0])
   else:
-    return dJdparam
+    if project is False:
+      return dJdparam
+    else:
+      return map(project, dJdparam)
 
 def hessian(J, m, warn=True):
   '''Choose which Hessian the user wants.'''
