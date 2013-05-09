@@ -5367,12 +5367,10 @@ class DiskCheckpointer(Checkpointer):
     
     Checkpointer.__init__(self)
 
-#    if dolfin.MPI.process_number() == 0:    
-#      if os.path.exists(dirname):
-#        dolfin.info_red("Warning: Deleting checkpoint directory %s" % dirname)
-#        shutil.rmtree(dirname)
-#      os.mkdir(dirname)
-#    dolfin.MPI.barrier()
+    if dolfin.MPI.process_number() == 0:    
+      if not os.path.exists(dirname):
+        os.mkdir(dirname)
+    dolfin.MPI.barrier()
     
     self.__dirname = dirname
     self.__filenames = {}
