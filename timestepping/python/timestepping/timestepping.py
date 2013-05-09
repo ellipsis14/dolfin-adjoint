@@ -46,7 +46,9 @@ import scipy.optimize
 import ufl
 import vtk
 
-__all__ = ["AbstractMethodException",
+from exceptions import *
+
+__all__ = [
   "AdjoinedTimeSystem",
   "AdjointTimeFunction",
   "AdjointTimeSystem",
@@ -55,37 +57,30 @@ __all__ = ["AbstractMethodException",
   "AssemblyCache",
   "AssignmentSolver",
   "CellKernel",
-  "CheckpointException",
   "Checkpointer",
   "Constant",
-  "DependencyException",
   "DiskCheckpointer",
   "EmbeddedCpp",
   "EquationSolver",
   "FinalTimeLevel",
   "Function",
-  "InvalidArgumentException",
   "LinearCombination",
   "LinearSolver",
   "MemoryCheckpointer",
   "N",
-  "NotImplementedException",
   "PAAdjointSolvers",
   "PABilinearForm",
   "PAEquationSolver",
   "PAForm",
   "PALinearForm",
-  "ParameterException",
   "QForm",
   "SolverCache",
-  "StateException",
   "StaticConstant",
   "StaticDirichletBC",
   "StaticFunction",
   "TimeFunction",
   "TimeFunctional",
   "TimeLevel",
-  "TimeLevelException",
   "TimeLevels",
   "TimeSystem",
   "Version",
@@ -135,25 +130,6 @@ __all__ = ["AbstractMethodException",
   "system_info",
   "ufl_version",
   "write_vtu"]
-
-class AbstractMethodException(Exception):
-  pass
-class CheckpointException(Exception):
-  pass
-class DependencyException(Exception):
-  pass
-class InvalidArgumentException(TypeError):
-  pass
-class NotImplementedException(Exception):
-  pass
-class ParameterException(Exception):
-  pass
-class StateException(Exception):
-  pass
-class TimeLevelException(Exception):
-  pass
-class VersionException(ImportError):
-  pass
 
 class Version:
   """

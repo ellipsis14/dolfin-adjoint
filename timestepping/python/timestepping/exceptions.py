@@ -15,31 +15,42 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import timestepping
-
-from exceptions import *
-from timestepping import *
-
-__doc__ = \
-"""
-A timestepping abstraction and automated adjoining library. This library
-utilises the FEniCS system for symbolic manipulation and automated code
-generation, and supplements this system with a syntax for the description of
-timestepping finite element models.
-"""
-
-__license__ = "LGPL-3"
-
-__version__ = "1.2.0"
-
 __all__ = \
-  exceptions.__all__ + \
-  timestepping.__all__ + \
-  [ 
-    "__doc__",
-    "__license__",
-    "__name__",
-    "__version__",
-    "exceptions",
-    "timestepping"
+  [
+    "AbstractMethodException",
+    "CheckpointException",
+    "DependencyException",
+    "InvalidArgumentException",
+    "NotImplementedException",
+    "ParameterException",
+    "StateException",
+    "TimeLevelException",
+    "VersionException"
   ]
+
+class AbstractMethodException(Exception):
+  pass
+
+class CheckpointException(Exception):
+  pass
+
+class DependencyException(Exception):
+  pass
+
+class InvalidArgumentException(TypeError):
+  pass
+
+class NotImplementedException(Exception):
+  pass
+
+class ParameterException(Exception):
+  pass
+
+class StateException(Exception):
+  pass
+
+class TimeLevelException(Exception):
+  pass
+
+class VersionException(ImportError):
+  pass

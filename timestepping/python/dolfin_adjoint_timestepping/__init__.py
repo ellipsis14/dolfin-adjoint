@@ -15,10 +15,12 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import dolfin_adjoint
+import dolfin_adjoint_timestepping
 import timestepping
 
-from exceptions import *
 from timestepping import *
+from dolfin_adjoint_timestepping import *
 
 __doc__ = \
 """
@@ -26,20 +28,22 @@ A timestepping abstraction and automated adjoining library. This library
 utilises the FEniCS system for symbolic manipulation and automated code
 generation, and supplements this system with a syntax for the description of
 timestepping finite element models.
+
+This version of the library integrates with dolfin-adjoint.
 """
 
 __license__ = "LGPL-3"
 
 __version__ = "1.2.0"
 
-__all__ = \
-  exceptions.__all__ + \
-  timestepping.__all__ + \
-  [ 
+__all__ = dolfin_adjoint_timestepping.__all__ +
+  [
     "__doc__",
     "__license__",
     "__name__",
     "__version__",
-    "exceptions",
+    "dolfin_adjoint",
+    "dolfin_adjoint_timestepping",
     "timestepping"
   ]
+  
