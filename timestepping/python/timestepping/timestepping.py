@@ -46,18 +46,6 @@ import scipy.optimize
 import ufl
 import vtk
 
-__doc__ = \
-"""
-A timestepping abstraction and automatic adjoining library. This library
-utilises the FEniCS system for symbolic manipulation and automatic code
-generation, and supplements this system with a syntax for the description of
-timestepping finite element models.
-"""
-
-__license__ = "LGPL-3"
-
-__version__ = "1.2.0"
-
 __all__ = ["AbstractMethodException",
   "AdjoinedTimeSystem",
   "AdjointTimeFunction",
@@ -102,11 +90,6 @@ __all__ = ["AbstractMethodException",
   "TimeSystem",
   "Version",
   "WrappedFunction",
-  "__doc__",
-  "__license__",
-  "__name__",
-  "__package__",
-  "__version__",
   "action",
   "add_parameter",
   "adjoint",
@@ -542,7 +525,6 @@ def system_info():
   import instant
   import ufc
 
-  dolfin.info("Timestepping library version %s" % __version__)
   dolfin.info("Date / time    : %s" % time.ctime())
   dolfin.info("Machine        : %s" % socket.gethostname())
   dolfin.info("Platform       : %s" % platform.platform())
@@ -579,7 +561,6 @@ def system_info():
     dolfin.info("PETSc version  : %i.%i.%ip%i" % petsc_ver.tuple())
 
   return
-system_info()
 
 # Enable aggressive compiler optimisations by default.
 dolfin.parameters["form_compiler"]["cpp_optimize"] = True

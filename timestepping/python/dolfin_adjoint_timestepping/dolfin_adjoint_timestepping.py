@@ -34,27 +34,10 @@ import ufl
 from timestepping import *
 from dolfin_adjoint import *
 
-__doc__ = \
-"""
-A timestepping abstraction and automatic adjoining library. This library
-utilises the FEniCS system for symbolic manipulation and automatic code
-generation, and supplements this system with a syntax for the description of
-timestepping finite element models.
-
-This version of the library integrates with dolfin-adjoint.
-"""
-
 __all__ = timestepping.__all__ + dir(dolfin_adjoint)
 for val in copy.copy(__all__):
   if val.startswith("__") and val.endswith("__"):
     __all__.remove(val)
-__all__ += [ "__doc__",
-  "__license__",
-  "__name__",
-  "__package__",
-  "__version__",
-  "dolfin_adjoint",
-  "timestepping"]
 
 def system_info():
   """
@@ -65,7 +48,6 @@ def system_info():
   dolfin.info("dolfin-adjoint version: %s" % dolfin_adjoint.__version__)
   
   return
-dolfin.info("dolfin-adjoint version: %s" % dolfin_adjoint.__version__)
 
 dolfin.parameters["timestepping"]["pre_assembly"]["linear_forms"]["whole_form_optimisation"] = True
 
