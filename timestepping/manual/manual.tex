@@ -10,6 +10,26 @@
 \usepackage{natbib}
 \usepackage{nicefrac}
 \usepackage{ulem}
+\usepackage[svgnames]{xcolor}
+
+\hypersetup{
+  colorlinks = true,
+  citecolor = DarkBlue,
+  linkcolor = DarkBlue,
+  urlcolor = DarkBlue
+}
+
+\lstset{
+  language = Python,
+  basicstyle = \ttfamily\footnotesize,
+  frame = single,
+  commentstyle = \color{Grey},
+  keywordstyle = \color{blue},
+  stringstyle = \color{DarkViolet},
+  keepspaces = true,
+  showspaces = false,
+  showstringspaces = false
+}
 
 \newcommand{\version}{1.2.0}
 
@@ -168,7 +188,7 @@ This manual documents only the primary high-level interface. Further
 documentation relating to all functions and classes in the \verb+timestepping+
 library can be accessed via the online documentation. For example, in a Python
 shell:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 >>> import timestepping
 >>> help(timestepping)
 \end{lstlisting}
@@ -186,7 +206,7 @@ section \ref{sect:principles}.
 The \verb+timestepping+ library is intended to be used in combination with
 DOLFIN. The \verb+timestepping+ library overrides some aspects of the DOLFIN
 interface, and hence the standard way of accessing the library is via:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 from dolfin import *
 from timestepping import *
 \end{lstlisting}
@@ -202,7 +222,7 @@ each accepts an optional string \verb+name+ keyword argument defining the
 
 \subsection*{Examples}
 
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 from dolfin import *
 from timestepping import *
 
@@ -268,7 +288,7 @@ with value \verb=N + i=.
 
 New \verb+TimeLevel+ and \verb+FinalTimeLevel+ objects can be instantiated
 directly. The high-level constructor arguments are:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
   n_custom = TimeLevel(arg)
   N_custom = FinalTimeLevel(arg)
 \end{lstlisting}
@@ -278,13 +298,13 @@ used. New \verb+TimeLevel+ and \verb+FinalTimeLevel+ objects can also be
 instantiated via the addition or subtraction of an integer or
 \verb+fractions.Fraction+ from an existing \verb+TimeLevel+ or
 \verb+FinalTimeLevel+:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 n_custom = n + offset_1
 N_custom = N - offset_2
 \end{lstlisting}
 
 \subsection*{Examples}
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 from timestepping import *
 from fractions import Fraction
 
@@ -321,7 +341,7 @@ point, defining which levels are to be treated as being in the past and which
 levels are to be treated as being in the future.
 
 A \verb+TimeLevels+ object is instantiated via:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 time_levels = TimeLevels(levels, cycle_map, last_past_level)
 \end{lstlisting}
 where \verb+levels+ is a list containing \verb+TimeLevel+ objects,
@@ -348,7 +368,7 @@ All keys in \verb+cycle_map+ must be in the past.
 
 \subsection*{Examples}
 
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 from timestepping import *
 from fractions import *
 
@@ -383,7 +403,7 @@ A \verb+TimeFunction+ object defines a series of \verb+dolfin.Function+ objects,
 each specified on an individual time level.
 
 A \verb+TimeFunction+ object is instantiated via:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 tfn = TimeFunction(levels, *args, name = name, **kwargs)
 \end{lstlisting}
 where \verb+levels+ is a \verb+TimeLevels+, \verb+args+ and \verb+kwargs+ are
@@ -394,7 +414,7 @@ A symbolic representation of a single function, defined on a single time level,
 can be accessed by indexing into the \verb+TimeFunction+ using an integer,
 \verb+fractions.Fraction+, \verb+TimeLevel+, or \verb+FinalTimeLevel+. For
 example:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 tfn[0]      # Representation of the function at time level 0
 tfn[n + 1]  # Representation of the function at time level n + 1
 tfn[N - 2]  # Representation of the function at time level N - 2
@@ -420,7 +440,7 @@ state.
 
 \subsection*{Examples}
 
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 from dolfin import *
 from timestepping import *
 
@@ -452,14 +472,14 @@ Model equations can be registered with a \verb+TimeSystem+ by calling the
 \verb+add_assignment+ or \verb+add_solve+ methods.
 
 A \verb+TimeSystem+ is instantiated without arguments:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 system = TimeSystem()
 \end{lstlisting}
 
 \subsection{Registering assignments}
 
 An assignment can be registered via the \verb+add_assignment+ method:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 system.add_assignment(y, x)
 \end{lstlisting}
 Here \verb+x+ is a \verb+dolfin.Function+ corresponding to a time level of a
@@ -472,7 +492,7 @@ in the function space of \verb+x+. The assignment must also be linear, with
 \verb+y+ independent of \verb+x+.
 
 A \verb+LinearCombination+ is instantiated via:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 lc = LinearCombination(*args)
 \end{lstlisting}
 where the arguments \verb+args+ are an arbitrary list of tuples
@@ -499,13 +519,13 @@ registered via the \verb+add_solve+ method. The arguments of this method are
 largely based upon the arguments accepted by the \verb+dolfin.solve+ function.
 The following are the high-level interfaces offered by this method:
 
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 system.add_solve(y, x)
 \end{lstlisting}
 where \verb+y+ and \verb+x+ are as expected by the \verb+add_assignment+ method.
 This calls the \verb+add_assignment+ method.
 
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 system.add_solve(a == L, x, bcs,
   solver_parameters = solver_parameters,
   adjoint_solver_parameters = adjoint_solver_parameters)
@@ -514,7 +534,7 @@ where \verb+a+ is a rank 2 \verb+dolfin.Form+, \verb+L+ is a rank 1 \linebreak
 \verb+dolfin.Form+, and \verb+x+ is a \verb+dolfin.Function+ corresponding to a
 time level of a \linebreak \verb+TimeFunction+. This registers a (possibly
 non-linear) variational problem. Alternatively, one may use:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 system.add_solve(eq, x, bcs,
   solver_parameters = solver_parameters,
   adjoint_solver_parameters = adjoint_solver_parameters)
@@ -547,12 +567,12 @@ equation must be in this stage. For example, any time level dependencies of an
 equation which solves for an initialisation stage time level must themselves
 correspond to an initialisation stage time level. The following is a valid
 registration:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 system.add_solve(F[-1], F[0])
 \end{lstlisting}
 (provide that \verb+F+ is defined on the relevant levels), while the following
 is an \emph{invalid} registration:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 system.add_solve(F[n], F[0])
 \end{lstlisting}
 
@@ -568,7 +588,7 @@ the analysis and optimisation step (see section \ref{sect:assembly}).
 
 \subsection*{Examples}
 
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 from dolfin import *
 from timestepping import *
 
@@ -630,7 +650,7 @@ declared as static may be modified before the initialisation stage.
 
 \subsection*{Examples}
 
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 from dolfin import *
 from timestepping import *
 
@@ -650,7 +670,7 @@ F.interpolate(Expression("x[0]"))
 bc = StaticDirichletBC(space, 0.0, "on_boundary")
 \end{lstlisting}
 
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 from dolfin import *
 from timestepping import *
 
@@ -709,14 +729,14 @@ or more at the same time leads to undefined behaviour.
 
 If an adjoint model is not enabled, the \verb+assemble+ method has high-level
 arguments:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 asystem = system.assemble(initialise = initialise)
 \end{lstlisting}
 This returns an \verb+AssembledTimeSystem+. If the optional \verb+initialise+ is
 not supplied or is \verb+True+ then, immediately after the \verb+assemble+ call,
 the initialisation stage is complete. Otherwise, the initialisation stage can be
 performed via a subsequent call to the \verb+initialise+ method:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 asystem.initialise()
 \end{lstlisting}
 
@@ -725,7 +745,7 @@ asystem.initialise()
 An adjoint model is enabled by calling the \verb+assemble+ method with the
 optional \verb+adjoint+ boolean argument set equal to \verb+True+. The remaining
 high-level arguments are:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 asystem = system.assemble(adjoint = adjoint,
   disk_period = disk_period, functional = functional,
   initialise = initialise)
@@ -734,7 +754,7 @@ This returns an \verb+AdjoinedTimeSystem+. If the optional \verb+initialise+ is
 not supplied or is \verb+True+ then, immediately after the \verb+assemble+ call,
 the initialisation stage is complete. Otherwise, the initialisation stage can be
 performed via a subsequent call to the \verb+initialise+ method:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 asystem.initialise()
 \end{lstlisting}
 The optional integer \verb+disk_period+ defines how often the forward model
@@ -747,7 +767,7 @@ interface the optional \verb+functional+ is a rank 0 form.
 of a \verb+TimeFunction+ must correspond to finalisation stage time levels. If
 \verb+functional+ is not supplied to the \verb+assemble+ method then a
 functional can instead be specified via the \verb+set_functional+ method:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 asystem.set_functional(functional)
 \end{lstlisting}
 
@@ -755,7 +775,7 @@ asystem.set_functional(functional)
 
 The model is timestepped by calling the \verb+timestep+ method of an \linebreak
 \verb+AssembledTimeSystem+ or \verb+AdjoinedTimeSystem+:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 asystem.timestep(s = s)
 \end{lstlisting}
 where the optional integer \verb+s+ is the number of timesteps to perform. If
@@ -763,7 +783,7 @@ where the optional integer \verb+s+ is the number of timesteps to perform. If
 \verb+timestep+ method performs both the timestep solve and timestep cycle
 stages. At the model end the finalisation stage is performed by calling the
 \verb+finalise+ method:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 asystem.finalise()
 \end{lstlisting}
 
@@ -778,7 +798,7 @@ methods should not be called after the \verb+finalise+ call.
 
 \subsection*{Examples}
 
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 from dolfin import *
 from timestepping import *
 
@@ -851,7 +871,7 @@ storage is configured in the analysis and optimisation step (see section
 After the forward model finalisation stage (after the \linebreak
 \verb+AdjoinedTimeSystem.finalise+ call) stored forward model data can be
 verified via the \verb+verify_checkpoints+ method:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 asystem.verify_checkpoints(tolerance = tolerance)
 \end{lstlisting}
 where the optional \verb+tolerance+ argument is a positive float defining the
@@ -866,7 +886,7 @@ entire forward model, and hence this should only be used for debugging purposes.
 
 A model constrained derivative can be computed via the \verb+compute_gradient+
 method. The high-level arguments for this method are:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 grad = asystem.compute_gradient(parameters = parameters,
   project = project,
   project_solver_parameters = project_solver_parameters)
@@ -923,7 +943,7 @@ parameter $\vec{m}$.
 
 The \verb+taylor_test+ method performs such a verification. The high-level
 arguments for this method are:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 orders = asystem.taylor_test(parameter, grad = grad,
   ntest = ntest, fact  = fact)
 \end{lstlisting}
@@ -1004,7 +1024,7 @@ may indicate a bug in the \verb+timestepping+ library.
 
 \subsection*{Examples}
 
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 from dolfin import *
 from timestepping import *
 
@@ -1089,7 +1109,7 @@ may for example be a \verb+dolfin.Constant+ or \verb+dolfin.Function+. It is
 further assumed that some Python function for approximating
 $\int_\Omega \phi_i F(T)$ over the space $\Omega$ and with test functions
 $\phi_i$ is provided, with the following form:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 def F(test, T):
   rhs = ... # Insert definition here
   return rhs
@@ -1123,7 +1143,7 @@ yielding:
 This is the forward Euler scheme, and has first order accuracy.
 
 This discretisation can be implemented via:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 levels    = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
 levels_dT = TimeLevels(levels = [n], cycle_map = {},
   last_past_level = n - 1)
@@ -1163,7 +1183,7 @@ first order accurate. Hence, for example, a single forward Euler step
 \end{equation}
 
 This discretisation can be implemented via:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 levels    = TimeLevels(levels = [n, n + 1, n + 2],
   cycle_map = {n:n + 1, n + 1:n + 2}, last_past_level = n + 1)
 levels_dT = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1},
@@ -1221,7 +1241,7 @@ steps can be applied:
 \end{subequations}
 
 This discretisation can be implemented via:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 from fractions import Fraction
 hf = Fraction(1, 2)
 
@@ -1285,7 +1305,7 @@ first order accurate. Hence, for example, a single forward Euler step
 \end{equation}
 
 This discretisation can be implemented via:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 levels    = TimeLevels(levels = [n, n + 1, n + 2],
   cycle_map = {n:n + 1, n + 1:n + 2}, last_past_level = n + 1)
 levels_dT = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1},
@@ -1329,7 +1349,7 @@ Adams-Moulton schemes can be found in \citet[section III.1]{hairer1987}.
 In an Adams-Moulton scheme the right-hand-side of equation
 \eqref{eqn:adams_moulton} depends implicitly on the future solution $T^{n + 1}$.
 If $F(T)$ is linear then the implicit term contributes to the left-hand-side
-matrix in a linear solve for $T^{n + 1}$. If $F(T)$ is non-linear then the
+matrix in a linear solve for $T^{n + 1}$. If $F(T)$ is non-linear then
 a non-linear equation for $T^{n + 1}$ must be solved.
 
 \subsection{Backward Euler}\label{sect:be}
@@ -1345,7 +1365,7 @@ yielding:
 This is the backward Euler scheme, and has first order accuracy.
 
 This discretisation can be implemented via:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 levels = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
 T = TimeFunction(levels, space, name = "T")
 
@@ -1377,7 +1397,7 @@ scheme \citep[e.g.][section 3.4]{donea2003}, (although, confusingly,
 ``Crank-Nicolson'' can refer to the implicit midpoint rule).
 
 This discretisation can be implemented via:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 levels = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
 T = TimeFunction(levels, space, name = "T")
 
@@ -1406,7 +1426,7 @@ method is also known as the Crank-Nicolson scheme
 ``Crank-Nicolson'' can refer to the implicit trapezium rule).
 
 This discretisation can be implemented via:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 levels = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
 T = TimeFunction(levels, space, name = "T")
 
@@ -1468,7 +1488,7 @@ A simple second order explicit Runge-Kutta scheme takes the form:
 \end{subequations}
 
 This discretisation can be implemented via:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 from fractions import Fraction
 hf = Fraction(1, 2)
 
@@ -1585,7 +1605,7 @@ Each timestep involves the implicit solution for two new values, $T^{n + 1,1}$
 and $T^{n + 1,2}$, given one previous value, $T^{n,2}$.
 
 This discretisation can be implemented via:
-\begin{lstlisting}[language = python, frame = single, basicstyle=\footnotesize]
+\begin{lstlisting}
 spaces = space * space
 tests = TestFunction(spaces)
 test1, test2 = split(tests)
