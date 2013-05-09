@@ -444,7 +444,7 @@ def da_annotate_equation_solve(solve):
           solver = cache[("solver", var.type)]
         else:
           # Create a new linear solver and cache it
-          if var.type in["ADJ_ADJOINT", "ADJ_SOA"]:
+          if var.type in ["ADJ_ADJOINT", "ADJ_SOA"]:
             solver_parameters = self.__adjoint_solver_parameters
           else:
             solver_parameters = self.__solver_parameters
