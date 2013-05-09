@@ -5370,7 +5370,7 @@ class DiskCheckpointer(Checkpointer):
     if dolfin.MPI.process_number() == 0:    
       if not os.path.exists(dirname):
         os.mkdir(dirname)
-    dolfin.MPI.barrier()
+      dolfin.MPI.barrier()
     
     self.__dirname = dirname
     self.__filenames = {}
@@ -5482,7 +5482,7 @@ class DiskCheckpointer(Checkpointer):
     if not key in self.__filenames:
       raise CheckpointException("Missing checkpoint with key %s" % key)
 
-    os.remove(self.__filenames[key])
+#    os.remove(self.__filenames[key])
     del(self.__filenames[key])
     del(self.__id_map[key])
 
@@ -5498,15 +5498,15 @@ class DiskCheckpointer(Checkpointer):
       raise InvalidArgumentException("keep must be a list")
 
     if len(keep) == 0:
-      for key in self.__filenames:
-        os.remove(self.__filenames[key])
+#      for key in self.__filenames:
+#        os.remove(self.__filenames[key])
       self.__filenames = {}
       self.__id_map = {}
     else:
       keep = [str(key) for key in keep]
       for key in copy.copy(self.__filenames.keys()):
         if not key in keep:
-          os.remove(self.__filenames[key])
+ #         os.remove(self.__filenames[key])
           del(self.__filenames[key])
           del(self.__id_map[key])
 
