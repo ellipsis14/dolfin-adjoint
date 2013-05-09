@@ -251,7 +251,8 @@ class Matrix(libadjoint.Matrix):
       else:
         bcs = self.bcs
 
-      x = Vector(dolfin.Function(self.test_function().function_space()))
+      test = self.test_function()
+      x = Vector(dolfin.Function(test.function_space()))
 
       #print "b.data is a %s in the solution of %s" % (b.data.__class__, var)
       if b.data is None and not hasattr(b, 'nonlinear_form'):
@@ -275,7 +276,7 @@ class Matrix(libadjoint.Matrix):
         else:
           assembled_lhs = dolfin.assemble(self.data)
           [bc.apply(assembled_lhs) for bc in bcs]
-          assembled_rhs = dolfin.assemble(b.data)
+          assembled_rhs = wrap_assemble(b.data, test)
           [bc.apply(assembled_rhs) for bc in bcs]
 
           wrap_solve(assembled_lhs, x.data.vector(), assembled_rhs, self.solver_parameters)
@@ -300,7 +301,7 @@ class Matrix(libadjoint.Matrix):
             assembled_rhs = dolfin.Vector()
             assembler.assemble(assembled_rhs)
         elif isinstance(b.data, ufl.Form):
-            assembled_rhs = dolfin.assemble(b.data)
+            assembled_rhs = wrap_assemble(b.data, self.test_function())
         else:
             assembled_rhs = b.data.vector()
         [bc.apply(assembled_rhs) for bc in bcs]
@@ -403,3 +404,23 @@ def wrap_solve(A, x, b, solver_parameters):
 
      solver.solve(A, x, b)
      return
+
+def wrap_assemble(form, test):
+  '''If you do
+     F = inner(grad(TrialFunction(V), grad(TestFunction(V))))
+     a = lhs(F); L = rhs(F)
+     solve(a == L, ...)
+
+     it works, even though L is empty. But if you try to assemble(L) as we do here,
+     you get a crash.
+
+     This function wraps assemble to catch that crash and return an empty RHS instead.
+  '''
+
+  try:
+    b = dolfin.assemble(form)
+  except RuntimeError:
+    assert form.integrals() == ()
+    b = dolfin.Function(test.function_space()).vector()
+
+  return b
