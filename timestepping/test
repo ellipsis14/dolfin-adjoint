@@ -102,7 +102,7 @@ for np, test in tests:
     if not np == 1:
       proc = subprocess.Popen(("mpirun -np %i %s" % (np, test)).split(), env = env)
     else:
-      proc = subprocess.Popen(("tcsh -c %s" % test).split(), env = env)
+      proc = subprocess.Popen(("%s" % test).split(), env = env)
     proc.wait()
   except:
     raise Exception("Failed to run test: %s" % test)
