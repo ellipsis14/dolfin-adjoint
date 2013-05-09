@@ -17,6 +17,7 @@
 
 import timestepping
 
+from embedded_cpp import *
 from exceptions import *
 from timestepping import *
 
@@ -33,6 +34,7 @@ __license__ = "LGPL-3"
 __version__ = "1.2.0"
 
 __all__ = \
+  embedded_cpp.__all__ + \
   exceptions.__all__ + \
   timestepping.__all__ + \
   [ 
