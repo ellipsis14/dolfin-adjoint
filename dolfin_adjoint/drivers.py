@@ -146,7 +146,7 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
     else:
       adjglobals.adjointer.forget_adjoint_values(i)
 
-  def project(func):
+  def project_test(func):
     if isinstance(func, dolfin.Function):
       V = func.function_space()
       u = dolfin.TrialFunction(V)
@@ -162,12 +162,12 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
     if project is False:
       return dJdparam[0]
     else:
-      return project(dJdparam[0])
+      return project_test(dJdparam[0])
   else:
     if project is False:
       return dJdparam
     else:
-      return map(project, dJdparam)
+      return map(project_test, dJdparam)
 
 def hessian(J, m, warn=True):
   '''Choose which Hessian the user wants.'''
