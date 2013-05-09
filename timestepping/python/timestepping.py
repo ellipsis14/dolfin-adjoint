@@ -5370,7 +5370,7 @@ class DiskCheckpointer(Checkpointer):
     if dolfin.MPI.process_number() == 0:    
       if not os.path.exists(dirname):
         os.mkdir(dirname)
-      dolfin.MPI.barrier()
+    dolfin.MPI.barrier()
     
     self.__dirname = dirname
     self.__filenames = {}
