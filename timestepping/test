@@ -91,15 +91,18 @@ if opts.long:
 if opts.local:
   tests += find_tests(os.path.join("tests", "local"))
 
+env = copy.copy(os.environ)
+env["PYTHONPATH"] = "%s:%s" % (os.path.join(path, "python"), os.environ["PYTHONPATH"])
+
 successes = 0
 failures = []
 for np, test in tests:
   print "Running test: %s" % test
   try:
     if not np == 1:
-      proc = subprocess.Popen(("mpirun -np %i %s" % (np, test)).split())
+      proc = subprocess.Popen(("mpirun -np %i %s" % (np, test)).split(), env = env)
     else:
-      proc = subprocess.Popen(("%s" % test).split())
+      proc = subprocess.Popen(("tcsh -c %s" % test).split(), env = env)
     proc.wait()
   except:
     raise Exception("Failed to run test: %s" % test)
