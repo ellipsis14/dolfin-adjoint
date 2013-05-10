@@ -31,6 +31,7 @@ __all__ = \
     "DirichletBC",
     "action",
     "adjoint",
+    "assemble",
     "derivative",
     "homogenize",
     "lhs",
@@ -241,3 +242,16 @@ def action(form, coefficient):
     return QForm(nform, quadrature_degree = form_quadrature_degree(form))
   else:
     return nform
+    
+def assemble(*args, **kwargs):
+  """
+  Wrapper for the DOLFIN assemble function. Correctly handles PAForm s,
+  TimeSystem s and QForm s.
+  """
+  
+  if isinstance(args[0], QForm):
+    if "form_compiler_parameters" in kwargs:
+      raise InvalidArgumentException("Cannot supply form_compiler_parameters argument when assembling a QForm")
+    return dolfin.assemble(form_compiler_parameters = args[0].form_compiler_parameters(), *args, **kwargs)
+  else:
+    return dolfin.assemble(*args, **kwargs)

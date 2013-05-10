@@ -28,11 +28,13 @@ from exceptions import *
   
 __all__ = \
   [
+    "LinearSolver",
     "apply_bcs",
     "differentiate_expr",
     "enforce_bcs",
     "evaluate_expr",
     "expand",
+    "expand_solver_parameters",
     "expr_terms",
     "extract_form_data",
     "is_empty_form",
@@ -351,6 +353,74 @@ def is_zero_rhs(rhs):
     return float(rhs) == 0.0
   else:
     return False
+
+def expand_solver_parameters(solver_parameters, default_solver_parameters = {}):
+  """
+  Return an expanded dictionary of solver parameters with all defaults
+  explicitly specified. The optional default_solver_parameters argument can
+  be used to override global defaults.
+  """
+  
+  if not isinstance(solver_parameters, dict):
+    raise InvalidArgumentException("solver_parameters must be a dictionary")
+  if not isinstance(default_solver_parameters, dict):
+    raise InvalidArgumentException("default_solver_parameters must be a dictionary")
+
+  def apply(parameters, default):
+    lparameters = copy.copy(default)
+    for key in parameters:
+      if not isinstance(parameters[key], dict):
+        lparameters[key] = parameters[key]
+      elif key in default:
+        lparameters[key] = apply(parameters[key], default[key])
+      else:
+        lparameters[key] = apply(parameters[key], {})
+    return lparameters
+  
+  if not len(default_solver_parameters) == 0:
+    solver_parameters = apply(solver_parameters, default_solver_parameters)
+  return apply(solver_parameters, {"linear_solver":"lu", "lu_solver":dolfin.parameters["lu_solver"].to_dict(), "krylov_solver":dolfin.parameters["krylov_solver"].to_dict()})
+  
+def LinearSolver(solver_parameters):
+  """
+  Return an LUSolver or KrylovSolver configured as per the supplied solver
+  parameters.
+  """
+  
+  if not isinstance(solver_parameters, dict):
+    raise InvalidArgumentException("solver_parameters must be a dictionary")
+
+  solver = "lu"
+  pc = None
+  kp = {}
+  lp = {}
+  for key in solver_parameters:
+    if key == "linear_solver":
+      solver = solver_parameters[key]
+    elif key == "preconditioner":
+      pc = solver_parameters[key]
+    elif key == "krylov_solver":
+      kp = solver_parameters[key]
+    elif key == "lu_solver":
+      lp = solver_parameters[key]
+    elif key == "newton_solver":
+      pass
+    elif key in ["print_matrix", "print_rhs", "reset_jacobian", "symmetric"]:
+      raise NotImplementedException("Unsupported solver parameter: %s" % key)
+    else:
+      raise InvalidArgumentException("Unexpected solver parameter: %s" % key)
+  
+  if solver == "lu":
+    solver = dolfin.LUSolver()
+    solver.parameters.update(lp)
+  else:
+    if pc is None:
+      solver = dolfin.KrylovSolver(solver)
+    else:
+      solver = dolfin.KrylovSolver(solver, pc)
+    solver.parameters.update(kp)
+
+  return solver
 
 def is_empty_form(form):
   """

@@ -17,6 +17,8 @@
 
 from fenics_patches import *
 
+import caches
+import equation_solvers
 import embedded_cpp
 import exceptions
 import fenics_overrides
@@ -29,6 +31,8 @@ import timestepping
 import versions
 import vtu_io
 
+from caches import *
+from equation_solvers import *
 from embedded_cpp import *
 from exceptions import *
 from fenics_overrides import *
@@ -54,6 +58,8 @@ __license__ = "LGPL-3"
 __version__ = "1.2.0"
 
 __all__ = \
+  caches.__all__ + \
+  equation_solvers.__all__ + \
   embedded_cpp.__all__ + \
   exceptions.__all__ + \
   fenics_overrides.__all__ + \
@@ -70,6 +76,8 @@ __all__ = \
     "__license__",
     "__name__",
     "__version__",
+    "caches",
+    "equation_solvers",
     "embedded_cpp",
     "exceptions",
     "fenics_overrides",
