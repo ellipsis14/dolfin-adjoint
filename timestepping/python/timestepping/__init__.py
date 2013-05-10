@@ -22,6 +22,7 @@ import exceptions
 import fenics_overrides
 import fenics_utils
 import quadrature
+import statics
 import time_functions
 import time_levels
 import timestepping
@@ -33,6 +34,7 @@ from exceptions import *
 from fenics_overrides import *
 from fenics_utils import *
 from quadrature import *
+from statics import *
 from time_functions import *
 from time_levels import *
 from timestepping import *
@@ -57,9 +59,10 @@ __all__ = \
   fenics_overrides.__all__ + \
   fenics_utils.__all__ + \
   quadrature.__all__ + \
-  timestepping.__all__ + \
+  statics.__all__ + \
   time_functions.__all__ + \
   time_levels.__all__ + \
+  timestepping.__all__ + \
   versions.__all__ + \
   vtu_io.__all__ + \
   [ 
@@ -72,6 +75,7 @@ __all__ = \
     "fenics_overrides",
     "fenics_utils",
     "quadrature",
+    "statics",
     "time_functions",
     "time_levels",
     "timestepping",

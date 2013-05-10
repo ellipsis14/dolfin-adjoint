@@ -34,49 +34,43 @@ from fenics_utils import *
 from embedded_cpp import *
 from exceptions import *
 from quadrature import *
+from statics import *
 from time_functions import *
 from time_levels import *
 from versions import *
 from vtu_io import *
 
-__all__ = [
-  "AdjoinedTimeSystem",
-  "AdjointTimeSystem",
-  "AdjointVariableMap",
-  "AssembledTimeSystem",
-  "AssemblyCache",
-  "AssignmentSolver",
-  "Checkpointer",
-  "DiskCheckpointer",
-  "EquationSolver",
-  "LinearCombination",
-  "LinearSolver",
-  "MemoryCheckpointer",
-  "PAAdjointSolvers",
-  "PABilinearForm",
-  "PAEquationSolver",
-  "PAForm",
-  "PALinearForm",
-  "SolverCache",
-  "StaticConstant",
-  "StaticDirichletBC",
-  "StaticFunction",
-  "TimeFunctional",
-  "TimeSystem",
-  "add_parameter",
-  "assemble",
-  "assembly_cache",
-  "clear_caches",
-  "expand_solver_parameters",
-  "extract_non_static_coefficients",
-  "is_static_bc",
-  "is_static_coefficient",
-  "is_static_form",
-  "n_non_static_bcs",
-  "n_non_static_coefficients",
-  "nest_parameters",
-  "pa_solve",
-  "solver_cache"]
+__all__ = \
+  [
+    "AdjoinedTimeSystem",
+    "AdjointTimeSystem",
+    "AdjointVariableMap",
+    "AssembledTimeSystem",
+    "AssemblyCache",
+    "AssignmentSolver",
+    "Checkpointer",
+    "DiskCheckpointer",
+    "EquationSolver",
+    "LinearCombination",
+    "LinearSolver",
+    "MemoryCheckpointer",
+    "PAAdjointSolvers",
+    "PABilinearForm",
+    "PAEquationSolver",
+    "PAForm",
+    "PALinearForm",
+    "SolverCache",
+    "TimeFunctional",
+    "TimeSystem",
+    "add_parameter",
+    "assemble",
+    "assembly_cache",
+    "clear_caches",
+    "expand_solver_parameters",
+    "nest_parameters",
+    "pa_solve",
+    "solver_cache"
+  ]
 
 # Enable aggressive compiler optimisations by default.
 dolfin.parameters["form_compiler"]["cpp_optimize"] = True
@@ -122,115 +116,6 @@ add_parameter(dolfin.parameters["timestepping"]["pre_assembly"]["linear_forms"],
 add_parameter(dolfin.parameters["timestepping"]["pre_assembly"]["bilinear_forms"], "whole_form_optimisation", True)
 add_parameter(dolfin.parameters["timestepping"]["pre_assembly"]["equations"], "symmetric_boundary_conditions", False)
 add_parameter(dolfin.parameters["timestepping"]["pre_assembly"], "verbose", True)
-
-def StaticConstant(*args, **kwargs):
-  """
-  Return a Constant which is marked as "static". Arguments are identical to the
-  Constant function.
-  """
-  
-  c = Constant(*args, **kwargs)
-  if isinstance(c, ufl.tensors.ListTensor):
-    for c_c in c:
-      assert(isinstance(c_c, dolfin.Constant))
-      c_c._time_static = True
-  else:
-    assert(isinstance(c, dolfin.Constant))
-    c._time_static = True
-
-  return c
-
-def StaticFunction(*args, **kwargs):
-  """
-  Return a Function which is marked as "static". Arguments are identical to the
-  Function function.
-  """
-  
-  fn = Function(*args, **kwargs)
-  fn._time_static = True
-
-  return fn
-
-class StaticDirichletBC(DirichletBC):
-  """
-  A DirichletBC which is marked as "static". Constructor arguments are identical
-  to the DOLFIN DirichletBC constructor.
-  """
-
-  def __init__(self, *args, **kwargs):
-    DirichletBC.__init__(self, *args, **kwargs)
-
-    self._time_static = True
-
-    return
-
-def is_static_coefficient(c):
-  """
-  Return whether the supplied argument is a static Coefficient.
-  """
-  
-  return isinstance(c, (ufl.constantvalue.FloatValue, ufl.constantvalue.IntValue)) or (hasattr(c, "_time_static") and c._time_static)
-
-def extract_non_static_coefficients(form):
-  """
-  Return all non-static Coefficient s associated with the supplied form.
-  """
-  
-  non_static = []
-  for c in ufl.algorithms.extract_coefficients(form):
-    if not is_static_coefficient(c):
-      non_static.append(c)
-  return non_static
-
-def n_non_static_coefficients(form):
-  """
-  Return the number of non-static Coefficient s associated with the supplied
-  form.
-  """
-  
-  non_static = 0
-  for c in ufl.algorithms.extract_coefficients(form):
-    if not is_static_coefficient(c):
-      non_static += 1
-  return non_static
-
-def is_static_form(form):
-  """
-  Return whether the supplied form is "static".
-  """
-  
-  if not isinstance(form, ufl.form.Form):
-    raise InvalidArgumentException("form must be a Form")
-
-  for dep in ufl.algorithms.extract_coefficients(form):
-    if not is_static_coefficient(dep):
-      return False
-  return True
-
-def is_static_bc(bc):
-  """
-  Return whether the supplied DirichletBC is "static".
-  """
-  
-  if not isinstance(bc, dolfin.cpp.DirichletBC):
-    raise InvalidArgumentException("bc must be a DirichletBC")
-
-  return hasattr(bc, "_time_static") and bc._time_static
-
-def n_non_static_bcs(bcs):
-  """
-  Given a list of DirichletBC s, return the number of static DirichletBC s.
-  """
-  
-  if not isinstance(bcs, list):
-    raise InvalidArgumentException("bcs must be a list of DirichletBC s")
-
-  n = 0
-  for bc in bcs:
-    if not is_static_bc(bc):
-      n += 1
-
-  return n
 
 class LinearCombination:
   """

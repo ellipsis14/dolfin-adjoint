@@ -20,6 +20,7 @@ from fractions import Fraction
 import dolfin
 import ufl
 
+from exceptions import *
 from fenics_overrides import *
 from time_levels import *
 
