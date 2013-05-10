@@ -65,7 +65,8 @@ class CustomSolver(EquationSolver):
       L = assemble(rhs)
       for bc in bcs:
         bc.apply(a, L)
-      solver.solve(a, x_2.vector(), L)
+      solver.set_operator(a)
+      solver.solve(x_2.vector(), L)
       it += 1
       if (x_1.vector() - x_2.vector()).norm("linf") < 1.0e-10:
         break

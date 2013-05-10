@@ -22,10 +22,10 @@ import types
   
 import dolfin
 import dolfin_adjoint
-
 import libadjoint
-import timestepping
 import ufl
+
+import timestepping
 
 __all__ = timestepping.__all__ + dir(dolfin_adjoint)
 for val in copy.copy(__all__):

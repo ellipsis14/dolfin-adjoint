@@ -19,6 +19,7 @@ from fenics_patches import *
 from parameters import *
 
 import caches
+import checkpointing
 import equation_solvers
 import embedded_cpp
 import exceptions
@@ -31,11 +32,12 @@ import pre_assembled_forms
 import statics
 import time_functions
 import time_levels
-import timestepping
+import time_systems
 import versions
 import vtu_io
 
 from caches import *
+from checkpointing import *
 from equation_solvers import *
 from embedded_cpp import *
 from exceptions import *
@@ -48,7 +50,7 @@ from quadrature import *
 from statics import *
 from time_functions import *
 from time_levels import *
-from timestepping import *
+from time_systems import *
 from versions import *
 from vtu_io import *
 
@@ -66,6 +68,7 @@ __version__ = "1.2.0"
 
 __all__ = \
   caches.__all__ + \
+  checkpointing.__all__ + \
   equation_solvers.__all__ + \
   embedded_cpp.__all__ + \
   exceptions.__all__ + \
@@ -80,7 +83,7 @@ __all__ = \
   statics.__all__ + \
   time_functions.__all__ + \
   time_levels.__all__ + \
-  timestepping.__all__ + \
+  time_systems.__all__ + \
   versions.__all__ + \
   vtu_io.__all__ + \
   [ 
@@ -89,6 +92,7 @@ __all__ = \
     "__name__",
     "__version__",
     "caches",
+    "checkpointing",
     "equation_solvers",
     "embedded_cpp",
     "exceptions",
@@ -101,7 +105,7 @@ __all__ = \
     "statics",
     "time_functions",
     "time_levels",
-    "timestepping",
+    "time_systems",
     "versions",
     "vtu_io"
   ]
