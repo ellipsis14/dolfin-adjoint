@@ -21,11 +21,13 @@ import embedded_cpp
 import exceptions
 import timestepping
 import versions
+import vtu_io
 
 from embedded_cpp import *
 from exceptions import *
 from timestepping import *
 from versions import *
+from vtu_io import *
 
 __doc__ = \
 """
@@ -44,6 +46,7 @@ __all__ = \
   exceptions.__all__ + \
   timestepping.__all__ + \
   versions.__all__ + \
+  vtu_io.__all__ + \
   [ 
     "__doc__",
     "__license__",
