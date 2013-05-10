@@ -27,13 +27,13 @@ import libadjoint
 import timestepping
 import ufl
 
-from timestepping import *
-from dolfin_adjoint import *
-
 __all__ = timestepping.__all__ + dir(dolfin_adjoint)
 for val in copy.copy(__all__):
   if val.startswith("__") and val.endswith("__"):
     __all__.remove(val)
+
+from timestepping import *
+from dolfin_adjoint import *
 
 def system_info():
   """

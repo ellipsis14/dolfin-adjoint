@@ -19,12 +19,20 @@ from fenics_patches import *
 
 import embedded_cpp
 import exceptions
+import fenics_overrides
+import fenics_utils
+import quadrature
+import time_levels
 import timestepping
 import versions
 import vtu_io
 
 from embedded_cpp import *
 from exceptions import *
+from fenics_overrides import *
+from fenics_utils import *
+from quadrature import *
+from time_levels import *
 from timestepping import *
 from versions import *
 from vtu_io import *
@@ -44,7 +52,11 @@ __version__ = "1.2.0"
 __all__ = \
   embedded_cpp.__all__ + \
   exceptions.__all__ + \
+  fenics_overrides.__all__ + \
+  fenics_utils.__all__ + \
+  quadrature.__all__ + \
   timestepping.__all__ + \
+  time_levels.__all__ + \
   versions.__all__ + \
   vtu_io.__all__ + \
   [ 
@@ -54,6 +66,12 @@ __all__ = \
     "__version__",
     "embedded_cpp",
     "exceptions",
+    "fenics_overrides",
+    "fenics_utils",
+    "quadrature",
+    "time_levels",
     "timestepping",
-    "versions"
+    "versions",
+    "vtu_io"
   ]
+  
