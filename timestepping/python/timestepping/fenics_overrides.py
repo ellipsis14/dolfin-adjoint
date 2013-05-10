@@ -111,8 +111,8 @@ def homogenize(bc):
   elif isinstance(bc, dolfin.cpp.DirichletBC):
     hbc = DirichletBC(bc.function_space(), bc.value(), *bc.domain_args, method = bc.method())
     hbc.homogenize()
-    if is_static_bc(bc):
-      hbc._time_static = True
+    if hasattr(bc, "_time_static"):
+      hbc._time_static = bc._time_static
   else:
     raise InvalidArgumentException("bc must be a DirichletBC")
 
