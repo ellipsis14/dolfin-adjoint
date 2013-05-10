@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 # Copyright (C) 2007 Anders Logg
-# Copyright (C) 2007-2013 Anders Logg and Kristian B. Oelgaard
 # Copyright (C) 2008-2013 Martin Sandve Alnes
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
