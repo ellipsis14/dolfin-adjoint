@@ -47,16 +47,19 @@ if ffc_version() < (1, 0, 0) or ffc_version() >= (1, 3, 0):
 
 # Backwards compatibility for older versions of DOLFIN.
 if dolfin_version() < (1, 1, 0):
-  __all__ += ["GenericLinearSolver",
-    "GenericLUSolver",
-    "FacetFunction",
-    "MeshFunction",
-    "UnitCubeMesh",
-    "UnitIntervalMesh",
-    "UnitSquareMesh",
-    "RectangleMesh",
-    "has_krylov_solver_method",
-    "has_krylov_solver_preconditioner"]
+  __all__ += \
+    [
+      "GenericLinearSolver",
+      "GenericLUSolver",
+      "FacetFunction",
+      "MeshFunction",
+      "UnitCubeMesh",
+      "UnitIntervalMesh",
+      "UnitSquareMesh",
+      "RectangleMesh",
+      "has_krylov_solver_method",
+      "has_krylov_solver_preconditioner"
+    ]
 
   GenericLinearSolver = dolfin.GenericLinearSolver = (dolfin.KrylovSolver, dolfin.LUSolver, dolfin.LinearSolver, dolfin.PETScLUSolver, dolfin.PETScKrylovSolver)
   GenericLUSolver = dolfin.GenericLUSolver = (dolfin.LUSolver, dolfin.PETScLUSolver)
@@ -110,8 +113,11 @@ if dolfin_version() < (1, 1, 0):
 
   sys.setdlopenflags(ctypes.RTLD_GLOBAL + sys.getdlopenflags())
 if dolfin_version() < (1, 2, 0):
-  __all__ += ["grad", 
-              "FacetNormal"]
+  __all__ += \
+    [
+      "grad", 
+      "FacetNormal"
+    ]
               
   def grad(f):
     g = dolfin.grad(f)

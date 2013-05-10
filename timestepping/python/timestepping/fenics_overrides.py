@@ -26,6 +26,7 @@ from quadrature import *
 
 __all__ = \
   [
+    "_assemble_classes",
     "Constant",
     "Function",
     "DirichletBC",
@@ -243,6 +244,7 @@ def action(form, coefficient):
   else:
     return nform
     
+_assemble_classes = []
 def assemble(*args, **kwargs):
   """
   Wrapper for the DOLFIN assemble function. Correctly handles PAForm s,
@@ -253,5 +255,7 @@ def assemble(*args, **kwargs):
     if "form_compiler_parameters" in kwargs:
       raise InvalidArgumentException("Cannot supply form_compiler_parameters argument when assembling a QForm")
     return dolfin.assemble(form_compiler_parameters = args[0].form_compiler_parameters(), *args, **kwargs)
+  elif isinstance(args[0], tuple(_assemble_classes)):
+    return args[0].assemble(*args[1:], **kwargs)
   else:
     return dolfin.assemble(*args, **kwargs)
