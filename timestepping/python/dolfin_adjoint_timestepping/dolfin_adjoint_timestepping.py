@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-# Copyright (C) 2008-2013 Martin Sandve Alnes
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
 #
@@ -17,9 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Based on code from dolfin-adjoint bzr trunk 640
-
-# Copyright (C) 2008-2013 Martin Sandve Alnes from UFL file ufl/form.py, bzr
-# branch 1.1.x 1484
 
 import copy
 import types
@@ -50,16 +46,6 @@ def system_info():
   return
 
 dolfin.parameters["timestepping"]["pre_assembly"]["linear_forms"]["whole_form_optimisation"] = True
-
-# Backwards compatibility for older versions of UFL.
-if ufl_version() < (1, 1, 0):
-  # Modified version of code from form.py, UFL bzr 1.1.x branch revision 1484
-  def Form__mul__(self, coefficient):
-    if isinstance(coefficient, ufl.expr.Expr):
-      return ufl.formoperators.action(self, coefficient)
-    return NotImplemented
-  ufl.Form.__mul__ = Form__mul__
-  del(Form__mul__)
 
 # dolfin-adjoint internals expect Constant s and Function s to have an
 # adj_name attribute. Patch __getattr__ to provide it.

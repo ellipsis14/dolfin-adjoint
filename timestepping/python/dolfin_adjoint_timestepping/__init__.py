@@ -36,7 +36,8 @@ __license__ = "LGPL-3"
 
 __version__ = "1.2.0"
 
-__all__ = dolfin_adjoint_timestepping.__all__ + \
+__all__ = \
+  dolfin_adjoint_timestepping.__all__ + \
   [
     "__doc__",
     "__license__",

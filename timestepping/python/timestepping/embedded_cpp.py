@@ -24,6 +24,7 @@ import instant
 import numpy
 
 from exceptions import *
+from fenics_versions import *
 
 __all__ = \
   [
@@ -51,7 +52,7 @@ class EmbeddedCpp:
                    GenericVector, or Mesh, identifying the variable type.
   """
 
-  if dolfin.__version__ < "1.1.0":
+  if dolfin_version() < (1, 1, 0):
     __default_includes = """#include "dolfin.h"
 #define la_index uint"""
   else:

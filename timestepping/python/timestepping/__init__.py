@@ -15,11 +15,17 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from fenics_patches import *
+
+import embedded_cpp
+import exceptions
 import timestepping
+import versions
 
 from embedded_cpp import *
 from exceptions import *
 from timestepping import *
+from versions import *
 
 __doc__ = \
 """
@@ -37,11 +43,14 @@ __all__ = \
   embedded_cpp.__all__ + \
   exceptions.__all__ + \
   timestepping.__all__ + \
+  versions.__all__ + \
   [ 
     "__doc__",
     "__license__",
     "__name__",
     "__version__",
+    "embedded_cpp",
     "exceptions",
-    "timestepping"
+    "timestepping",
+    "versions"
   ]

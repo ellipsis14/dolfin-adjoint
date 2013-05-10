@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-# Copyright (C) 2007 Anders Logg
 # Copyright (C) 2007-2013 Anders Logg and Kristian B. Oelgaard
 # Copyright (C) 2008-2013 Martin Sandve Alnes
 # Copyright (C) 2011-2012 by Imperial College London
@@ -18,35 +17,31 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Copyright (C) 2007 Anders Logg from FFC file ffc/codesnippets.py, bzr branch
-# 1.1.x 1771
-
 # Copyright (C) 2007-2013 Anders Logg and Kristian B. Oelgaard from FFC file
 # ffc/analysis.py, bzr trunk 1839
 
-# Copyright (C) 2008-2013 Martin Sandve Alnes from UFL file ufl/coefficient.py,
-# bzr trunk 1571, ufl/algorithms/ad.py bzr 1.1.x branch 1484
+# Copyright (C) 2008-2013 Martin Sandve Alnes from UFL file
+# ufl/algorithms/ad.py, bzr 1.1.x branch 1484
 
 from collections import OrderedDict
 import copy
-import ctypes
 from fractions import Fraction
-import glob
 import os
 import pickle
-import sys
 
 import dolfin
 import ffc
-import instant
 import numpy
 import scipy
 import scipy.optimize
 import ufl
 import vtk
 
+from fenics_patches import *
+
 from embedded_cpp import *
 from exceptions import *
+from versions import *
 
 __all__ = [
   "AdjoinedTimeSystem",
@@ -92,7 +87,6 @@ __all__ = [
   "clear_caches",
   "derivative",
   "differentiate_expr",
-  "dolfin_version",
   "enforce_bcs",
   "evaluate_expr",
   "expand",
@@ -100,7 +94,6 @@ __all__ = [
   "expr_terms",
   "extract_form_data",
   "extract_non_static_coefficients",
-  "ffc_version",
   "form_quadrature_degree",
   "homogenize",
   "is_empty_form",
@@ -117,225 +110,11 @@ __all__ = [
   "n_non_static_coefficients",
   "nest_parameters",
   "pa_solve",
-  "petsc_version",
   "read_vtu",
   "replace",
   "rhs",
   "solver_cache",
-  "system_info",
-  "ufl_version",
   "write_vtu"]
-
-class Version:
-  """
-  Defines and enables comparisons between version numbers. Is supplied with
-  rich comparison methods.
-
-  Constructor arguments:
-    ver: One of:
-        1. A non-negative integer.
-      or:
-        2. A period delimited string. If the string ends in "-dev" or "+" then
-           this ending is treated as ".1".
-      or:
-        3. An object that can be cast to an integer numpy array with
-           non-negative elements.
-  """
-  
-  def __init__(self, ver):
-    if isinstance(ver, int):
-      ver = [ver]
-    elif isinstance(ver, str):
-      if ver.endswith("-dev"):
-        ver = ver[:-4].split(".") + [1]
-      elif ver.endswith("+"):
-        ver = ver[:-1].split(".") + [1]
-      else:
-        ver = ver.split(".")
-    ver = numpy.array(ver, dtype = numpy.int)
-    if len(ver) == 0 or not (ver >= 0).all():
-      raise InvalidArgumentException("Invalid version")
-    self.__ver = ver
-    return
-  
-  def tuple(self):
-    """
-    Return a tuple representation of the version number.
-    """
-    
-    return tuple(self.__ver)
-  
-  def __len__(self):
-    return self.__ver.shape[0]
-  
-  def __str__(self):
-    s = str(self.__ver[0])
-    for i in range(1, len(self.__ver)):
-      s += ".%i" % self.__ver[i]
-    return s
-  
-  def __eq__(self, other):
-    if not isinstance(other, Version):
-      other = Version(other)
-    n = min(len(self.__ver), len(other.__ver))
-    for i in range(n):
-      if not self.__ver[i] == other.__ver[i]:
-        return False
-    for i in range(n, len(self.__ver)):
-      if not self.__ver[i] == 0:
-        return False
-    for i in range(n, len(other.__ver)):
-      if not other.__ver[i] == 0:
-        return False
-    return True
-    
-  def __gt__(self, other):
-    if not isinstance(other, Version):
-      other = Version(other)
-    n = min(len(self.__ver), len(other.__ver))
-    for i in range(n):
-      if self.__ver[i] > other.__ver[i]:
-        return True
-    for i in range(n, len(self.__ver)):
-      if self.__ver[i] > 0:
-        return True
-    for i in range(n, len(other.__ver)):
-      if other.__ver[i] > 0:
-        return False
-    return False
-    
-  def __lt__(self, other):
-    if not isinstance(other, Version):
-      other = Version(other)
-    n = min(len(self.__ver), len(other.__ver))
-    for i in range(n):
-      if self.__ver[i] < other.__ver[i]:
-        return True
-    return False
-    
-  def __ne__(self, other):
-    return not self == other
-  
-  def __ge__(self, other):
-    return not self < other
-  
-  def __le__(self, other):
-    return not self > other
-
-def dolfin_version():
-  """
-  Return the current DOLFIN version, as a Version.
-  """
-
-  return Version(dolfin.__version__)
-
-def ffc_version():
-  """
-  Return the current FFC version, as a Version.
-  """
-
-  return Version(ffc.__version__)
-
-def petsc_version():
-  """
-  Attempt to determine the current PETSc version, and return a Version if this
-  is successful. Otherwise, return None.
-  """
-
-  if "PETSC_DIR" in os.environ:
-    petsc_dir = os.environ["PETSC_DIR"]
-  else:
-    paths = sorted(glob.glob("/usr/lib/petscdir/*"), reverse = True)
-    petsc_dir = "/usr"
-    for path in paths:
-      if os.path.isdir(path):
-        petsc_dir = path
-        break
-  if "PETSC_ARCH" in os.environ:
-    petsc_arch = os.environ["PETSC_ARCH"]
-  else:
-    petsc_arch = ""
-
-  version = None
-  for include_dir in [os.path.join(petsc_dir, petsc_arch, os.path.pardir, "include"),
-                      os.path.join(petsc_dir, petsc_arch, "include"),
-                      "/usr/include/petsc"]:
-    if os.path.isfile(os.path.join(include_dir, "petscversion.h")):
-      version = numpy.empty(4, dtype = numpy.int)
-      EmbeddedCpp(includes = \
-        """
-        #include "petscversion.h"
-        """,
-        code = \
-        """
-        version[0] = PETSC_VERSION_MAJOR;
-        version[1] = PETSC_VERSION_MINOR;
-        version[2] = PETSC_VERSION_SUBMINOR;
-        version[3] = PETSC_VERSION_PATCH;
-        """, include_dirs = [include_dir], version = long_arr).run(version = version)
-      break
-
-  if version is None:
-    return None
-  else:
-    return Version(version)
-
-def ufl_version():
-  """
-  Return the current UFL version, as a Version.
-  """
-
-  return Version(ufl.__version__)
-
-def system_info():
-  """
-  Print system information and assorted library versions.
-  """
-  
-  import platform
-  import socket
-  import time
-
-  import FIAT
-  import instant
-  import ufc
-
-  dolfin.info("Date / time    : %s" % time.ctime())
-  dolfin.info("Machine        : %s" % socket.gethostname())
-  dolfin.info("Platform       : %s" % platform.platform())
-  dolfin.info("Processor      : %s" % platform.processor())
-  dolfin.info("Python version : %s" % platform.python_version())
-  dolfin.info("NumPy version  : %s" % numpy.__version__)
-  dolfin.info("SciPy version  : %s" % scipy.__version__)
-  dolfin.info("VTK version    : %s" % vtk.vtkVersion().GetVTKVersion())
-  dolfin.info("DOLFIN version : %s" % dolfin.__version__)
-  dolfin.info("FIAT version   : %s" % FIAT.__version__)
-  try:
-    import ferari
-    dolfin.info("FErari version : %s" % ferari.VERSION)
-  except ImportError:
-    pass
-  dolfin.info("FFC version    : %s" % ffc.__version__)
-  dolfin.info("Instant version: %s" % instant.__version__)
-  try:
-    import SyFi
-    dolfin.info("SyFi version   : %i.%i" % (SyFi.version_major, SyFi.version_minor))
-  except ImportError:
-    pass
-  dolfin.info("UFC version    : %s" % ufc.__version__)
-  dolfin.info("UFL version    : %s" % ufl.__version__)
-  try:
-    import viper
-    dolfin.info("Viper version  : %s" % viper.__version__)
-  except ImportError:
-    pass
-  petsc_ver = petsc_version()
-  if petsc_ver is None:
-    dolfin.info("PETSc version  : Unknown")
-  else:
-    dolfin.info("PETSc version  : %i.%i.%ip%i" % petsc_ver.tuple())
-
-  return
 
 # Enable aggressive compiler optimisations by default.
 dolfin.parameters["form_compiler"]["cpp_optimize"] = True
@@ -381,131 +160,6 @@ add_parameter(dolfin.parameters["timestepping"]["pre_assembly"]["linear_forms"],
 add_parameter(dolfin.parameters["timestepping"]["pre_assembly"]["bilinear_forms"], "whole_form_optimisation", True)
 add_parameter(dolfin.parameters["timestepping"]["pre_assembly"]["equations"], "symmetric_boundary_conditions", False)
 add_parameter(dolfin.parameters["timestepping"]["pre_assembly"], "verbose", True)
-
-# Only versions 1.0.x, 1.1.x, and 1.2.x have been tested.
-if dolfin_version() < (1, 0, 0) or dolfin_version() >= (1, 3, 0):
-  raise VersionException("DOLFIN version %s not supported" % dolfin.__version__)
-if ufl_version() < (1, 0, 0) or ufl_version() >= (1, 3, 0):
-  raise VersionException("UFL version %s not supported" % ufl.__version__)
-if ffc_version() < (1, 0, 0) or ffc_version() >= (1, 3, 0):
-  raise VersionException("FFC version %s not supported" % ffc.__version__)
-
-# Backwards compatibility for older versions of DOLFIN.
-if dolfin_version() < (1, 1, 0):
-  __all__ += ["GenericLinearSolver",
-    "GenericLUSolver",
-    "FacetFunction",
-    "MeshFunction",
-    "UnitCubeMesh",
-    "UnitIntervalMesh",
-    "UnitSquareMesh",
-    "RectangleMesh",
-    "has_krylov_solver_method",
-    "has_krylov_solver_preconditioner"]
-
-  GenericLinearSolver = dolfin.GenericLinearSolver = (dolfin.KrylovSolver, dolfin.LUSolver, dolfin.LinearSolver, dolfin.PETScLUSolver, dolfin.PETScKrylovSolver)
-  GenericLUSolver = dolfin.GenericLUSolver = (dolfin.LUSolver, dolfin.PETScLUSolver)
-  UnitCubeMesh = dolfin.UnitCube
-  UnitIntervalMesh = dolfin.UnitInterval
-  UnitSquareMesh = dolfin.UnitSquare
-  RectangleMesh = dolfin.Rectangle
-
-  def has_krylov_solver_method(method):
-    return method in [k_method[0] for k_method in dolfin.krylov_solver_methods()]
-
-  def has_krylov_solver_preconditioner(pc):
-    return pc in [k_pc[0] for k_pc in dolfin.krylov_solver_preconditioners()]
-
-  class FacetFunction(dolfin.FacetFunction):
-    def __new__(cls, tp, mesh, value = 0):
-      if tp == "size_t":
-        tp = "uint"
-      return dolfin.FacetFunction.__new__(cls, tp, mesh, value = value)
-    
-  class MeshFunction(dolfin.MeshFunction):
-    def __new__(cls, tp, *args):
-      if tp == "size_t":
-        tp = "uint"
-      return dolfin.MeshFunction.__new__(cls, tp, *args)
-
-  __GenericVector_gather_orig = dolfin.GenericVector.gather
-  __GenericVector_gather_code = EmbeddedCpp(
-    code =
-      """
-      Array< double > lx(n);
-      Array< unsigned int > lnodes(n);
-      for(size_t i = 0;i < n;i++){
-        lnodes[i] = nodes[i];
-      }
-      v->gather(lx, lnodes);
-      for(size_t i = 0;i < n;i++){
-        x[i] = lx[i];
-      }
-      """,
-    n = int, nodes = int_arr, v = dolfin.GenericVector, x = double_arr)
-  def GenericVector_gather(self, *args):
-    if len(args) == 1 and isinstance(args[0], numpy.ndarray) and len(args[0].shape) == 1 and args[0].dtype == "int32":
-      x = numpy.empty(args[0].shape[0])
-      __GenericVector_gather_code.run(n = args[0].shape[0], nodes = args[0], v = self, x = x)
-      return x
-    else:
-      return __GenericVector_gather_orig(self, *args)
-  dolfin.GenericVector.gather = GenericVector_gather
-  del(GenericVector_gather)
-
-  sys.setdlopenflags(ctypes.RTLD_GLOBAL + sys.getdlopenflags())
-if dolfin_version() < (1, 2, 0):
-  __all__ += ["grad", 
-              "FacetNormal"]
-              
-  def grad(f):
-    g = dolfin.grad(f)
-    if len(g.shape()) == 0:
-      return dolfin.as_vector([g])
-    else:
-      return g
-  
-  def FacetNormal(mesh):
-    nm = dolfin.FacetNormal(mesh)
-    if len(nm.shape()) == 0:
-      return dolfin.as_vector([nm])
-    else:
-      return nm
-
-# Backwards compatibility for older versions of UFL.
-if ufl_version() < (1, 1, 0):
-  # Modified version of code from coefficient.py, UFL bzr trunk revision 1463
-  def Coefficient__eq__(self, other):
-    if self is other:
-      return True
-    if not isinstance(other, ufl.coefficient.Coefficient):
-      return False
-    return self._count == other._count and self._element == other._element
-  ufl.coefficient.Coefficient.__eq__ = Coefficient__eq__
-  del(Coefficient__eq__)
-# UFL patches.
-elif ufl_version() >= (1, 2, 0) and ufl_version() < (1, 3, 0):
-  __Form_compute_form_data_orig = ufl.Form.compute_form_data
-  def Form_compute_form_data(self, object_names = None, common_cell = None, element_mapping = None):
-    if element_mapping is None:
-      element_mapping = ffc.jitcompiler._compute_element_mapping(self, common_cell = common_cell)
-    return __Form_compute_form_data_orig(self, object_names = object_names, common_cell = common_cell, element_mapping = element_mapping)
-  ufl.Form.compute_form_data = Form_compute_form_data
-  del(Form_compute_form_data)
-  
-  def Cell_is_undefined(self):
-    return False
-  ufl.geometry.Cell.is_undefined = Cell_is_undefined
-  del(Cell_is_undefined)
-
-# FFC patches.
-if ffc_version() < (1, 2, 0):
-  # Patch to code from FFC file codesnippets.py, FFC bzr 1.1.x branch revision
-  # 1771
-  ffc.codesnippets._circumradius_1D = """\
-  // Compute circumradius, in 1D it is equal to the cell volume/2.0.
-  const double circumradius%(restriction)s = std::abs(detJ%(restriction)s)/2.0;"""
-  ffc.codesnippets.circumradius[1] = ffc.codesnippets._circumradius_1D
 
 class TimeLevel:
   """
