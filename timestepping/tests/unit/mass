@@ -56,9 +56,9 @@ system.add_solve(S1 * inner(test2, trial2) * dx == S1 * inner(test2, F4[n + 2]) 
 
 system = system.assemble(adjoint = True)
 
-for solve in system._AdjoinedTimeSystem__forward._AssembledTimeSystem__init_solves \
-  + system._AdjoinedTimeSystem__forward._AssembledTimeSystem__solves \
-  + system._AdjoinedTimeSystem__forward._AssembledTimeSystem__final_solves:
+for solve in system._ManagedModel__forward._ForwardModel__init_solves \
+  + system._ManagedModel__forward._ForwardModel__solves \
+  + system._ManagedModel__forward._ForwardModel__final_solves:
   if isinstance(solve, PAEquationSolver):
     a, L = solve._PAEquationSolver__a, solve._PAEquationSolver__L
     assert(isinstance(a, PABilinearForm))

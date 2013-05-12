@@ -77,6 +77,11 @@ class Checkpointer:
 
     if not isinstance(cs, set):
       cs = set(cs)
+    cs = list(cs)
+    def cmp(x, y):
+      return x.id() - y.id()
+    cs.sort(cmp = cmp)
+    
     return cs
     
   def checkpoint(self, key, cs):

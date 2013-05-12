@@ -318,7 +318,7 @@ class PAAdjointSolvers:
             a_solver = solver_cache.solver(self.__a_a_forms[i], self.__a_solver_parameters[i], static = True, bcs = self.__a_bcs[i], symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
           else:
             a_a = PABilinearForm(self.__a_a_forms[i], parameters = self.parameters["bilinear_forms"])
-            a_solver = solver_cache.solver(self.__a_a_forms[i], self.__a_solver_parameters[i], static = a_a.n_non_pre_assembled() == 0 and static_bcs and static_form, bcs = self.__a_bcs[i], symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
+            a_solver = solver_cache.solver(self.__a_a_forms[i], self.__a_solver_parameters[i], static = a_a.is_static() and static_bcs, bcs = self.__a_bcs[i], symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
         else:
           assert(a_a_rank == 1)
           assert(self.__a_solver_parameters[i] is None)

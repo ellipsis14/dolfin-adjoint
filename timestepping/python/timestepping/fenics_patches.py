@@ -29,6 +29,7 @@ import sys
 import dolfin
 import ffc
 import numpy
+import scipy.optimize
 import ufl
 
 from embedded_cpp import *

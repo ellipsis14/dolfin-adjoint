@@ -184,7 +184,7 @@ class PAEquationSolver(EquationSolver):
             a = PABilinearForm(eq.lhs, parameters = self.parameters["bilinear_forms"])
             cache_info("Pre-assembled LHS terms in solve for %s    : %i" % (x.name(), a.n_pre_assembled()), dolfin.info_blue)
             cache_info("Non-pre-assembled LHS terms in solve for %s: %i" % (x.name(), a.n_non_pre_assembled()), dolfin.info_blue)
-            solver = solver_cache.solver(eq.lhs, solver_parameters, static = a.n_non_pre_assembled() == 0 and static_bcs and static_form, bcs = bcs, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
+            solver = solver_cache.solver(eq.lhs, solver_parameters, static = a.is_static() and static_bcs, bcs = bcs, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
         else:
           assert(eq_lhs_rank == 1)
           a = PALinearForm(eq.lhs, parameters = self.parameters["linear_forms"])

@@ -60,11 +60,10 @@ class PAForm:
     if not isinstance(form, ufl.form.Form) or is_empty_form(form):
       raise InvalidArgumentException("form must be a non-empty Form")
 
-    if self.parameters["whole_form_optimisation"]:
-      if is_static_form(form):
-        self.__set_pa([form], [])
-      else:
-        self.__set_pa([], [form])
+    if is_static_form(form):
+      self.__set_pa([form], [])
+    elif self.parameters["whole_form_optimisation"]:
+      self.__set_pa([], [form])
     else:
       self.__set_split(form)
 
@@ -176,6 +175,13 @@ class PAForm:
     """
     
     return self.__rank
+  
+  def is_static(self):
+    """
+    Return whether the Form is static.
+    """
+    
+    return self.__n_non_pre_assembled == 0
     
   def n_pre_assembled(self):
     """
@@ -243,11 +249,10 @@ class PALinearForm(PAForm):
     if not isinstance(form, ufl.form.Form) or is_empty_form(form):
       raise InvalidArgumentException("form must be a non-empty Form")
 
-    if self.parameters["whole_form_optimisation"]:
-      if is_static_form(form):
-        self.__set_pa([form], [], [])
-      else:
-        self.__set_pa([], [], [form])
+    if is_static_form(form):
+      self.__set_pa([form], [], [])
+    elif self.parameters["whole_form_optimisation"]:
+      self.__set_pa([], [], [form])
     else:
       self.__set_split(form)
 
@@ -330,6 +335,7 @@ class PALinearForm(PAForm):
 
     self._PAForm__n_pre_assembled = len(pre_assembled_L) + n_mult_assembled_L
     self._PAForm__n_non_pre_assembled = len(non_pre_assembled_L)
+    self.__static = (self._PAForm__n_non_pre_assembled == 0) and (n_mult_assembled_L == 0)
 
     return
 
@@ -368,6 +374,13 @@ class PALinearForm(PAForm):
         L += self._PAForm__pre_assembled_L
 
     return L
+  
+  def is_static(self):
+    """
+    Return whether the Form is static.
+    """
+    
+    return self.__static
   
   def replace(self, mapping):
     """

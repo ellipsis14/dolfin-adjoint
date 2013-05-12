@@ -125,6 +125,14 @@ class Version:
   
   def __le__(self, other):
     return not self > other
+  
+  def __cmp__(self, other):
+    if self > other:
+      return 1
+    elif self < other:
+      return -1
+    else:
+      return 0
 
 def dolfin_version():
   """

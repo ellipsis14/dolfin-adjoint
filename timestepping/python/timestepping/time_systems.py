@@ -39,9 +39,9 @@ from time_levels import *
 
 __all__ = \
   [
-    "AdjointTimeSystem",
-    "AdjoinedTimeSystem",
-    "AssembledTimeSystem",
+    "AdjointModel",
+    "ForwardModel",
+    "ManagedModel",
     "TimeSystem"
   ]
 
@@ -56,8 +56,8 @@ class TimeSystem:
     self.__solves = OrderedDict()
     self.__final_solves = OrderedDict()
 
-    self.__x_tfns = [set(), True]
-    self.__tfns = [set(), True]
+    self.__x_tfns = [[], True]
+    self.__tfns = [[], True]
     self.__sorted_solves = [[[], [], []], True]
 
     self.__update = None
@@ -79,7 +79,41 @@ class TimeSystem:
         proc_deps.add(dep)
     proc_deps = list(proc_deps)
     def cmp(x, y):
-      return id(x) - id(y)
+      if hasattr(x, "_time_level_data"):
+        if hasattr(y, "_time_level_data"):
+          x_tfn, x_level = x._time_level_data
+          y_tfn, y_level = y._time_level_data
+          if x_tfn > y_tfn:
+            return 1
+          elif x_tfn < y_tfn:
+            return -1
+          elif isinstance(x_level, (int, Fraction)):
+            if isinstance(y_level, (int, Fraction)):
+              return x_level.__cmp__(y_level)
+            else:
+              assert(isinstance(y_level, (TimeLevel, FinalTimeLevel)))
+              return -1
+          elif isinstance(x_level, TimeLevel):
+            if isinstance(y_level, (int, Fraction)):
+              return 1
+            elif isinstance(y_level, TimeLevel):
+              return x_level.__cmp__(y_level)
+            else:
+              assert(isinstance(y_level, FinalTimeLevel))
+              return -1
+          else:
+            assert(isinstance(x_level, FinalTimeLevel))
+            if isinstance(y_level, (int, Fraction, TimeLevel)):
+              return 1
+            else:
+              assert(isinstance(y_level, FinalTimeLevel))
+              return x_level.__cmp__(y_level)
+        else:
+          return 1
+      elif hasattr(y, "_time_level_data"):
+        return -1
+      else:
+        return x.id() - y.id()
     proc_deps.sort(cmp = cmp)
 
     return proc_deps
@@ -437,14 +471,14 @@ class TimeSystem:
 
   def assemble(self, *args, **kwargs):
     """
-    Return an AssembledTimeSystem if adjoint is False, and an AdjoinedTimeSystem
-    otherwise.
+    Return a ForwardModel if adjoint is False, and a ManagedModel with an
+    adjoint model enabled otherwise.
 
     Valid keyword arguments:
-      adjoint (default false): Whether to create an AdjoinedTimeSystem rather
-        than an AssembledTimeSystem.
-    All other arguments are passed directly to the AssembledTimeSystem or
-    AdjoinedTimeSystem constructors.
+      adjoint (default false): If true then a ForwardModel is returned. If false
+        then an adjoint model is derived and a ManagedModel is returned.
+    All other arguments are passed directly to the ForwardModel or ManagedModel
+    constructors.
     """
 
     kwargs = copy.copy(kwargs)
@@ -455,13 +489,13 @@ class TimeSystem:
       adjoint = False
     
     if adjoint:
-      return AdjoinedTimeSystem(self, *args, **kwargs)
+      return ManagedModel(self, *args, **kwargs)
     else:
-      return AssembledTimeSystem(self, *args, **kwargs)
+      return ForwardModel(self, *args, **kwargs)
     
 _assemble_classes.append(TimeSystem)
 
-class AssembledTimeSystem:
+class ForwardModel:
   """
   Used to solve timestep equations with timestep specific optimisations applied.
 
@@ -641,7 +675,7 @@ class AssembledTimeSystem:
       
     return
     
-class AdjointTimeSystem:
+class AdjointModel:
   """
   Used to solve adjoint timestep equations with timestep specific optimisations
   applied. This assumes that forward model data is updated externally.
@@ -652,8 +686,8 @@ class AdjointTimeSystem:
   """
   
   def __init__(self, tsystem, functional = None):
-    if not isinstance(tsystem, AssembledTimeSystem):
-      raise InvalidArgumentException("tsystem must be an AssembledTimeSystem")
+    if not isinstance(tsystem, ForwardModel):
+      raise InvalidArgumentException("tsystem must be a ForwardModel")
 
     # Step 1: Set up the adjoint variable map
     a_map = AdjointVariableMap()
@@ -682,9 +716,9 @@ class AdjointTimeSystem:
         
     # Step 3: Adjoin the final solves
 #    dolfin.info("Initialising adjoint initial solves")
-    a_initial_solves = PAAdjointSolvers(tsystem._AssembledTimeSystem__final_solves, [], a_map)
+    a_initial_solves = PAAdjointSolvers(tsystem._ForwardModel__final_solves, [], a_map)
 #    dolfin.info("Initialising adjoint initial cycle 1")
-    a_initial_cycle1 = PAAdjointSolvers(f_as_final_solves, tsystem._AssembledTimeSystem__final_solves, a_map)
+    a_initial_cycle1 = PAAdjointSolvers(f_as_final_solves, tsystem._ForwardModel__final_solves, a_map)
 #    dolfin.info("Initialising adjoint initial cycle 2")
     a_initial_cycle2 = PAAdjointSolvers(f_as_id_solves, f_as_final_solves, a_map)
 #    dolfin.info("Initialising adjoint initial cycle 3")
@@ -692,9 +726,9 @@ class AdjointTimeSystem:
 
     # Step 4: Adjoin the timestep
 #    dolfin.info("Initialising adjoint timestep cycle")
-    a_cycle = PAAdjointSolvers(f_as_solves, tsystem._AssembledTimeSystem__solves, a_map)
+    a_cycle = PAAdjointSolvers(f_as_solves, tsystem._ForwardModel__solves, a_map)
 #    dolfin.info("Initialising adjoint timestep")
-    a_solves = PAAdjointSolvers(tsystem._AssembledTimeSystem__solves, f_as_solves, a_map)
+    a_solves = PAAdjointSolvers(tsystem._ForwardModel__solves, f_as_solves, a_map)
     
     # Step 5: Adjoin the initial solves
 #    dolfin.info("Initialising adjoint final cycle")
@@ -702,9 +736,9 @@ class AdjointTimeSystem:
     # solves for all time levels. If no forward timestep "solve" is specified
     # for a given level, then we need to know the forward timestep "cycle"
     # instead.
-    f_init_dep_solves = copy.copy(tsystem._AssembledTimeSystem__solves)  
+    f_init_dep_solves = copy.copy(tsystem._ForwardModel__solves)  
     f_x = set()
-    for solve in tsystem._AssembledTimeSystem__solves:
+    for solve in tsystem._ForwardModel__solves:
       f_x.add(solve.x())
     for f_tfn in f_tfns:
       cycle_map = f_tfn.cycle_map()
@@ -713,7 +747,7 @@ class AdjointTimeSystem:
           f_init_dep_solves.append(AssignmentSolver(f_tfn[cycle_map[level]], f_tfn[level]))
     a_final_cycle = PAAdjointSolvers(f_as_init_solves, f_init_dep_solves, a_map)
 #    dolfin.info("Initialising adjoint final solves")
-    a_final_solves = PAAdjointSolvers(tsystem._AssembledTimeSystem__init_solves, f_as_init_solves, a_map)
+    a_final_solves = PAAdjointSolvers(tsystem._ForwardModel__init_solves, f_as_init_solves, a_map)
 
     self.__tsystem = tsystem
     self.__a_map = a_map
@@ -734,7 +768,7 @@ class AdjointTimeSystem:
 
   def a_map(self):
     """
-    Return the AdjointVariableMap used by the AdjointTimeSystem.
+    Return the AdjointVariableMap used by the AdjointModel.
     """
     
     return self.__a_map
@@ -902,7 +936,7 @@ class AdjointTimeSystem:
 
     return
   
-class AdjoinedTimeSystem:
+class ManagedModel:
   """
   Used to solve forward and adjoint timestep equations. This performs necessary
   storage and recovery management.
@@ -929,18 +963,18 @@ class AdjoinedTimeSystem:
         raise InvalidArgumentException("disk_period must be a positive integer")
       
     forward = assemble(tsystem, adjoint = False, initialise = False, reassemble = reassemble)
-    adjoint = AdjointTimeSystem(forward)
+    adjoint = AdjointModel(forward)
 
     init_cp_cs1 = set()
     init_cp_cs2 = set()
-    for solve in forward._AssembledTimeSystem__init_solves:
+    for solve in forward._ForwardModel__init_solves:
       init_cp_cs1.add(solve.x())
       for dep in solve.dependencies(non_symbolic = True):
         if isinstance(dep, dolfin.Function) and hasattr(dep, "_time_level_data"):
           init_cp_cs1.add(dep)
     cp_cs = set()
     cp_f_tfn = {}
-    for solve in forward._AssembledTimeSystem__solves:
+    for solve in forward._ForwardModel__solves:
       cp_cs.add(solve.x())
       for dep in solve.dependencies(non_symbolic = True):
         if isinstance(dep, dolfin.Function) and hasattr(dep, "_time_level_data"):
@@ -952,7 +986,7 @@ class AdjoinedTimeSystem:
             cp_f_tfn[f_tfn] = level
     nl_cp_cs = set()
     update_cs = set()
-    for solve in forward._AssembledTimeSystem__solves:
+    for solve in forward._ForwardModel__solves:
       for c in solve.nonlinear_dependencies():
         if isinstance(c, dolfin.Function) and hasattr(c, "_time_level_data"):
           nl_cp_cs.add(c)
@@ -1112,7 +1146,7 @@ class AdjoinedTimeSystem:
 
   def a_map(self):
     """
-    Return the AdjointVariableMap associated with the AdjoinedTimeSystem.
+    Return the AdjointVariableMap associated with the ManagedModel.
     """
     
     return self.__a_map
@@ -1361,9 +1395,9 @@ class AdjoinedTimeSystem:
       if not is_static_coefficient(parameter):
         raise InvalidArgumentException("Differentiating with respect to non-static parameter")
 
-    f_init_solves = self.__forward._AssembledTimeSystem__init_solves
-    f_solves = self.__forward._AssembledTimeSystem__solves
-    f_final_solves = self.__forward._AssembledTimeSystem__final_solves
+    f_init_solves = self.__forward._ForwardModel__init_solves
+    f_solves = self.__forward._ForwardModel__solves
+    f_final_solves = self.__forward._ForwardModel__final_solves
 
     dFdm = {j:[OrderedDict() for i in range(len(parameters))] for j in range(-1, 2)}
     for i, parameter in enumerate(parameters):
@@ -1497,7 +1531,7 @@ class AdjoinedTimeSystem:
     self.__restore_timestep_checkpoint(-4)
     self.__forward.timestep_update(s = self.__S + 1)
     self.__adjoint.initialise()
-    addto_grad(1, self.__adjoint._AdjointTimeSystem__a_initial_solves, self.__a_map)
+    addto_grad(1, self.__adjoint._AdjointModel__a_initial_solves, self.__a_map)
     if not callback is None:
       callback(s = self.__S + 1)
 
@@ -1507,14 +1541,14 @@ class AdjoinedTimeSystem:
       self.__adjoint.timestep_cycle()
       self.__restore_timestep_checkpoint(self.__S - i, cp_cs = cp_cs, update_cs = update_cs)
       self.__adjoint.timestep_solve()
-      addto_grad(0, self.__adjoint._AdjointTimeSystem__a_solves, self.__a_map)
+      addto_grad(0, self.__adjoint._AdjointModel__a_solves, self.__a_map)
       if not callback is None:
         callback(s = self.__S - i)
 
     self.__adjoint.final_cycle()
     self.__restore_timestep_checkpoint(-2)
     self.__adjoint.finalise()
-    addto_grad(-1, self.__adjoint._AdjointTimeSystem__a_final_solves, self.__a_map)
+    addto_grad(-1, self.__adjoint._AdjointModel__a_final_solves, self.__a_map)
     if not callback is None:
       callback(s = 0)
 

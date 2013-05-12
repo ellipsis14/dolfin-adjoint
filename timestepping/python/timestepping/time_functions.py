@@ -189,6 +189,7 @@ class TimeFunction(TimeLevels):
     self.__fns = fns
     self.__space = space
     self.__lfns = lfns
+    self.__id = fns[tlevels.levels()[0]].id()
 
     return
 
@@ -206,6 +207,15 @@ class TimeFunction(TimeLevels):
       return self.__lfns[key]
     else:
       raise InvalidArgumentException("key must be an integer, Fraction, TimeLevel, or FinalTimeLevel")
+
+  def __cmp__(self, other):
+    if not isinstance(other, TimeFunction):
+      raise InvalidArgumentException("other must be a TimeFunction")
+
+    return self.__id - other.__id
+
+  def __hash__(self):
+    return hash(self.__id)
 
   def name(self):
     """

@@ -101,6 +101,14 @@ class TimeLevel:
 
   def __ge__(self, other):
     return not self < other
+  
+  def __cmp__(self, other):
+    if self > other:
+      return 1
+    elif self < other:
+      return -1
+    else:
+      return 0
 
   def __hash__(self):
     return hash((0, self.__offset))
@@ -191,6 +199,14 @@ class FinalTimeLevel:
 
   def __ge__(self, other):
     return self < other
+  
+  def __cmp__(self, other):
+    if self > other:
+      return 1
+    elif self < other:
+      return -1
+    else:
+      return 0
 
   def __hash__(self):
     return hash((1, self.__offset))
@@ -239,6 +255,8 @@ class TimeLevels:
     for level in levels:
       if not isinstance(level, TimeLevel):
         raise InvalidArgumentException("levels must be a list of TimeLevel s")
+    if len(levels) == 0:
+      raise InvalidArgumentException("levels must include at least one TimeLevel")
     levels = tuple(sorted(list(set(levels))))
 
     if not isinstance(cycle_map, dict):

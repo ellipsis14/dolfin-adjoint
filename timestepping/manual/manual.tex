@@ -719,11 +719,11 @@ initialisation stage, returning an object suitable for execution of the model
 time loop. An adjoint model is enabled by supplying additional arguments to the
 \verb+assemble+ method.
 
-The \verb+assemble+ method returns an \verb+AssembledTimeSystem+ if no adjoint
-model is enabled, and an \verb+AdjoinedTimeSystem+ otherwise. Note that there is
-a fairly strong assumption that at most one \verb+AssembledTimeSystem+ or
-\linebreak \verb+AdjoinedTimeSystem+ is instantiated at once. Instantiating two
-or more at the same time leads to undefined behaviour.
+The \verb+assemble+ method returns an \verb+ForwardModel+ if no adjoint model is
+enabled, and an \verb+ManagedModel+ otherwise. Note that there is a fairly
+strong assumption that at most one \verb+ForwardModel+ or
+\verb+ManagedModel+ is instantiated at once. Instantiating two or more at the
+same time leads to undefined behaviour.
 
 \subsection{Forward model only}\label{sect:forward_assembly}
 
@@ -732,9 +732,9 @@ arguments:
 \begin{lstlisting}
 asystem = system.assemble(initialise = initialise)
 \end{lstlisting}
-This returns an \verb+AssembledTimeSystem+. If the optional \verb+initialise+ is
-not supplied or is \verb+True+ then, immediately after the \verb+assemble+ call,
-the initialisation stage is complete. Otherwise, the initialisation stage can be
+This returns an \verb+ForwardModel+. If the optional \verb+initialise+ is not
+supplied or is \verb+True+ then, immediately after the \verb+assemble+ call, the
+initialisation stage is complete. Otherwise, the initialisation stage can be
 performed via a subsequent call to the \verb+initialise+ method:
 \begin{lstlisting}
 asystem.initialise()
@@ -750,9 +750,9 @@ asystem = system.assemble(adjoint = adjoint,
   disk_period = disk_period, functional = functional,
   initialise = initialise)
 \end{lstlisting}
-This returns an \verb+AdjoinedTimeSystem+. If the optional \verb+initialise+ is
-not supplied or is \verb+True+ then, immediately after the \verb+assemble+ call,
-the initialisation stage is complete. Otherwise, the initialisation stage can be
+This returns an \verb+ManagedModel+. If the optional \verb+initialise+ is not
+supplied or is \verb+True+ then, immediately after the \verb+assemble+ call, the
+initialisation stage is complete. Otherwise, the initialisation stage can be
 performed via a subsequent call to the \verb+initialise+ method:
 \begin{lstlisting}
 asystem.initialise()
@@ -774,7 +774,7 @@ asystem.set_functional(functional)
 \section{Timestepping}
 
 The model is timestepped by calling the \verb+timestep+ method of an \linebreak
-\verb+AssembledTimeSystem+ or \verb+AdjoinedTimeSystem+:
+\verb+ForwardModel+ or \verb+ManagedModel+:
 \begin{lstlisting}
 asystem.timestep(s = s)
 \end{lstlisting}
@@ -854,7 +854,7 @@ system.finalise()
 
 Given a forward model described using a \verb+TimeSystem+, the associated
 discrete adjoint model can be derived in the analysis and optimisation step (see
-section \ref{sect:adjoint_assembly}). The resulting \verb+AdjoinedTimeSystem+
+section \ref{sect:adjoint_assembly}). The resulting \verb+ManagedModel+
 returned can be used to perform a model constrained derivative calculation.
 
 \subsection{Checkpointing and storage}
@@ -869,8 +869,8 @@ storage is configured in the analysis and optimisation step (see section
 \ref{sect:adjoint_assembly}).
 
 After the forward model finalisation stage (after the \linebreak
-\verb+AdjoinedTimeSystem.finalise+ call) stored forward model data can be
-verified via the \verb+verify_checkpoints+ method:
+\verb+ManagedModel.finalise+ call) stored forward model data can be verified via
+the \verb+verify_checkpoints+ method:
 \begin{lstlisting}
 asystem.verify_checkpoints(tolerance = tolerance)
 \end{lstlisting}
@@ -913,7 +913,7 @@ contains the derivative projected onto the parameter trial space, and where
 matrix inversion.
 
 The \verb+compute_gradient+ method must be called after the forward model
-finalisation stage (after the \verb+AdjoinedTimeSystem.finalise+ call), and a
+finalisation stage (after the \verb+ManagedModel.finalise+ call), and a
 functional must be registered.
 
 \subsection{Adjoint verification}

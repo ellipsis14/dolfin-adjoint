@@ -71,7 +71,11 @@ del(get_constant)
 
 # Resolve namespace clashes
 def assemble(*args, **kwargs):
-  if isinstance(args[0], TimeSystem):
+  if isinstance(args[0], QForm):
+    if "form_compiler_parameters" in kwargs:
+      raise InvalidArgumentException("Cannot supply form_compiler_parameters argument when assembling a QForm")
+    return dolfin_adjoint.assemble(form_compiler_parameters = args[0].form_compiler_parameters(), *args, **kwargs)
+  elif isinstance(args[0], tuple(_assemble_classes)):
     return args[0].assemble(*args[1:], **kwargs)
   else:
     return dolfin_adjoint.assemble(*args, **kwargs)
@@ -112,33 +116,57 @@ class TimeFunction(timestepping.TimeFunction):
     
     return
 
-__AssembledTimeSystem_timestep_cycle_orig = timestepping.AssembledTimeSystem.timestep_cycle
-def AssembledTimeSystem_timestep_cycle(self, extended = True):
+__ForwardModel_timestep_cycle_orig = timestepping.ForwardModel.timestep_cycle
+def ForwardModel_timestep_cycle(self, extended = True):
   """
   Perform the timestep cycle. The optional extended argument has no effect.
   """
     
-  __AssembledTimeSystem_timestep_cycle_orig(self, extended = False)
+  __ForwardModel_timestep_cycle_orig(self, extended = False)
   # Signal the end of the timestep
   adj_inc_timestep()
   
   return
-timestepping.AssembledTimeSystem.timestep_cycle = AssembledTimeSystem_timestep_cycle
-del(AssembledTimeSystem_timestep_cycle)
+timestepping.ForwardModel.timestep_cycle = ForwardModel_timestep_cycle
+del(ForwardModel_timestep_cycle)
 
-__AssembledTimeSystem_finalise_orig = timestepping.AssembledTimeSystem.finalise
-def AssembledTimeSystem_finalise(self):
+__ForwardModel_finalise_orig = timestepping.ForwardModel.finalise
+def ForwardModel_finalise(self):
   """
   Solve final equations and perform the final variable cycle.
   """
     
-  __AssembledTimeSystem_finalise_orig(self)
+  __ForwardModel_finalise_orig(self)
   # Signal the end of the forward model
   adj_inc_timestep()
   
   return
-timestepping.AssembledTimeSystem.finalise = AssembledTimeSystem_finalise
-del(AssembledTimeSystem_finalise)
+timestepping.ForwardModel.finalise = ForwardModel_finalise
+del(ForwardModel_finalise)
+
+__AssignmentSolver__init__orig = AssignmentSolver.__init__
+def AssignmentSolver__init__(self, *args, **kwargs):
+  __AssignmentSolver__init__orig(self, *args, **kwargs)
+  solve_orig = self.solve.im_class.solve
+  # Equation annotation based on solve in solving.py
+  def solve(self, *args, **kwargs):
+    # Annotate an assignment solve
+    record = da_annotate_equation_solve(self)
+    annotate = not dolfin.parameters["adjoint"]["stop_annotating"]
+    dolfin.parameters["adjoint"]["stop_annotating"] = True
+    ret = solve_orig(self, *args, **kwargs)
+    dolfin.parameters["adjoint"]["stop_annotating"] = not annotate
+    if record:
+      x = self.x()
+      if isinstance(x, WrappedFunction):
+        x = x.fn()
+      adjglobals.adjointer.record_variable(adjglobals.adj_variables[x], libadjoint.MemoryStorage(adjlinalg.Vector(x)))
+    return ret
+  solve.__doc__ = solve_orig.__doc__
+  self.solve = types.MethodType(solve, self)
+  return
+AssignmentSolver.__init__ = AssignmentSolver__init__
+del(AssignmentSolver__init__)
 
 __EquationSolver__init__orig = EquationSolver.__init__
 def EquationSolver__init__(self, *args, **kwargs):
@@ -170,30 +198,6 @@ def EquationSolver__init__(self, *args, **kwargs):
   return
 EquationSolver.__init__ = EquationSolver__init__
 del(EquationSolver__init__)
-
-__AssignmentSolver__init__orig = AssignmentSolver.__init__
-def AssignmentSolver__init__(self, *args, **kwargs):
-  __AssignmentSolver__init__orig(self, *args, **kwargs)
-  solve_orig = self.solve.im_class.solve
-  # Equation annotation based on solve in solving.py
-  def solve(self, *args, **kwargs):
-    # Annotate an assignment solve
-    record = da_annotate_equation_solve(self)
-    annotate = not dolfin.parameters["adjoint"]["stop_annotating"]
-    dolfin.parameters["adjoint"]["stop_annotating"] = True
-    ret = solve_orig(self, *args, **kwargs)
-    dolfin.parameters["adjoint"]["stop_annotating"] = not annotate
-    if record:
-      x = self.x()
-      if isinstance(x, WrappedFunction):
-        x = x.fn()
-      adjglobals.adjointer.record_variable(adjglobals.adj_variables[x], libadjoint.MemoryStorage(adjlinalg.Vector(x)))
-    return ret
-  solve.__doc__ = solve_orig.__doc__
-  self.solve = types.MethodType(solve, self)
-  return
-AssignmentSolver.__init__ = AssignmentSolver__init__
-del(AssignmentSolver__init__)
 
 def unwrap_fns(form):
   """
