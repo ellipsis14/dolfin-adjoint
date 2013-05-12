@@ -80,7 +80,7 @@ def find_tests(rel_path, exclude = []):
   return ntests
 
 if opts.short:
-  tests = find_tests(os.path.join("manual", "examples"), exclude = "test") \
+  tests = find_tests(os.path.join("manual", "examples")) \
         + find_tests(os.path.join("tests", "fenics")) \
         + find_tests(os.path.join("tests", "unit")) \
         + find_tests(os.path.join("tests", "short"))
