@@ -14,6 +14,8 @@ class KrylovSolver(dolfin.KrylovSolver):
     self.solver_parameters = args
 
     self.operators = (None, None)
+    if len(args) > 0 and isinstance(args[0], dolfin.GenericMatrix):
+      self.operators = (args[0], None)
 
   def set_operators(self, A, P):
     dolfin.KrylovSolver.set_operators(self, A, P)
