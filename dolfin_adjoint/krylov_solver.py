@@ -12,6 +12,7 @@ class KrylovSolver(dolfin.KrylovSolver):
   def __init__(self, *args):
     dolfin.KrylovSolver.__init__(self, *args)
     self.solver_parameters = args
+    self.nsp = None
 
     self.operators = (None, None)
     if len(args) > 0 and isinstance(args[0], dolfin.GenericMatrix):
@@ -20,6 +21,10 @@ class KrylovSolver(dolfin.KrylovSolver):
   def set_operators(self, A, P):
     dolfin.KrylovSolver.set_operators(self, A, P)
     self.operators = (A, P)
+
+  def set_nullspace(self, nsp):
+    dolfin.KrylovSolver.set_nullspace(self, nsp)
+    self.nsp = nsp
 
   def set_operator(self, A):
     dolfin.KrylovSolver.set_operator(self, A)
@@ -71,6 +76,7 @@ class KrylovSolver(dolfin.KrylovSolver):
       parameters = self.parameters.to_dict()
       fn_space = u.function_space()
       has_preconditioner = P is not None
+      nsp = self.nsp
 
       class KrylovSolverMatrix(adjlinalg.Matrix):
         def __init__(self, *args, **kwargs):
@@ -102,6 +108,13 @@ class KrylovSolver(dolfin.KrylovSolver):
 
           solver = dolfin.KrylovSolver(*solver_parameters)
           solver.parameters.update(parameters)
+
+          if nsp is not None and self.adjoint is False:
+            solver.set_nullspace(nsp)
+          if nsp is not None and self.adjoint:
+            # maybe add a KrylovSolver.set_adjoint_nullspace?
+            dolfin.info_red("Warning: setting nullspace for adjoint solve to be the same for the forward solve. May not be the actual basis for the nullspace.")
+            solver.set_nullspace(nsp)
 
           x = dolfin.Function(fn_space)
           if self.initial_guess is not None and var.type == 'ADJ_FORWARD':
