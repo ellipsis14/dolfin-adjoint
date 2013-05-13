@@ -49,13 +49,18 @@ if not has_linear_algebra_backend("PETSc"):
     info("DOLFIN has not been configured with TPETSc. Exiting.")
     exit()
 
+if dolfin.__version__ < "1.2.0+":
+    info("Need dolfin > 1.2.0")
+    exit()
+
 parameters["linear_algebra_backend"] = "PETSc"
 
 # Create mesh and define function space
-mesh = UnitSquareMesh(64, 64)
+mesh = UnitSquareMesh(24, 24)
 V = FunctionSpace(mesh, "CG", 1)
 null_space = Vector(Function(V).vector())
 V.dofmap().set(null_space, 1.0)
+null_space[:] = null_space/null_space.norm("l2")
 
 def main(f, g):
   # Define variational problem
@@ -85,7 +90,6 @@ def main(f, g):
   # Solve
   solver.solve(u.vector(), b)
 
-  print "u.vector().inner(null_space): ", u.vector().inner(null_space)
   return u
 
 if __name__ == "__main__":
@@ -97,27 +101,12 @@ if __name__ == "__main__":
 
   assert replay_dolfin(tol=0.0, stop=True)
 
-  class DJDM(object):
-    def __init__(self, djdu):
-      self.djdu = djdu
-
-    def vector(self):
-      return self
-
-    def inner(self, direction):
-      m = TimeConstantParameter(f, perturbation=Function(V, direction))
-      for (fn, var) in compute_tlm(m, forget=False):
-        pass
-
-      return self.djdu.inner(fn.vector())
-
   frm = lambda u: inner(u, u)*dx
 
   Jm = assemble(frm(u))
   J = Functional(frm(u))
   m = TimeConstantParameter(f)
-  #dJdm = compute_gradient(J, m, forget=False)
-  dJdm = DJDM(assemble(derivative(frm(u), u)))
+  dJdm = compute_gradient(J, m, forget=False)
 
   def Jhat(f):
     u = main(f, g)
