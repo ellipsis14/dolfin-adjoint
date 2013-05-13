@@ -125,8 +125,8 @@ def run_test(i, np, test, test_success):
     else:
       test_success[i] = 0
   finally:
-    shutil.rmtree(tmppath)
     os.chdir(cwd)
+    shutil.rmtree(tmppath)
 
   if test_success[i]:
     sys.stdout.write("Test success: %s\n" % test)
