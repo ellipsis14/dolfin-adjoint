@@ -20,6 +20,7 @@
 # Copyright (C) 2011 Simula Research Laboratory and Lyudmyla Vynnytska and Marie
 # E. Rognes from dolfin-adjoint file tests/mantle_convection/temperature.py, bzr
 # trunk 573
+# Code first added: 2013-02-26
 
 # Modified version of mantle_convection test from dolfin-adjoint bzr trunk 513
 

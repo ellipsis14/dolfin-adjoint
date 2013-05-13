@@ -21,6 +21,7 @@
 # E. Rognes from dolfin-adjoint files
 # tests/mantle_convection/mantle_convection.py and
 # tests/mantle_convection/paper.py, bzr trunk 573
+# Code first added: 2013-02-26
 
 # Modified version of mantle_convection test from dolfin-adjoint bzr trunk 513
 

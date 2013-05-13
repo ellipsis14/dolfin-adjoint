@@ -19,9 +19,11 @@
 
 # Copyright (C) 2007 Kristian B. Oelgaard from DOLFIN file
 # demo/undocumented/dg-poisson/python/demo_dg-poisson.py, bzr trunk 7478
+# Code first added: 2013-01-04
 
 # Copyright (C) 2008 Johan Hake from dolfin-adjoint file tests/upwind/upwind.py,
 # bzr trunk revision 638
+# Code first added: 2012-11-26
 
 from dolfin import *
 import dolfin

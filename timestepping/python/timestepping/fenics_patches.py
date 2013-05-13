@@ -19,9 +19,15 @@
 
 # Copyright (C) 2007 Anders Logg from FFC file ffc/codesnippets.py, bzr branch
 # 1.1.x 1771
+# Code first added: 2013-04-10
+
+# Copyright (C) 2008-2013 Martin Sandve Alnes from UFL file ufl/form.py, bzr
+# branch 1.1.x 1484
+# Code first added: 2013-05-08
 
 # Copyright (C) 2008-2013 Martin Sandve Alnes from UFL file ufl/coefficient.py,
-# bzr trunk 1571, ufl/form.py, bzr branch 1.1.x 1484
+# bzr trunk 1571
+# Code first added: 2012-11-20
 
 import ctypes
 import sys

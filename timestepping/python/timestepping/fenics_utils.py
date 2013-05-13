@@ -18,6 +18,7 @@
 
 # Copyright (C) 2008-2013 Martin Sandve Alnes from UFL file
 # ufl/algorithms/ad.py, bzr 1.1.x branch 1484
+# Code first added: 2013-01-18
   
 import copy
   

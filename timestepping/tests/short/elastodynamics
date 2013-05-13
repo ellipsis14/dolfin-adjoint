@@ -15,17 +15,18 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Modified by Anders Logg 2008-2011
+# Modified version of demo_elastodynamics.py demo from DOLFIN bzr trunk 7436
 #
+# DOLFIN modification dates:
+# Modified by Anders Logg 2008-2011
 # First added:  2010-04-30
 # Last changed: 2012-11-12
 
 # Copyright (C) 2010 Garth N. Wells from DOLFIN file
 # demo/undocumented/elastodynamics/python/demo_elastodynamics.py, bzr trunk 7478
+# Code first added: 2013-01-30
 
 """This demo program solves an elastodynamics problem."""
-
-# Modified version of demo_elastodynamics.py demo from DOLFIN bzr trunk 7436
 
 from dolfin import *
 from timestepping import *

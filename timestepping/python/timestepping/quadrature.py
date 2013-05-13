@@ -18,6 +18,7 @@
 
 # Copyright (C) 2007-2013 Anders Logg and Kristian B. Oelgaard from FFC file
 # ffc/analysis.py, bzr trunk 1839
+# Code first added: 2012-12-06
 
 import dolfin
 import ffc
