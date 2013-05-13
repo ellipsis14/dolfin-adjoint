@@ -54,18 +54,21 @@ parameters["linear_algebra_backend"] = "PETSc"
 # Create mesh and define function space
 mesh = UnitSquareMesh(64, 64)
 V = FunctionSpace(mesh, "CG", 1)
+null_space = Vector(Function(V).vector())
+V.dofmap().set(null_space, 1.0)
 
-def main(g):
+def main(f, g):
   # Define variational problem
   u = TrialFunction(V)
   v = TestFunction(V)
-  f = Expression("10*exp(-(pow(x[0] - 0.5, 2) + pow(x[1] - 0.5, 2)) / 0.02)")
   a = inner(grad(u), grad(v))*dx
   L = f*v*dx + g*v*ds
 
   # Assemble system
   A = assemble(a)
   b = assemble(L)
+
+  #bc = DirichletBC(V, 0.0, "on_boundary"); bc.apply(A); bc.apply(b)
 
   # Solution Function
   u = Function(V)
@@ -74,30 +77,52 @@ def main(g):
   solver = KrylovSolver(A, "gmres")
 
   # Create null space basis and attach to Krylov solver
-  null_space = Vector(u.vector())
-  V.dofmap().set(null_space, 1.0)
   solver.set_nullspace([null_space])
-  solver.parameters["relative_tolerance"] = 1.0e-16
+  solver.parameters["relative_tolerance"] = 1.0e-200
+  solver.parameters["absolute_tolerance"] = 1.0e-14
+  solver.parameters["maximum_iterations"] = 20000
 
   # Solve
   solver.solve(u.vector(), b)
+
+  print "u.vector().inner(null_space): ", u.vector().inner(null_space)
   return u
 
 if __name__ == "__main__":
   g = interpolate(Expression("-sin(5*x[0])"), V, name="SourceG")
-  u = main(g)
+  f = interpolate(Expression("10*exp(-(pow(x[0] - 0.5, 2) + pow(x[1] - 0.5, 2)) / 0.02)"), V, name="SourceF")
+  u = main(f, g)
+
+  parameters["adjoint"]["stop_annotating"] = True
 
   assert replay_dolfin(tol=0.0, stop=True)
 
-#  Jm = assemble(inner(u, u)*dx)
-#  J = Functional(inner(u, u)*dx)
-#  m = TimeConstantParameter(g)
-#  dJdm = compute_gradient(J, m, forget=False)
-#
-#  def Jhat(g):
-#    u = main(g)
-#    return assemble(inner(u, u)*dx)
-#
-#  minconv = taylor_test(Jhat, m, Jm, dJdm)
-#  assert minconv > 1.8
+  class DJDM(object):
+    def __init__(self, djdu):
+      self.djdu = djdu
+
+    def vector(self):
+      return self
+
+    def inner(self, direction):
+      m = TimeConstantParameter(f, perturbation=Function(V, direction))
+      for (fn, var) in compute_tlm(m, forget=False):
+        pass
+
+      return self.djdu.inner(fn.vector())
+
+  frm = lambda u: inner(u, u)*dx
+
+  Jm = assemble(frm(u))
+  J = Functional(frm(u))
+  m = TimeConstantParameter(f)
+  #dJdm = compute_gradient(J, m, forget=False)
+  dJdm = DJDM(assemble(derivative(frm(u), u)))
+
+  def Jhat(f):
+    u = main(f, g)
+    return assemble(frm(u))
+
+  minconv = taylor_test(Jhat, m, Jm, dJdm, perturbation_direction=interpolate(Constant(1.0), V))
+  assert minconv > 1.8
 
