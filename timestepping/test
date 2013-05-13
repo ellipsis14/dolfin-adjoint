@@ -30,7 +30,7 @@ optionParser = optparse.OptionParser( \
   add_help_option = True, \
   description = "Run timestepping tests")
 optionParser.add_option("-c", "--custom-tests", action = "store_true", dest = "local", help = "Enable custom local tests", default = False)
-optionParser.add_option("-n", "--num-processors", type = int, dest = "N", help = "Run using N cores. A zero or negative value indicates that all cores should be used. Note that if a test uses > N threads or MPI processes then additional cores will be used.", default = 1)
+optionParser.add_option("-n", "--num-processors", type = int, dest = "N", help = "Run using N cores. A zero or negative value indicates that all cores should be used. Note that if an individual test uses > N cores then additional cores will be used.", default = 1)
 optionParser.add_option("-l", "--long-tests", action = "store_true", dest = "long", help = "Enable long tests", default = False)
 optionParser.add_option("-S", "--no-short-tests", action = "store_false", dest = "short", help = "Disable short tests", default = True)
 opts, args = optionParser.parse_args()
@@ -150,6 +150,11 @@ if N == 1:
     proc.start()
     proc.join()
 else:
+  for test in copy.copy(tests):
+    if test[0] * test[1] >= N:
+      tests.remove(test)
+      tests.append(test)
+  
   n = 0
   procs = []
   for i in range(len(tests)):
