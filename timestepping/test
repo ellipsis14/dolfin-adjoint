@@ -17,15 +17,20 @@
 import copy
 import glob
 import optparse
+import multiprocessing
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
+import time
 
 optionParser = optparse.OptionParser( \
   usage = "%prog [OPTIONS] DIR", \
   add_help_option = True, \
   description = "Run timestepping tests")
 optionParser.add_option("-c", "--custom-tests", action = "store_true", dest = "local", help = "Enable custom local tests", default = False)
+optionParser.add_option("-n", "--num-processors", type = int, dest = "N", help = "Run using N cores. A zero or negative value indicates that all cores should be used. Note that if a test uses > N threads or MPI processes then additional cores will be used.", default = 1)
 optionParser.add_option("-l", "--long-tests", action = "store_true", dest = "long", help = "Enable long tests", default = False)
 optionParser.add_option("-S", "--no-short-tests", action = "store_false", dest = "short", help = "Disable short tests", default = True)
 opts, args = optionParser.parse_args()
@@ -66,16 +71,25 @@ def find_tests(rel_path, exclude = []):
   ntests = []
   for test in tests:
     handle = open(test, "r")
-    n = 1
-    for i in range(2):
-      line = handle.readline()
+    lines = [handle.readline() for i in range(3)]
+    handle.close()
+    np = 1
+    for line in lines:
       if line.startswith("#NP "):
         try:
-          n = int(line[4:])
+          np = int(line[4:])
           break
         except ValueError:
           pass
-    ntests.append((n, test))
+    nt = 1
+    for line in lines:
+      if line.startswith("#NT "):
+        try:
+          nt = int(line[4:])
+          break
+        except ValueError:
+          pass
+    ntests.append((np, nt, test))
 
   return ntests
 
@@ -91,36 +105,88 @@ if opts.long:
 if opts.local:
   tests += find_tests(os.path.join("tests", "local"))
 
-env = copy.copy(os.environ)
-env["PYTHONPATH"] = "%s:%s" % (os.path.join(path, "python"), os.environ["PYTHONPATH"])
+def run_test(i, np, test, test_success):
+  sys.stdout.write("Running test: %s\n" % test)
+  
+  env = copy.copy(os.environ)
+  env["PYTHONPATH"] = "%s:%s" % (os.path.join(path, "python"), os.environ["PYTHONPATH"])
 
-successes = 0
-failures = []
-for np, test in tests:
-  print "Running test: %s" % test
+  cwd = os.getcwd()
+  tmppath = tempfile.mkdtemp()
+  os.chdir(tmppath)
   try:
     if not np == 1:
       proc = subprocess.Popen(("mpirun -np %i %s" % (np, test)).split(), env = env)
     else:
       proc = subprocess.Popen(("%s" % test).split(), env = env)
     proc.wait()
-  except:
-    raise Exception("Failed to run test: %s" % test)
-  if proc.returncode == 0:
-    print "Test success: %s" % test
-    successes += 1
+    if proc.returncode == 0:
+      test_success[i] = 1
+    else:
+      test_success[i] = 0
+  finally:
+    shutil.rmtree(tmppath)
+    os.chdir(cwd)
+
+  if test_success[i]:
+    sys.stdout.write("Test success: %s\n" % test)
   else:
     sys.stderr.write("Test failure: %s\n" % test)
-    failures.append(test)
+    
+  return
+
+N = max(opts.N, 0)
+if N == 0:
+  N = multiprocessing.cpu_count()
+
+test_success = multiprocessing.Array("i", len(tests))
+for i in range(len(test_success)):
+  test_success[i] = 0
+  
+if N == 1:
+  for i in range(len(tests)):
+    np, nt, test = tests[i]
+    proc = multiprocessing.Process(target = run_test, args = (i, np, test, test_success))
+    proc.start()
+    proc.join()
+else:
+  n = 0
+  procs = []
+  for i in range(len(tests)):
+    np, nt, test = tests[i]
+    if n + (np * nt) > N and len(procs) > 0:
+      while True:
+        for proc in copy.copy(procs):
+          if not proc[3].is_alive():
+            procs.remove(proc)
+            n -= proc[0] * proc[1]
+        if n + (np * nt) <= N or len(procs) == 0:
+          break
+        time.sleep(0.1)
+    proc = multiprocessing.Process(target = run_test, args = (i, np, test, test_success))
+    proc.start()
+    procs.append((np, nt, test, proc))
+    n += np * nt
+  while len(procs) > 0:
+    procs.pop()[3].join()
+  
+successes = 0
+failures = 0
+for success in test_success:
+  if success == 1:
+    successes += 1
+  else:
+    failures += 1
 print \
 """\
 ----------------------------------------------------------------------
 Summary:
 
 Successes: %i
-Failures: %i""" % (successes, len(failures))
-if len(failures) > 0:
+Failures: %i""" % (successes, failures)
+if failures > 0:
   print "Failures:"
-  for failure in failures:
-    print failure
+  for i, success in enumerate(test_success):
+    if not success == 1:
+      print tests[i][2]
   sys.exit(1)

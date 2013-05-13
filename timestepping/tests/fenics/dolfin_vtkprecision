@@ -19,14 +19,12 @@ if dolfin_version() < (1, 1, 0):
   import sys
   sys.exit(0)
 
-import os, tempfile
 from dolfin import *
 mesh = RectangleMesh(0.0, 0.0, 1.0 + 1.0e-14, 1.0 + 1.0e-14, 10, 10)
 space = FunctionSpace(mesh, "CG", 1)
 F = Function(space)
 F.assign(Constant(1.0 + 1.0e-14))
-tmppath = tempfile.mkdtemp()
-handle = File(os.path.join(tmppath, "test.pvd"))
+handle = File("dolfin_vtkprecision.pvd")
 handle << (F, 0.0)
 coords = mesh.coordinates()
 arr = F.vector().array()
@@ -34,7 +32,7 @@ print "%.17e, %.17e, %.17e" % (coords[2, 0], arr.min(), arr.max())
 
 import numpy, vtk
 reader = vtk.vtkXMLUnstructuredGridReader()
-reader.SetFileName(os.path.join(tmppath, "test000000.vtu"))
+reader.SetFileName("dolfin_vtkprecision000000.vtu")
 reader.Update()
 vtu = reader.GetOutput()
 n = vtu.GetNumberOfPoints()
@@ -44,9 +42,6 @@ coords = numpy.array([coords.GetTuple3(i) for i in range(n)])
 arr = data.GetArray("u")
 arr = numpy.array([arr.GetValue(i) for i in range(n)])
 print "%.17e, %.17e, %.17e" % (coords[2, 0], arr.min(), arr.max())
-
-import shutil
-shutil.rmtree(tmppath)
 
 comp = coords[2, 0]
 ref = (1.0 + 1.0e-14) * (2.0 / 10.0)

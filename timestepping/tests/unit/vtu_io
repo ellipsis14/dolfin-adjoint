@@ -14,17 +14,12 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import shutil
-import tempfile
-
 import numpy;  numpy.random.seed(0)
 
 from dolfin import *
 from timestepping import *
 
 mesh = RectangleMesh(0.0, 0.0, 1.0, 1.0, 10, 10)
-tmppath = tempfile.mkdtemp()
 
 for mesh, e in [(UnitIntervalMesh(10), [("CG", 1), ("CG", 2), ("CG", 3), ("DG", 1), ("DG", 2), ("DG", 3)]),
                 (UnitSquareMesh(10, 10), [("CG", 1), ("CG", 2), ("DG", 1), ("DG", 2)]),
@@ -35,12 +30,10 @@ for mesh, e in [(UnitIntervalMesh(10), [("CG", 1), ("CG", 2), ("CG", 3), ("DG", 
     F.vector().set_local(numpy.random.random(F.vector().local_size()))
     F.vector().apply("insert")
 
-    filename = os.path.join(tmppath, "test")
+    filename = "%iD_P%i_%s" % (mesh.geometry().dim(), args[1], args[0])
     write_vtu(filename, F)
     G = read_vtu(filename, space)["u"]
 
     err = (F.vector() - G.vector()).norm("linf")
-    print "%i, %s, %.17e" % (mesh.geometry().dim(), args, err)
+    print "%iD, P%i_%s: %.17e" % (mesh.geometry().dim(), args[1], args[0], err)
     assert(err == 0.0)
-
-shutil.rmtree(tmppath)
