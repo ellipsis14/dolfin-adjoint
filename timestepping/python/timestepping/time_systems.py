@@ -681,19 +681,19 @@ class AdjointModel:
   applied. This assumes that forward model data is updated externally.
 
   Constructor arguments:
-    tsystem: A TimeSystem defining the timestep equations.
+    forward: A ForwardModel defining the forward model.
     functional: A rank 0 form or a TimeFunctional defining the functional.
   """
   
-  def __init__(self, tsystem, functional = None):
-    if not isinstance(tsystem, ForwardModel):
-      raise InvalidArgumentException("tsystem must be a ForwardModel")
+  def __init__(self, forward, functional = None):
+    if not isinstance(forward, ForwardModel):
+      raise InvalidArgumentException("forward must be a ForwardModel")
 
     # Step 1: Set up the adjoint variable map
     a_map = AdjointVariableMap()
 
     # Step 2: Set up the forward variable cycle "solvers"
-    f_tfns = tsystem.tfns()
+    f_tfns = forward.tfns()
     f_as_init_solves = []
     f_as_solves = []
     # A block identity operator. In the first adjoint timestep cycle levels
@@ -716,9 +716,9 @@ class AdjointModel:
         
     # Step 3: Adjoin the final solves
 #    dolfin.info("Initialising adjoint initial solves")
-    a_initial_solves = PAAdjointSolvers(tsystem._ForwardModel__final_solves, [], a_map)
+    a_initial_solves = PAAdjointSolvers(forward._ForwardModel__final_solves, [], a_map)
 #    dolfin.info("Initialising adjoint initial cycle 1")
-    a_initial_cycle1 = PAAdjointSolvers(f_as_final_solves, tsystem._ForwardModel__final_solves, a_map)
+    a_initial_cycle1 = PAAdjointSolvers(f_as_final_solves, forward._ForwardModel__final_solves, a_map)
 #    dolfin.info("Initialising adjoint initial cycle 2")
     a_initial_cycle2 = PAAdjointSolvers(f_as_id_solves, f_as_final_solves, a_map)
 #    dolfin.info("Initialising adjoint initial cycle 3")
@@ -726,9 +726,9 @@ class AdjointModel:
 
     # Step 4: Adjoin the timestep
 #    dolfin.info("Initialising adjoint timestep cycle")
-    a_cycle = PAAdjointSolvers(f_as_solves, tsystem._ForwardModel__solves, a_map)
+    a_cycle = PAAdjointSolvers(f_as_solves, forward._ForwardModel__solves, a_map)
 #    dolfin.info("Initialising adjoint timestep")
-    a_solves = PAAdjointSolvers(tsystem._ForwardModel__solves, f_as_solves, a_map)
+    a_solves = PAAdjointSolvers(forward._ForwardModel__solves, f_as_solves, a_map)
     
     # Step 5: Adjoin the initial solves
 #    dolfin.info("Initialising adjoint final cycle")
@@ -736,9 +736,9 @@ class AdjointModel:
     # solves for all time levels. If no forward timestep "solve" is specified
     # for a given level, then we need to know the forward timestep "cycle"
     # instead.
-    f_init_dep_solves = copy.copy(tsystem._ForwardModel__solves)  
+    f_init_dep_solves = copy.copy(forward._ForwardModel__solves)  
     f_x = set()
-    for solve in tsystem._ForwardModel__solves:
+    for solve in forward._ForwardModel__solves:
       f_x.add(solve.x())
     for f_tfn in f_tfns:
       cycle_map = f_tfn.cycle_map()
@@ -747,9 +747,9 @@ class AdjointModel:
           f_init_dep_solves.append(AssignmentSolver(f_tfn[cycle_map[level]], f_tfn[level]))
     a_final_cycle = PAAdjointSolvers(f_as_init_solves, f_init_dep_solves, a_map)
 #    dolfin.info("Initialising adjoint final solves")
-    a_final_solves = PAAdjointSolvers(tsystem._ForwardModel__init_solves, f_as_init_solves, a_map)
+    a_final_solves = PAAdjointSolvers(forward._ForwardModel__init_solves, f_as_init_solves, a_map)
 
-    self.__tsystem = tsystem
+    self.__forward = forward
     self.__a_map = a_map
     self.__a_initial_solves = a_initial_solves
     self.__a_initial_cycle1 = a_initial_cycle1

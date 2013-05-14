@@ -42,8 +42,8 @@ class AdjointVariableMap:
   """
   A map between forward and adjoint variables. Indexing into the
   AdjointVariableMap with a forward Function yields an associated adjoint
-  function, and similarly indexing into the AdjointVariableMap with an adjoint
-  Function yields an associated forward function. Allocates adjoint Function s
+  Function, and similarly indexing into the AdjointVariableMap with an adjoint
+  Function yields an associated forward Function. Allocates adjoint Function s
   as required.
   """
   
