@@ -1,5 +1,6 @@
 from dolfin import *
 from dolfin_adjoint import *
+import libadjoint
 
 parameters["adjoint"]["cache_factorizations"] = True
 
