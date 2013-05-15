@@ -3,6 +3,7 @@ import solving
 import libadjoint
 import adjglobals
 import adjlinalg
+import utils
 
 class NonlinearVariationalProblem(dolfin.NonlinearVariationalProblem):
   '''This object is overloaded so that solves using this class are automatically annotated,
@@ -21,13 +22,13 @@ class NonlinearVariationalSolver(dolfin.NonlinearVariationalSolver):
     dolfin.NonlinearVariationalSolver.__init__(self, problem)
     self.problem = problem
 
-  def solve(self, annotate=True):
+  def solve(self, annotate=None):
     '''To disable the annotation, just pass :py:data:`annotate=False` to this routine, and it acts exactly like the
     Dolfin solve call. This is useful in cases where the solve is known to be irrelevant or diagnostic
     for the purposes of the adjoint computation (such as projecting fields to other function spaces
     for the purposes of visualisation).'''
-    if dolfin.parameters["adjoint"]["stop_annotating"]:
-      annotate = False
+
+    annotate = utils.to_annotate(annotate)
 
     if annotate:
       problem = self.problem
@@ -57,13 +58,13 @@ class LinearVariationalSolver(dolfin.LinearVariationalSolver):
     dolfin.LinearVariationalSolver.__init__(self, problem)
     self.problem = problem
 
-  def solve(self, annotate=True):
+  def solve(self, annotate=None):
     '''To disable the annotation, just pass :py:data:`annotate=False` to this routine, and it acts exactly like the
     Dolfin solve call. This is useful in cases where the solve is known to be irrelevant or diagnostic
     for the purposes of the adjoint computation (such as projecting fields to other function spaces
     for the purposes of visualisation).'''
-    if dolfin.parameters["adjoint"]["stop_annotating"]:
-      annotate = False
+
+    annotate = utils.to_annotate(annotate)
 
     if annotate:
       problem = self.problem
