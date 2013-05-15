@@ -66,7 +66,7 @@ if __name__ == "__main__":
     ic = project(Expression("sin(2*pi*x[0])"),  V)
     ic_copy = Function(ic)
     forward = main(ic, annotate=True)
-    forward_copy = Function(forward)
+    forward_copy = Function(forward, annotate=False)
 
     adj_html("burgers_newton_forward.html", "forward")
     adj_html("burgers_newton_adjoint.html", "adjoint")

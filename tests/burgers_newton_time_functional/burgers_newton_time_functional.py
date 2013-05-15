@@ -61,7 +61,7 @@ if __name__ == "__main__":
     ic = project(Expression("sin(2*pi*x[0])"),  V)
     ic_copy = Function(ic)
     j, forward = main(ic, annotate=True)
-    forward_copy = Function(forward)
+    forward_copy = Function(forward, annotate=False)
     ic = forward
     ic.vector()[:] = ic_copy.vector()
 

@@ -537,3 +537,13 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
   else:
     return min(convergence_order(with_gradient))
 
+def to_annotate(flag):
+  '''Should dolfin-adjoint annotate this statement or not?'''
+  if flag is None:
+    return not dolfin.parameters["adjoint"]["stop_annotating"]
+
+  if flag is True:
+    if dolfin.parameters["adjoint"]["stop_annotating"]:
+      raise AssertionError("The user insisted on annotation, but stop_annotating is True.")
+
+  return flag

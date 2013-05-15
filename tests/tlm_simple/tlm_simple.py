@@ -24,6 +24,7 @@ if __name__ == "__main__":
 
   ic = project(Expression("x[0]*(x[0]-1)*x[1]*(x[1]-1)"), V)
   soln = main(ic, annotate=True)
+  parameters["adjoint"]["stop_annotating"] = True
 
   perturbation_direction = Function(V)
   vec = perturbation_direction.vector()

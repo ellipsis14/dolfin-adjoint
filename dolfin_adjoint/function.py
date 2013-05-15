@@ -5,12 +5,13 @@ import libadjoint
 import assign
 import adjlinalg
 import adjglobals
+import utils
 
 dolfin_assign = dolfin.Function.assign
 dolfin_split  = dolfin.Function.split
 dolfin_str    = dolfin.Function.__str__
 
-def dolfin_adjoint_assign(self, other, annotate=True):
+def dolfin_adjoint_assign(self, other, annotate=None):
   '''We also need to monkeypatch the Function.assign method, as it is often used inside 
   the main time loop, and not annotating it means you get the adjoint wrong for totally
   nonobvious reasons. If anyone objects to me monkeypatching your objects, my apologies
@@ -19,12 +20,17 @@ def dolfin_adjoint_assign(self, other, annotate=True):
   if self is other:
     return
 
-  # ignore anything not a dolfin.Function
-  if not isinstance(other, dolfin.Function) or annotate is False or dolfin.parameters["adjoint"]["stop_annotating"]:
-    return dolfin_assign(self, other)
-
   # ignore anything that is an interpolation, rather than a straight assignment
   if str(self.function_space()) != str(other.function_space()):
+    return dolfin_assign(self, other)
+
+  # ignore anything not a dolfin.Function, unless the user insists
+  if not isinstance(other, dolfin.Function) and (annotate is not True):
+    return dolfin_assign(self, other)
+
+  to_annotate = utils.to_annotate(annotate)
+  # if we shouldn't annotate, just assign
+  if not to_annotate:
     return dolfin_assign(self, other)
 
   other_var = adjglobals.adj_variables[other]
@@ -40,7 +46,7 @@ def dolfin_adjoint_assign(self, other, annotate=True):
         errmsg = '''Cannot use Function.split() (yet). To adjoint this, we need functionality
         not yet present in DOLFIN. See https://bugs.launchpad.net/dolfin/+bug/891127 .
 
-        Your model may well work if you use split(func) instead of func.split().'''
+        Your model may work if you use split(func) instead of func.split().'''
         raise libadjoint.exceptions.LibadjointErrorNotImplemented(errmsg)
 
     return dolfin_assign(self, other)
@@ -83,18 +89,14 @@ class Function(dolfin.Function):
     For more details, see :doc:`the dolfin-adjoint documentation </documentation/misc>`.'''
 
   def __init__(self, *args, **kwargs):
-    annotate = False
-    annotate_in_kwargs = False
-    if 'annotate' in kwargs:
-      annotate_in_kwargs = True
-      annotate = kwargs['annotate']
-      del kwargs['annotate']
-    if dolfin.parameters["adjoint"]["stop_annotating"]:
-      annotate = False
+
+    annotate = kwargs.get("annotate", None)
+    if "annotate" in kwargs: del kwargs["annotate"]
+    to_annotate = utils.to_annotate(annotate)
 
     if "name" in kwargs:
       self.adj_name = kwargs["name"]
-      if self.adj_name in adjglobals.function_names and annotate:
+      if self.adj_name in adjglobals.function_names and to_annotate:
         dolfin.info_red("Warning: got duplicate function name %s" % self.adj_name)
       adjglobals.function_names.add(self.adj_name)
       del kwargs["name"]
@@ -102,14 +104,19 @@ class Function(dolfin.Function):
     dolfin.Function.__init__(self, *args, **kwargs)
 
     if hasattr(self, 'adj_name'):
-      self.rename(self.adj_name, self.adj_name)
+      self.rename(self.adj_name, "a Function from dolfin-adjoint")
 
-    if isinstance(args[0], dolfin.Function) and annotate:
-      other_var = adjglobals.adj_variables[args[0]]
-      if adjglobals.adjointer.variable_known(other_var) or annotate_in_kwargs:
-        assign.register_assign(self, args[0])
+    if to_annotate:
+      if not isinstance(args[0], dolfin.cpp.FunctionSpace):
+        if isinstance(args[0], dolfin.Function):
+          known = adjglobals.adjointer.variable_known(adjglobals.adj_variables[args[0]])
+        else:
+          known = True
 
-  def assign(self, other, annotate=True):
+        if known or (annotate is True):
+          assign.register_assign(self, args[0])
+
+  def assign(self, other, annotate=None):
     '''To disable the annotation, just pass :py:data:`annotate=False` to this routine, and it acts exactly like the
     Dolfin assign call.'''
 
