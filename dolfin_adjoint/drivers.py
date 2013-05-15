@@ -51,6 +51,8 @@ def compute_adjoint(functional, forget=True, ignore=[]):
         continue
 
       (adj_var, output) = adjglobals.adjointer.get_adjoint_solution(i, functional)
+      if output.data:
+        output.data.rename(str(adj_var), "a Function from dolfin-adjoint")
 
       storage = libadjoint.MemoryStorage(output)
       storage.set_overwrite(True)
@@ -72,6 +74,8 @@ def compute_tlm(parameter, forget=False):
 
   for i in range(adjglobals.adjointer.equation_count):
       (tlm_var, output) = adjglobals.adjointer.get_tlm_solution(i, parameter)
+      if output.data:
+        output.data.rename(str(tlm_var), "a Function from dolfin-adjoint")
 
       storage = libadjoint.MemoryStorage(output)
       storage.set_overwrite(True)
@@ -139,6 +143,7 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
         out = lparam[j].functional_partial_derivative(adjglobals.adjointer, J, adj_var.timestep)
         dJdparam[j] = _add(dJdparam[j], out)
 
+
     if forget is None:
       pass
     elif forget:
@@ -157,6 +162,11 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
       return proj
     else:
       return func
+
+
+  for i, parameter in enumerate(lparam):
+    if isinstance(dJdparam[i], dolfin.Function):
+      dJdparam[i].rename("d(%s)/d(%s)" % (str(J), str(parameter)), "a Function from dolfin-adjoint")
 
   if scalar:
     if project is False:
@@ -266,6 +276,9 @@ class BasicHessian(libadjoint.Matrix):
       storage.set_overwrite(True)
       adjglobals.adjointer.record_variable(soa_var, storage)
 
+    if isinstance(Hm, dolfin.Function):
+      Hm.rename("d^2(%s)/d(%s)^2" % (str(self.J), str(self.m)), "a Function from dolfin-adjoint")
+
     return Hm
 
   def action(self, x, y):
@@ -311,6 +324,7 @@ class BasicHessian(libadjoint.Matrix):
     retval = []
     for i in range(eps.ncv):
       (lamda, u) = eps.get_eps(i)
+      u.data.rename("eigenvector %s of d^2(%s)/d(%s)^2" % (i, str(self.J), str(self.m)), "a Function from dolfin-adjoint")
       retval += [(lamda, u.data)]
 
     return retval

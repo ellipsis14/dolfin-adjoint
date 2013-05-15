@@ -159,6 +159,8 @@ class ReducedFunctional(object):
         func_value = 0.
         for i in range(adjointer.equation_count):
             (fwd_var, output) = adjointer.get_forward_solution(i)
+            if isinstance(output.data, Function):
+              output.data.rename(str(fwd_var), "a Function from dolfin-adjoint")
 
             if self.replay_cb is not None:
               self.replay_cb(fwd_var, output.data, unlist(value))
