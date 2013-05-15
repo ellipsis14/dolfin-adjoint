@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Modified version of stokes.py test from dolfin-adjoint bzr trunk 513
+# Code first added: 13/02/09
 
 """
 Very stupid scheme for decoupled stationary Stokes + heat equation:

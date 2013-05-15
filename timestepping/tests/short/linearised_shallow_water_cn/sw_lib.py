@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Modified version of shallow_water test from dolfin-adjoint bzr trunk 636
+# Code first added: 13/04/26
 
 from dolfin import *
 import numpy

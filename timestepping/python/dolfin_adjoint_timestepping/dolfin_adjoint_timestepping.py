@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Based on code from dolfin-adjoint bzr trunk 640
+# Code first added: 13/05/05
 
 import copy
 import types
