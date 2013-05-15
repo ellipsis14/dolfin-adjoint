@@ -51,6 +51,7 @@ if __name__ == "__main__":
     ic = project(Expression("sin(2*pi*x[0])"),  V)
     ic_copy = Function(ic)
     forward = main(ic, annotate=True)
+    parameters["adjoint"]["stop_annotating"] = True
     forward_copy = Function(forward)
 
     ic = forward
