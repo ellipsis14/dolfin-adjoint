@@ -5,7 +5,7 @@ import libadjoint
 import adjglobals
 import adjlinalg
 
-def project(v, V=None, bcs=None, mesh=None, solver_type="cg", preconditioner_type="default", form_compiler_parameters=None, annotate=True, name=None):
+def project(v, V=None, bcs=None, mesh=None, solver_type="cg", preconditioner_type="default", form_compiler_parameters=None, annotate=True, name=None, force=False):
   '''The project call performs an equation solve, and so it too must be annotated so that the
   adjoint and tangent linear models may be constructed automatically by libadjoint.
 
@@ -17,10 +17,10 @@ def project(v, V=None, bcs=None, mesh=None, solver_type="cg", preconditioner_typ
   if dolfin.parameters["adjoint"]["stop_annotating"]:
     annotate = False
 
-  if isinstance(v, dolfin.Expression):
+  if isinstance(v, dolfin.Expression) and not force:
     annotate = False
 
-  if isinstance(v, dolfin.Constant):
+  if isinstance(v, dolfin.Constant) and not force:
     annotate = False
 
   out = dolfin.project(v, V, bcs, mesh, solver_type, preconditioner_type, form_compiler_parameters)
