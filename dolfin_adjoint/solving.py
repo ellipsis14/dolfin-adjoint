@@ -29,6 +29,7 @@ import adjglobals
 import adjlinalg
 import misc
 import lusolver
+import utils
 
 def annotate(*args, **kwargs):
   '''This routine handles all of the annotation, recording the solves as they
@@ -343,13 +344,7 @@ def solve(*args, **kwargs):
   for the purposes of visualisation).'''
 
   # First, decide if we should annotate or not.
-  to_annotate = True
-  if "annotate" in kwargs:
-    to_annotate = kwargs["annotate"]
-    del kwargs["annotate"] # so we don't pass it on to the real solver
-  if dolfin.parameters["adjoint"]["stop_annotating"]:
-    to_annotate = False
-
+  to_annotate = utils.to_annotate(kwargs.pop("annotate", None))
   if to_annotate:
     linear = annotate(*args, **kwargs)
 

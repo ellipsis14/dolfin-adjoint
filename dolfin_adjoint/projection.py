@@ -4,8 +4,9 @@ import dolfin.fem.projection
 import libadjoint
 import adjglobals
 import adjlinalg
+import utils
 
-def project(v, V=None, bcs=None, mesh=None, solver_type="cg", preconditioner_type="default", form_compiler_parameters=None, annotate=True, name=None, force=False):
+def project(v, V=None, bcs=None, mesh=None, solver_type="cg", preconditioner_type="default", form_compiler_parameters=None, annotate=None, name=None):
   '''The project call performs an equation solve, and so it too must be annotated so that the
   adjoint and tangent linear models may be constructed automatically by libadjoint.
 
@@ -14,20 +15,21 @@ def project(v, V=None, bcs=None, mesh=None, solver_type="cg", preconditioner_typ
   computation (such as projecting fields to other function spaces for the purposes of
   visualisation).'''
 
-  if dolfin.parameters["adjoint"]["stop_annotating"]:
-    annotate = False
+  to_annotate = utils.to_annotate(annotate)
 
-  if isinstance(v, dolfin.Expression) and not force:
-    annotate = False
+  if isinstance(v, dolfin.Expression) and (annotate is not True):
+    to_annotate = False
 
-  if isinstance(v, dolfin.Constant) and not force:
-    annotate = False
+  if isinstance(v, dolfin.Constant) and (annotate is not True):
+    to_annotate = False
 
   out = dolfin.project(v, V, bcs, mesh, solver_type, preconditioner_type, form_compiler_parameters)
+
   if name is not None:
     out.adj_name = name
+    out.rename(name, "a Function from dolfin-adjoint")
 
-  if annotate:
+  if to_annotate:
     # reproduce the logic from project. This probably isn't future-safe, but anyway
 
     if V is None:
