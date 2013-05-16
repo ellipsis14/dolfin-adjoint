@@ -5,6 +5,7 @@ import libadjoint
 import adjglobals
 import adjlinalg
 import misc
+import utils
 
 lu_solvers = {}
 adj_lu_solvers = {}
@@ -70,15 +71,9 @@ class LUSolver(dolfin.LUSolver):
     for the purposes of the adjoint computation (such as projecting fields to other function spaces
     for the purposes of visualisation).'''
 
-    annotate = True
-    if "annotate" in kwargs:
-      annotate = kwargs["annotate"]
-      del kwargs["annotate"]
+    to_annotate = utils.to_annotate(kwargs.pop("annotate", None))
 
-    if dolfin.parameters["adjoint"]["stop_annotating"]:
-      annotate = False
-
-    if annotate:
+    if to_annotate:
       if len(args) == 2:
         try:
           A = self.matrix.form
@@ -133,7 +128,7 @@ class LUSolver(dolfin.LUSolver):
 
     out = dolfin.LUSolver.solve(self, *args, **kwargs)
 
-    if annotate:
+    if to_annotate:
       if dolfin.parameters["adjoint"]["record_all"]:
         adjglobals.adjointer.record_variable(adjglobals.adj_variables[x], libadjoint.MemoryStorage(adjlinalg.Vector(x)))
 

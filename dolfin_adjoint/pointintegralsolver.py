@@ -5,14 +5,13 @@ import solving
 import adjlinalg
 import adjglobals
 import hashlib
+import utils
 
 if dolfin.__version__ > '1.2.0':
   class PointIntegralSolver(dolfin.PointIntegralSolver):
-    def step(self, dt, annotate=True):
+    def step(self, dt, annotate=None):
 
-      to_annotate = annotate
-      if dolfin.parameters["adjoint"]["stop_annotating"]:
-        to_annotate = False
+      to_annotate = utils.to_annotate(annotate)
 
       if to_annotate:
         scheme = self.scheme()

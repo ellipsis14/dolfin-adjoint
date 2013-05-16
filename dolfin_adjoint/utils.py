@@ -1,5 +1,4 @@
 import libadjoint
-from parameter import *
 from dolfin import info_red, info_blue, info
 import adjglobals
 import dolfin
@@ -126,6 +125,7 @@ def test_initial_condition_tlm(J, dJ, ic, seed=0.01, perturbation_direction=None
   # and check its correctness with the Taylor remainder convergence test.
   info_blue("Running Taylor remainder convergence analysis for the tangent linear model... ")
   import random
+  import parameter
 
   adj_var = adjglobals.adj_variables[ic]; adj_var.timestep = 0
   if not adjglobals.adjointer.variable_known(adj_var):
@@ -166,7 +166,7 @@ def test_initial_condition_tlm(J, dJ, ic, seed=0.01, perturbation_direction=None
 
   with_gradient = []
   for i in range(len(perturbations)):
-    param = InitialConditionParameter(ic, perturbations[i])
+    param = parameter.InitialConditionParameter(ic, perturbations[i])
     final_tlm = tlm_dolfin(param, forget=False).data
     remainder = abs(functional_values[i] - f_direct - final_tlm.vector().inner(dJ))
     with_gradient.append(remainder)
@@ -403,6 +403,7 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
 
   info_blue("Running Taylor remainder convergence test ... ")
   import random
+  import parameter
 
   def get_const(val):
     if isinstance(val, str):
@@ -423,11 +424,11 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
   # First, compute perturbation sizes.
   seed_default = 0.01
   if seed is None:
-    if isinstance(m, ScalarParameter):
+    if isinstance(m, parameter.ScalarParameter):
       seed = get_const(m.a) / 5.0
 
       if seed == 0.0: seed = 0.1
-    elif isinstance(m, InitialConditionParameter):
+    elif isinstance(m, parameter.InitialConditionParameter):
       ic = get_value(m, value)
       if len(ic.vector()) == 1: # our parameter is in R
         seed = float(ic) / 5.0
@@ -440,11 +441,11 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
 
   # Next, compute the perturbation direction.
   if perturbation_direction is None:
-    if isinstance(m, ScalarParameter):
+    if isinstance(m, parameter.ScalarParameter):
       perturbation_direction = 1
-    elif isinstance(m, ScalarParameters):
+    elif isinstance(m, parameter.ScalarParameters):
       perturbation_direction = numpy.array([get_const(x)/5.0 for x in m.v])
-    elif isinstance(m, InitialConditionParameter):
+    elif isinstance(m, parameter.InitialConditionParameter):
       ic = get_value(m, value)
       perturbation_direction = dolfin.Function(ic)
       vec = perturbation_direction.vector()
@@ -453,7 +454,7 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
     else:
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to compute a perturbation direction")
   else:
-    if isinstance(m, InitialConditionParameter):
+    if isinstance(m, parameter.InitialConditionParameter):
       ic = get_value(m, value)
 
   # So now compute the perturbations:
@@ -468,16 +469,16 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
       perturbations.append(perturbation)
 
   # And now the perturbed inputs:
-  if isinstance(m, ScalarParameter):
+  if isinstance(m, parameter.ScalarParameter):
     pinputs = [dolfin.Constant(get_const(m.a) + x) for x in perturbations]
-  elif isinstance(m, ScalarParameters):
+  elif isinstance(m, parameter.ScalarParameters):
     a = numpy.array([get_const(x) for x in m.v])
 
     def make_const(arr):
       return [dolfin.Constant(x) for x in arr]
 
     pinputs = [make_const(a + x) for x in perturbations]
-  elif isinstance(m, InitialConditionParameter):
+  elif isinstance(m, parameter.InitialConditionParameter):
     pinputs = []
     for x in perturbations:
       pinput = dolfin.Function(x)
@@ -497,15 +498,15 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
   info("Convergence orders for Taylor remainder without gradient information (should all be 1): " + str(convergence_order(no_gradient)))
 
   with_gradient = []
-  if isinstance(m, ScalarParameter):
+  if isinstance(m, parameter.ScalarParameter):
     for i in range(len(perturbations)):
       remainder = abs(functional_values[i] - Jm - dJdm*perturbations[i])
       with_gradient.append(remainder)
-  elif isinstance(m, ScalarParameters):
+  elif isinstance(m, parameter.ScalarParameters):
     for i in range(len(perturbations)):
       remainder = abs(functional_values[i] - Jm - numpy.dot(dJdm, perturbations[i]))
       with_gradient.append(remainder)
-  elif isinstance(m, InitialConditionParameter):
+  elif isinstance(m, parameter.InitialConditionParameter):
     for i in range(len(perturbations)):
       remainder = abs(functional_values[i] - Jm - dJdm.vector().inner(perturbations[i].vector()))
       with_gradient.append(remainder)
@@ -518,15 +519,15 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
 
   if HJm is not None:
     with_hessian = []
-    if isinstance(m, ScalarParameter):
+    if isinstance(m, parameter.ScalarParameter):
       for i in range(len(perturbations)):
         remainder = abs(functional_values[i] - Jm - dJdm*perturbations[i] - 0.5*perturbations[i]*HJm(perturbations[i]))
         with_hessian.append(remainder)
-    elif isinstance(m, ScalarParameters):
+    elif isinstance(m, parameter.ScalarParameters):
       for i in range(len(perturbations)):
         remainder = abs(functional_values[i] - Jm - numpy.dot(dJdm, perturbations[i]) - 0.5*numpy.dot(perturbations[i], HJm(perturbations[i])))
         with_hessian.append(remainder)
-    elif isinstance(m, InitialConditionParameter):
+    elif isinstance(m, parameter.InitialConditionParameter):
       for i in range(len(perturbations)):
         remainder = abs(functional_values[i] - Jm - dJdm.vector().inner(perturbations[i].vector()) - 0.5*perturbations[i].vector().inner(HJm(perturbations[i]).vector()))
         with_hessian.append(remainder)

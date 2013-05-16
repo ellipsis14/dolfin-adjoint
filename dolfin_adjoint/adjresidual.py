@@ -1,4 +1,3 @@
-from adjrhs import adj_get_forward_equation
 import adjlinalg
 import adjglobals
 
@@ -11,6 +10,7 @@ import libadjoint
 from dolfin import info_red, info_blue
 
 def get_residual(i):
+    from adjrhs import adj_get_forward_equation
     (fwd_var, lhs, rhs) = adj_get_forward_equation(i)
 
     if isinstance(lhs, adjlinalg.IdentityMatrix):
