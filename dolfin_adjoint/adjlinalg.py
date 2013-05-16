@@ -56,6 +56,7 @@ class Vector(libadjoint.Vector):
       self.nonlinear_form = x.nonlinear_form
       self.nonlinear_u = x.nonlinear_u
       self.nonlinear_bcs = x.nonlinear_bcs
+      self.nonlinear_J = x.nonlinear_J
 
     if x.zero:
       return
@@ -272,7 +273,8 @@ class Matrix(libadjoint.Matrix):
         if hasattr(b, 'nonlinear_form'): # was a nonlinear solve
           x.data.vector()[:] = b.nonlinear_u.vector()
           F = dolfin.replace(b.nonlinear_form, {b.nonlinear_u: x.data})
-          dolfin.fem.solving.solve(F == 0, x.data, b.nonlinear_bcs, solver_parameters=self.solver_parameters)
+          J = dolfin.replace(b.nonlinear_J, {b.nonlinear_u: x.data})
+          dolfin.fem.solving.solve(F == 0, x.data, b.nonlinear_bcs, J=J, solver_parameters=self.solver_parameters)
         else:
           assembled_lhs = dolfin.assemble(self.data)
           [bc.apply(assembled_lhs) for bc in bcs]

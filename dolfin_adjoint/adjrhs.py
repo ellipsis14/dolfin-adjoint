@@ -143,7 +143,7 @@ class NonlinearRHS(RHS):
     self.bcs = bcs
     self.mass = mass
     self.solver_parameters = solver_parameters
-    self.J = J
+    self.J = J or dolfin.derivative(F, u)
 
     # We want to mark that the RHS term /also/ depends on
     # the previous value of u, as that's what we need to initialise
@@ -184,13 +184,16 @@ class NonlinearRHS(RHS):
           replace_map[self.coeffs[i]] = values[j].data
 
     current_F    = dolfin.replace(self.F, replace_map)
+    current_J    = dolfin.replace(self.J, replace_map)
     u = dolfin.Function(ic)
     current_F    = dolfin.replace(current_F, {self.u: u})
+    current_J    = dolfin.replace(current_J, {self.u: u})
 
     vec = adjlinalg.Vector(None)
     vec.nonlinear_form = current_F
     vec.nonlinear_u = u
     vec.nonlinear_bcs = self.bcs
+    vec.nonlinear_J = current_J
 
     return vec
 
