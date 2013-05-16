@@ -4,8 +4,9 @@ import libadjoint
 import ufl
 import adjglobals
 import adjlinalg
+import utils
 
-def interpolate(v, V, annotate=True, name=None):
+def interpolate(v, V, annotate=None, name=None):
   '''The interpolate call changes Function data, and so it too must be annotated so that the
   adjoint and tangent linear models may be constructed automatically by libadjoint.
 
@@ -18,10 +19,9 @@ def interpolate(v, V, annotate=True, name=None):
   if name is not None:
     out.adj_name = name
 
-  if dolfin.parameters["adjoint"]["stop_annotating"]:
-    annotate = False
+  to_annotate = utils.to_annotate(annotate)
 
-  if isinstance(v, dolfin.Function) and annotate:
+  if isinstance(v, dolfin.Function) and to_annotate:
     rhsdep = adjglobals.adj_variables[v]
     if adjglobals.adjointer.variable_known(rhsdep):
       block_name = "Identity: %s" % str(V)

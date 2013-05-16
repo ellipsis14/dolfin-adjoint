@@ -19,12 +19,17 @@ def main(ic, annotate=False):
     v = TestFunction(V)
 
     mass = assemble(inner(u, v) * dx)
+    if annotate: assert hasattr(mass, 'form')
+
     advec = assemble(u_*u.dx(0)*v * dx)
+    if annotate: assert hasattr(advec, 'form')
+
     rhs = assemble(inner(u_, v) * dx)
+    if annotate: assert hasattr(rhs, 'form')
 
     L = mass + advec
 
-    assert hasattr(L, 'form')
+    if annotate: assert hasattr(L, 'form')
     solve(L, u_.vector(), rhs, 'lu', annotate=annotate)
 
     return u_

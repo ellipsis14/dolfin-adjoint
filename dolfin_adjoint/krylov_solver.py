@@ -5,6 +5,7 @@ import libadjoint
 import adjlinalg
 import adjglobals
 import misc
+import utils
 
 class KrylovSolver(dolfin.KrylovSolver):
   '''This object is overloaded so that solves using this class are automatically annotated,
@@ -36,13 +37,7 @@ class KrylovSolver(dolfin.KrylovSolver):
     for the purposes of the adjoint computation (such as projecting fields to other function spaces
     for the purposes of visualisation).'''
 
-    to_annotate = True
-    if "annotate" in kwargs:
-      to_annotate = kwargs["annotate"]
-      del kwargs["annotate"] # so we don't pass it on to the real solver
-
-    if dolfin.parameters["adjoint"]["stop_annotating"]:
-      to_annotate = False
+    to_annotate = utils.to_annotate(kwargs.pop("annotate", None))
 
     if to_annotate:
       if len(args) == 3:

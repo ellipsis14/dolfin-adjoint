@@ -20,13 +20,14 @@ def dolfin_adjoint_assign(self, other, annotate=None):
   if self is other:
     return
 
-  # ignore anything that is an interpolation, rather than a straight assignment
-  if str(self.function_space()) != str(other.function_space()):
-    return dolfin_assign(self, other)
-
   # ignore anything not a dolfin.Function, unless the user insists
   if not isinstance(other, dolfin.Function) and (annotate is not True):
     return dolfin_assign(self, other)
+
+  # ignore anything that is an interpolation, rather than a straight assignment
+  if hasattr(self, "function_space") and hasattr(other, "function_space"):
+    if str(self.function_space()) != str(other.function_space()):
+      return dolfin_assign(self, other)
 
   to_annotate = utils.to_annotate(annotate)
   # if we shouldn't annotate, just assign
@@ -90,8 +91,7 @@ class Function(dolfin.Function):
 
   def __init__(self, *args, **kwargs):
 
-    annotate = kwargs.get("annotate", None)
-    if "annotate" in kwargs: del kwargs["annotate"]
+    annotate = kwargs.pop("annotate", None)
     to_annotate = utils.to_annotate(annotate)
 
     if "name" in kwargs:

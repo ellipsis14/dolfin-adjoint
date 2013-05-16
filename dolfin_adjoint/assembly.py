@@ -1,5 +1,6 @@
 import dolfin
 import copy
+import utils
 
 dolfin_assemble = dolfin.assemble
 def assemble(*args, **kwargs):
@@ -10,10 +11,7 @@ def assemble(*args, **kwargs):
   """
   form = args[0]
 
-  to_annotate = True
-  if "annotate" in kwargs:
-    to_annotate = kwargs["annotate"]
-    del kwargs["annotate"] # so we don't pass it on to the real solver
+  to_annotate = utils.to_annotate(kwargs.pop("annotate", None))
 
   output = dolfin_assemble(*args, **kwargs)
   if not isinstance(output, float) and to_annotate:
@@ -68,10 +66,14 @@ def assemble_system(*args, **kwargs):
     bcs = [bcs]
 
   (lhs_out, rhs_out) = dolfin.assemble_system(*args, **kwargs)
-  lhs_out.form = lhs
-  lhs_out.bcs = bcs
-  lhs_out.assemble_system = True
-  rhs_out.form = rhs
-  rhs_out.bcs = bcs
-  rhs_out.assemble_system = True
+
+  to_annotate = utils.to_annotate(kwargs.pop("annotate", None))
+  if to_annotate:
+    lhs_out.form = lhs
+    lhs_out.bcs = bcs
+    lhs_out.assemble_system = True
+    rhs_out.form = rhs
+    rhs_out.bcs = bcs
+    rhs_out.assemble_system = True
+
   return (lhs_out, rhs_out)
