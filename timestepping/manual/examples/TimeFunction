@@ -1,0 +1,38 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from dolfin import *
+from timestepping import *
+
+# Define a simple structured mesh on the unit square
+mesh = UnitSquareMesh(10, 10)
+# P1 function space
+space_p1 = FunctionSpace(mesh, "CG", 1)
+# P2_{DG} function space
+space_p2dg = FunctionSpace(mesh, "DG", 2)
+
+# Define two different sets of time levels
+levels_1 = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+levels_2 = TimeLevels(levels = [n], cycle_map = {},
+  last_past_level = n - 1)
+
+# Define time dependent functions on the levels
+F1 = TimeFunction(levels_1, space_p1, name = "F1")
+F2 = TimeFunction(levels_2, space_p2dg, name = "F2")
+
+# An equation involving the two time dependent functions
+test_p1 = TestFunction(space_p1)
+eq = inner(test_p1, F1[n + 1]) * dx == inner(test_p1, F2[n]) * dx

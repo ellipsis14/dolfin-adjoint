@@ -1,0 +1,305 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2011-2012 by Imperial College London
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+Multi-layer quasi-geostrophic model with a configuration based on the PEQUOD
+finite difference model. See, for example:
+  Karabasov, Berloff and Goloviznin, Ocean Modelling, 2009, pp. 155 - 168
+  Marshall, Maddison and Berloff, Journal of Physical Oceanography, 2012,
+    pp. 539 - 557
+"""
+
+from dolfin import *
+from timestepping import *
+
+import numpy
+
+Constant = StaticConstant
+DirichletBC = StaticDirichletBC
+
+# Physical parameters
+L     = 3840.0e5
+beta  = Constant(2.0e-13)
+A     = 0.9
+B     = 0.2
+tau0  = Constant(0.8)
+nu    = Constant(100.0e4)
+r     = Constant(4.0e-8)
+alpha = Constant(120.0e5)
+# Stratification
+H = [Constant(0.25e5), Constant(0.75e5), Constant(3.0e5)]
+# Stratification parameters output by PEQUOD, yielding deformation radii of
+# 40 km and 23 km
+s = [(None, Constant(0.11861888862549392E-012)), \
+     (Constant(0.39539629541831307E-013), Constant(0.74701918925497074E-013)), \
+     (Constant(0.18675479731374269E-013), None)]
+# Discretisation parameters
+layers = len(H)
+ngrid  = 128
+dt = Constant(3600.0)
+mtime  = float(dt) * 5.0
+nnt    = int(round(mtime / float(dt)) + 0.5)
+
+lu_solver = {"linear_solver":"lu"}
+
+# Non-dimensionalisation
+scale = L
+def Scale(p, s):
+  return p.assign(float(p) / s)
+L = 1.0
+for i in range(layers):
+  Scale(H[i], scale)
+Scale(beta,   1.0 / (scale ** 2))
+Scale(tau0,   (scale ** 2) / (scale ** 2))
+Scale(nu,     (scale ** 2) / scale)
+Scale(r,      1.0 / scale)
+Scale(alpha,  scale)
+if layers > 1:
+  Scale(s[0][1],  1.0 / (scale ** 2))
+  Scale(s[-1][0], 1.0 / (scale ** 2))
+  for i in range(1, layers - 1):
+    Scale(s[i][0], 1.0 / (scale ** 2))
+    Scale(s[i][1], 1.0 / (scale ** 2))
+Scale(dt, scale)
+mtime /= scale
+
+# Wind forcing
+class Wind(Expression):
+  def eval(self, value, x):
+    # PEQUOD wind forcing profile
+    lL = L / 2.0
+    xVal = x[0] - lL
+    yMid = B * xVal
+    yVal = x[1] - lL
+    if yVal < yMid:
+      ret = -numpy.pi * (1.0 / lL) * A * numpy.sin(numpy.pi * (lL + yVal) / (lL + yMid))
+    else:
+      ret = numpy.pi * (1.0 / lL) * (1.0 / A) * numpy.sin(numpy.pi * (yVal - yMid) / (lL - yMid))
+    value[:] = ret
+    return
+  def value_shape(self):
+    return tuple()
+wind = Wind()
+# Stratification
+smat = numpy.zeros((layers, layers))
+if layers > 1:
+  smat[0, 0]   = -float(s[0][1])
+  smat[0, 1]   = +float(s[0][1])
+  smat[-1, -2] = +float(s[-1][0])
+  smat[-1, -1] = -float(s[-1][0])
+  for i in range(1, layers - 1):
+    smat[i, i - 1] = +float(s[i][0])
+    smat[i, i]     = -(float(s[i][0]) + float(s[i][1]))
+    smat[i, i + 1] = +float(s[i][1])
+ss, modes_to_z = numpy.linalg.eig(smat)
+z_to_modes = numpy.linalg.inv(modes_to_z)
+blayer = 0;  mss = abs(ss[0])
+for i in range(1, len(ss)):
+  if abs(ss[i]) < mss:
+      blayer = i
+      mss = abs(ss[i])
+assert(mss < 2.0e-13)
+ss = [Constant(ss[i]) for i in range(layers)]
+
+mesh   = RectangleMesh(0.0, 0.0, L, L, ngrid, ngrid)
+nm     = FacetNormal(mesh)
+space  = FunctionSpace(mesh, "CG", 1)
+cspace = FunctionSpace(mesh, "R",  0)
+test, trial = TestFunction(space), TrialFunction(space)
+ctest, ctrial = TestFunction(cspace), TrialFunction(cspace)
+
+levels      = TimeLevels(levels = [n - 2, n - 1, n, n + 1], cycle_map = {n - 2:n - 1, n - 1:n, n:n + 1})
+levels_nc   = TimeLevels(levels = [n - 2, n - 1, n, n + 1], cycle_map = {})
+levels_dqdt = TimeLevels(levels = [n - 2, n - 1, n], cycle_map = {n - 2:n - 1, n - 1:n}, last_past_level = n - 1)
+
+# Fields
+q      = [TimeFunction(levels,      space, name = "q_%i" % (i + 1)) for i in range(layers)]
+q_i    = [TimeFunction(levels_nc,   space, name = "q_i_%i" % (i + 1)) for i in range(layers)]
+dqdt   = [TimeFunction(levels_dqdt, space, name = "dqdt_%i" % (i + 1)) for i in range(layers)]
+rel    = [TimeFunction(levels,      space, name = "rel_%i" % (i + 1)) for i in range(layers)]
+psi    = [TimeFunction(levels,      space, name = "psi_%i" % (i + 1)) for i in range(layers)]
+zeta_i = [TimeFunction(levels_nc,   space, name = "zeta_i_%i" % (i + 1)) for i in range(layers)]
+zeta_m = [TimeFunction(levels_nc,   space, name = "zeta_m_%i" % (i + 1)) for i in range(layers)]
+psi_m  = [TimeFunction(levels_nc,   space, name = "psi_m_%i" % (i + 1)) for i in range(layers)]
+psi0   = [TimeFunction(levels_nc,   space, name = "psi0_%i" % (i + 1)) for i in range(layers)]
+psi1   = []
+for i in range(layers):
+  if i == blayer:
+    psi1.append(None)
+  else:
+    psi1.append(StaticFunction(space, name = "psi1_%i" % (i + 1)))
+c      = [TimeFunction(levels_nc,   cspace, name = "c_%i" % (i + 1)) for i in range(layers)]
+beta_y = StaticFunction(space, name = "beta_y")
+q_wind = StaticFunction(space, name = "q_wind")
+
+# Boundary conditions
+bc_zero = DirichletBC(space, 0.0, "on_boundary")
+bc_one  = DirichletBC(space, 1.0, "on_boundary")
+
+beta_y.interpolate(Expression("beta * x[1]", beta = float(beta)))
+pa_solve(inner(test, trial) * dx == inner(test, (1.0 / H[0]) * Wind()) * dx, q_wind, solver_parameters = lu_solver)
+for i in range(layers):
+  if i == blayer:
+#    a = inner(grad(test), grad(trial)) * dx - (test * dot(grad(trial), nm)) * ds
+    pass
+  else:
+    a = (inner(grad(test), grad(trial)) - ss[i] * inner(test, trial)) * dx  - (test * dot(grad(trial), nm)) * ds
+    pa_solve(a == inner(test, Constant(0.0)) * dx, \
+      psi1[i], bc_one, solver_parameters = lu_solver)
+
+# System equations
+system = TimeSystem()
+
+def add_pv_inversion(n):
+  for i in range(layers):
+    system.add_solve(LinearCombination((1.0, q_i[i][n]), (-1.0, beta_y)), zeta_i[i][n])
+    system.add_solve(LinearCombination(*[(z_to_modes[i][j], zeta_i[j][n]) for j in range(layers)]), zeta_m[i][n])
+    if i == blayer:
+      system.add_solve(inner(grad(test), grad(trial)) * dx - (test * dot(grad(trial), nm)) * ds == -inner(test, zeta_m[i][n]) * dx, \
+        psi_m[i][n], bc_zero, solver_parameters = lu_solver)
+    else:
+      system.add_solve((inner(grad(test), grad(trial)) - ss[i] * inner(test, trial)) * dx - (test * dot(grad(trial), nm)) * ds == -inner(test, zeta_m[i][n]) * dx, \
+        psi0[i][n], bc_zero, solver_parameters = lu_solver)
+      system.add_solve(inner(ctest, psi1[i] * ctrial) * dx == -inner(ctest, psi0[i][n]) * dx,
+        c[i][n], solver_parameters = lu_solver)
+      system.add_solve(psi0[i][n] + c[i][n] * psi1[i], psi_m[i][n])
+    system.add_solve(LinearCombination(*[(modes_to_z[i][j], psi_m[j][n]) for j in range(layers)]), psi[i][n])
+
+  return
+
+def add_rel_solve(n):
+  for i in range(layers):
+    system.add_solve(inner(test, trial) * dx - alpha * test * trial * ds == -inner(grad(test), grad(psi[i][n])) * dx,
+      rel[i][n], solver_parameters = lu_solver)
+
+  return
+
+def add_pv_update(n):
+  for i in range(layers):
+    if i > 0:
+      if i < layers - 1:
+        system.add_solve(LinearCombination((1.0, rel[i][n]), (1.0, beta_y), (s[i][0], psi[i - 1][n]), (-s[i][0] - s[i][1], psi[i][n]), (s[i][1], psi[i + 1][n])), q[i][n])
+      else:
+        system.add_solve(LinearCombination((1.0, rel[i][n]), (1.0, beta_y), (s[i][0], psi[i - 1][n]), (-s[i][0], psi[i][n])), q[i][n])
+    else:
+      system.add_solve(LinearCombination((1.0, rel[i][n]), (1.0, beta_y), (-s[i][1], psi[i][n]), (s[i][1], psi[i + 1][n])), q[i][n])
+
+  return
+
+def add_dqdt_solve(n):
+  for i in range(layers):
+    gradPsi = grad(psi[i][n])
+    rhs = inner(grad(test), as_vector([-gradPsi[1], gradPsi[0]]) * q[i][n]) * dx \
+        - nu * inner(grad(test), grad(rel[i][n])) * dx
+    if i == 0:
+      rhs += inner(test, tau0 * q_wind) * dx
+    if i == layers - 1:
+      rhs += - r * inner(test, rel[i][n]) * dx
+    system.add_solve(inner(test, trial) * dx == rhs, dqdt[i][n], solver_parameters = lu_solver)
+
+  return
+
+# Set up the model
+for i in range(layers):
+  system.add_solve(beta_y, q_i[i][-2])
+add_pv_inversion(-2)
+add_rel_solve(-2)
+add_pv_update(-2)
+add_dqdt_solve(-2)
+
+for i in range(layers):
+  system.add_solve(LinearCombination((dt, dqdt[i][-2]),
+                                     (1.0, q[i][-2])), q_i[i][-1])
+add_pv_inversion(-1)
+add_rel_solve(-1)
+add_pv_update(-1)
+add_dqdt_solve(-1)
+
+for i in range(layers):
+  system.add_solve(LinearCombination((1.5 * dt, dqdt[i][-1]),
+                                     (-0.5 * dt, dqdt[i][-2]),
+                                     (1.0, q[i][-1])), q_i[i][0])
+add_pv_inversion(0)
+add_rel_solve(0)
+add_pv_update(0)
+
+add_dqdt_solve(n)
+for i in range(layers):
+  system.add_solve(LinearCombination(((23.0 / 12.0) * dt, dqdt[i][n]),
+                                     ((-4.0 / 3.0) * dt, dqdt[i][n - 1]),
+                                     ((5.0 / 12.0) * dt, dqdt[i][n - 2]),
+                                     (1.0, q[i][n])), q_i[i][n + 1])
+add_pv_inversion(n + 1)
+add_rel_solve(n + 1)
+add_pv_update(n + 1)
+
+system = system.assemble(adjoint = True)
+
+def check(f, ref, tol, scale = None):
+  v = f.vector().norm("l2")
+  if not scale is None:
+    v *= scale
+  err = abs(v - ref)
+  print "%.17e %.17e %.17e" % (v, ref, err)
+  assert(err < tol)
+  return
+
+check(q[0][-2], 2.20073680358033627e+06, 8.0e-9)
+check(q[1][-2], 2.20073680358033627e+06, 8.0e-9)
+check(q[2][-2], 2.20073680358033627e+06, 8.0e-9)
+check(q[0][-1], 2.20076449380046502e+06, 8.0e-9)
+check(q[1][-1], 2.20073797596434690e+06, 2.0e-8)
+check(q[2][-1], 2.20073726492761029e+06, 1.0e-8)
+check(q[0][0], 2.20079218441609666e+06, 9.0e-9)
+check(q[1][0], 2.20073914890155755e+06, 8.0e-9)
+check(q[2][0], 2.20073772634891700e+06, 7.0e-9)
+
+t = 2.0 * float(dt)
+c = 0
+while t < mtime:
+  system.timestep()
+  t += float(dt)
+  c += 1
+#  print t * scale / (3600.0 * 24.0)
+  if c == 1:
+    check(q[0][n], 2.20081987591721490e+06, 9.0e-9)
+    check(q[1][n], 2.20074032217920711e+06, 7.0e-9)
+    check(q[2][n], 2.20073818778413581e+06, 8.0e-9)
+  elif c == 2:
+    check(q[0][n], 2.20084756830502208e+06, 2.0e-8)
+    check(q[1][n], 2.20074149579874752e+06, 8.0e-9)
+    check(q[2][n], 2.20073864923472283e+06, 8.0e-9)
+
+system.finalise()
+
+system.verify_checkpoints()
+
+gradPsi = grad(psi[2][N])
+system.set_functional(0.5 * dot(gradPsi, gradPsi) * dx)
+J = system.compute_functional()
+g = system.compute_gradient([tau0, beta_y, alpha])
+
+assembly_cache.info()
+
+orders = system.taylor_test(tau0, J = J, grad = g[0])
+assert((orders > 1.99).all())
+
+orders = system.taylor_test(beta_y, J = J, grad = g[1])
+assert((orders > 1.99).all())
+
+orders = system.taylor_test(alpha, J = J, grad = g[2], fact = 2.5e-3)
+assert((orders > 1.94).all())

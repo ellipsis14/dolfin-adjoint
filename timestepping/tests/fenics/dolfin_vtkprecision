@@ -1,0 +1,68 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from timestepping import *
+if dolfin_version() < (1, 1, 0):
+  import sys
+  sys.exit(0)
+
+from dolfin import *
+mesh = RectangleMesh(0.0, 0.0, 1.0 + 1.0e-14, 1.0 + 1.0e-14, 10, 10)
+space = FunctionSpace(mesh, "CG", 1)
+F = Function(space)
+F.assign(Constant(1.0 + 1.0e-14))
+handle = File("dolfin_vtkprecision.pvd")
+handle << (F, 0.0)
+coords = mesh.coordinates()
+arr = F.vector().array()
+print "%.17e, %.17e, %.17e" % (coords[2, 0], arr.min(), arr.max())
+
+import numpy, vtk
+reader = vtk.vtkXMLUnstructuredGridReader()
+reader.SetFileName("dolfin_vtkprecision000000.vtu")
+reader.Update()
+vtu = reader.GetOutput()
+n = vtu.GetNumberOfPoints()
+data = vtu.GetPointData()
+coords = vtu.GetPoints().GetData()
+coords = numpy.array([coords.GetTuple3(i) for i in range(n)])
+arr = data.GetArray("u")
+arr = numpy.array([arr.GetValue(i) for i in range(n)])
+print "%.17e, %.17e, %.17e" % (coords[2, 0], arr.min(), arr.max())
+
+comp = coords[2, 0]
+ref = (1.0 + 1.0e-14) * (2.0 / 10.0)
+err = abs(comp - ref)
+print "%.17e" % comp
+print "%.17e" % ref
+print "%.17e" % err
+assert(err == 0.0)
+
+comp = arr.min()
+ref = 1.0 + 1.0e-14
+err = abs(comp - ref)
+print "%.17e" % comp
+print "%.17e" % ref
+print "%.17e" % err
+assert(err == 0.0)
+
+comp = arr.max()
+ref = 1.0 + 1.0e-14
+err = abs(comp - ref)
+print "%.17e" % comp
+print "%.17e" % ref
+print "%.17e" % err
+assert(err == 0.0)

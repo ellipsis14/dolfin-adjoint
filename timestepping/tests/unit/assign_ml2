@@ -1,0 +1,50 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from dolfin import *
+from timestepping import *
+
+mesh = UnitIntervalMesh(1)
+space = FunctionSpace(mesh, "R", 0)
+test, trial = TestFunction(space), TrialFunction(space)
+
+ic = StaticFunction(space, name = "initial_condition")
+ic.assign(Constant(1.0))
+
+system = TimeSystem()
+levels = TimeLevels(levels = [n - 1, n, n + 1], cycle_map = {n - 1:n, n:n + 1})
+u = TimeFunction(levels, space, name = "u")
+  
+system.add_solve(ic, u[-1])
+system.add_solve(ic, u[0])
+system.add_solve(u[n - 1], u[n + 1])
+
+system = system.assemble(adjoint = True)
+system.timestep()
+system.timestep()
+system.finalise()
+
+print u[N].vector().array()
+
+system.verify_checkpoints()
+
+system.set_functional(u[N] * dx)
+grad = system.compute_gradient(ic)
+
+err = abs(grad.array()[0] - 1.0)
+print grad.array()[0], err
+
+assert(err < 1.0e-16)

@@ -1,0 +1,39 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import numpy;  numpy.random.seed(0)
+
+from dolfin import *
+from timestepping import *
+
+mesh = RectangleMesh(0.0, 0.0, 1.0, 1.0, 10, 10)
+
+for mesh, e in [(UnitIntervalMesh(10), [("CG", 1), ("CG", 2), ("CG", 3), ("DG", 1), ("DG", 2), ("DG", 3)]),
+                (UnitSquareMesh(10, 10), [("CG", 1), ("CG", 2), ("DG", 1), ("DG", 2)]),
+                (UnitCubeMesh(10, 10, 10), [("CG", 1), ("CG", 2), ("DG", 1), ("DG", 2)])]:
+  for args in e:
+    space  = FunctionSpace(mesh, *args)
+    F = Function(space)
+    F.vector().set_local(numpy.random.random(F.vector().local_size()))
+    F.vector().apply("insert")
+
+    filename = "%iD_P%i_%s" % (mesh.geometry().dim(), args[1], args[0])
+    write_vtu(filename, F)
+    G = read_vtu(filename, space)["u"]
+
+    err = (F.vector() - G.vector()).norm("linf")
+    print "%iD, P%i_%s: %.17e" % (mesh.geometry().dim(), args[1], args[0], err)
+    assert(err == 0.0)

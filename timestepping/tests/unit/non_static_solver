@@ -1,0 +1,73 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from dolfin import *
+from timestepping import *
+
+mesh = UnitIntervalMesh(10)
+
+space1 = FunctionSpace(mesh, "CG", 1)
+test1, trial1 = TestFunction(space1), TrialFunction(space1)
+
+space2 = FunctionSpace(mesh, "CG", 2)
+test2, trial2 = TestFunction(space2), TrialFunction(space2)
+
+form1 = inner(test1, trial1) * dx
+form2 = inner(test2, trial2) * dx
+
+solver1 = solver_cache.solver(form1, {"linear_solver":"lu"}, static = False)
+solver2 = solver_cache.solver(form2, {"linear_solver":"lu"}, static = False)
+
+F1 = Function(space1)
+F2 = Function(space2)
+
+solver1.set_operator(assemble(form1))
+solver1.solve(F1.vector(), assemble(inner(test1, Constant(1.0)) * dx))
+
+comp = F1.vector().min()
+ref = 1.0
+err = abs(comp - ref)
+print "%.17e" % comp
+print "%.17e" % ref
+print "%.17e" % err
+assert(err < 2.0e-15)
+
+comp = F1.vector().max()
+ref = 1.0
+err = abs(comp - ref)
+print "%.17e" % comp
+print "%.17e" % ref
+print "%.17e" % err
+assert(err < 3.0e-15)
+
+solver2.set_operator(assemble(form2))
+solver2.solve(F2.vector(), assemble(inner(test2, Constant(2.0)) * dx))
+
+comp = F2.vector().min()
+ref = 2.0
+err = abs(comp - ref)
+print "%.17e" % comp
+print "%.17e" % ref
+print "%.17e" % err
+assert(err < 7.0e-15)
+
+comp = F2.vector().max()
+ref = 2.0
+err = abs(comp - ref)
+print "%.17e" % comp
+print "%.17e" % ref
+print "%.17e" % err
+assert(err < 2.0e-14)

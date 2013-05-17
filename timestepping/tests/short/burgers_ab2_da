@@ -1,0 +1,113 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2011-2012 by Imperial College London
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Based on burgers_newton.py test from dolfin-adjoint
+# Code first added: 12/10/25
+
+from dolfin import *
+from dolfin_adjoint_timestepping import *
+
+import numpy
+
+if "reorder_dofs_serial" in parameters:
+  parameters["reorder_dofs_serial"] = False
+
+ngrid = 30
+nu = StaticConstant(0.0001)
+dt = StaticConstant(0.01 / ngrid)
+t_end = 0.2
+
+mesh = UnitIntervalMesh(ngrid)
+space = FunctionSpace(mesh, "CG", 2)
+test, trial = TestFunction(space), TrialFunction(space)
+
+ic = StaticFunction(space, name = "initial_condition")
+ic.assign(project(Expression("sin(2.0 * pi * x[0])"), space))
+
+system = TimeSystem()
+levels   = TimeLevels(levels = [n - 1, n, n + 1], cycle_map = {n - 1:n, n:n + 1})
+levels_F = TimeLevels(levels = [n - 1, n], cycle_map = {n - 1:n}, last_past_level = n - 1)
+u = TimeFunction(levels,   space, name = "u")
+F = TimeFunction(levels_F, space, name = "F")
+def rhs(n):
+  return - dt * (inner(test, dot(as_vector([u[n]]), grad(u[n]))) + nu * inner(grad(test), grad(u[n]))) * dx
+def add_F_solve(n):
+  system.add_solve(inner(test, trial) * dx == rhs(n),
+    F[n],
+    StaticDirichletBC(space, 0.0, "on_boundary"), solver_parameters = {"linear_solver":"lu"})
+  return
+  
+system.add_solve(ic, u[-1])
+add_F_solve(-1)
+system.add_solve(inner(test, trial) * dx == inner(test, u[-1]) * dx + inner(test, F[-1]) * dx,
+  u[0],
+  StaticDirichletBC(space, 0.0, "on_boundary"), solver_parameters = {"linear_solver":"lu"})
+add_F_solve(n)
+system.add_solve(LinearCombination((1.5, F[n]), (-0.5, F[n - 1]), (1.0, u[n])), u[n + 1])
+
+system = system.assemble(adjoint = True, disk_period = 10)
+t = float(dt)
+while t <= t_end:
+  system.timestep()
+  t += float(dt)
+system.finalise()
+parameters["adjoint"]["stop_annotating"] = True
+
+dolfin_adjoint_solution = numpy.array(map(float, """0.00000000e+00   9.17947410e-02   1.83580878e-01   2.73568984e-01
+   3.60664714e-01   4.41808790e-01   5.12623599e-01   5.67286606e-01
+   6.00105334e-01   6.07379379e-01   5.88668923e-01   5.46203053e-01
+   4.82330634e-01   3.95044447e-01   2.67915575e-01  -5.24775662e-10
+  -2.67915575e-01  -3.95044445e-01  -4.82330624e-01  -5.46203026e-01
+  -5.88668864e-01  -6.07379286e-01  -6.00105163e-01  -5.67286483e-01
+  -5.12623827e-01  -4.41809500e-01  -3.60664647e-01  -2.73569079e-01
+  -1.83581574e-01  -9.17943236e-02   0.00000000e+00   4.66673626e-02
+   1.39351894e-01   2.31799208e-01   3.23907944e-01   4.16035551e-01
+   5.09314855e-01   6.05469154e-01   7.06436839e-01   8.13233073e-01
+   9.24880779e-01   1.03789579e+00   1.14651890e+00   1.24294773e+00
+   1.31600207e+00   1.34355585e+00  -1.34355585e+00  -1.31600207e+00
+  -1.24294773e+00  -1.14651888e+00  -1.03789575e+00  -9.24880705e-01
+  -8.13232926e-01  -7.06436656e-01  -6.05469133e-01  -5.09315381e-01
+  -4.16035982e-01  -3.23907692e-01  -2.31799841e-01  -1.39351895e-01
+  -4.66670316e-02""".split()))
+err = abs(u[N].vector().array() - dolfin_adjoint_solution).max()
+print u[N].vector().array(), err
+assert(err < 5.0e-9)
+
+system.verify_checkpoints()
+
+system.set_functional(u[N] * u[N] * dx)
+J = system.compute_functional()
+grad = system.compute_gradient([ic, nu])
+print grad[0].array(), float(grad[1])
+
+orders = system.taylor_test(ic, J = J, grad = grad[0])
+assert((orders > 1.99).all())
+
+orders = system.taylor_test(nu, J = J, grad = grad[1])
+assert((orders > 1.99).all())
+
+assert(replay_dolfin(forget = False, tol = 3.0e-14, stop = True))
+
+grad_da = compute_gradient(Functional(u[N] * u[N] * dx * dolfin_adjoint.dt[FINISH_TIME]), [InitialConditionParameter(ic), ScalarParameter(nu)])
+
+err = (grad[0] - grad_da[0].vector()).norm("linf")
+print "%s %.17e" % (grad_da[0].vector().array(), err)
+assert(err < 2.0e-13)
+
+err = abs(float(grad[1]) - grad_da[1])
+print "%.17e %.17e" % (grad_da[1], err)
+assert(err < 4.0e-11)

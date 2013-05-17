@@ -1,0 +1,104 @@
+#!/usr/bin/env python
+#NP 2
+
+# Copyright (C) 2011-2012 by Imperial College London
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from dolfin import *
+from timestepping import *
+
+from fractions import Fraction
+hf = Fraction(1, 2)
+
+# Model parameters (cgs units)
+L       = 1000.0e5
+beta    = StaticConstant(2.0e-13)
+dt      = StaticConstant(3600.0)
+maxTime = 3600.0 * 24.0 * 14.0
+ngrid   = 32
+
+lu_solver = {"linear_solver":"lu"}
+
+mesh  = RectangleMesh(0.0, 0.0, L, L, ngrid, ngrid)
+space = FunctionSpace(mesh, "CG", 1)
+test  = TestFunction(space)
+trial = TrialFunction(space)
+
+levels = TimeLevels([n, n + hf, n + 1], cycle_map = {n:n + 1})
+q = TimeFunction(levels, space, name = "q")
+psi = TimeFunction(levels, space, name = "psi")
+
+betay = StaticFunction(space, name = "betay")
+betay.interpolate(Expression("beta * x[1]", beta = float(beta)))
+
+F = StaticFunction(space, name = "F")
+pa_solve(inner(test, trial) * dx == inner(test, Expression("-A * sin(pi * (x[1] / L))", A = (1.0 / 1.0e5) * (pi / L), L = L)) * dx, \
+  F, solver_parameters = lu_solver)
+
+psi_bc = StaticDirichletBC(space, 0.0, "on_boundary")
+def add_psi_solve(n):
+  system.add_solve((test * dot(grad(trial), FacetNormal(mesh))) * ds - inner(grad(test), grad(trial)) * dx == inner(test, q[n] - betay) * dx, \
+    psi[n], psi_bc, solver_parameters = lu_solver)
+  return
+
+system = TimeSystem()
+system.add_solve(betay, q[0])
+add_psi_solve(0)
+
+# These are deliberately in this order to test dependency resolution
+
+add_psi_solve(n + 1)
+add_psi_solve(n + hf)
+
+gradPsi = grad(psi[n + hf]);  u = as_vector([-gradPsi[1], gradPsi[0]])
+system.add_solve(inner(test, trial) * dx == (inner(test, q[n]) + dt * (inner(grad(test), q[n + hf] * u) + inner(test, F))) * dx,
+  q[n + 1], solver_parameters = lu_solver)
+gradPsi = grad(psi[n]);  u = as_vector([-gradPsi[1], gradPsi[0]])
+system.add_solve(inner(test, trial) * dx == (inner(test, q[n]) + 0.5 * dt * (inner(grad(test), q[n] * u) + inner(test, F))) * dx, \
+  q[n + hf], solver_parameters = lu_solver)
+
+system = system.assemble(adjoint = True, disk_period = 24)                 
+
+t = 0.0
+while t < maxTime:
+  system.timestep()
+  t += float(dt)
+#  gradPsi = grad(psi[n])
+#  print "%.6f %.6g" % (t / (3600.0 * 24.0), assemble(0.5 * dot(gradPsi, gradPsi) * dx))
+system.finalise()
+
+#write_vtu("bve_rk2", psi[N], t = t)
+
+gradPsi = grad(psi[N])
+system.set_functional(0.5 * dot(gradPsi, gradPsi) * dx)
+J = system.compute_functional()
+
+ref = 1.15116124138032544e+17
+err = abs(J - ref)
+print "%.17e" % J
+print "%.17e" % ref
+print "%.17e" % (err / ref)
+assert(err < 9.0e-11 * ref)
+
+system.verify_checkpoints(tolerance = 5.0e-6)
+
+g = system.compute_gradient(F, project = True)
+
+#write_vtu("bve_rk2_g", g[1], t = t)
+
+assembly_cache.info()
+
+orders = system.taylor_test(F, J = J, grad = g)
+assert((orders > 1.97).all())

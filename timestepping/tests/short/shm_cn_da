@@ -1,0 +1,118 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+This is a model of simple-harmonic motion combining a proof-of-concept
+high-level representation of timestepping with DOLFIN. The two stages of the
+model timestep are represented in the following way:
+  Stage 1: Timestep solve
+           Defined by the TimeSystem class, and set-up via the add_solve method.
+  Stage 2: Timestep variable cycle
+           Defined by the TimeLevels and TimeFunction classes, and set-up via
+           the TimeLevels constructor.
+The TimeSystem class keeps a record of all TimeFunction dependencies encountered
+by the add_solve method. Calling assemble(adjoint = False) on a TimeSystem
+returns an AssembledTimeSystem, which can be used to apply timestepping
+optimisations. The AssembledTimeSystem.solve method calls the registered solves,
+in order, and then cycles all the recorded TimeFunction dependencies.
+"""
+
+from dolfin import *
+from dolfin_adjoint_timestepping import *
+
+import numpy
+
+omega = StaticConstant(2.0 * numpy.pi)
+dt = StaticConstant(0.01)
+T = 1.0
+
+lu_solver = {"linear_solver":"lu"}
+
+mesh = UnitIntervalMesh(1)
+space = FunctionSpace(mesh, "R", 0)
+spaces = space * space
+test, trial = TestFunction(spaces), TrialFunction(spaces)
+test_s, test_v = TestFunctions(spaces)
+trial_s, trial_v = TrialFunctions(spaces)
+
+x0 = StaticFunction(space, name = "equilibrium_s")
+x0.assign(Constant(0.5))
+
+system = TimeSystem()
+
+cn_levels = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+X = TimeFunction(cn_levels, spaces, name = "s_and_u")
+
+# Initial condition
+system.add_solve(inner(test, X[0]) * dx == inner(test_s, StaticConstant(1.0)) * dx,
+  X[0], solver_parameters = lu_solver)
+# Crank-Nicolson discretised SHM
+system.add_solve(inner(test, X[n + 1]) * dx - inner(test, X[n]) * dx
+  - dt * inner(test_s, 0.5 * (X[n][1] + X[n + 1][1])) * dx
+  + dt * inner(test_v, omega * omega * (0.5 * (X[n][0] + X[n + 1][0]) - x0)) * dx == 0,
+  X[n + 1], solver_parameters = lu_solver)
+
+def energy(n):
+  return assemble(0.5 * X[n][1] * X[n][1] * dx + 0.5 * omega * omega * (X[n][0] - x0) * (X[n][0] - x0) * dx)
+  
+system = assemble(system, adjoint = True)
+t = 0.0
+E0 = energy(0)
+info("Time, X[0], X[1], E = %.2f %.6f %.6f %.6f" % (t, assemble(X[n][0] * dx), assemble(X[n][1] * dx), E0))
+
+# Timestep
+while t * (1.0 + 1.0e-9) < T:
+  system.timestep()
+  t += float(dt)
+  E = energy(n)
+  info("Time, X[0], X[1], E, E err = %.2f %.6f %.6f %.6f %.17e" % (t, assemble(X[n][0] * dx), assemble(X[n][1] * dx), E, abs(E - E0)))
+
+system.finalise()
+parameters["adjoint"]["stop_annotating"] = True
+
+err = abs(E - E0)
+print "%.17e" % E
+print "%.17e" % E0
+print "%.17e" % err
+assert(err < 3.0e-14)
+
+system.verify_checkpoints()
+
+system.set_functional(X[N][1] * dx)
+J = system.compute_functional()
+dJdp = system.compute_gradient(omega)
+orders = system.taylor_test(omega, J = J, grad = dJdp)
+assert((orders > 1.98).all())
+
+dJdp_da = compute_gradient(Functional(X[N][1] * dx * dolfin_adjoint.dt[FINISH_TIME]), ScalarParameter(omega))
+err = abs(float(dJdp) - dJdp_da)
+print "%.17e" % dJdp_da
+print "%.17e" % float(dJdp)
+print "%.17e" % err
+assert(err < 5.0e-16)
+
+import scipy.optimize
+if hasattr(scipy.optimize, "minimize"):
+  omega_old = float(omega)
+  omega.assign(0.0)
+  clear_caches(omega)
+  minimize(ReducedFunctional(Functional((X[N][1] - Constant(J)) * (X[N][1] - Constant(J)) * dx * dolfin_adjoint.dt[FINISH_TIME]),
+    ScalarParameter(omega)), bounds = (1.75 * numpy.pi, 2.25 * numpy.pi), tol = 1.0e-8)
+  err = abs(float(omega) - omega_old)
+  print "%.17e" % (float(omega) / numpy.pi)
+  print "%.17e" % (omega_old / numpy.pi)
+  print "%.17e" % (err / numpy.pi)
+  assert((err / numpy.pi) < 3.0e-12)

@@ -1,0 +1,65 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from dolfin import *
+from timestepping import *
+
+# Define a simple structured mesh on the unit interval
+mesh = UnitIntervalMesh(10)
+# P1 function space
+space = FunctionSpace(mesh, "CG", 1)
+
+# Model parameters and boundary conditions
+dt = StaticConstant(0.05)
+bc1 = StaticDirichletBC(space, 1.0,
+  "on_boundary && near(x[0], 0.0)")
+bc2 = StaticDirichletBC(space, 0.0,
+  "on_boundary && near(x[0], 1.0)")
+bcs = [bc1, bc2]
+nu = StaticConstant(0.01)
+
+# Define time levels
+levels = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+# A time dependent function
+u = TimeFunction(levels, space, name = "u")
+
+# Initialise a TimeSystem
+system = TimeSystem()
+
+# Add an initial assignment
+u_ic = StaticFunction(space, name = "u_ic")
+u_ic.assign(Constant(0.0))
+bc1.apply(u_ic.vector())
+system.add_solve(u_ic, u[0])
+# Register a simple diffusion equation, discretised in time
+# using forward Euler
+test = TestFunction(space)
+system.add_solve(
+  inner(test, (1.0 / dt) * (u[n + 1] - u[n])) * dx ==
+    -nu * inner(grad(test), grad(u[n])) * dx,
+  u[n + 1], bcs,
+  solver_parameters = {"linear_solver":"lu"})
+
+# Assemble the TimeSystem
+system = system.assemble()
+
+# Timestep the model
+t = 0.0
+while t * (1.0 + 1.0e-9) < 1.0:
+  system.timestep()
+  t += float(dt)
+# Finalise
+system.finalise()

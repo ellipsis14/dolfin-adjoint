@@ -1,0 +1,415 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2007 Kristian B. Oelgaard
+# Copyright (C) 2008 Johan Hake
+# Copyright (C) 2011-2012 by Imperial College London
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Copyright (C) 2007 Kristian B. Oelgaard from DOLFIN file
+# demo/undocumented/dg-poisson/python/demo_dg-poisson.py, bzr trunk 7478
+# Code first added: 2013-01-04
+
+# Copyright (C) 2008 Johan Hake from dolfin-adjoint file tests/upwind/upwind.py,
+# bzr trunk revision 638
+# Code first added: 2012-11-26
+
+"""
+This is a P1_DG-P2 discretisation of the incompressible Boussinesq Navier-Stokes
+equations. The temporal discretisation largely follows Ford et al, MWR, 2004,
+pp. 2816 - 2831 (except for the initial pressure solve and the tracer staggering
+in time -- see code comments). The advection discretisation utilises face
+averaging, rather than face upwinding, as the latter is not differentiable. The
+viscous / diffusive discretisation utilises an interior penalty method based on
+DOLFIN demo demo_dg-poisson.py (see e.g. DOLFIN bzr trunk 7436).
+"""
+
+from dolfin import *
+from timestepping import *
+
+from fractions import Fraction;  hf = Fraction(1, 2)
+import numpy
+import os
+
+Constant = StaticConstant
+
+# Model parameters
+dt = Constant(1.0e-2)   # The model timestep
+alpha = Constant(10.0)  # Interior penalty parameter
+max_t = 0.5  # Final model time
+
+# Linear solvers
+lu_solver = {"linear_solver":"lu"}
+if has_krylov_solver_method("cgs"):
+  sol = "cgs"
+else:
+  sol = "gmres"
+if has_krylov_solver_preconditioner("eisenstat"):
+  pc = "eisenstat"
+else:
+  pc = "sor"
+dTdt_solver = {"linear_solver":sol, "preconditioner":pc, "krylov_solver":{"relative_tolerance":1.0e-12, "absolute_tolerance":1.0e-16, "divergence_limit":1.0e8}}
+
+# The model mesh ...
+mesh = Mesh(os.path.join(os.path.abspath(os.path.dirname(__file__)), "data", "square_10-200.xml.gz"))
+nm = FacetNormal(mesh)
+h = CellSize(mesh)
+# ... and function spaces
+space_u = FunctionSpace(mesh, "DG", 1)
+space_p = FunctionSpace(mesh, "CG", 2)
+space_p0 = FunctionSpace(mesh, "DG", 0)
+test_u, trial_u = TestFunction(space_u), TrialFunction(space_u)
+test_p, trial_p = TestFunction(space_p), TrialFunction(space_p)
+test_p0, trial_p0 = TestFunction(space_p0), TrialFunction(space_p0)
+
+Pr = StaticFunction(space_u);  Pr.assign(Constant(0.71))  # Prandtl number, used to determine ...
+nu = Pr                 #  ... the viscosity ...
+kappa = Constant(1.0)   # ... with normalised diffusivity
+Ra = Constant(1.0e3)    # Rayleigh number, used to determine ...
+gaDT = Ra * kappa * nu  # ... g alpha Delta T
+
+# Model time levels and fields
+it_levels = TimeLevels(levels = [n, n + hf, n + 1], cycle_map = {n:n + 1})
+u_s        = TimeFunction(it_levels, space_u, name = "u_s")        # Intermediate divergent velocity
+v_s        = TimeFunction(it_levels, space_u, name = "v_s")
+u          = TimeFunction(it_levels, space_u, name = "u")          # Non-divergent velocity
+v          = TimeFunction(it_levels, space_u, name = "v")
+dudt_s     = TimeFunction(it_levels, space_u, name = "dudt_s")     # Intermediate divergent velocity tendency
+dvdt_s     = TimeFunction(it_levels, space_u, name = "dvdt_s")
+dp         = TimeFunction(it_levels, space_p, name = "dp")         # Pressure increment
+grad_dp_x  = TimeFunction(it_levels, space_u, name = "grad_dp_x")  # Pressure increment gradient
+grad_dp_y  = TimeFunction(it_levels, space_u, name = "grad_dp_y")
+p          = TimeFunction(it_levels, space_p, name = "p")          # Pressure
+T          = TimeFunction(it_levels, space_u, name = "T")          # Temperature
+dTdt       = TimeFunction(it_levels, space_u, name = "dTdt")       # Time derivative of temperature
+c          = Function(space_p0, name = "c")                        # Courant number
+div_U      = Function(space_p, name = "div_U")                     # Velocity divergence
+psi        = Function(space_p, name = "psi")                       # Stream function
+
+# Temperature boundary conditions
+T_bc1 = Constant(1.0)
+T_bc2 = Constant(0.0)
+
+# Mark the left and right boundaries
+class LeftBoundary(SubDomain):
+  def inside(self, x, on_boundary):
+    return on_boundary and near(x[0], 0.0)
+class RightBoundary(SubDomain):
+  def inside(self, x, on_boundary):
+    return on_boundary and near(x[0], 1.0)
+bcs = MeshFunction("size_t", mesh, 1)
+bcs.set_all(0)
+LeftBoundary().mark(bcs, 1)
+RightBoundary().mark(bcs, 2)
+bc_ids = [0, 1, 2]
+
+# A DG advection-diffusion solve with weak Dirichlet boundary conditions defined
+# by bc. If nhbcs is True, then boundaries with no Dirichlet boundary condition
+# defined by bc have a weak homogeneous Neumann boundary condition applied. If
+# nhbcs is False, then boundaries with no Dirichlet boundary condition defined
+# by bc have a weak homogeneous Dirichlet boundary condition applied.
+def add_dTdt_solve(T, dTdt, u, v, kappa, s = None, bc = {}, initial_guess = None, nhbcs = False):
+  U = as_vector([u, v])
+#  # DG advection upwinding based on dolfin-adjoint upwind test
+#  Un = 0.5 * (dot(U, nm) + abs(dot(U, nm)))
+  L = (
+      # Advection term
+      
+      inner(grad(test_u), U * T) * dx
+#      # Face upwinding
+#    - inner(jump(test_u), jump(Un * T)) * dS
+      # Face averaging
+    - inner(jump(test_u), dot(as_vector([avg(u * T), avg(v * T)]), nm("+"))) * dS
+      ) \
+    + (
+      # Viscous term, using an interior penalty Laplace operator based on DOLFIN
+      # demo demo_dg-poisson.py. See Oelgaard et al, SIAM J. Sci. Comput., 2008,
+      # pp. 849 - 864 and Arnold et al, SIAM J. Numer. Anal., 2002,
+      # pp. 1749 - 1779.
+    
+    - kappa      * inner(grad(test_u), grad(T)) * dx
+    + avg(kappa) * inner(avg(grad(test_u)), jump(T, nm)) * dS
+    + avg(kappa) * inner(jump(test_u, nm), avg(grad(T))) * dS
+    - avg(kappa) * (avg(alpha) / avg(h)) * inner(jump(test_u, nm), jump(T, nm)) * dS
+      )
+      
+  # Viscous term weak boundary conditions
+  if nhbcs:
+    for id in bc:
+      L += (
+           kappa * inner(test_u * nm, grad(T)) * ds[bcs](id)
+        + (kappa * inner(grad(test_u), T * nm) - kappa * bc[id] * inner(grad(test_u), nm)) * ds[bcs](id)
+        - (kappa * (alpha / h) * inner(test_u, T) - kappa * (alpha / h) * inner(test_u, bc[id])) * ds[bcs](id)
+           )
+  else:
+    for id in bc_ids:
+      L += (
+          kappa * inner(grad(test_u), T * nm) * ds[bcs](id)
+        + kappa * inner(test_u * nm, grad(T)) * ds[bcs](id)
+        - kappa * (alpha / h) * inner(test_u, T) * ds[bcs](id)
+          )
+    for id in bc:
+      L += (
+        - kappa * bc[id] * inner(grad(test_u), nm) * ds[bcs](id)
+        + kappa * (alpha / h) * inner(test_u, bc[id]) * ds[bcs](id)
+           )
+
+  if not s is None:
+    L += (
+         # Source
+         
+         inner(test_u, s) * dx
+         )
+
+  system.add_solve(inner(test_u, dTdt) * dx == L, dTdt, solver_parameters = dTdt_solver, initial_guess = initial_guess)
+      
+  return
+
+# Single point boundary condition, used to apply a reference node to pressure
+# solves
+cell = mesh.closest_cell(Point(0.5, 0.5))
+mesh_coords = mesh.coordinates()
+cells = mesh.cells()[cell]
+node = cells[0]
+r = numpy.sqrt((mesh_coords[node, 0] - 0.5) ** 2 + (mesh_coords[node, 1] - 0.5) ** 2)
+for lnode in cells[1:]:
+  lr = numpy.sqrt((mesh_coords[lnode, 0] - 0.5) ** 2 + (mesh_coords[lnode, 1] - 0.5) ** 2)
+  if lr < r:
+    node = lnode
+    r = lr
+p0_coord = mesh_coords[node, :]
+ref_bc = StaticDirichletBC(space_p, 0.0, "fabs(x[0] - %.17e) < DOLFIN_EPS && fabs(x[1] - %.17e) < DOLFIN_EPS" % (p0_coord[0], p0_coord[1]), method = "pointwise")
+del(mesh_coords)
+
+# Given a divergent velocity, compute the pressure increment and non-divergent
+# velocity
+def add_dp_solve(u_s, v_s, dp, grad_dp_x, grad_dp_y, u, v):
+  U_s = as_vector([u_s, v_s])
+  system.add_solve(inner(grad(test_p), grad(dp)) * dx ==
+    (1.0 / dt) * inner(grad(test_p), U_s) * dx,
+    dp, ref_bc, solver_parameters = lu_solver)
+  system.add_solve(inner(test_u, grad_dp_x) * dx ==
+    inner(test_u, grad(dp)[0]) * dx,
+    grad_dp_x, solver_parameters = lu_solver)
+  system.add_solve(inner(test_u, grad_dp_y) * dx ==
+    inner(test_u, grad(dp)[1]) * dx,
+    grad_dp_y, solver_parameters = lu_solver)
+  system.add_solve(LinearCombination((1.0, u_s), (-dt, grad_dp_x)), u)
+  system.add_solve(LinearCombination((1.0, v_s), (-dt, grad_dp_y)), v)
+  
+  return
+
+system = TimeSystem()
+
+# Divergent initial condition
+system.add_solve(0.0, u_s[0])
+system.add_solve(0.0, v_s[0])
+# Projected, non-divergent, initial condition. Note that dp[0], grad_dp_x[0],
+# and grad_dp_y[0] are used as working memory here.
+add_dp_solve(u_s[0], v_s[0], dp[0], grad_dp_x[0], grad_dp_y[0], u[0], v[0])
+# Initial pressure solve. In the notation of Ford et al, MWR, 2004,
+# pp. 2816 - 2831, this sets p_-1/2 = p_0. This approach is extremely similar*
+# to that described in Ford et al -- since the initial velocity is
+# non-divergent, this is exactly equation (32) on the first iterate.
+# This is also how Fluidity handles the initialisation (C J Cotter, personal
+# comm., 01/2013), provided that the initial velocity is non-divergent.
+#   * Perhaps identical. Ford et al is a little unclear as to how the
+#     projection step is handled after the single iteration of the implicit
+#     pressure solver.
+add_dTdt_solve(u[0], dudt_s[0], u[0], v[0], nu)
+add_dTdt_solve(v[0], dvdt_s[0], u[0], v[0], nu, s = gaDT * T[0])
+system.add_solve(inner(grad(test_p), grad(p[0])) * dx ==
+  inner(grad(test_p), as_vector([dudt_s[0], dvdt_s[0]])) * dx,
+  p[0], ref_bc, solver_parameters = lu_solver)
+# Temperature initial condition
+system.add_solve(interpolate(Expression("1.0 - x[0]"), space_u), T[0])
+
+# Timestep iteration 1
+# In Ford et al, MWR, 2004, pp. 2816 - 2831 it is proposed that one consider the
+# tracer to be staggered in time with respect to the velocity. Here, instead,
+# the tracer and velocity are collocated in time, and the tracer is interpolated
+# onto the staggered time point.
+add_dTdt_solve(u[n] + 0.5 * dt * dudt_s[n + hf], dudt_s[n + hf], u[n], v[n], nu, s = -grad(p[n])[0], initial_guess = dudt_s[n])
+add_dTdt_solve(v[n] + 0.5 * dt * dvdt_s[n + hf], dvdt_s[n + hf], u[n], v[n], nu, s = -grad(p[n])[1] + gaDT * 0.5 * (T[n] + T[n + hf]), initial_guess = dvdt_s[n])
+system.add_solve(LinearCombination((1.0, u[n]), (dt, dudt_s[n + hf])), u_s[n + hf])
+system.add_solve(LinearCombination((1.0, v[n]), (dt, dvdt_s[n + hf])), v_s[n + hf])
+add_dp_solve(u_s[n + hf], v_s[n + hf], dp[n + hf], grad_dp_x[n + hf], grad_dp_y[n + hf], u[n + hf], v[n + hf])
+system.add_solve(LinearCombination((1.0, p[n]), (1.0, dp[n + hf])), p[n + hf])
+add_dTdt_solve(T[n] + 0.5 * dt * dTdt[n + hf], dTdt[n + hf], u[n], v[n], kappa, bc = {1:T_bc1, 2:T_bc2}, nhbcs = True, initial_guess = dTdt[n])
+system.add_solve(LinearCombination((1.0, T[n]), (dt, dTdt[n + hf])), T[n + hf])
+
+# Timestep iteration 2
+# Ford et al, MWR, 2004, pp. 2816 - 2831 is unclear at to how the pressure is
+# handled on the second iteration, but I believe this is what was intended.
+# This is also how Fluidity handles this step (C J Cotter, personal comm.,
+# 01/2013).
+add_dTdt_solve(u[n] + 0.5 * dt * dudt_s[n + 1], dudt_s[n + 1], 0.5 * (u[n] + u[n + hf]), 0.5 * (v[n] + v[n + hf]), nu, s = -grad(p[n + hf])[0], initial_guess = dudt_s[n + hf])
+add_dTdt_solve(v[n] + 0.5 * dt * dvdt_s[n + 1], dvdt_s[n + 1], 0.5 * (u[n] + u[n + hf]), 0.5 * (v[n] + v[n + hf]), nu, s = -grad(p[n + hf])[1] + gaDT * 0.5 * (T[n] + T[n + 1]), initial_guess = dvdt_s[n + hf])
+system.add_solve(LinearCombination((1.0, u[n]), (dt, dudt_s[n + 1])), u_s[n + 1])
+system.add_solve(LinearCombination((1.0, v[n]), (dt, dvdt_s[n + 1])), v_s[n + 1])
+add_dp_solve(u_s[n + 1], v_s[n + 1], dp[n + 1], grad_dp_x[n + 1], grad_dp_y[n + 1], u[n + 1], v[n + 1])
+system.add_solve(LinearCombination((1.0, p[n + hf]), (1.0, dp[n + 1])), p[n + 1])
+add_dTdt_solve(T[n] + 0.5 * dt * dTdt[n + 1], dTdt[n + 1], 0.5 * (u[n] + u[n + hf]), 0.5 * (v[n] + v[n + hf]), kappa, bc = {1:T_bc1, 2:T_bc2}, nhbcs = True, initial_guess = dTdt[n + hf])
+system.add_solve(LinearCombination((1.0, T[n]), (dt, dTdt[n + 1])), T[n + 1])
+
+# Diagnostics
+c_solver = PAEquationSolver(lumped_mass(space_p0) ==
+  inner(test_p0, sqrt(u[n] ** 2 + v[n] ** 2) * dt / h) * dx,
+  c)
+div_U_solver = PAEquationSolver(inner(test_p, div_U) * dx ==
+  -inner(grad(test_p), as_vector([u[n], v[n]])) * dx,
+  div_U, solver_parameters = lu_solver)
+psi_solver = PAEquationSolver(inner(grad(test_p), grad(psi)) * dx ==
+  inner(grad(test_p), as_vector([-v[n], u[n]])) * dx,
+  psi, StaticDirichletBC(space_p, 0.0, "on_boundary"), solver_parameters = lu_solver)
+def diagnostics(t):
+  c_solver.solve()
+  div_U_solver.solve()
+  psi_solver.solve()
+  dudt_norm = (dudt_s[n].vector() - grad_dp_x[n].vector()).norm("linf"), \
+              (dvdt_s[n].vector() - grad_dp_y[n].vector()).norm("linf")
+  dTdt_norm = dTdt[n].vector().norm("linf")
+  u_norm = u[n].vector().norm("linf"), v[n].vector().norm("linf")
+  T_norm = T[n].vector().norm("linf")
+  T_range = T[n].vector().min(), T[n].vector().max()
+  if 0.0 in [u_norm[0], u_norm[1], T_norm]:
+    eps = numpy.NAN
+  else:
+    eps = max(dudt_norm[0] / u_norm[0], dudt_norm[1] / u_norm[1], dTdt_norm / T_norm)
+  c_norm = c.vector().norm("linf")
+  div_U_norm = div_U.vector().norm("linf")
+  psi_mid = numpy.empty(1)
+  psi.eval(psi_mid, numpy.array([0.5, 0.5], dtype = numpy.float_))
+  psi_mid = abs(float(psi_mid[0]))
+  Nu = assemble(dot(grad(T[n]), nm) * ds[bcs](1))
+  if div_U_norm > 5.0e-11:
+    linfo = info_red
+  else:
+    linfo = info
+  linfo("Time, ||u||_inf, ||v||_inf, min(T), max(T), eps, Courant, ||div U||_inf, psi_mid, Nu = %.2f, %.17e, %.17e, %.17e, %.17e, %.7e, %.17e, %.17e, %.17e, %.17e"
+    % (t, u_norm[0], u_norm[1], T_range[0], T_range[1], eps, c_norm, div_U_norm, psi_mid, Nu))
+  return
+def update(s, cs = None):
+  if s > 0:
+    t = float(dt) * (s - 1)
+    dolfin.info("Time = %.6f" % t)
+  return
+system.set_update(update)
+
+# Convergence test the time discretisation
+system_orig = system
+dt_orig = float(dt)
+
+dt.assign(dt_orig / 50.0)
+system = system_orig.assemble()
+system.timestep(ns = 50)
+system.finalise()
+u_ref = Function(space_u, name = "u_ref");  u_ref.assign(u[N])
+v_ref = Function(space_u, name = "v_ref");  v_ref.assign(v[N])
+p_ref = Function(space_p, name = "p_ref");  p_ref.assign(p[N])
+T_ref = Function(space_u, name = "T_ref");  T_ref.assign(T[N])
+
+errs = [], [], [], []
+for i in range(4, -1, -1):
+  ndt = 2 ** i
+  dt.assign(dt_orig / ndt)
+  system.reassemble(dt)
+  system.initialise()
+  system.timestep(ns = ndt)
+  system.finalise()
+  errs[0].append(sqrt(assemble(((u[N] - u_ref) ** 2) * dx)))
+  errs[1].append(sqrt(assemble(((v[N] - v_ref) ** 2) * dx)))
+  errs[2].append(sqrt(assemble(((p[N] - p_ref) ** 2) * dx)))
+  errs[3].append(sqrt(assemble(((T[N] - T_ref) ** 2) * dx)))
+orders = [numpy.empty(len(errs[0]) - 1) for i in range(len(errs))]
+for i in range(len(errs)):
+  for j in range(1, len(errs[0])):
+    orders[i][j - 1] = numpy.log(errs[i][j] / errs[i][j - 1]) / numpy.log(2.0)
+print errs
+print orders
+assert((orders[0] > 2.0).all())
+assert((orders[1] > 2.0).all())
+assert((orders[2] > 1.0).all())
+assert((orders[3] > 2.0).all())
+
+del(system, u_ref, v_ref, p_ref, T_ref)
+system = system_orig
+dt.assign(dt_orig)
+del(system_orig, dt_orig)
+clear_caches(dt)
+
+# Assemble and run the forward model
+system = system.assemble(adjoint = True, disk_period = 10, functional = dot(grad(T[N]), nm) * ds[bcs](1), reassemble = True)
+
+t = 0.0
+diagnostics(t)
+#index = 0
+#write_vtu("boussinesq-navier-stokes_cn_picard2", [u[n], v[n], p[n], T[n], psi], index = index, t = t)
+#s = 0
+#s_disk = int((1.0 / float(dt)) * (1.0 + 1.0e-6))
+while t * (1.0 + 1.0e-6) < max_t:
+  system.timestep()
+  t += float(dt)
+  diagnostics(t)
+#  s += 1
+#  if s % s_disk == 0:
+#    index += 1
+#    write_vtu("boussinesq-navier-stokes_cn_picard2", [u[n], v[n], p[n], T[n], psi], index = index, t = t)
+system.finalise()
+
+# Verify incompressibility
+err = div_U.vector().norm("linf")
+print "%.17e" % err
+assert(err < 6.0e-12)
+
+# Verify pressure zero point
+p0 = numpy.empty(1);  p0[:] = numpy.NAN
+p[N].eval(p0, numpy.array(p0_coord, dtype = numpy.float_))
+print "%.17e" % abs(p0)
+assert(abs(p0) < 5.0e-14)
+
+# Verify the solution. Reference value from de Vahl Davis and Jones,
+# International Journal for Numerical Methods in Fluids, 1983, pp. 227 - 248,
+# table I.
+J = system.compute_functional()
+ref = 1.118
+err = abs(J - ref)
+print "%.17e" % J
+print "%.17e" % ref
+print "%.17e" % err
+assert(err < 1.0e-3)
+
+# Verify the solution. Reference value from de Vahl Davis and Jones,
+# International Journal for Numerical Methods in Fluids, 1983, pp. 227 - 248,
+# table I.
+psi_mid = numpy.empty(1)
+psi.eval(psi_mid, numpy.array([0.5, 0.5], dtype = numpy.float_))
+psi_mid = abs(float(psi_mid[0]))
+ref = 1.174
+err = abs(psi_mid - ref)
+print "%.17e" % psi_mid
+print "%.17e" % ref
+print "%.17e" % err
+assert(err < 4.0e-3)
+
+# Verify the checkpoints
+system.verify_checkpoints()
+
+# Run the adjoint model
+dJdm = system.compute_gradient(nu, project = True)
+#write_vtu("boussinesq-navier-stokes_cn_picard2_dJdm", dJdm[1], t = t)
+
+# Verify the derivative
+orders = system.taylor_test(nu, J = J, grad = dJdm, ntest = 2, fact = 5.0e-4)
+assert((orders > 1.99).all())

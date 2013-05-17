@@ -1,0 +1,166 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2007 Kristian B. Oelgaard
+# Copyright (C) 2008 Johan Hake
+# Copyright (C) 2011-2012 by Imperial College London
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Copyright (C) 2007 Kristian B. Oelgaard from DOLFIN file
+# demo/undocumented/dg-poisson/python/demo_dg-poisson.py, bzr trunk 7478
+# Code first added: 2013-01-04
+
+# Copyright (C) 2008 Johan Hake from dolfin-adjoint file tests/upwind/upwind.py,
+# bzr trunk revision 638
+# Code first added: 2012-11-26
+
+from dolfin import *
+from timestepping import *
+
+from fractions import Fraction;  f1 = Fraction(1, 3); f2 = Fraction(2, 3)
+import numpy
+import os
+
+Constant = StaticConstant
+
+# Model parameters
+deltax = 0.01                              # Approximate nodal spacing in the
+                                           # quasi-uniform mesh
+alpha = Constant(15.0)                     # Interior penalty parameter
+alpha_s = 4.0 * deltax / (2.0 * numpy.pi)  # Length scale parameter for the
+                                           # initial condition Helmholtz
+                                           # smoother
+C = 0.25                                   # Approximate maximum Courant number
+
+# Determine the model timestep
+dt = C * deltax / 0.5
+dt = Constant(2.0 * numpy.pi / (int(2.0 * numpy.pi / dt) + 1))
+
+# The model mesh ...
+mesh = Mesh(os.path.join(os.path.abspath(os.path.dirname(__file__)), "data", "circle_100.xml.gz"))
+nm = FacetNormal(mesh)
+h = CellSize(mesh)
+# ... and function spaces
+space = FunctionSpace(mesh, "DG", 1)
+test = TestFunction(space)
+space_p1 = FunctionSpace(mesh, "CG", 1)
+
+# A Laplace operator subject to homogeneous Neumann boundary conditions
+def laplace(T):
+  # Laplace operator based on DOLFIN demo demo_dg-poisson.py. See Oelgaard et
+  # al, SIAM J. Sci. Comput., 2008, pp. 849 - 864 and Arnold et al, SIAM J.
+  # Numer. Anal., 2002, pp. 1749 - 1779.
+
+  return \
+    (
+  - inner(grad(test), grad(T)) * dx
+  + inner(avg(grad(test)), jump(T, nm)) * dS
+  + inner(jump(test, nm), avg(grad(T))) * dS
+  - (avg(alpha) / avg(h)) * inner(jump(test, nm), jump(T, nm)) * dS
+    )
+
+# Generate a smoothed top hat initial condition
+T_ic_unsmoothed = StaticFunction(space, name = "T_iadvection c_unsmoothed")
+pa_solve(inner(test, T_ic_unsmoothed) * dx == inner(test, Expression("x[0] > 0.2 && x[0] < 0.4 && x[1] > -0.1 && x[1] < 0.1 ? 1.0 : 0.0")) * dx,
+  T_ic_unsmoothed, solver_parameters = {"linear_solver":"lu"})
+T_ic = StaticFunction(space, name = "T_ic")
+pa_solve(alpha_s * alpha_s * laplace(T_ic) + inner(test, T_ic_unsmoothed - T_ic) * dx == 0,
+  T_ic, solver_parameters = {"linear_solver":"lu"})
+T_ic.vector()[:] += interpolate(Expression("exp(-((x[0] + 0.3) * (x[0] + 0.3) + x[1] * x[1]) / (2.0 * 0.05 * 0.05))"), space).vector()
+
+# Solid body rotation
+u = StaticFunction(space_p1, name = "u")
+u.interpolate(Expression("-x[1]"))
+v = StaticFunction(space_p1, name = "v")
+v.interpolate(Expression("x[0]"))
+
+# Model time levels and fields
+levels = TimeLevels(levels = [n, n + f1, n + f2, n + 1], cycle_map = {n:n + 1})
+levels_dT = TimeLevels(levels = [n, n + f1, n + f2], cycle_map = {}, last_past_level = n - f1)
+T = TimeFunction(levels, space, name = "T")
+dT = TimeFunction(levels_dT, space, name = "dT")
+
+system = TimeSystem()
+
+# Initial condition
+system.add_solve(T_ic, T[0])
+
+# Add a solve for a T increment
+U = as_vector([u, v])
+# DG advection upwinding based on dolfin-adjoint upwind test
+Un = 0.5 * (dot(U, nm) + abs(dot(U, nm)))
+def add_dT_solve(n):
+  system.add_solve(inner(test, dT[n]) * dx == dt * inner(grad(test), U * T[n]) * dx - avg(dt) * inner(jump(test), jump(Un * T[n])) * dS,
+    dT[n], solver_parameters = {"linear_solver":"lu"})
+  return
+
+# Add solves for all T increments
+add_dT_solve(n)
+add_dT_solve(n + f1)
+add_dT_solve(n + f2)
+
+# Third order SSP RK time discretisation. See Kuzmin, JCAM, 2010,
+# pp. 3077 - 3085 equations 7 - 9.
+system.add_solve(LinearCombination((1.0, T[n]), (1.0, dT[n])), T[n + f1])
+system.add_solve(LinearCombination((3.0 / 4.0, T[n]), (1.0 / 4.0, T[n + f1]), (1.0 / 4.0, dT[n + f1])), T[n + f2])
+system.add_solve(LinearCombination((1.0 / 3.0, T[n]), (2.0 / 3.0, T[n + f2]), (2.0 / 3.0, dT[n + f2])), T[n + 1])
+
+# Simple callback to display the model time
+def update(s, cs = None):
+  print "Time = %.6f" % (max(s - 1, 0) * float(dt))
+  return
+system.set_update(update)
+
+# Assemble the model
+system = system.assemble(adjoint = True, disk_period = 100, functional = (T[N] - T_ic) * (T[N] - T_ic) * dx)
+
+T_int_0 = assemble(T[0] * dx)
+
+# Run the model
+t = 0.0
+#s = 0
+T_int = assemble(T[n] * dx)
+print "T_int, T_int_err, T_min, T_max = %.17e, %.17e, %.17e, %.17e" % (T_int, abs(T_int - T_int_0), T[n].vector().min(), T[n].vector().max())
+#index = 0
+#write_vtu("advection_2d_rk3", T[n], index = index, t = t)
+while t * (1.0 + 1.0e-9) < 2.0 * numpy.pi:
+  system.timestep()
+  t += float(dt)
+#  s += 1
+  T_int = assemble(T[n] * dx)
+  print "T_int, T_int_err, T_min, T_max = %.17e, %.17e, %.17e, %.17e" % (T_int, abs(T_int - T_int_0), T[n].vector().min(), T[n].vector().max())
+#  if s % 100 == 0:
+#    index += 1
+#    write_vtu("advection_2d_rk3", T[n], index = index, t = t)
+system.finalise()
+#index += 1
+#write_vtu("advection_2d_rk3", T[n], index = index, t = t)
+
+T_int = assemble(T[N] * dx)
+T_int_err = abs(T_int - T_int_0)
+T_min = T[n].vector().min()
+T_max = T[n].vector().max()
+print "T_int, T_int_err, T_min, T_max = %.17e, %.17e, %.17e, %.17e" % (T_int, T_int_err, T_min, T_max)
+assert(T_int_err < 4.0e-15)
+assert(T_min > -4.5e-2)
+assert(T_max < 1.0 + 6.6e-2)
+
+system.verify_checkpoints()
+
+# Compute a model constrained derivative
+dJdm = system.compute_gradient(T_ic)
+
+# Verify the computed model constrained derivative
+orders = system.taylor_test(T_ic, grad = dJdm, fact = 1.0e-7)
+assert((orders > 1.99).all())

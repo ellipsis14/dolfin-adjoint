@@ -1,0 +1,102 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2011-2012 by Imperial College London
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Based on burgers_newton.py test from dolfin-adjoint
+# Code first added: 12/10/25
+
+from dolfin import *
+from timestepping import *
+
+import numpy
+
+if "reorder_dofs_serial" in parameters:
+  parameters["reorder_dofs_serial"] = False
+
+ngrid = 30
+nu = StaticConstant(0.0001)
+dt = StaticConstant(0.01 / ngrid)
+t_end = 0.2
+
+mesh = UnitIntervalMesh(ngrid)
+space = FunctionSpace(mesh, "CG", 2)
+test, trial = TestFunction(space), TrialFunction(space)
+
+ic = StaticFunction(space, name = "initial_condition")
+ic.assign(project(Expression("sin(2.0 * pi * x[0])"), space))
+
+system = TimeSystem()
+levels   = TimeLevels(levels = [n - 1, n, n + 1], cycle_map = {n - 1:n, n:n + 1})
+levels_F = TimeLevels(levels = [n - 1, n], cycle_map = {n - 1:n}, last_past_level = n - 1)
+u = TimeFunction(levels,   space, name = "u")
+F = TimeFunction(levels_F, space, name = "F")
+def rhs(u):
+  return - dt * (inner(test, dot(as_vector([u]), grad(u))) + nu * inner(grad(test), grad(u))) * dx
+def add_F_solve(n, u_n = None):
+  if u_n is None:
+    u_n = u[n]
+  system.add_solve(inner(test, trial) * dx == rhs(u_n),
+    F[n],
+    StaticDirichletBC(space, 0.0, "on_boundary"), solver_parameters = {"linear_solver":"lu"})
+  return
+  
+system.add_solve(inner(test, trial) * dx == inner(test, ic) * dx,
+  u[-1],
+  StaticDirichletBC(space, 0.0, "on_boundary"), solver_parameters = {"linear_solver":"lu"})
+add_F_solve(-1, ic)
+system.add_solve(LinearCombination((1.0, F[-1]), (1.0, u[-1])), u[0])
+add_F_solve(n)
+system.add_solve(LinearCombination((2.0, F[n]), (1.0, u[n - 1])), u[n + 1])
+
+system = system.assemble(adjoint = True, disk_period = 10)
+t = float(dt)
+while t <= t_end:
+  system.timestep()
+  t += float(dt)
+system.finalise()
+
+dolfin_adjoint_solution = numpy.array(map(float, """0.00000000e+00   9.17928930e-02   1.83579895e-01   2.73568409e-01
+   3.60660813e-01   4.41798311e-01   5.12606151e-01   5.67266556e-01
+   6.00091748e-01   6.07382214e-01   5.88692441e-01   5.46242214e-01
+   4.82373850e-01   3.95080086e-01   2.67937032e-01  -6.86218300e-10
+  -2.67937033e-01  -3.95080084e-01  -4.82373840e-01  -5.46242187e-01
+  -5.88692382e-01  -6.07382121e-01  -6.00091577e-01  -5.67266433e-01
+  -5.12606378e-01  -4.41799021e-01  -3.60660747e-01  -2.73568505e-01
+  -1.83580590e-01  -9.17924756e-02   0.00000000e+00   4.66662897e-02
+   1.39350796e-01   2.31800545e-01   3.23911427e-01   4.16040541e-01
+   5.09322027e-01   6.05478512e-01   7.06445726e-01   8.13236605e-01
+   9.24875061e-01   1.03788114e+00   1.14649994e+00   1.24293056e+00
+   1.31599061e+00   1.34355011e+00  -1.34355011e+00  -1.31599061e+00
+  -1.24293055e+00  -1.14649993e+00  -1.03788110e+00  -9.24874987e-01
+  -8.13236458e-01  -7.06445543e-01  -6.05478491e-01  -5.09322553e-01
+  -4.16040972e-01  -3.23911175e-01  -2.31801178e-01  -1.39350797e-01
+  -4.66659586e-02""".split()))
+err = abs(u[N].vector().array() - dolfin_adjoint_solution).max()
+print u[N].vector().array(), err
+assert(err < 5.0e-9)
+
+system.verify_checkpoints()
+
+system.set_functional(u[N] * u[N] * dx)
+J = system.compute_functional()
+grad = system.compute_gradient([ic, nu])
+print grad[0].array(), float(grad[1])
+
+orders = system.taylor_test(ic, J = J, grad = grad[0])
+assert((orders > 1.99).all())
+
+orders = system.taylor_test(nu, J = J, grad = grad[1])
+assert((orders > 1.99).all())

@@ -1,0 +1,161 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2011-2012 by Imperial College London
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from fractions import Fraction;  hf = Fraction(1, 2)
+import os
+import sys
+
+import numpy
+
+from dolfin import *
+from timestepping import *
+
+# Model parameters (cgs units)
+L       = 2000.0e5
+beta    = StaticConstant(2.0e-13)
+dt      = StaticConstant(1800.0)
+maxTime = 3600.0 * 24.0
+nu      = StaticConstant(150.0e4)
+tau0    = StaticConstant(0.4)
+y_0     = 0.4
+H       = StaticConstant(1.0e5)
+
+mesh = Mesh(os.path.join(os.path.abspath(os.path.dirname(__file__)), "data", "square_125.xml.gz"))
+space = FunctionSpace(mesh, "CG", 2)
+test  = TestFunction(space)
+
+levels    = TimeLevels([n - 2, n - 2 + hf, n - 1, n, n + 1], cycle_map = {n - 2:n - 1, n - 1:n, n:n + 1})
+levels_dq = TimeLevels([n - 2, n - 2 + hf, n - 1, n], cycle_map = {n - 2:n - 1, n - 1:n}, last_past_level = n - 1)
+q    = TimeFunction(levels,    space, name = "q")
+psi  = TimeFunction(levels,    space, name = "psi")
+dq   = TimeFunction(levels_dq, space, name = "dq")
+
+betay = StaticFunction(space, name = "betay")
+betay.interpolate(Expression("beta * x[1]", beta = float(beta)))
+
+class Wind(Expression):
+  def __init__(self, y_0):
+    Expression.__init__(self)
+    self.__y_0 = y_0
+    return
+  def eval(self, value, x):
+    y_0 = self.__y_0
+    x, y = x / L
+    y_m = (1.0 - 2.0 * y_0) * x + y_0
+    if y > y_m:
+      value[:] = +numpy.cos(numpy.pi * ((y - y_m) / (1.0 - y_m)))
+    else:
+      value[:] = -numpy.cos(numpy.pi * (y / y_m))
+    return
+  def value_shape(self):
+    return tuple()
+F = StaticFunction(space, name = "F")
+pa_solve(inner(test, F) * dx == inner(test, Wind(y_0 = y_0)) * dx, \
+  F, solver_parameters = {"linear_solver":"lu"})
+#write_vtu("F", F)
+
+system = TimeSystem()
+
+hbc = StaticDirichletBC(space, 0.0, "on_boundary")
+def add_dq_solve(n):
+  grad_psi = grad(psi[n]);  u = as_vector([-grad_psi[1], grad_psi[0]])
+  u_F = as_vector([StaticConstant(0.0), -F])
+  system.add_solve(inner(test, dq[n]) * dx == -dt * inner(grad(test), -u * q[n] + nu * grad(q[n] - betay)) * dx + dt * inner(test, div((tau0 / H) * u_F)) * dx,
+    dq[n], hbc, solver_parameters = {"linear_solver":"lu"})
+  return
+def add_psi_solve(n):
+  system.add_solve(-inner(grad(test), grad(psi[n])) * dx == inner(test, q[n] - betay) * dx, \
+    psi[n], hbc, solver_parameters = {"linear_solver":"lu"})
+  return
+
+q_ic = StaticFunction(space, name = "q_ic")
+q_ic.assign(betay)
+
+# Galerkin project, so that bc is applied to the initial condition
+system.add_solve(inner(test, q[-2]) * dx == inner(test, q_ic) * dx,  
+  q[-2], StaticDirichletBC(space, betay, "on_boundary"), solver_parameters = {"linear_solver":"lu"})
+add_psi_solve(-2)
+add_dq_solve(-2)
+system.add_solve(LinearCombination((0.5, dq[-2]), (1.0, q[-2])), q[-2 + hf])
+add_psi_solve(-2 + hf)
+add_dq_solve(-2 + hf)
+system.add_solve(LinearCombination((1.0, dq[-2 + hf]), (1.0, q[-2])), q[-1])
+add_psi_solve(-1)
+add_dq_solve(-1)
+system.add_solve(LinearCombination((1.5, dq[-1]), (-0.5, dq[-2]), (1.0, q[-1])), q[0])
+add_psi_solve(0)
+
+add_dq_solve(n)
+system.add_solve(LinearCombination(((23.0 / 12.0), dq[n]), \
+                                   ((-4.0 / 3.0), dq[n - 1]), \
+                                   ((5.0 / 12.0), dq[n - 2]), \
+                                   (1.0, q[n])), q[n + 1])
+add_psi_solve(n + 1)
+
+def update(s, cs = None):
+  if s == 0:
+    t = 0.0
+  else:
+    t = (s + 1) * float(dt)
+  print "Time (days) = %.6f" % (t / (3600.0 * 24.0))
+  return
+system.set_update(update)
+
+grad_psi = grad(psi[N])
+system = system.assemble(adjoint = True, functional = 0.5 * H * dot(grad_psi, grad_psi) * dx)
+
+space_p0 = FunctionSpace(mesh, "DG", 0)
+c = Function(space_p0, name = "c")
+c_solver = PAEquationSolver(lumped_mass(space_p0) == inner(TestFunction(space_p0), sqrt(dot(grad(psi[n]), grad(psi[n]))) * dt / (0.5 * CellSize(mesh))) * dx,
+  c)
+def diagnostics(n, t):
+  if isinstance(n, TimeLevel) and n.offset() == 0:
+    c_solver.solve()
+    grad_psi = grad(psi[n])
+    c_norm = c.vector().norm("linf")
+    print "Time (days), KE, Courant = %.6f, %.17e, %.17e" % (t / (3600.0 * 24.0), assemble(0.5 * H * dot(grad_psi, grad_psi) * dx), c_norm)
+  else:
+    grad_psi = grad(psi[n])
+    print "Time (days), KE = %.6f, %.17e" % (t / (3600.0 * 24.0), assemble(0.5 * H * dot(grad_psi, grad_psi) * dx))
+
+  sys.stdout.flush()
+  sys.stderr.flush()
+  
+  return
+
+for j in range(-2, 1):
+  diagnostics(j, (float(dt) * (j + 2)))
+t = 2.0 * float(dt)
+#s = 2
+#index = 0
+#output = [psi[n], q[n], dq[n - 2], dq[n - 1]]
+while t * (1.0 + 1.0e-9) < maxTime:
+  system.timestep()
+  t += float(dt)
+#  s += 1
+  diagnostics(n, t)
+#  if s % int(((24.0 * 3600.0) / float(dt)) * 365) == 0:
+#    index += 1
+#    write_vtu("bve_ab3", output, index = index, t = t)
+system.finalise()
+
+dJdm = system.compute_gradient(q_ic, project = True)
+#write_vtu("bve_ab3_dJdm", dJdm[1])
+
+system.verify_checkpoints()
+orders = system.taylor_test(q_ic, grad = dJdm, fact = 1.0e-7)
+assert((orders > 1.99).all())

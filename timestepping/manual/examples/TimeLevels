@@ -1,0 +1,42 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+from timestepping import *
+from fractions import *
+
+# Create a TimeLevels with one past level and one future level, with
+# the past level data replaced by the future level data during the
+# timestep variable cycle. Suitable for use with forward Euler,
+# backward Euler, or Crank-Nicolson schemes.
+levels_1 = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+
+# Create a TimeLevels with one future level
+levels_2 = TimeLevels(levels = [n], cycle_map = {},
+  last_past_level = n - 1)
+
+# Create a TimeLevels with one past level and two future levels,
+# with the past level data replaced by the latest future level data
+# during the timestep variable cycle. Suitable for use with a
+# second order Runge-Kutta scheme.
+levels_3 = TimeLevels(levels = [n, n + Fraction(1, 2), n + 1],
+  cycle_map = {n:n + 1})
+
+# Create a TimeLevels with three past levels and one future level,
+# with the past levels replaced by the nearest later level during
+# the timestep variable cycle. Suitable for use with a third order
+# Adams-Bashforth scheme.
+levels_4 = TimeLevels(levels = [n - 2, n - 1, n, n + 1],
+  cycle_map = {n - 2:n - 1, n - 1:n, n:n + 1})

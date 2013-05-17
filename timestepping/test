@@ -1,0 +1,197 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import copy
+import glob
+import optparse
+import multiprocessing
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+
+optionParser = optparse.OptionParser( \
+  usage = "%prog [OPTIONS] DIR", \
+  add_help_option = True, \
+  description = "Run timestepping tests")
+optionParser.add_option("-c", "--custom-tests", action = "store_true", dest = "local", help = "Enable custom local tests", default = False)
+optionParser.add_option("-n", "--num-processors", type = int, dest = "N", help = "Run using N cores. A zero or negative value indicates that all cores should be used. Note that if an individual test uses > N cores then additional cores will be used.", default = 1)
+optionParser.add_option("-l", "--long-tests", action = "store_true", dest = "long", help = "Enable long tests", default = False)
+optionParser.add_option("-S", "--no-short-tests", action = "store_false", dest = "short", help = "Disable short tests", default = True)
+opts, args = optionParser.parse_args()
+if len(args) > 0:
+  print "Unexpected trailing argument"
+  sys.exit(1)
+
+path = os.path.abspath(os.path.dirname(__file__))
+def find_tests(rel_path, exclude = []):
+  def lfind_tests(rel_path):
+    tests = glob.glob(os.path.join(path, rel_path, "*"))
+    for test in copy.copy(tests):
+      if os.path.isdir(test):
+        tests.remove(test)
+        tests += lfind_tests(os.path.join(rel_path, test))
+    for test in copy.copy(tests):
+      if not os.access(test, os.X_OK):
+        tests.remove(test)
+    return tests
+
+  tests = lfind_tests(rel_path)
+  rel_path_len = len(os.path.join(path, rel_path, ""))
+  for test in copy.copy(tests):
+    if test[rel_path_len:] in exclude:
+      tests.remove(test)
+
+  def cmp(a, b):
+    a_basename = os.path.basename(a)
+    b_basename = os.path.basename(b)
+    if a_basename < b_basename:
+      return -1
+    elif a_basename == b_basename:
+      return 0
+    else:
+      return 1
+  tests.sort(cmp = cmp)
+
+  ntests = []
+  for test in tests:
+    handle = open(test, "r")
+    lines = [handle.readline() for i in range(3)]
+    handle.close()
+    np = 1
+    for line in lines:
+      if line.startswith("#NP "):
+        try:
+          np = int(line[4:])
+          break
+        except ValueError:
+          pass
+    nt = 1
+    for line in lines:
+      if line.startswith("#NT "):
+        try:
+          nt = int(line[4:])
+          break
+        except ValueError:
+          pass
+    ntests.append((np, nt, test))
+
+  return ntests
+
+if opts.short:
+  tests = find_tests(os.path.join("manual", "examples")) \
+        + find_tests(os.path.join("tests", "fenics")) \
+        + find_tests(os.path.join("tests", "unit")) \
+        + find_tests(os.path.join("tests", "short"))
+else:
+  tests = []
+if opts.long:
+  tests += find_tests(os.path.join("tests", "long"))
+if opts.local:
+  tests += find_tests(os.path.join("tests", "local"))
+
+def run_test(i, np, test, test_success):
+  sys.stdout.write("Running test: %s\n" % test)
+  
+  env = copy.copy(os.environ)
+  env["PYTHONPATH"] = "%s:%s" % (os.path.join(path, "python"), os.environ["PYTHONPATH"])
+
+  cwd = os.getcwd()
+  tmppath = tempfile.mkdtemp()
+  os.chdir(tmppath)
+  try:
+    if not np == 1:
+      proc = subprocess.Popen(("mpirun -np %i %s" % (np, test)).split(), env = env)
+    else:
+      proc = subprocess.Popen(("%s" % test).split(), env = env)
+    proc.wait()
+    if proc.returncode == 0:
+      test_success[i] = 1
+    else:
+      test_success[i] = 0
+  finally:
+    os.chdir(cwd)
+    shutil.rmtree(tmppath)
+
+  if test_success[i]:
+    sys.stdout.write("Test success: %s\n" % test)
+  else:
+    sys.stderr.write("Test failure: %s\n" % test)
+    
+  return
+
+N = max(opts.N, 0)
+if N == 0:
+  N = multiprocessing.cpu_count()
+
+test_success = multiprocessing.Array("i", len(tests))
+for i in range(len(test_success)):
+  test_success[i] = 0
+  
+if N == 1:
+  for i in range(len(tests)):
+    np, nt, test = tests[i]
+    proc = multiprocessing.Process(target = run_test, args = (i, np, test, test_success))
+    proc.start()
+    proc.join()
+else:
+  for test in copy.copy(tests):
+    if test[0] * test[1] >= N:
+      tests.remove(test)
+      tests.append(test)
+  
+  n = 0
+  procs = []
+  for i in range(len(tests)):
+    np, nt, test = tests[i]
+    if n + (np * nt) > N and len(procs) > 0:
+      while True:
+        for proc in copy.copy(procs):
+          if not proc[3].is_alive():
+            procs.remove(proc)
+            n -= proc[0] * proc[1]
+        if n + (np * nt) <= N or len(procs) == 0:
+          break
+        time.sleep(0.1)
+    proc = multiprocessing.Process(target = run_test, args = (i, np, test, test_success))
+    proc.start()
+    procs.append((np, nt, test, proc))
+    n += np * nt
+  while len(procs) > 0:
+    procs.pop()[3].join()
+  
+successes = 0
+failures = 0
+for success in test_success:
+  if success == 1:
+    successes += 1
+  else:
+    failures += 1
+print \
+"""\
+----------------------------------------------------------------------
+Summary:
+
+Successes: %i
+Failures: %i""" % (successes, failures)
+if failures > 0:
+  print "Failures:"
+  for i, success in enumerate(test_success):
+    if not success == 1:
+      print tests[i][2]
+  sys.exit(1)

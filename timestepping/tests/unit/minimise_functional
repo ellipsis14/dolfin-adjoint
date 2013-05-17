@@ -1,0 +1,50 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import numpy;  numpy.random.seed(0)
+
+from dolfin import *
+from timestepping import *
+
+mesh = UnitSquareMesh(10, 10)
+space = FunctionSpace(mesh, "CG", 2)
+
+T_ic = StaticFunction(space, name = "T_ic")
+T_ic.vector().set_local(numpy.random.random(T_ic.vector().local_size()))
+T_ic.vector().apply("insert")
+
+levels = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+T = TimeFunction(levels, space, name = "T")
+
+system = TimeSystem()
+system.add_solve(T_ic, T[0])
+system.add_solve(T[n], T[n + 1])
+
+T_f = StaticFunction(space, name = "T_f")
+system = system.assemble(adjoint = True, functional = (T[N] - T_f) * (T[N] - T_f) * dx)
+system.timestep(ns = 10)
+system.finalise()
+
+T_f.assign(T[N])
+system.reassemble(T_f)
+
+T_ic_orig = StaticFunction(space, name = "T_ic")
+T_ic_orig.assign(T_ic)
+system.minimise_functional(T_ic, tolerance = 1.0e-14, parameters_0 = 0.5, bounds = (0.0, 1.0))
+
+err = (T_ic.vector() - T_ic_orig.vector()).norm("linf")
+print "%.17e" % err
+assert(err < 8.0e-4)
