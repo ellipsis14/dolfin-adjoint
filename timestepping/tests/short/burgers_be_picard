@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Based on burgers_newton.py test from dolfin-adjoint
-# Code first added: 12/10/25
+# Code first added: 2012-10-25
 
 from dolfin import *
 from timestepping import *
