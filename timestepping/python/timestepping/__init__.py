@@ -64,7 +64,7 @@ timestepping finite element models.
 
 __license__ = "LGPL-3"
 
-__version__ = "1.2.0"
+__version__ = "1.2.0+"
 
 __all__ = \
   caches.__all__ + \

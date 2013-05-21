@@ -230,6 +230,9 @@ class PABilinearForm(PAForm):
   """
   
   def __init__(self, form, parameters = dolfin.parameters["timestepping"]["pre_assembly"]["bilinear_forms"]):
+    if not extract_form_data(form).rank == 2:
+      raise InvalidArgumentException("form must be a rank 2 form")
+    
     PAForm.__init__(self, form, parameters = parameters)
 
     return
@@ -241,6 +244,9 @@ class PALinearForm(PAForm):
   """
   
   def __init__(self, form, parameters = dolfin.parameters["timestepping"]["pre_assembly"]["linear_forms"]):
+    if not extract_form_data(form).rank == 1:
+      raise InvalidArgumentException("form must be a rank 1 form")
+    
     PAForm.__init__(self, form, parameters = parameters)
 
     return
