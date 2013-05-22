@@ -309,7 +309,7 @@ def da_annotate_equation_solve(solve):
     eq = dolfin.inner(dolfin.TestFunction(x.function_space()), dolfin.TrialFunction(x.function_space())) * dolfin.dx == \
       dolfin.inner(dolfin.TestFunction(x.function_space()), rhs) * dolfin.dx
     bcs = []
-    solver_parameters = {"linear_solver":"lu"}
+    solver_parameters = {"linear_solver":"default"}
     adjoint_solver_parameters = solver_parameters
   else:
     # Equation solve case
@@ -385,7 +385,7 @@ def da_annotate_equation_solve(solve):
             # The matrix is static, so we can cache it
             if not self.parameters["equations"]["symmetric_boundary_conditions"] and static_bcs:
               # Cache with boundary conditions
-              a = assembly_cache.assemble(self.data, bcs = bcs)
+              a = assembly_cache.assemble(self.data, bcs = bcs, symmetric_bcs = False)
               apply_a_bcs = False
             else:
               # Cache without boundary conditions

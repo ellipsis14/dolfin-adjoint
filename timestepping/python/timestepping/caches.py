@@ -187,7 +187,7 @@ class SolverCache:
       return tuple(fopts)
 
     if static:
-      if not "linear_solver" in solver_parameters or solver_parameters["linear_solver"] == "lu":
+      if not "linear_solver" in solver_parameters or solver_parameters["linear_solver"] in ["direct", "lu"] or dolfin.has_lu_solver_method(solver_parameters["linear_solver"]):
         solver_parameters = expand_solver_parameters(solver_parameters, default_solver_parameters = {"lu_solver":{"reuse_factorization":True, "same_nonzero_pattern":True}})
       else:
         solver_parameters = expand_solver_parameters(solver_parameters, default_solver_parameters = {"krylov_solver":{"preconditioner":{"reuse":True}}})
@@ -195,7 +195,7 @@ class SolverCache:
       solver_parameters = expand_solver_parameters(solver_parameters)
 
       static_parameters = False
-      if solver_parameters["linear_solver"] == "lu":
+      if solver_parameters["linear_solver"] in ["direct", "lu"] or dolfin.has_lu_solver_method(solver_parameters["linear_solver"]):
         static_parameters = solver_parameters["lu_solver"]["reuse_factorization"] or solver_parameters["lu_solver"]["same_nonzero_pattern"]
       else:
         static_parameters = solver_parameters["krylov_solver"]["preconditioner"]["reuse"]
@@ -204,7 +204,7 @@ class SolverCache:
 
     if static:
       if len(bcs) == 0:
-        key = (expand(form), flatten_parameters(solver_parameters))
+        key = (expand(form), None, None, flatten_parameters(solver_parameters))
       else:
         key = (expand(form), tuple(bcs), symmetric_bcs, flatten_parameters(solver_parameters))
     else:
@@ -214,7 +214,7 @@ class SolverCache:
       if test.count() > trial.count():
         test, trial = trial, test
       if len(bcs) == 0:
-        key = ((test, trial), flatten_parameters(solver_parameters))
+        key = ((test, trial), None, None, flatten_parameters(solver_parameters))
       else:
         key = ((test, trial), tuple(bcs), symmetric_bcs, flatten_parameters(solver_parameters))
 

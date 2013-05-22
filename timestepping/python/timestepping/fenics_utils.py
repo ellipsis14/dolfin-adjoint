@@ -380,7 +380,7 @@ def expand_solver_parameters(solver_parameters, default_solver_parameters = {}):
   
   if not len(default_solver_parameters) == 0:
     solver_parameters = apply(solver_parameters, default_solver_parameters)
-  return apply(solver_parameters, {"linear_solver":"lu", "lu_solver":dolfin.parameters["lu_solver"].to_dict(), "krylov_solver":dolfin.parameters["krylov_solver"].to_dict()})
+  return apply(solver_parameters, {"linear_solver":"default", "lu_solver":dolfin.parameters["lu_solver"].to_dict(), "krylov_solver":dolfin.parameters["krylov_solver"].to_dict()})
   
 def LinearSolver(solver_parameters):
   """
@@ -411,8 +411,17 @@ def LinearSolver(solver_parameters):
     else:
       raise InvalidArgumentException("Unexpected solver parameter: %s" % key)
   
-  if solver == "lu":
-    solver = dolfin.LUSolver()
+  if solver in ["direct", "lu"]:
+    is_lu = True
+    solver = "default"
+  elif solver == "iterative":
+    is_lu = False
+    solver = "gmres"
+  else:
+    is_lu = dolfin.has_lu_solver_method(solver)
+  
+  if is_lu:
+    solver = dolfin.LUSolver(solver)
     solver.parameters.update(lp)
   else:
     if pc is None:

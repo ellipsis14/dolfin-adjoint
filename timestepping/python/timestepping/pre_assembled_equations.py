@@ -123,7 +123,7 @@ class PAEquationSolver(EquationSolver):
         # Supplied an initial guess for a linear solve with a rank 1 LHS -
         # ignore it
         initial_guess = None
-      elif "linear_solver" in solver_parameters and not solver_parameters["linear_solver"] == "lu":
+      elif "linear_solver" in solver_parameters and not solver_parameters["linear_solver"] in ["direct", "lu"] and not dolfin.has_lu_solver_method(solver_parameters["linear_solver"]):
         # Supplied an initial guess with a Krylov solver - check the
         # initial_guess solver parameter
         if not "krylov_solver" in solver_parameters:

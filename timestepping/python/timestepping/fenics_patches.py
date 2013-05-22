@@ -65,7 +65,8 @@ if dolfin_version() < (1, 1, 0):
       "UnitSquareMesh",
       "RectangleMesh",
       "has_krylov_solver_method",
-      "has_krylov_solver_preconditioner"
+      "has_krylov_solver_preconditioner",
+      "has_lu_solver_method"
     ]
 
   GenericLinearSolver = dolfin.GenericLinearSolver = (dolfin.KrylovSolver, dolfin.LUSolver, dolfin.LinearSolver, dolfin.PETScLUSolver, dolfin.PETScKrylovSolver)
@@ -77,9 +78,15 @@ if dolfin_version() < (1, 1, 0):
 
   def has_krylov_solver_method(method):
     return method in [k_method[0] for k_method in dolfin.krylov_solver_methods()]
+  dolfin.has_krylov_solver_method = has_krylov_solver_method
 
   def has_krylov_solver_preconditioner(pc):
     return pc in [k_pc[0] for k_pc in dolfin.krylov_solver_preconditioners()]
+  dolfin.has_krylov_solver_preconditioner = has_krylov_solver_preconditioner
+  
+  def has_lu_solver_method(method):
+    return method in [lu_method for lu_method in dolfin.lu_solver_methods()]
+  dolfin.has_lu_solver_method = has_lu_solver_method
 
   class FacetFunction(dolfin.FacetFunction):
     def __new__(cls, tp, mesh, value = 0):
