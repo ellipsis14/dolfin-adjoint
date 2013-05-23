@@ -46,7 +46,8 @@ def system_info():
   
   return
 
-dolfin.parameters["timestepping"]["pre_assembly"]["linear_forms"]["whole_form_optimisation"] = True
+dolfin.parameters["timestepping"]["pre_assembly"]["linear_forms"]["matrix_optimisation"] = False
+dolfin.parameters["timestepping"]["pre_assembly"]["linear_forms"]["term_optimisation"] = False
 
 # dolfin-adjoint internals expect Constant s and Function s to have an
 # adj_name attribute. Patch __getattr__ to provide it.

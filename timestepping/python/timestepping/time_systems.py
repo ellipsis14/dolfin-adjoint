@@ -203,15 +203,19 @@ class TimeSystem:
             raise DependencyException("Invalid non-linear solve")
     else:
       s_kwargs = copy.copy(kwargs)
-      if "adjoint_solver_parameters" in s_kwargs:
-        if not isinstance(s_kwargs["adjoint_solver_parameters"], dict):
-          raise InvalidArgumentException("adjoint_solver_parameters must be a dictionary")
-        del(s_kwargs["adjoint_solver_parameters"])
       if "initial_guess" in s_kwargs:
         if not s_kwargs["initial_guess"] is None and not isinstance(s_kwargs["initial_guess"], dolfin.Function):
           raise InvalidArgumentException("initial_guess must be a Function")
         initial_guess = s_kwargs["initial_guess"]
         del(s_kwargs["initial_guess"])
+      if "adjoint_solver_parameters" in s_kwargs:
+        if not isinstance(s_kwargs["adjoint_solver_parameters"], dict):
+          raise InvalidArgumentException("adjoint_solver_parameters must be a dictionary")
+        del(s_kwargs["adjoint_solver_parameters"])
+      if "pre_assembly_parameters" in s_kwargs:
+        if not isinstance(s_kwargs["pre_assembly_parameters"], dict):
+          raise InvalidArgumentException("pre_assembly_parameters must be a dictionary")
+        del(s_kwargs["pre_assembly_parameters"])
       else:
         initial_guess = None
       if "form_compiler_parameters" in s_kwargs:

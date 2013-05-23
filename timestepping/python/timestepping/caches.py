@@ -82,6 +82,8 @@ class AssemblyCache:
       if not key in self.__cache:
         cache_info("Assembling form with rank %i" % form_data.rank, dolfin.info_red)
         self.__cache[key] = assemble(form)
+        if form_data.rank == 2:
+          self.__cache[key].compress()
       else:
         cache_info("Using cached assembled form with rank %i" % form_data.rank, dolfin.info_green)
     else:
@@ -94,6 +96,7 @@ class AssemblyCache:
         mat = assemble(form)
         apply_bcs(mat, bcs, symmetric_bcs = symmetric_bcs)
         self.__cache[key] = mat
+        mat.compress()
       else:
         cache_info("Using cached assembled form with rank 2, with boundary conditions", dolfin.info_green)
 

@@ -163,8 +163,15 @@ def add_dTdt_solve(T, dTdt, u, v, kappa, s = None, bc = {}, initial_guess = None
          
          inner(test_u, s) * dx
          )
-
-  system.add_solve(inner(test_u, dTdt) * dx == L, dTdt, solver_parameters = dTdt_solver, initial_guess = initial_guess)
+         
+  ver = petsc_version()
+  if not ver is None and ver >= (3, 2, 0):
+    pre_assembly_parameters = {"bilinear_forms":{"term_optimisation":True, "expand_form":True}}
+  else:
+    pre_assembly_parameters = {"bilinear_forms":{"term_optimisation":False}}
+  system.add_solve(inner(test_u, dTdt) * dx == L, dTdt,
+    solver_parameters = dTdt_solver, initial_guess = initial_guess,
+    pre_assembly_parameters = pre_assembly_parameters)
       
   return
 

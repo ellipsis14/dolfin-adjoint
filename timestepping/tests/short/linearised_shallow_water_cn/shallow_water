@@ -63,7 +63,7 @@ err = abs(comp - ref)
 print "%.17e" % comp
 print "%.17e" % ref
 print "%.17e" % err
-assert(err < 2.0e-16)
+assert(err < 3.0e-16)
 
 comp = assemble(split(state)[1] * split(state)[1] * dx)
 ref = 8.51321895311346568e-07

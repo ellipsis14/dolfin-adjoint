@@ -99,7 +99,7 @@ T_ic.interpolate(InitialTemperature(Ra, length))
 system.add_solve(T_ic, T[0])
 eta = viscosity(T[0])
 (a, L, pre) = momentum(W, eta, (Ra*T[0])*g)
-system.add_solve(a == L, w[0], bcs=bcs, solver_parameters={"krylov_solver": {"relative_tolerance": 1.0e-14}})
+system.add_solve(a == L, w[0], bcs=bcs, solver_parameters={"linear_solver":"mumps"})
 
 # Define initial and end time
 t = 0.0
@@ -116,7 +116,7 @@ system.add_solve(a == L, T_pr[n + 1], T_bcs, solver_parameters={"krylov_solver":
 # Solve for predicted flow
 eta = viscosity(T_pr[n + 1])
 (a, L, precond) = momentum(W, eta, (Ra*T_pr[n + 1])*g)
-system.add_solve(a == L, w_pr[n + 1], bcs, solver_parameters={"krylov_solver": {"relative_tolerance": 1.0e-14}})
+system.add_solve(a == L, w_pr[n + 1], bcs, solver_parameters={"linear_solver":"mumps"})
 
 # Solve for corrected temperature T in terms of predicted and previous velocity
 (a, L) = energy_correction(Q, dt, split(w_pr[n + 1])[0], split(w[n])[0], T[n])
@@ -125,7 +125,7 @@ system.add_solve(a == L, T[n + 1], T_bcs, solver_parameters={"krylov_solver": {"
 # Solve for corrected flow
 eta = viscosity(T[n + 1])
 (a, L, precond) = momentum(W, eta, (Ra*T[n + 1])*g)
-system.add_solve(a == L, w[n + 1], bcs, solver_parameters={"krylov_solver": {"relative_tolerance": 1.0e-14}})
+system.add_solve(a == L, w[n + 1], bcs, solver_parameters={"linear_solver":"mumps"})
 
 def update(s, cs = None):
   print "Time = %.5f" % (max(s - 1, 0) * float(dt))

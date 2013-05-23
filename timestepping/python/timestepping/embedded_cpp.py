@@ -49,7 +49,8 @@ class EmbeddedCpp:
     name:          The name of a variable in the code, which will be passed from
                    Python.
     type:          One of int, float, int_arr, long_arr double_arr, Function,
-                   GenericVector, or Mesh, identifying the variable type.
+                   GenericMatrix, GenericVector, or Mesh, identifying the
+                   variable type.
   """
 
   if dolfin_version() < (1, 1, 0):
@@ -72,8 +73,8 @@ class EmbeddedCpp:
       if not isinstance(arg, str):
         raise InvalidArgumentException("Argument name must be a string")
     for arg in kwargs.values():
-      if not arg in [int, float, int_arr, double_arr, long_arr, dolfin.Function, dolfin.GenericVector, dolfin.Mesh]:
-        raise InvalidArgumentException("Argument type must be int, float, int_arr, long_arr, double_arr, Function, GenericVector or Mesh")
+      if not arg in [int, float, int_arr, double_arr, long_arr, dolfin.Function, dolfin.GenericMatrix, dolfin.GenericVector, dolfin.Mesh]:
+        raise InvalidArgumentException("Argument type must be int, float, int_arr, long_arr, double_arr, Function, GenericMatrix, GenericVector or Mesh")
 
     self.__code = code
     self.__includes = """%s
@@ -113,6 +114,8 @@ class EmbeddedCpp:
         args += "void* %s" % name_mangle
         if arg == dolfin.Function:
           cast_code += "    boost::shared_ptr<Function> %s = (*((boost::shared_ptr<Function>*)%s));\n" % (name, name_mangle)
+        elif arg == dolfin.GenericMatrix:
+          cast_code += "    boost::shared_ptr<GenericMatrix> %s = (*((boost::shared_ptr<GenericMatrix>*)%s));\n" % (name, name_mangle)
         elif arg == dolfin.GenericVector:
           cast_code += "    boost::shared_ptr<GenericVector> %s = (*((boost::shared_ptr<GenericVector>*)%s));\n" % (name, name_mangle)
         else:
@@ -133,7 +136,7 @@ extern "C" {
   }
 }""" % (self.__includes, args, cast_code, self.__code)
 
-    mod = instant.build_module(code = code, cppargs = dolfin.parameters["form_compiler"]["cpp_optimize_flags"], include_dirs = self.__include_dirs)
+    mod = instant.build_module(code = code, cppargs = dolfin.parameters["form_compiler"]["cpp_optimize_flags"], lddargs = "-ldolfin", include_dirs = self.__include_dirs)
     path = os.path.dirname(mod.__file__)
     name = os.path.split(path)[-1]
     self.__lib = ctypes.cdll.LoadLibrary(os.path.join(path, "_%s.so" % name))
@@ -184,7 +187,7 @@ extern "C" {
       elif isinstance(arg, numpy.ndarray):
         largs.append(arg.ctypes.data)
       else:
-        assert(isinstance(arg, (dolfin.Function, dolfin.GenericVector, dolfin.Mesh)))
+        assert(isinstance(arg, (dolfin.Function, dolfin.GenericMatrix, dolfin.GenericVector, dolfin.Mesh)))
         largs.append(ctypes.c_void_p(int(arg.this)))
 
     ret = self.__lib.code(*largs)

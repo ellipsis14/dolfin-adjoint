@@ -35,8 +35,8 @@ __all__ = \
     "enforce_bcs",
     "evaluate_expr",
     "expand",
+    "expand_expr",
     "expand_solver_parameters",
-    "expr_terms",
     "extract_form_data",
     "is_empty_form",
     "is_general_constant",
@@ -159,7 +159,7 @@ def differentiate_expr(expr, u):
 
   return der
 
-def expr_terms(expr):
+def expand_expr(expr):
   """
   Recursively expand the supplied Expr into the largest possible Sum.
   """
@@ -170,12 +170,12 @@ def expr_terms(expr):
   if isinstance(expr, ufl.algebra.Sum):
     terms = []
     for term in expr.operands():
-      terms += expr_terms(term)
+      terms += expand_expr(term)
     return terms
   elif isinstance(expr, ufl.algebra.Product):
     fact1, fact2 = expr.operands()[0], ufl.algebra.Product(*expr.operands()[1:])
-    fact1_terms = expr_terms(fact1)
-    fact2_terms = expr_terms(fact2)
+    fact1_terms = expand_expr(fact1)
+    fact2_terms = expand_expr(fact2)
     terms = []
     for term1 in fact1_terms:
       if isinstance(term1, ufl.algebra.Product):
@@ -192,38 +192,38 @@ def expr_terms(expr):
   elif isinstance(expr, ufl.indexsum.IndexSum):
     ops = expr.operands()
     assert(len(ops) == 2)
-    return [ufl.indexsum.IndexSum(term, ops[1]) for term in expr_terms(ops[0])]
+    return [ufl.indexsum.IndexSum(term, ops[1]) for term in expand_expr(ops[0])]
   elif isinstance(expr, ufl.indexed.Indexed):
     ops = expr.operands()
     assert(len(ops) == 2)
-    return [ufl.indexed.Indexed(term, ops[1]) for term in expr_terms(ops[0])]
+    return [ufl.indexed.Indexed(term, ops[1]) for term in expand_expr(ops[0])]
   elif isinstance(expr, ufl.tensors.ComponentTensor):
     ops = expr.operands()
     assert(len(ops) == 2)
-    return [ufl.tensors.ComponentTensor(term, ops[1]) for term in expr_terms(ops[0])]
+    return [ufl.tensors.ComponentTensor(term, ops[1]) for term in expand_expr(ops[0])]
   elif isinstance(expr, ufl.algebra.Division):
     ops = expr.operands()
     assert(len(ops) == 2)
-    return [ufl.algebra.Division(term, ops[1]) for term in expr_terms(ops[0])]
+    return [ufl.algebra.Division(term, ops[1]) for term in expand_expr(ops[0])]
   elif isinstance(expr, ufl.restriction.PositiveRestricted):
     ops = expr.operands()
     assert(len(ops) == 1)
-    return [ufl.restriction.PositiveRestricted(term) for term in expr_terms(ops[0])]
+    return [ufl.restriction.PositiveRestricted(term) for term in expand_expr(ops[0])]
   elif isinstance(expr, ufl.restriction.NegativeRestricted):
     ops = expr.operands()
     assert(len(ops) == 1)
-    return [ufl.restriction.NegativeRestricted(term) for term in expr_terms(ops[0])]
+    return [ufl.restriction.NegativeRestricted(term) for term in expand_expr(ops[0])]
   # Only defined for UFL versions >= 1.0.0 and < 1.2.0
   elif hasattr(ufl.differentiation, "SpatialDerivative") and isinstance(expr, ufl.differentiation.SpatialDerivative):
     ops = expr.operands()
     assert(len(ops) == 2)
-    return [ufl.differentiation.SpatialDerivative(term, ops[1]) for term in expr_terms(ops[0])]
+    return [ufl.differentiation.SpatialDerivative(term, ops[1]) for term in expand_expr(ops[0])]
   elif isinstance(expr, ufl.differentiation.Grad):
     ops = expr.operands()
     assert(len(ops) == 1)
-    return [ufl.differentiation.Grad(term) for term in expr_terms(ops[0])]
+    return [ufl.differentiation.Grad(term) for term in expand_expr(ops[0])]
   elif isinstance(expr, (ufl.tensoralgebra.Dot, ufl.tensoralgebra.Inner)):
-    return expr_terms(ufl.algorithms.expand_compounds(expr))
+    return expand_expr(ufl.algorithms.expand_compounds(expr))
   # Expr types white-list. These cannot be expanded.
   elif isinstance(expr, (ufl.constantvalue.IntValue,
                          ufl.argument.Argument,
@@ -245,7 +245,7 @@ def expr_terms(expr):
                          ufl.operators.Conditional)):
     return [expr]
   else:
-    dolfin.info_red("Warning: Expr type %s not expanded by expr_terms" % expr.__class__)
+    dolfin.info_red("Warning: Expr type %s not expanded by expand_expr" % expr.__class__)
     return [expr]
 
 def lumped_mass(space, du = None):
@@ -411,7 +411,7 @@ def LinearSolver(solver_parameters):
     else:
       raise InvalidArgumentException("Unexpected solver parameter: %s" % key)
   
-  if solver in ["direct", "lu"]:
+  if solver in ["default", "direct", "lu"]:
     is_lu = True
     solver = "default"
   elif solver == "iterative":

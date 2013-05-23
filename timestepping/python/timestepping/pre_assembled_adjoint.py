@@ -174,10 +174,9 @@ class PAAdjointSolvers:
       or EquationSolver s.
     a_map: The AdjointVariableMap used to convert between forward and adjoint
       Function s.
-    parameters: Parameters defining detailed optimisation options.
   """
   
-  def __init__(self, f_solves_a, f_solves_b, a_map, parameters = dolfin.parameters["timestepping"]["pre_assembly"]):
+  def __init__(self, f_solves_a, f_solves_b, a_map):
     if not isinstance(f_solves_a, list):
       raise InvalidArgumentException("f_solves_a must be a list of AssignmentSolver s or EquationSolver s")
     for f_solve in f_solves_a:
@@ -190,10 +189,6 @@ class PAAdjointSolvers:
         raise InvalidArgumentException("f_solves_b must be a list of AssignmentSolver s or EquationSolver s")
     if not isinstance(a_map, AdjointVariableMap):
       raise InvalidArgumentException("a_map must be an AdjointVariableMap")
-    if isinstance(parameters, dict):
-      parameters = dolfin.Parameters(**parameters)
-    else:
-      parameters = dolfin.Parameters(parameters)
 
     # Reverse causality
     f_solves_a = copy.copy(f_solves_a);  f_solves_a.reverse()
@@ -205,6 +200,7 @@ class PAAdjointSolvers:
     la_L_as = []
     la_bcs = []
     la_solver_parameters = []
+    la_pre_assembly_parameters = []
     la_keys = {}
 
     # Create an adjoint solve for each forward solve in f_solves_a, and add
@@ -217,7 +213,8 @@ class PAAdjointSolvers:
       if isinstance(f_solve, AssignmentSolver):
         la_a_forms.append(None)
         la_bcs.append([])
-        la_solver_parameters.append({})
+        la_solver_parameters.append(None)
+        la_pre_assembly_parameters.append(dolfin.parameters["timestepping"]["pre_assembly"].copy())
       else:
         assert(isinstance(f_solve, EquationSolver))
         f_a = f_solve.tangent_linear()[0]
@@ -227,16 +224,14 @@ class PAAdjointSolvers:
           a_a = adjoint(f_a, adjoint_arguments = (a_test, a_trial))
           la_a_forms.append(a_a)
           la_bcs.append(f_solve.hbcs())
-          la_solver_parameters.append(copy.copy(f_solve.adjoint_solver_parameters()))
-#          if not "krylov_solver" in la_solver_parameters[-1]:
-#            la_solver_parameters[-1]["krylov_solver"] = {}
-#          la_solver_parameters[-1]["krylov_solver"]["nonzero_initial_guess"] = False
+          la_solver_parameters.append(copy.deepcopy(f_solve.adjoint_solver_parameters()))
         else:
           assert(f_a_rank == 1)
           a_a = f_a
           la_a_forms.append(a_a)
           la_bcs.append(f_solve.hbcs())
           la_solver_parameters.append(None)
+        la_pre_assembly_parameters.append(f_solve.pre_assembly_parameters().copy())
       la_x.append(a_x)
       la_L_forms.append(None)
       la_L_as.append([])
@@ -286,8 +281,8 @@ class PAAdjointSolvers:
     self.__a_L_as = la_L_as
     self.__a_bcs = la_bcs
     self.__a_solver_parameters = la_solver_parameters
+    self.__a_pre_assembly_parameters = la_pre_assembly_parameters
     self.__a_keys = la_keys
-    self.parameters = parameters
     
     self.__functional = None
     self.reassemble()
@@ -314,22 +309,22 @@ class PAAdjointSolvers:
           static_bcs = n_non_static_bcs(self.__a_bcs[i]) == 0
           static_form = is_static_form(self.__a_a_forms[i])
           if len(self.__a_bcs[i]) > 0 and static_bcs and static_form:
-            a_a = assembly_cache.assemble(self.__a_a_forms[i], bcs = self.__a_bcs[i], symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
-            a_solver = solver_cache.solver(self.__a_a_forms[i], self.__a_solver_parameters[i], static = True, bcs = self.__a_bcs[i], symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
+            a_a = assembly_cache.assemble(self.__a_a_forms[i], bcs = self.__a_bcs[i], symmetric_bcs = self.__a_pre_assembly_parameters[i]["equations"]["symmetric_boundary_conditions"])
+            a_solver = solver_cache.solver(self.__a_a_forms[i], self.__a_solver_parameters[i], static = True, bcs = self.__a_bcs[i], symmetric_bcs = self.__a_pre_assembly_parameters[i]["equations"]["symmetric_boundary_conditions"])
           else:
-            a_a = PABilinearForm(self.__a_a_forms[i], parameters = self.parameters["bilinear_forms"])
-            a_solver = solver_cache.solver(self.__a_a_forms[i], self.__a_solver_parameters[i], static = a_a.is_static() and static_bcs, bcs = self.__a_bcs[i], symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
+            a_a = PABilinearForm(self.__a_a_forms[i], parameters = self.__a_pre_assembly_parameters[i]["bilinear_forms"])
+            a_solver = solver_cache.solver(self.__a_a_forms[i], self.__a_solver_parameters[i], static = a_a.is_static() and static_bcs, bcs = self.__a_bcs[i], symmetric_bcs = self.__a_pre_assembly_parameters[i]["equations"]["symmetric_boundary_conditions"])
         else:
           assert(a_a_rank == 1)
           assert(self.__a_solver_parameters[i] is None)
-          a_a = PALinearForm(self.__a_a_forms[i], parameters = self.parameters["linear_forms"])
+          a_a = PALinearForm(self.__a_a_forms[i], parameters = self.__a_pre_assembly_parameters[i]["linear_forms"])
           a_solver = None
       return a_a, a_solver
     def assemble_rhs(i):
       if self.__a_L_forms[i] is None:
         return None
       else:
-        return PALinearForm(self.__a_L_forms[i], parameters = self.parameters["linear_forms"])
+        return PALinearForm(self.__a_L_forms[i], parameters = self.__a_pre_assembly_parameters[i]["linear_forms"])
     
     if len(args) == 0:
       la_a, la_solvers = [], []
@@ -471,7 +466,7 @@ class PAAdjointSolvers:
           enforce_bcs(L, a_bcs)
         else:
           a_a = assemble(a_a, copy = len(a_bcs) > 0)
-          apply_bcs(a_a, a_bcs, L = L, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
+          apply_bcs(a_a, a_bcs, L = L, symmetric_bcs = self.__a_pre_assembly_parameters[i]["equations"]["symmetric_boundary_conditions"])
         a_solver.set_operator(a_a)
         a_solver.solve(a_x.vector(), L)
 
@@ -502,9 +497,9 @@ class PAAdjointSolvers:
           raise DependencyException("Invalid dependency")
 
       self.__a_L_rhs = [None for i in range(len(self.__a_x))]
-      for a_x in a_rhs:
+      for i, a_x in enumerate(a_rhs):
         if a_x in self.__a_keys:
-          self.__a_L_rhs[self.__a_keys[a_x]] = PALinearForm(a_rhs[a_x], parameters = self.parameters["linear_forms"])
+          self.__a_L_rhs[self.__a_keys[a_x]] = PALinearForm(a_rhs[a_x], parameters = self.__a_pre_assembly_parameters[i]["linear_forms"])
       self.__functional = functional
     elif isinstance(functional, TimeFunctional):
       self.__a_L_rhs = [None for i in range(len(self.__a_x))]

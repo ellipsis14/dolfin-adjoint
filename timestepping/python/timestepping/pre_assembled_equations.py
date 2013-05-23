@@ -51,15 +51,6 @@ class PAEquationSolver(EquationSolver):
     args, kwargs = copy.copy(args), copy.copy(kwargs)
 
     # Process arguments not to be passed to _extract_args
-    if "parameters" in kwargs:
-      parameters = kwargs["parameters"]
-      del(kwargs["parameters"])
-    else:
-      parameters = dolfin.parameters["timestepping"]["pre_assembly"]
-    if isinstance(parameters, dict):
-      parameters = dolfin.Parameters(**parameters)
-    else:
-      parameters = dolfin.Parameters(parameters)
     if "initial_guess" in kwargs:
       if not kwargs["initial_guess"] is None and not isinstance(kwargs["initial_guess"], dolfin.Function):
         raise InvalidArgumentException("initial_guess must be a Function")
@@ -74,6 +65,11 @@ class PAEquationSolver(EquationSolver):
       del(kwargs["adjoint_solver_parameters"])
     else:
       adjoint_solver_parameters = None
+    if "pre_assembly_parameters" in kwargs:
+      pre_assembly_parameters = kwargs["pre_assembly_parameters"]
+      del(kwargs["pre_assembly_parameters"])
+    else:
+      pre_assembly_parameters = {}
 
     # Process remaining arguments
     if "form_compiler_parameters" in kwargs:
@@ -138,7 +134,10 @@ class PAEquationSolver(EquationSolver):
         initial_guess = None
 
     # Initialise
-    EquationSolver.__init__(self, eq, x, bcs, solver_parameters = solver_parameters, adjoint_solver_parameters = adjoint_solver_parameters)
+    EquationSolver.__init__(self, eq, x, bcs,
+      solver_parameters = solver_parameters,
+      adjoint_solver_parameters = adjoint_solver_parameters,
+      pre_assembly_parameters = pre_assembly_parameters)
     self.__args = args
     self.__kwargs = kwargs
     self.__J = J
@@ -146,7 +145,6 @@ class PAEquationSolver(EquationSolver):
     self.__goal = goal
     self.__form_parameters = form_parameters
     self.__initial_guess = initial_guess
-    self.parameters = parameters
 
     # Assemble
     self.reassemble()
@@ -163,7 +161,9 @@ class PAEquationSolver(EquationSolver):
     calling reassemble on the PAEquationSolver.
     """
     
-    x, eq, bcs, solver_parameters = self.x(), self.eq(), self.bcs(), self.solver_parameters()
+    x, eq, bcs, solver_parameters, pre_assembly_parameters = self.x(), \
+      self.eq(), self.bcs(), self.solver_parameters(), \
+      self.pre_assembly_parameters()
     x_deps = self.dependencies()
     if self.is_linear():
       for dep in x_deps:
@@ -175,25 +175,25 @@ class PAEquationSolver(EquationSolver):
         if eq_lhs_rank == 2:
           static_bcs = n_non_static_bcs(bcs) == 0
           static_form = is_static_form(eq.lhs)
-          if not self.parameters["equations"]["symmetric_boundary_conditions"] and len(bcs) > 0 and static_bcs and static_form:
+          if not pre_assembly_parameters["equations"]["symmetric_boundary_conditions"] and len(bcs) > 0 and static_bcs and static_form:
             a = assembly_cache.assemble(eq.lhs, bcs = bcs, symmetric_bcs = False)
             cache_info("Pre-assembled LHS terms in solve for %s    : 1" % x.name(), dolfin.info_blue)
             cache_info("Non-pre-assembled LHS terms in solve for %s: 0" % x.name(), dolfin.info_blue)
             solver = solver_cache.solver(eq.lhs, solver_parameters, static = True, bcs = bcs, symmetric_bcs = False)
           else:
-            a = PABilinearForm(eq.lhs, parameters = self.parameters["bilinear_forms"])
+            a = PABilinearForm(eq.lhs, parameters = pre_assembly_parameters["bilinear_forms"])
             cache_info("Pre-assembled LHS terms in solve for %s    : %i" % (x.name(), a.n_pre_assembled()), dolfin.info_blue)
             cache_info("Non-pre-assembled LHS terms in solve for %s: %i" % (x.name(), a.n_non_pre_assembled()), dolfin.info_blue)
-            solver = solver_cache.solver(eq.lhs, solver_parameters, static = a.is_static() and static_bcs, bcs = bcs, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
+            solver = solver_cache.solver(eq.lhs, solver_parameters, static = a.is_static() and static_bcs, bcs = bcs, symmetric_bcs = pre_assembly_parameters["equations"]["symmetric_boundary_conditions"])
         else:
           assert(eq_lhs_rank == 1)
-          a = PALinearForm(eq.lhs, parameters = self.parameters["linear_forms"])
+          a = PALinearForm(eq.lhs, parameters = pre_assembly_parameters["linear_forms"])
           cache_info("Pre-assembled LHS terms in solve for %s    : %i" % (x.name(), a.n_pre_assembled()), dolfin.info_blue)
           cache_info("Non-pre-assembled LHS terms in solve for %s: %i" % (x.name(), a.n_non_pre_assembled()), dolfin.info_blue)
           solver = None
         return a, solver
       def assemble_rhs():
-        L = PALinearForm(eq.rhs, parameters = self.parameters["linear_forms"])
+        L = PALinearForm(eq.rhs, parameters = pre_assembly_parameters["linear_forms"])
         cache_info("Pre-assembled RHS terms in solve for %s    : %i" % (x.name(), L.n_pre_assembled()), dolfin.info_blue)
         cache_info("Non-pre-assembled RHS terms in solve for %s: %i" % (x.name(), L.n_non_pre_assembled()), dolfin.info_blue)
         return L
@@ -218,16 +218,16 @@ class PAEquationSolver(EquationSolver):
       J, hbcs = self.J(), self.hbcs()
 
       def assemble_lhs():
-        a = PABilinearForm(J, parameters = self.parameters["bilinear_forms"])
+        a = PABilinearForm(J, parameters = pre_assembly_parameters["bilinear_forms"])
         cache_info("Pre-assembled LHS terms in solve for %s    : %i" % (x.name(), a.n_pre_assembled()), dolfin.info_blue)
         cache_info("Non-pre-assembled LHS terms in solve for %s: %i" % (x.name(), a.n_non_pre_assembled()), dolfin.info_blue)
-        solver = solver_cache.solver(J, solver_parameters, static = False, bcs = hbcs, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
+        solver = solver_cache.solver(J, solver_parameters, static = False, bcs = hbcs, symmetric_bcs = pre_assembly_parameters["equations"]["symmetric_boundary_conditions"])
         return a, solver
       def assemble_rhs():
         L = -eq.lhs
         if not is_zero_rhs(eq.rhs):
           L += eq.rhs
-        L = PALinearForm(L, parameters = self.parameters["linear_forms"])
+        L = PALinearForm(L, parameters = pre_assembly_parameters["linear_forms"])
         cache_info("Pre-assembled RHS terms in solve for %s    : %i" % (x.name(), L.n_pre_assembled()), dolfin.info_blue)
         cache_info("Non-pre-assembled RHS terms in solve for %s: %i" % (x.name(), L.n_non_pre_assembled()), dolfin.info_blue)
         return L
@@ -297,7 +297,7 @@ class PAEquationSolver(EquationSolver):
     to the Newton solver supplied with DOLFIN, but utilises pre-assembly.
     """
     
-    x = self.x()
+    x, pre_assembly_parameters = self.x(), self.pre_assembly_parameters()
     if not self.__initial_guess is None:
       x.assign(self.__initial_guess)
     
@@ -314,7 +314,7 @@ class PAEquationSolver(EquationSolver):
       elif self.__a.rank() == 2:
         a = assemble(self.__a, copy = len(bcs) > 0)
         L = assemble(self.__L, copy = len(bcs) > 0)
-        apply_bcs(a, bcs, L = L, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
+        apply_bcs(a, bcs, L = L, symmetric_bcs = pre_assembly_parameters["equations"]["symmetric_boundary_conditions"])
 
         solver.set_operator(a)
         solver.solve(x.vector(), L)
@@ -383,7 +383,7 @@ class PAEquationSolver(EquationSolver):
         it = 0
         if r_0 >= atol:
           l_a = assemble(a, copy = len(hbcs) > 0)
-          apply_bcs(l_a, hbcs, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
+          apply_bcs(l_a, hbcs, symmetric_bcs = pre_assembly_parameters["equations"]["symmetric_boundary_conditions"])
           solver.set_operator(l_a)
           solver.solve(dx, l_L)
           x.axpy(omega, dx)
@@ -396,7 +396,7 @@ class PAEquationSolver(EquationSolver):
             if r < atol:
               break
             l_a = assemble(a, copy = len(hbcs) > 0)
-            apply_bcs(l_a, hbcs, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
+            apply_bcs(l_a, hbcs, symmetric_bcs = pre_assembly_parameters["equations"]["symmetric_boundary_conditions"])
             solver.set_operator(l_a)
             solver.solve(dx, l_L)
             x.axpy(omega, dx)
@@ -404,7 +404,7 @@ class PAEquationSolver(EquationSolver):
       elif r_def == "incremental":
         l_a = assemble(a, copy = len(hbcs) > 0)
         l_L = assemble(L, copy = len(hbcs) > 0)
-        apply_bcs(l_a, hbcs, L = l_L, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
+        apply_bcs(l_a, hbcs, L = l_L, symmetric_bcs = pre_assembly_parameters["equations"]["symmetric_boundary_conditions"])
         solver.set_operator(l_a)
         solver.solve(dx, l_L)
         x.axpy(omega, dx)
@@ -415,7 +415,7 @@ class PAEquationSolver(EquationSolver):
           while it < max_its:
             l_a = assemble(a, copy = len(hbcs) > 0)
             l_L = assemble(L, copy = len(hbcs) > 0)
-            apply_bcs(l_a, hbcs, L = l_L, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
+            apply_bcs(l_a, hbcs, L = l_L, symmetric_bcs = pre_assembly_parameters["equations"]["symmetric_boundary_conditions"])
             solver.set_operator(l_a)
             solver.solve(dx, l_L)
             x.axpy(omega, dx)

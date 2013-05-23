@@ -258,4 +258,4 @@ print err
 assert(err < 5.0e-14)
 
 orders = system.taylor_test(ic, grad = dJdm, fact = 1.0e-3)
-assert((orders > 1.99).all())
+assert((orders > 1.98).all())

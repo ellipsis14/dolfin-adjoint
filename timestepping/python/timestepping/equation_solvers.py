@@ -302,9 +302,10 @@ class EquationSolver:
     solver_parameters: A dictionary of solver parameters.
     adjoint_solver_parameters: A dictionary of solver parameters for an adjoint
       solve.
+    pre_assembly_parameters: A dictionary of pre-assembly parameters.
   """
   
-  def __init__(self, eq, x, bcs = [], solver_parameters = {}, adjoint_solver_parameters = None):
+  def __init__(self, eq, x, bcs = [], solver_parameters = {}, adjoint_solver_parameters = None, pre_assembly_parameters = {}):
     if not isinstance(eq, ufl.equation.Equation):
       raise InvalidArgumentException("eq must be an Equation")
     if not isinstance(x, dolfin.Function):
@@ -321,11 +322,13 @@ class EquationSolver:
     if not adjoint_solver_parameters is None and not isinstance(adjoint_solver_parameters, dict):
       raise InvalidArgumentException("adjoint_solver_parameters must be a dictionary")
 
-    solver_parameters = copy.copy(solver_parameters)
+    solver_parameters = copy.deepcopy(solver_parameters)
     if adjoint_solver_parameters is None:
       adjoint_solver_parameters = solver_parameters
-    else:
-      adjoint_solver_parameters = copy.copy(adjoint_solver_parameters)
+    adjoint_solver_parameters = copy.deepcopy(adjoint_solver_parameters)
+    npre_assembly_parameters = dolfin.parameters["timestepping"]["pre_assembly"].copy()
+    npre_assembly_parameters.update(pre_assembly_parameters)
+    pre_assembly_parameters = npre_assembly_parameters;  del(npre_assembly_parameters)
 
     x_deps = ufl.algorithms.extract_coefficients(eq.lhs)
     if not is_zero_rhs(eq.rhs):
@@ -340,6 +343,7 @@ class EquationSolver:
     self.__hbcs = None
     self.__solver_parameters = solver_parameters
     self.__adjoint_solver_parameters = adjoint_solver_parameters
+    self.__pre_assembly_parameters = pre_assembly_parameters
     self.__x_deps = x_deps
     self.__is_linear = is_linear
     
@@ -453,6 +457,13 @@ class EquationSolver:
     """
     
     return self.__adjoint_solver_parameters
+  
+  def pre_assembly_parameters(self):
+    """
+    Return pre-assembly parameters.
+    """
+    
+    return self.__pre_assembly_parameters
 
   def is_linear(self):
     """
