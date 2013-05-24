@@ -1250,11 +1250,11 @@ Not all features provided by the \verb+timestepping+ library may be used in
 combination with \verb+dolfin-adjoint+. In particular the \verb+dolfin-adjoint+
 library supports only assignment operations which can be performed via a call
 to the \verb+assign+ method of \verb+dolfin.Function+ objects. If more general
-assignments are registered (see section \ref{sect:assignments}) then, at
-present, these equations are converted into a Galerkin projection with default
-linear solver options. Certain time discretisation specific optimisations are
-also disabled when combining the \verb+timestepping+ library with the
-\verb+dolfin_adjoint+ library.
+assignments are registered (see section \ref{sect:assignments}) then, in the
+\verb+dolfin-adjoint+ annotation of the forward model, these equations are
+converted into a Galerkin projection with default linear solver options. Certain 
+time discretisation specific optimisations are also disabled when combining the
+\verb+timestepping+ library with the \verb+dolfin_adjoint+ library.
 
 \chapter{Time discretisation examples}
 
