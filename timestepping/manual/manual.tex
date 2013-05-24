@@ -465,7 +465,7 @@ test_p1 = TestFunction(space_p1)
 eq = inner(test_p1, F1[n + 1]) * dx == inner(test_p1, F2[n]) * dx
 \end{lstlisting}
 
-\section{Model equations}
+\section{Model equations}\label{sect:equations}
 
 A \verb+TimeSystem+ object is used to keep a record of model equations.
 Model equations can be registered with a \verb+TimeSystem+ by calling the
@@ -476,7 +476,7 @@ A \verb+TimeSystem+ is instantiated without arguments:
 system = TimeSystem()
 \end{lstlisting}
 
-\subsection{Registering assignments}
+\subsection{Registering assignments}\label{sect:assignments}
 
 An assignment can be registered via the \verb+add_assignment+ method:
 \begin{lstlisting}
@@ -646,7 +646,10 @@ arguments are identical to the \verb+dolfin.DirichletBC+ constructor.
 
 Objects that are declared as ``static'' in this way should not be modified
 during the model execution -- doing so leads to undefined behaviour. Objects
-declared as static may be modified before the initialisation stage.
+declared as static may be freely modified before the analysis and optimisation
+stage (see section \ref{sect:assembly}), and functionality is provided to enable
+the safe modification of static \verb+Constant+ and \verb+Function+ objects
+after the finalisation stage (section \ref{sect:reassembly}).
 
 \subsection*{Examples}
 
@@ -771,7 +774,23 @@ functional can instead be specified via the \verb+set_functional+ method:
 asystem.set_functional(functional)
 \end{lstlisting}
 
-\section{Timestepping}
+\subsection{Modifying static data}\label{sect:reassembly}
+
+In some circumstances it is useful to modify the values of static \verb+Constant+
+or \verb+Function+ objects after the analysis and optimisation. This may be
+useful, for example, after the completion of forward model timestepping, in
+order to re-run the forward model with a new value for a parameter. However in
+this case the data cached during the analysis and optimisation stage may become
+invalid. This issue can be resolved by calling the \verb+reassemble+ method:
+\begin{lstlisting}
+asystem.reassemble(*args)
+\end{lstlisting}
+If supplied with no arguments then this method regenerates all cached data.
+Optionally an arbitrary number of \verb+Constant+ or \verb+Function+ arguments
+may be supplied, indicating that only data associated with these objects should
+be regenerated.
+
+\section{Timestepping}\label{sect:timestepping}
 
 The model is timestepped by calling the \verb+timestep+ method of an \linebreak
 \verb+ForwardModel+ or \verb+ManagedModel+:
@@ -855,7 +874,7 @@ system.finalise()
 Given a forward model described using a \verb+TimeSystem+, the associated
 discrete adjoint model can be derived in the analysis and optimisation step (see
 section \ref{sect:adjoint_assembly}). The resulting \verb+ManagedModel+
-returned can be used to perform a model constrained derivative calculation.
+returned can be used to perform a total derivative calculation.
 
 \subsection{Checkpointing and storage}
 
@@ -884,8 +903,8 @@ entire forward model, and hence this should only be used for debugging purposes.
 
 \subsection{Derivative calculation}
 
-A model constrained derivative can be computed via the \verb+compute_gradient+
-method. The high-level arguments for this method are:
+A total derivative can be computed via the \verb+compute_gradient+ method. The
+high-level arguments for this method are:
 \begin{lstlisting}
 grad = asystem.compute_gradient(parameters = parameters,
   project = project,
@@ -899,7 +918,7 @@ optional \verb+project+ is a \linebreak boolean, and the optional
 must have been declared as static (see section \ref{sect:statics}). If
 \verb+parameters+ is a list of \verb+dolfin.Constant+ or \verb+dolfin.Function+
 objects then all elements must have been declared as static. This method returns
-the model constrained derivative of the registered functional (see section
+the total derivative of the registered functional (see section
 \ref{sect:adjoint_assembly}). If \verb+parameters+ is a list, then the
 \verb+i+th element of the return value contains the derivative with respect to
 the \verb+i+th element of \verb+parameters+. The derivative with respect to a
@@ -951,11 +970,11 @@ orders = asystem.taylor_test(parameter, grad = grad,
 been declared as static (see section \ref{sect:statics}) and the optional
 \verb+grad+ is the corresponding derivative returned by the
 \verb+compute_gradient+ method. If \verb+grad+ is not supplied then the
-model constrained derivative is computed using the adjoint model. The optional
-\verb+ntest+ argument is the number of forward model calculations to perform in
-the verification. This must be greater than or equal to 2, and a default value
-of 6 is used if this is not supplied. The optional \verb+fact+ is a positive
-float and sets the magnitude of the perturbations. Let $N$ be the value of
+total derivative is computed using the adjoint model. The optional \verb+ntest+
+argument is the number of forward model calculations to perform in the
+verification. This must be greater than or equal to 2, and a default value of 6
+is used if this is not supplied. The optional \verb+fact+ is a positive float
+and sets the magnitude of the perturbations. Let $N$ be the value of
 \verb+ntest+ and \verb+f+ be the value of \verb+fact+. If \verb+parameter+ is a
 \verb+dolfin.Constant+ with value $m$ then the perturbations applied are
 $\epsilon_i \delta m$, where:
@@ -1076,17 +1095,166 @@ while t * (1.0 + 1.0e-9) < 1.0:
 # Finalise
 system.finalise()
 
-# Perform a model constrained derivative calculation
-dJdm = system.compute_gradient(nu)
+# Perform a total derivative calculation
+dJ = system.compute_gradient(nu)
 
 # Verify the stored forward model data
 system.verify_checkpoints()
 # Verify the computed derivative using a Taylor remainder
 # convergence test
-orders = system.taylor_test(nu, grad = dJdm)
+orders = system.taylor_test(nu, grad = dJ)
 # Check the convergence order
 assert((orders > 1.99).all())
 \end{lstlisting}
+
+\chapter{Integration with \texttt{dolfin-adjoint}}
+
+The \verb+dolfin-adjoint+ library constructs the discrete adjoints of models
+written using the FEniCS system. Specifically, given a model written as a series
+of discrete variational problems using the Python DOLFIN interface,
+\verb+dolfin-adjoint+ constructs a ``tape'' of model equations and uses this
+tape to derive and implement discrete adjoint models \citep{farrell2012}.
+\verb+dolfin-adjoint+ provides a number of advanced features, including:
+\begin{enumerate}
+  \item Automated derivation of tangent-linear, adjoint, and second order
+        adjoint models.
+  \item Gradient calculations, with automated Taylor verification.
+  \item Hessian action calculations, with automated Taylor verification. 
+  \item Optimal checkpointing via the \verb+resolve+ library
+        \citep{griewank2000}.
+  \item Tools for performing principle component analyses.
+  \item Parallel optimisation (functional minimisation), including both gradient
+        and Hessian based optimisation \citep{funke2013}.
+\end{enumerate}
+
+The \verb+timestepping+ library can be used in combination with the \linebreak
+\verb+dolfin-adjoint+ library. This enables a transient model to be written
+using a high-level representation, and combines the application of time
+discretisation specific optimisations with the more advanced features available
+in \linebreak \verb+dolfin-adjoint+.
+
+For full details of the \verb+dolfin-adjoint+ library, see the
+\verb+dolfin-adjoint+ documentation \citep{da}.
+
+\section{Accessing the libraries}
+
+The combination of the \verb+timestepping+ and \verb+dolfin-adjoint+ libraries
+may be accessed via:
+\begin{lstlisting}
+from dolfin import *
+from dolfin_adjoint_timestepping import *
+\end{lstlisting}
+
+\section{Using \texttt{dolfin-adjoint}}
+
+When using \verb+dolfin-adjoint+ with the \verb+timestepping+ library, the
+model equations are registered as normal (see section \ref{sect:equations}),
+and the forward model is executed as normal (section \ref{sect:timestepping}).
+\verb+dolfin-adjoint+ functionality may be accessed upon completion of the
+model timestepping (after the \verb+finalise+ call). Typically the annotation
+of equations by \verb+dolfin-adjoint+ should be disabled upon completion of the
+model timestepping:
+\begin{lstlisting}
+asystem.finalise()
+parameters["adjoint"]["stop_annotating"] = True
+\end{lstlisting}
+
+\subsection*{Examples}
+
+\begin{lstlisting}
+from dolfin import *
+from dolfin_adjoint_timestepping import *
+
+### Stage 1: Configure and execute the forward model using
+###          functionality provided by the timestepping library
+
+# Define a simple structured mesh on the unit interval
+mesh = UnitIntervalMesh(10)
+# P1 function space
+space = FunctionSpace(mesh, "CG", 1)
+
+# Model parameters and boundary conditions
+dt = StaticConstant(0.05)
+bc1 = StaticDirichletBC(space, 1.0,
+  "on_boundary && near(x[0], 0.0)")
+bc2 = StaticDirichletBC(space, 0.0,
+  "on_boundary && near(x[0], 1.0)")
+bcs = [bc1, bc2]
+nu = StaticConstant(0.01)
+
+# Define time levels
+levels = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+# A time dependent function
+u = TimeFunction(levels, space, name = "u")
+
+# Initialise a TimeSystem
+system = TimeSystem()
+
+# Add an initial assignment
+u_ic = StaticFunction(space, name = "u_ic")
+u_ic.assign(Constant(0.0))
+bc1.apply(u_ic.vector())
+system.add_solve(u_ic, u[0])
+# Register a simple diffusion equation, discretised in time
+# using forward Euler
+test = TestFunction(space)
+system.add_solve(
+  inner(test, (1.0 / dt) * (u[n + 1] - u[n])) * dx ==
+    -nu * inner(grad(test), grad(u[n])) * dx,
+  u[n + 1], bcs,
+  solver_parameters = {"linear_solver":"lu"})
+
+# Assemble the TimeSystem
+system = system.assemble(initialise = False)
+
+# Run the forward model. The model execution is wrapped by a
+# function to enable adjoint verification using the
+# dolfin-adjoint taylor_test function.
+def run_forward():
+  system.initialise()
+  t = 0.0
+  while t * (1.0 + 1.0e-9) < 1.0:
+    system.timestep()
+    t += float(dt)
+  system.finalise()
+  return
+run_forward()
+
+### Stage 2: Access features provided by the dolfin-adjoint library
+
+# Disable annotation of model equations by dolfin-adjoint
+parameters["adjoint"]["stop_annotating"] = True
+
+# Define a functional equal to spatial integral of the final u
+J = u[N] * dx
+# Perform a total derivative calculation
+J_da = Functional(J * dolfin_adjoint.dt[FINISH_TIME])
+nu_da = ScalarParameter(nu)
+dJ = compute_gradient(J_da, nu_da)
+
+# Verify the computed derivative using a Taylor remainder
+# convergence test  
+def J_p(nu_p):
+  nu.assign(nu_p)
+  system.reassemble(nu_p)
+  run_forward()
+  return assemble(J)
+order = taylor_test(J_p, nu_da, assemble(J), dJ, seed = 1.0e-6)
+# Check the convergence order
+assert(order > 1.99)
+\end{lstlisting}
+
+\section{Limitations}
+
+Not all features provided by the \verb+timestepping+ library may be used in
+combination with \verb+dolfin-adjoint+. In particular the \verb+dolfin-adjoint+
+library supports only assignment operations which can be performed via a call
+to the \verb+assign+ method of \verb+dolfin.Function+ objects. If more general
+assignments are registered (see section \ref{sect:assignments}) then, at
+present, these equations are converted into a Galerkin projection with default
+linear solver options. Certain time discretisation specific optimisations are
+also disabled when combining the \verb+timestepping+ library with the
+\verb+dolfin_adjoint+ library.
 
 \chapter{Time discretisation examples}
 

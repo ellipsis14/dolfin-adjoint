@@ -15,7 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from dolfin import *
-from timestepping import *
+from dolfin_adjoint_timestepping import *
+
+### Stage 1: Configure and execute the forward model using
+###          functionality provided by the timestepping library
 
 # Define a simple structured mesh on the unit interval
 mesh = UnitIntervalMesh(10)
@@ -53,25 +56,41 @@ system.add_solve(
   u[n + 1], bcs,
   solver_parameters = {"linear_solver":"lu"})
 
-# Assemble the TimeSystem, enabling the adjoint. Set the
-# functional to be equal to spatial integral of the final u.
-system = system.assemble(adjoint = True, functional = u[N] * dx)
+# Assemble the TimeSystem
+system = system.assemble(initialise = False)
 
-# Timestep the model
-t = 0.0
-while t * (1.0 + 1.0e-9) < 1.0:
-  system.timestep()
-  t += float(dt)
-# Finalise
-system.finalise()
+# Run the forward model. The model execution is wrapped by a
+# function to enable adjoint verification using the
+# dolfin-adjoint taylor_test function.
+def run_forward():
+  system.initialise()
+  t = 0.0
+  while t * (1.0 + 1.0e-9) < 1.0:
+    system.timestep()
+    t += float(dt)
+  system.finalise()
+  return
+run_forward()
 
+### Stage 2: Access features provided by the dolfin-adjoint library
+
+# Disable annotation of model equations by dolfin-adjoint
+parameters["adjoint"]["stop_annotating"] = True
+
+# Define a functional equal to spatial integral of the final u
+J = u[N] * dx
 # Perform a total derivative calculation
-dJ = system.compute_gradient(nu)
+J_da = Functional(J * dolfin_adjoint.dt[FINISH_TIME])
+nu_da = ScalarParameter(nu)
+dJ = compute_gradient(J_da, nu_da)
 
-# Verify the stored forward model data
-system.verify_checkpoints()
 # Verify the computed derivative using a Taylor remainder
-# convergence test
-orders = system.taylor_test(nu, grad = dJ)
+# convergence test  
+def J_p(nu_p):
+  nu.assign(nu_p)
+  system.reassemble(nu_p)
+  run_forward()
+  return assemble(J)
+order = taylor_test(J_p, nu_da, assemble(J), dJ, seed = 1.0e-6)
 # Check the convergence order
-assert((orders > 1.99).all())
+assert(order > 1.99)
