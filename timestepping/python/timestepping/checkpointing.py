@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import cPickle
 import copy
-import pickle
 import os
 
 import dolfin
@@ -282,7 +282,7 @@ class DiskCheckpointer(Checkpointer):
 
     filename = self.__filename(key)
     handle = open(filename, "wb")
-    pickler = pickle.Pickler(handle, -1)
+    pickler = cPickle.Pickler(handle, -1)
     pickler.dump(c_cs)
 
     self.__filenames[key] = filename
@@ -305,7 +305,7 @@ class DiskCheckpointer(Checkpointer):
       cs = [c.id() for c in cs]
 
     handle = open(self.__filename(key), "rb")
-    pickler = pickle.Unpickler(handle)
+    pickler = cPickle.Unpickler(handle)
     c_cs = pickler.load()
     if cs is None:
       cs = c_cs.keys()
@@ -338,7 +338,7 @@ class DiskCheckpointer(Checkpointer):
     if not isinstance(tolerance, float) or tolerance < 0.0:
       raise InvalidArgumentException("tolerance must be a non-negative float")
     handle = open(self.__filename(key), "rb")
-    pickler = pickle.Unpickler(handle)
+    pickler = cPickle.Unpickler(handle)
     c_cs = pickler.load()
 
     try:
