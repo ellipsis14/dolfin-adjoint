@@ -10,6 +10,7 @@ from utils import test_initial_condition_adjoint, test_initial_condition_adjoint
 from drivers import replay_dolfin, compute_adjoint, compute_tlm, compute_gradient, hessian
 from newton_solver import NewtonSolver
 from krylov_solver import KrylovSolver
+from linear_solver import LinearSolver
 from variational_solver import NonlinearVariationalSolver, NonlinearVariationalProblem, LinearVariationalSolver, LinearVariationalProblem
 from projection import project
 from function import Function
