@@ -49,44 +49,14 @@ def system_info():
 dolfin.parameters["timestepping"]["pre_assembly"]["linear_forms"]["matrix_optimisation"] = False
 dolfin.parameters["timestepping"]["pre_assembly"]["linear_forms"]["term_optimisation"] = False
 
-# dolfin-adjoint internals expect Constant s and Function s to have an
-# adj_name attribute. Patch __getattr__ to provide it.
-def adj_name__getattr__(self, name):
-  if name == "adj_name":
-    return self.name()
-  else:
-    return object.__getattr__(self, name)
-dolfin.Constant.__getattr__ = adj_name__getattr__
-dolfin.Function.__getattr__ = adj_name__getattr__
-del(adj_name__getattr__)
-
-# constant.get_constant expects to be dealing with dolfin-adjoint Constant s.
-# Patch it so that it can handle any Constant. Modified version of get_constant
-# from constant.py.
-def get_constant(a):
-  if isinstance(a, dolfin.Constant):
-    return a
-  else:
-    return constant_objects[a]
-constant.get_constant.func_code = get_constant.func_code
-del(get_constant)
-
 # Resolve namespace clashes
-def assemble(*args, **kwargs):
-  if isinstance(args[0], QForm):
-    if "form_compiler_parameters" in kwargs:
-      raise InvalidArgumentException("Cannot supply form_compiler_parameters argument when assembling a QForm")
-    return dolfin_adjoint.assemble(form_compiler_parameters = args[0].form_compiler_parameters(), *args, **kwargs)
-  elif isinstance(args[0], tuple(_assemble_classes)):
-    return args[0].assemble(*args[1:], **kwargs)
-  else:
-    return dolfin_adjoint.assemble(*args, **kwargs)
-
-def Constant(value, cell = None, name = "u"):
-  if isinstance(value, tuple):
-    return dolfin.as_vector([dolfin_adjoint.Constant(val, cell = cell, name = "%s_%i" % (name, i)) for i, val in enumerate(value)])
-  else:
-    return dolfin_adjoint.Constant(value, cell = cell, name = name)
+fenics_overrides._Constant = dolfin_adjoint.Constant
+fenics_overrides._Function = dolfin_adjoint.Function
+fenics_overrides._KrylovSolver = dolfin_adjoint.KrylovSolver
+fenics_overrides._LinearSolver = dolfin_adjoint.LinearSolver
+fenics_overrides._LUSolver = dolfin_adjoint.LUSolver
+fenics_overrides._assemble = dolfin_adjoint.assemble
+from timestepping.fenics_overrides import *
 
 class TimeFunction(timestepping.TimeFunction):
   def __init__(self, tlevels, space, name = "u"):
@@ -429,7 +399,7 @@ def da_annotate_equation_solve(solve):
 
         # Solve and return
         solver.set_operator(a)
-        solver.solve(x.data.vector(), b)
+        solver.solve(x.data.vector(), b, annotate = False)
         return x
   else:
     # This is not a time level solve. Use the default Matrix type.

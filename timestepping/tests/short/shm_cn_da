@@ -97,6 +97,8 @@ dJdp = system.compute_gradient(omega)
 orders = system.taylor_test(omega, J = J, grad = dJdp)
 assert((orders > 1.98).all())
 
+assert(replay_dolfin(forget = False, tol = 0.0, stop = True))
+
 dJdp_da = compute_gradient(Functional(X[N][1] * dx * dolfin_adjoint.dt[FINISH_TIME]), ScalarParameter(omega))
 err = abs(float(dJdp) - dJdp_da)
 print "%.17e" % dJdp_da

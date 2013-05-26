@@ -26,10 +26,18 @@ from quadrature import *
 
 __all__ = \
   [
+    "_Constant",
+    "_DirichletBC",
+    "_Function",
+    "_KrylovSolver",
+    "_LinearSolver",
+    "_LUSolver",
+    "_assemble",
     "_assemble_classes",
     "Constant",
     "Function",
     "DirichletBC",
+    "LinearSolver",
     "action",
     "adjoint",
     "assemble",
@@ -39,6 +47,16 @@ __all__ = \
     "replace",
     "rhs"
   ]
+  
+# These are classes / functions that are wrapped in this module. These can be
+# replaced with custom subclasses / functions.
+_Constant = dolfin.Constant
+_DirichletBC = dolfin.DirichletBC
+_Function = dolfin.Function
+_KrylovSolver = dolfin.KrylovSolver
+_LinearSolver = dolfin.LinearSolver
+_LUSolver = dolfin.LUSolver
+_assemble = dolfin.assemble
   
 def Constant(value, cell = None, name = "u"):
   """
@@ -53,7 +71,7 @@ def Constant(value, cell = None, name = "u"):
   if isinstance(value, tuple):
     c = dolfin.as_vector([Constant(val, cell = cell, name = "%s_%i" % (name, i)) for i, val in enumerate(value)])
   else:
-    c = dolfin.Constant(value, cell = cell)
+    c = _Constant(value, cell = cell)
     c.rename(name, name)
 
   return c
@@ -71,18 +89,18 @@ def Function(*args, **kwargs):
   else:
     name = "u"
 
-  fn = dolfin.Function(*args, **kwargs)
+  fn = _Function(*args, **kwargs)
   fn.rename(name, name)
 
   return fn
 
-class DirichletBC(dolfin.DirichletBC):
+class DirichletBC(_DirichletBC):
   """
   Wrapper for DOLFIN DirichletBC. Adds homogenized method.
   """
   
   def __init__(self, *args, **kwargs):
-    dolfin.DirichletBC.__init__(self, *args, **kwargs)
+    _DirichletBC.__init__(self, *args, **kwargs)
     
     self.__hbc = None
     
@@ -94,7 +112,7 @@ class DirichletBC(dolfin.DirichletBC):
     """
     
     if self.__hbc is None:
-      self.__hbc = dolfin.DirichletBC(self.function_space(), self.value(), *self.domain_args, method = self.method())
+      self.__hbc = _DirichletBC(self.function_space(), self.value(), *self.domain_args, method = self.method())
       self.__hbc.homogenize()
       if hasattr(self, "_time_static"):
         self.__hbc._time_static = self._time_static
@@ -117,6 +135,61 @@ def homogenize(bc):
     raise InvalidArgumentException("bc must be a DirichletBC")
 
   return hbc
+
+def LinearSolver(*args, **kwargs):
+  """
+  Return a linear solver. 
+  
+  Arguments: One of:
+    1. Arguments as accepted by the DOLFIN LinearSolver constructor.
+  or:
+    2. A dictionary of solver parameters.
+  """
+  
+  if not len(args) == 1 or not isinstance(args[0], dict):
+    return _LinearSolver(*args, **kwargs)  
+  solver_parameters = args[0]
+
+  solver = "lu"
+  pc = None
+  kp = {}
+  lp = {}
+  for key in solver_parameters:
+    if key == "linear_solver":
+      solver = solver_parameters[key]
+    elif key == "preconditioner":
+      pc = solver_parameters[key]
+    elif key == "krylov_solver":
+      kp = solver_parameters[key]
+    elif key == "lu_solver":
+      lp = solver_parameters[key]
+    elif key == "newton_solver":
+      pass
+    elif key in ["print_matrix", "print_rhs", "reset_jacobian", "symmetric"]:
+      raise NotImplementedException("Unsupported solver parameter: %s" % key)
+    else:
+      raise InvalidArgumentException("Unexpected solver parameter: %s" % key)
+  
+  if solver in ["default", "direct", "lu"]:
+    is_lu = True
+    solver = "default"
+  elif solver == "iterative":
+    is_lu = False
+    solver = "gmres"
+  else:
+    is_lu = dolfin.has_lu_solver_method(solver)
+  
+  if is_lu:
+    solver = _LUSolver(solver)
+    solver.parameters.update(lp)
+  else:
+    if pc is None:
+      solver = _KrylovSolver(solver)
+    else:
+      solver = _KrylovSolver(solver, pc)
+    solver.parameters.update(kp)
+
+  return solver
 
 def adjoint(form, reordered_arguments = None, adjoint_arguments = None):
   """
@@ -254,8 +327,8 @@ def assemble(*args, **kwargs):
   if isinstance(args[0], QForm):
     if "form_compiler_parameters" in kwargs:
       raise InvalidArgumentException("Cannot supply form_compiler_parameters argument when assembling a QForm")
-    return dolfin.assemble(form_compiler_parameters = args[0].form_compiler_parameters(), *args, **kwargs)
+    return _assemble(form_compiler_parameters = args[0].form_compiler_parameters(), *args, **kwargs)
   elif isinstance(args[0], tuple(_assemble_classes)):
     return args[0].assemble(*args[1:], **kwargs)
   else:
-    return dolfin.assemble(*args, **kwargs)
+    return _assemble(*args, **kwargs)
