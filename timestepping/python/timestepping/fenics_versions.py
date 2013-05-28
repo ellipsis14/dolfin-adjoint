@@ -17,6 +17,7 @@
 
 import dolfin
 import ffc
+import instant
 import numpy
 import ufl
 
@@ -27,6 +28,7 @@ __all__ = \
     "Version",
     "dolfin_version",
     "ffc_version",
+    "instant_version",
     "ufl_version"
   ]
 
@@ -147,6 +149,13 @@ def ffc_version():
   """
 
   return Version(ffc.__version__)
+
+def instant_version():
+  """
+  Return the current Instant version, as a Version.
+  """
+
+  return Version(instant.__version__)
 
 def ufl_version():
   """

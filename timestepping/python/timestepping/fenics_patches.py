@@ -34,8 +34,11 @@
 # dolfin/la/GenericMatrix.cpp, bzr 1.2.x branch 7509
 # Code first added: 2013-05-23
 
+import copy
+
 import dolfin
 import ffc
+import instant
 import numpy
 import scipy.optimize
 import ufl
@@ -289,3 +292,26 @@ if ffc_version() < (1, 2, 0):
   // Compute circumradius, in 1D it is equal to the cell volume/2.0.
   const double circumradius%(restriction)s = std::abs(detJ%(restriction)s)/2.0;"""
   ffc.codesnippets.circumradius[1] = ffc.codesnippets._circumradius_1D
+  
+# Instant patches.
+if instant_version() >= (1, 2, 0) and instant_version() < (1, 3, 0):
+  __build_module_orig = instant.build_module
+  def build_module(*args, **kwargs):
+    args = copy.copy(args)
+    kwargs = copy.copy(kwargs)
+    
+    if len(args) >= 15:
+      args[14] = args[14] + ["/usr/include"]
+    elif "swig_include_dirs" in kwargs:
+      kwargs["swig_include_dirs"] = kwargs["swig_include_dirs"] + ["/usr/include"]
+    else:
+      kwargs["swig_include_dirs"] = ["/usr/include"]
+      
+    if len(args) >= 22:
+      args[21] = []
+    else:
+      kwargs["cmake_packages"]= []
+      
+    return __build_module_orig(*args, **kwargs)
+  instant.build_module = build_module
+  del(build_module)
