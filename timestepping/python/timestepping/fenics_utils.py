@@ -125,6 +125,8 @@ def evaluate_expr(expr, copy = False):
         val = val.copy()
   elif isinstance(expr, (ufl.constantvalue.FloatValue, ufl.constantvalue.IntValue, dolfin.Constant)):
     val = float(expr)
+  elif isinstance(expr, ufl.differentiation.CoefficientDerivative):
+    val = evaluate_expr(ufl.algorithms.expand_derivatives(expr))
   else:
     raise NotImplementedException("Expr type %s not implemented" % expr.__class__)
 
@@ -154,7 +156,7 @@ def differentiate_expr(expr, u):
     else:
       dim = der.cell().geometric_dimension()
       
-    der = expand(der, dim = dim)
+    der = ufl.algorithms.expand_derivatives(der, dim = dim)
 
   return der
 
@@ -221,7 +223,10 @@ def expand_expr(expr):
     ops = expr.operands()
     assert(len(ops) == 1)
     return [ufl.differentiation.Grad(term) for term in expand_expr(ops[0])]
-  elif isinstance(expr, (ufl.tensoralgebra.Dot, ufl.tensoralgebra.Inner)):
+  elif isinstance(expr, (ufl.tensoralgebra.Dot,
+                         ufl.tensoralgebra.Inner,
+                         ufl.differentiation.CoefficientDerivative,
+                         ufl.differentiation.VariableDerivative)):
     return expand_expr(expand(expr))
   # Expr types white-list. These cannot be expanded.
   elif isinstance(expr, (ufl.constantvalue.IntValue,
@@ -235,7 +240,8 @@ def expand_expr(expr):
                          ufl.geometry.FacetNormal,
                          ufl.mathfunctions.Sqrt,
                          ufl.operators.Variable,
-                         ufl.mathfunctions.Exp)):
+                         ufl.mathfunctions.Exp,
+                         ufl.constantvalue.Zero)):
     return [expr]
   # Expr types grey-list. It might be possible to expand these.
   elif isinstance(expr, (ufl.tensors.ComponentTensor,
@@ -274,7 +280,7 @@ def lumped_mass(space, du = None):
       masslump += lumped_mass(space.sub(i), du = du[i])
     return masslump
   else:
-    return expand(dolfin.derivative(c * dolfin.dx, c, du = du))
+    return ufl.algorithms.expand_derivatives(dolfin.derivative(c * dolfin.dx, c, du = du))
 
 def expand(form, dim = None):
   """

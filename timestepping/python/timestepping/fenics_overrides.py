@@ -295,7 +295,7 @@ def derivative(form, u, du = None):
   else:
     der = dolfin.derivative(form, u, du = du)
     
-  der = expand(der)
+  der = ufl.algorithms.expand_derivatives(der)
   if isinstance(form, QForm):
     return QForm(der, quadrature_degree = form.quadrature_degree())
   else:

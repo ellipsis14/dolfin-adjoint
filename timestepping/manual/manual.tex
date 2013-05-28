@@ -1236,7 +1236,7 @@ dJ = compute_gradient(J_da, nu_da)
 # convergence test  
 def J_p(nu_p):
   nu.assign(nu_p)
-  system.reassemble(nu_p)
+  system.reassemble(nu)
   run_forward()
   return assemble(J)
 order = taylor_test(J_p, nu_da, assemble(J), dJ, seed = 1.0e-6)
