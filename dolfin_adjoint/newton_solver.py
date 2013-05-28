@@ -19,7 +19,7 @@ class NewtonSolver(dolfin.NewtonSolver):
     if to_annotate:
       factory = args[0]
       vec = args[1]
-      b = dolfin.down_cast(vec).__class__()
+      b = dolfin.as_backend_type(vec).__class__()
 
       factory.F(b=b, x=vec)
 
