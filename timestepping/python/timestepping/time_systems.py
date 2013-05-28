@@ -978,17 +978,15 @@ class ManagedModel:
         if isinstance(dep, dolfin.Function) and hasattr(dep, "_time_level_data"):
           init_cp_cs1.add(dep)
     cp_cs = set()
-    cp_f_tfn = {}
+    cp_f_tfn = set()
     for solve in forward._ForwardModel__solves:
-      cp_cs.add(solve.x())
+      f_x = solve.x()
+      cp_cs.add(f_x)
+      cp_f_tfn.add(f_x._time_level_data[0])
       for dep in solve.dependencies(non_symbolic = True):
         if isinstance(dep, dolfin.Function) and hasattr(dep, "_time_level_data"):
           cp_cs.add(dep)
-          f_tfn, level = dep._time_level_data
-          if f_tfn in cp_f_tfn:
-            cp_f_tfn[f_tfn] = min(cp_f_tfn[f_tfn], level)
-          else:
-            cp_f_tfn[f_tfn] = level
+          cp_f_tfn.add(dep._time_level_data[0])
     nl_cp_cs = set()
     update_cs = set()
     for solve in forward._ForwardModel__solves:
@@ -1003,8 +1001,8 @@ class ManagedModel:
       for level in f_tfn.initial_levels():
         init_cp_cs1.add(f_tfn[level])
         init_cp_cs2.add(f_tfn[level])
-      for level in f_tfn.cycle_map().values():
-        if f_tfn in cp_f_tfn and level >= cp_f_tfn[f_tfn]:
+      if f_tfn in cp_f_tfn:
+        for level in f_tfn.cycle_map().values():
           cp_cs.add(f_tfn[level])
       for level in f_tfn.final_levels():
         final_cp_cs.add(f_tfn[level])

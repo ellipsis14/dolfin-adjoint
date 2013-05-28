@@ -146,7 +146,7 @@ def LinearSolver(*args, **kwargs):
     2. A dictionary of solver parameters.
   """
   
-  if not len(args) == 1 or not isinstance(args[0], dict):
+  if not len(args) == 1 or not len(kwargs) == 0 or not isinstance(args[0], dict):
     return _LinearSolver(*args, **kwargs)  
   solver_parameters = args[0]
 

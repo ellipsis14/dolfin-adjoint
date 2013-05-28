@@ -26,7 +26,6 @@
 # Code first added: 2012-11-26
 
 from dolfin import *
-import dolfin
 from timestepping import *
 
 from fractions import Fraction;  f1 = Fraction(1, 3); f2 = Fraction(2, 3)

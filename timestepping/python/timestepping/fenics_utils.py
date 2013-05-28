@@ -222,7 +222,7 @@ def expand_expr(expr):
     assert(len(ops) == 1)
     return [ufl.differentiation.Grad(term) for term in expand_expr(ops[0])]
   elif isinstance(expr, (ufl.tensoralgebra.Dot, ufl.tensoralgebra.Inner)):
-    return expand_expr(ufl.algorithms.expand_compounds(expr))
+    return expand_expr(expand(expr))
   # Expr types white-list. These cannot be expanded.
   elif isinstance(expr, (ufl.constantvalue.IntValue,
                          ufl.argument.Argument,

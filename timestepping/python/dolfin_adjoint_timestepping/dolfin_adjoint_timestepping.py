@@ -295,6 +295,8 @@ def da_annotate_equation_solve(solve):
   eq.lhs = unwrap_fns(eq.lhs)
   if not is_zero_rhs(eq.rhs):
     eq.rhs = unwrap_fns(eq.rhs)
+  if solve.is_linear() and extract_form_data(eq.lhs).rank == 1:
+    raise NotImplementedException("Annotation for linear variational problem with rank 1 LHS not implemented")
   
   if hasattr(x, "_time_level_data"):
     # This is a time level solve. Set up a Matrix class with some caching

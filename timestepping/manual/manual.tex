@@ -647,7 +647,7 @@ arguments are identical to the \verb+dolfin.DirichletBC+ constructor.
 Objects that are declared as ``static'' in this way should not be modified
 during the model execution -- doing so leads to undefined behaviour. Objects
 declared as static may be freely modified before the analysis and optimisation
-stage (see section \ref{sect:assembly}), and functionality is provided to enable
+step (see section \ref{sect:assembly}), and functionality is provided to enable
 the safe modification of static \verb+Constant+ and \verb+Function+ objects
 after the finalisation stage (section \ref{sect:reassembly}).
 
@@ -780,7 +780,7 @@ In some circumstances it is useful to modify the values of static \verb+Constant
 or \verb+Function+ objects after the analysis and optimisation. This may be
 useful, for example, after the completion of forward model timestepping, in
 order to re-run the forward model with a new value for a parameter. However in
-this case the data cached during the analysis and optimisation stage may become
+this case the data cached during the analysis and optimisation step may become
 invalid. This issue can be resolved by calling the \verb+reassemble+ method:
 \begin{lstlisting}
 asystem.reassemble(*args)

@@ -17,7 +17,6 @@
 import numpy
 
 from dolfin import *
-import dolfin
 from timestepping import *
 
 code = EmbeddedCpp(code = "b[0] = a;", a = int, b = long_arr)

@@ -199,7 +199,7 @@ class TimeFunction(TimeLevels):
       if not key in self._TimeLevels__offsets:
         raise InvalidArgumentException("key out of range")
       if not key in self.__lfns:
-        self.__lfns[key] = WrappedFunction(self.__fns[n + key], name = "%s_%i" % (self.__name, key))
+        self.__lfns[key] = WrappedFunction(self.__fns[n + key], name = "%s_%s" % (self.__name, key))
         self.__lfns[key]._time_level_data = (self, key)
       return self.__lfns[key]
     elif isinstance(key, TimeLevel):

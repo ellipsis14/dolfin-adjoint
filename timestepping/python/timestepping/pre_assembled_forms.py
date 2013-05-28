@@ -128,17 +128,29 @@ class PAForm:
       for integral in form_integrals(form):
         integrand, iargs = preprocess_integral(form, integral)
         if self.parameters["expand_form"]:
-          integrand = ufl.algebra.Sum(*expand_expr(integrand))
-        if isinstance(integrand, ufl.algebra.Sum):
-          terms = integrand.operands()
-        else:
-          terms = [integrand]
-        for term in terms:
-          tform = QForm([ufl.Integral(term, *iargs)], quadrature_degree = quadrature_degree)
-          if is_static_form(tform):
-            pre_assembled_L.append(tform)
+          if isinstance(integrand, ufl.algebra.Sum):
+            terms = [(term, expand_expr(term)) for term in integrand.operands()]
           else:
+            terms = [(integrand, expand_expr(integrand))]
+        else:
+          if isinstance(integrand, ufl.algebra.Sum):
+            terms = [[(term, term)] for term in integrand.operands()]
+          else:
+            terms = [[(term, term)]]        
+        for term in terms:
+          pterm = [], []
+          for sterm in term[1]:
+            stform = QForm([ufl.Integral(sterm, *iargs)], quadrature_degree = quadrature_degree)
+            if is_static_form(stform):
+              pterm[0].append(stform)
+            else:
+              pterm[1].append(stform)
+          if len(pterm[0]) == 0:
+            tform = QForm([ufl.Integral(term[0], *iargs)], quadrature_degree = quadrature_degree)
             non_pre_assembled_L.append(tform)
+          else:
+            pre_assembled_L += pterm[0]
+            non_pre_assembled_L += pterm[1]
 
       self._set_pa(pre_assembled_L, non_pre_assembled_L)
     else:
@@ -236,6 +248,9 @@ class PAForm:
     Replace coefficients.
     """
     
+    for i, dep in enumerate(self.__deps):
+      if dep in mapping:
+        self.__deps[i] = mapping[dep]
     if not self._non_pre_assembled_L is None:
       self._non_pre_assembled_L = replace(self._non_pre_assembled_L, mapping)
     
@@ -245,8 +260,9 @@ _assemble_classes.append(PAForm)
     
 class PABilinearForm(PAForm):
   """
-  A pre-assembled bi-linear form. This is identical to PAForm, but with
-  different default parameters.
+  A pre-assembled bi-linear form. This is similar to PAForm, but applies
+  additional optimisations specific to bi-linear forms. Also has different
+  default parameters.
   """
   
   def __init__(self, form, parameters = {}):
@@ -315,19 +331,14 @@ class PALinearForm(PAForm):
       tcs = extract_non_static_coefficients(tform)
       if not len(tcs) == 1 or not isinstance(tcs[0], dolfin.Function) or \
         (not dolfin.MPI.num_processes() == 1 and not tcs[0].function_space().num_sub_spaces() == 0):
-        return False
+        return None
       fn = tcs[0]
         
       mat_form = derivative(tform, fn)
       if n_non_static_coefficients(mat_form) > 0:
-        return False
-
-      if fn in mult_assembled_L:
-        mult_assembled_L[fn].append(mat_form)
+        return None
       else:
-        mult_assembled_L[fn] = [mat_form]
-      
-      return True
+        return fn, mat_form
     
     if is_static_form(form):
       pre_assembled_L.append(form)
@@ -337,18 +348,47 @@ class PALinearForm(PAForm):
       for integral in form_integrals(form):
         integrand, iargs = preprocess_integral(form, integral)
         if self.parameters["expand_form"]:
-          integrand = ufl.algebra.Sum(*expand_expr(integrand))
-        if isinstance(integrand, ufl.algebra.Sum):
-          terms = integrand.operands()
+          if isinstance(integrand, ufl.algebra.Sum):
+            terms = [(term, expand_expr(term)) for term in integrand.operands()]
+          else:
+            terms = [(integrand, expand_expr(integrand))]
         else:
-          terms = [integrand]
+          if isinstance(integrand, ufl.algebra.Sum):
+            terms = [[(term, term)] for term in integrand.operands()]
+          else:
+            terms = [[(term, term)]]        
         for term in terms:
-          tform = QForm([ufl.Integral(term, *iargs)], quadrature_degree = quadrature_degree)
-          if is_static_form(tform):
-            pre_assembled_L.append(tform)
-          elif not self.parameters["matrix_optimisation"] or not matrix_optimisation(tform):
+          pterm = [], [], []
+          for sterm in term[1]:
+            stform = QForm([ufl.Integral(sterm, *iargs)], quadrature_degree = quadrature_degree)
+            if is_static_form(stform):
+              pterm[0].append(stform)
+            elif self.parameters["matrix_optimisation"]:
+              mform = matrix_optimisation(stform)
+              if mform is None:
+                pterm[2].append(stform)
+              else:
+                pterm[1].append(mform)
+            else:
+              pterm[2].append(tform)
+          if len(pterm[0]) == 0 and len(pterm[1]) == 0:
+            tform = QForm([ufl.Integral(term[0], *iargs)], quadrature_degree = quadrature_degree)
             non_pre_assembled_L.append(tform)
-    elif not self.parameters["matrix_optimisation"] or not matrix_optimisation(form):
+          else:
+            pre_assembled_L += pterm[0]
+            for mform in pterm[1]:
+              if mform[0] in mult_assembled_L:
+                mult_assembled_L[mform[0]].append(mform[1])
+              else:
+                mult_assembled_L[mform[0]] = [mform[1]]
+            non_pre_assembled_L += pterm[2]
+    elif self.parameters["matrix_optimisation"]:
+      mform = matrix_optimisation(form)
+      if mform is None:
+        non_pre_assembled_L.append(form)
+      else:
+        mult_assembled_L[mform[0]] = [mform[1]]
+    else:
       non_pre_assembled_L.append(form)
 
     self._set_pa(pre_assembled_L, mult_assembled_L, non_pre_assembled_L)
