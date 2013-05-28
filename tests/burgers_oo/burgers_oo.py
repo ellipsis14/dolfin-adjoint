@@ -43,7 +43,7 @@ def main(ic, annotate=False):
 
     timestep = Constant(1.0/n)
 
-    solver = NewtonSolver("lu")
+    solver = NewtonSolver()
     solver.parameters["convergence_criterion"] = "incremental"
     solver.parameters["relative_tolerance"] = 1e-6
 
@@ -64,34 +64,15 @@ def main(ic, annotate=False):
 if __name__ == "__main__":
 
     ic = project(Expression("sin(2*pi*x[0])"),  V)
-    ic_copy = Function(ic)
     forward = main(ic, annotate=True)
-    forward_copy = Function(forward, annotate=False)
-
-    adj_html("burgers_newton_forward.html", "forward")
-    adj_html("burgers_newton_adjoint.html", "adjoint")
-
-    print "Running forward replay .... "
-    replay_dolfin(forget=False)
-    print "Running adjoint ... "
 
     J = Functional(forward*forward*dx*dt[FINISH_TIME])
-    dJdm = compute_gradient(J, InitialConditionParameter(forward), forget = False)
+    m = InitialConditionParameter(forward)
+    dJdm = compute_gradient(J, m, forget = False)
+    Jm = assemble(forward*forward*dx)
 
     def Jfunc(ic):
       forward = main(ic, annotate=False)
       return assemble(forward*forward*dx)
 
-    minconv = test_initial_condition_adjoint(Jfunc, ic, dJdm, seed=1.0e-5)
-    if minconv < 1.9:
-      info_red("Test failed. Convergence rate is %f < 1.9", minconv)
-      sys.exit(1)
-
-    dJ = assemble(derivative(forward_copy*forward_copy*dx, forward_copy))
-
-    ic = forward
-    ic.vector()[:] = ic_copy.vector()
-    minconv = test_initial_condition_tlm(Jfunc, dJ, ic, seed=1.0e-5)
-    if minconv < 1.9:
-      info_red("Test failed. Convergence rate is %d < 1.9", minconv)
-      sys.exit(1)
+    minconv = taylor_test(Jfunc, m, Jm, dJdm)
