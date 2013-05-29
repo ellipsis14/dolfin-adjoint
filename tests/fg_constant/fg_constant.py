@@ -34,6 +34,6 @@ if __name__ == "__main__":
   def J(a):
     soln = main(ic, a, annotate=False)
     return assemble(soln*soln*dx)
-
-  minconv = test_scalar_parameter_adjoint(J, a, dJda)
-
+  
+  Ja = assemble(soln**2*dx)
+  taylor_test(J, ScalarParameter(a), Ja, dJda)
