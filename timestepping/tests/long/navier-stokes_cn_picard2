@@ -55,15 +55,7 @@ T = 1.0#300.0  # Final model time
 
 # Linear solvers
 lu_solver = {"linear_solver":"lu"}
-if has_krylov_solver_method("cgs"):
-  sol = "cgs"
-else:
-  sol = "gmres"
-if has_krylov_solver_preconditioner("eisenstat"):
-  pc = "eisenstat"
-else:
-  pc = "sor"
-dTdt_solver = {"linear_solver":sol, "preconditioner":pc, "krylov_solver":{"relative_tolerance":1.0e-12, "absolute_tolerance":1.0e-16, "divergence_limit":1.0e8}}
+dTdt_solver = {"linear_solver":"bicgstab", "preconditioner":"ilu", "krylov_solver":{"relative_tolerance":1.0e-12, "absolute_tolerance":1.0e-16, "divergence_limit":1.0e8}}
 
 # The model mesh ...
 mesh = Mesh(os.path.join(os.path.abspath(os.path.dirname(__file__)), "data", "square_100.xml.gz"))
@@ -97,7 +89,7 @@ test_u_ic, trial_u_ic = TestFunction(u_ic_space), TrialFunction(u_ic_space)
 u_ic = StaticFunction(u_ic_space, name = "u_ic")
 bc = DirichletBC(u_ic_space, -1.0, "on_boundary && x[1] > 1.0 - DOLFIN_EPS")
 pa_solve(inner(test_u_ic, u_ic) * dx == inner(test_u_ic, Constant(0.0)) * dx,
-  u_ic, bc, solver_parameters = {"linear_solver":"lu"})
+  u_ic, bc, solver_parameters = lu_solver)
 
 # x-velocity boundary condition. Specifying this to be a field enables the
 # derivative to be computed for each point on the boundary.

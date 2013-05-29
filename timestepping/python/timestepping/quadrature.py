@@ -125,7 +125,9 @@ if ffc_version() < (1, 2, 0):
         quadrature_degree = -1
         for integral_data in form_data.integral_data:
           for integral in integral_data[2]:
-            rep = ffc.analysis._auto_select_representation(integral, form_data.unique_sub_elements)
+            rep = dolfin.parameters["form_compiler"]["representation"]
+            if rep == "auto":
+              rep = ffc.analysis._auto_select_representation(integral, form_data.unique_sub_elements)
             quadrature_degree = max(quadrature_degree, ffc.analysis._auto_select_quadrature_degree(integral, rep, form_data.unique_sub_elements))
       return quadrature_degree
     else:
@@ -150,7 +152,9 @@ else:
         form_data = extract_form_data(form)
         quadrature_degree = -1
         for integral in form.integrals():
-          rep = ffc.analysis._auto_select_representation(integral, form_data.unique_sub_elements, form_data.function_replace_map)
+          rep = dolfin.parameters["form_compiler"]["representation"]
+          if rep == "auto":
+            rep = ffc.analysis._auto_select_representation(integral, form_data.unique_sub_elements, form_data.function_replace_map)
           quadrature_degree = max(quadrature_degree, ffc.analysis._auto_select_quadrature_degree(integral, rep, form_data.unique_sub_elements, form_data.element_replace_map))
       return quadrature_degree
     else:
