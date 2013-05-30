@@ -158,7 +158,7 @@ if __name__ == "__main__":
   assert adjointer.evaluate_functional(J, 1) == 0.0
 
   # Pointwise evaluation at final time, symbolic
-  J = Functional(inner(u,u)*dx*dt[START_TIME])
+  J = Functional(0 + inner(u,u)*dx*dt[START_TIME])
   assert adjointer.evaluate_functional(J, 0) == 0.0
   assert adjointer.evaluate_functional(J, 1) == 0.0
 

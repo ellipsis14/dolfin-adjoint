@@ -103,6 +103,9 @@ class TimeForm(object):
             sum = TimeForm(self.terms + (other*dt[FINISH_TIME]).terms)
             return sum
 
+        elif other in [0, 0.0]:
+            return self
+
         else:
             return NotImplemented
 
