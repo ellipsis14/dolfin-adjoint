@@ -138,7 +138,10 @@ class Function(dolfin.Function):
     return dolfin_adjoint_str(self)
 
   def interpolate(self, other, annotate=None):
-    return dolfin_adjoint_interpolate(self, other, utils.to_annotate(annotate))
+    if annotate is True and dolfin.parameters["adjoint"]["stop_annotating"]:
+      raise AssertionError("The user insisted on annotation, but stop_annotating is True.")
+
+    return dolfin_adjoint_interpolate(self, other, annotate)
 
 dolfin.Function.assign = dolfin_adjoint_assign # so that Functions produced inside Expression etc. get it too
 dolfin.Function.split  = dolfin_adjoint_split
