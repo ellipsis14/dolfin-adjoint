@@ -5,7 +5,11 @@ import libadjoint
 import adjlinalg
 import adjglobals
 
-def register_assign(new, old):
+def register_assign(new, old, op=None):
+
+  if not isinstance(old, dolfin.Function):
+    assert op is not None
+
   fn_space = new.function_space()
   block_name = "Identity: %s" % str(fn_space)
   if len(block_name) > int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"]):
@@ -19,10 +23,10 @@ def register_assign(new, old):
   identity_block.assemble = identity_assembly_cb
   dep = adjglobals.adj_variables.next(new)
 
-  if dolfin.parameters["adjoint"]["record_all"]:
+  if dolfin.parameters["adjoint"]["record_all"] and isinstance(old, dolfin.Function):
     adjglobals.adjointer.record_variable(dep, libadjoint.MemoryStorage(adjlinalg.Vector(old)))
 
-  rhs = IdentityRHS(old)
+  rhs = IdentityRHS(old, fn_space, op)
   register_initial_conditions(zip(rhs.coefficients(),rhs.dependencies()), linear=True)
   initial_eq = libadjoint.Equation(dep, blocks=[identity_block], targets=[dep], rhs=rhs)
   cs = adjglobals.adjointer.register_equation(initial_eq)
@@ -30,12 +34,18 @@ def register_assign(new, old):
   do_checkpoint(cs, dep, rhs)
 
 class IdentityRHS(libadjoint.RHS):
-  def __init__(self, var):
+  def __init__(self, var, fn_space, op):
     self.var = var
-    self.dep = adjglobals.adj_variables[var]
+    self.fn_space = fn_space
+    self.op = op
+    if isinstance(var, dolfin.Function):
+      self.dep = adjglobals.adj_variables[var]
 
   def __call__(self, dependencies, values):
-    return adjlinalg.Vector(values[0].data)
+    if len(values) > 0:
+      return adjlinalg.Vector(values[0].data)
+    else:
+      return adjlinalg.Vector(self.op(self.var, self.fn_space))
 
   def derivative_action(self, dependencies, values, variable, contraction_vector, hermitian):
 
@@ -77,10 +87,16 @@ class IdentityRHS(libadjoint.RHS):
     return None
 
   def dependencies(self):
-    return [self.dep]
+    if isinstance(self.var, dolfin.Function):
+      return [self.dep]
+    else:
+      return []
 
   def coefficients(self):
-    return [self.var]
+    if isinstance(self.var, dolfin.Function):
+      return [self.var]
+    else:
+      return []
 
   def __str__(self):
     return "AssignIdentity(%s)" % str(self.dep)
