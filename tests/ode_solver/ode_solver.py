@@ -39,8 +39,9 @@ if __name__ == "__main__":
 
   u = Function(u0, name="Solution")
   v = TestFunction(R)
-  form = inner(c*u, v)*dP
-  exact_u = lambda t: exp(c_f*t)
+  time = Constant(0.0)
+  form = inner(time*u, v)*dP
+  exact_u = lambda t: exp(t*t/2.0)
 
   plot = True
   if plot:
@@ -50,8 +51,8 @@ if __name__ == "__main__":
 
   errors = []
   for dt in dts:
-    time = Constant(0.0)
     u.assign(u0)
+    time.assign(0.0)
     adj_reset()
     (u, xs, ys) = main(u, form, time, Solver, dt=dt)
 
