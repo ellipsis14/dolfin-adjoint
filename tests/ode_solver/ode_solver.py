@@ -24,7 +24,7 @@ def main(u, form, time, Solver, dt):
   solver = PointIntegralSolver(scheme)
   solver.parameters["newton_solver"]["iterations_to_retabulate_jacobian"] = 1
 
-  for i in range(int(2.0/dt)):
+  for i in range(int(0.2/dt)):
     solver.step(dt)
     xs.append(float(time))
     ys.append(u.vector().array()[0])
@@ -35,41 +35,54 @@ if __name__ == "__main__":
   u0 = interpolate(Constant(1.0), R, name="InitialValue")
   c_f = 1.0
   c  = interpolate(Constant(1.0), R, name="GrowthRate")
-  Solver = CrankNicolson
+  Solver = BackwardEuler
 
   u = Function(u0, name="Solution")
   v = TestFunction(R)
   time = Constant(0.0)
-  form = inner(time*u, v)*dP
+  # FIXME: make this work in the forward code:
+  #expr = Expression("t", t=time)
+  #form = inner(expr(u, v)*dP
+  form = lambda u, time: inner(time*u, v)*dP
   exact_u = lambda t: exp(t*t/2.0)
 
+  ## Step 0. Check forward order-of-convergence (nothing to do with adjoints)
+  check = False
   plot = False
-  if plot:
-    import matplotlib.pyplot as plt
 
-  dts = [0.1, 0.05, 0.025]
+  if check:
+    if plot:
+      import matplotlib.pyplot as plt
 
-  errors = []
-  for dt in dts:
-    u.assign(u0)
-    time.assign(0.0)
-    adj_reset()
-    (u, xs, ys) = main(u, form, time, Solver, dt=dt)
+    dts = [0.1, 0.05, 0.025]
 
-    exact_ys = [exact_u(t) for t in xs]
-    errors.append(abs(ys[-1] - exact_ys[-1]))
+    errors = []
+    for dt in dts:
+      u.assign(u0)
+      time.assign(0.0)
+      adj_reset()
+      (u, xs, ys) = main(u, form(u, time), time, Solver, dt=dt)
+
+      exact_ys = [exact_u(t) for t in xs]
+      errors.append(abs(ys[-1] - exact_ys[-1]))
+
+      if plot:
+        plt.plot(xs, ys, label="Approximate solution (dt %s)" % dt)
+        if dt == dts[-1]:
+          plt.plot(xs, exact_ys, label="Exact solution")
+
+    print "Errors: ", errors
+    print "Convergence order: ", convergence_order(errors)
+
+    assert min(convergence_order(errors)) > 0.8
 
     if plot:
-      plt.plot(xs, ys, label="Approximate solution (dt %s)" % dt)
-      if dt == dts[-1]:
-        plt.plot(xs, exact_ys, label="Exact solution")
+      plt.legend(loc="best")
+      plt.show()
+  else:
+    (u, xs, ys) = main(u, form(u, time), time, Solver, dt=0.2)
 
-  print "Errors: ", errors
-  print "Convergence order: ", convergence_order(errors)
-
-  if plot:
-    plt.legend(loc="best")
-    plt.show()
+  ## Step 1. Check replay correctness
   
   replay = True
   if replay:
@@ -77,3 +90,20 @@ if __name__ == "__main__":
     adj_html("forward.html", "forward")
     success = replay_dolfin(tol=1.0e-15, stop=True)
     assert success
+
+  ## Step 2. Check TLM correctness
+
+  dtm = TimeMeasure()
+  J = Functional(inner(u, u)*dx*dtm[FINISH_TIME])
+  m = InitialConditionParameter(u)
+  Jm = assemble(inner(u, u)*dx)
+  dJdm = compute_gradient_tlm(J, m, forget=False)
+
+  def Jhat(ic):
+    time = Constant(0.0)
+    (out, xs, ys) = main(ic, form(ic, time), time, Solver, dt=dt)
+    return assemble(inner(out, out)*dx)
+
+  #minconv_tlm = taylor_test(Jhat, m, Jm, dJdm)
+  #assert minconv_tlm > 1.8
+

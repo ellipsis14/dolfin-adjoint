@@ -62,24 +62,41 @@ if dolfin.__version__ > '1.2.0':
     def __str__(self):
       return hashlib.md5(str(self.form)).hexdigest()
 
-    def __call__(self, dependencies, values):
+    def new_form(self, new_time, new_solution, dependencies, values):
       new_form = dolfin.replace(self.form, dict(zip(self.coeffs, [val.data for val in values])))
 
-      new_solution = dolfin.Function(self.fn_space)
       ic_value = values[dependencies.index(self.ic_var)].data
       new_solution.assign(ic_value, annotate=False)
       new_form = dolfin.replace(new_form, {ic_value: new_solution})
 
-      new_time = dolfin.Constant(self.time)
       new_form = dolfin.replace(new_form, {self.scheme.t(): new_time})
-      new_scheme = self.scheme.__class__(new_form, new_solution, new_time)
+      return new_form
 
+    def new_scheme(self, dependencies, values):
+      new_time = dolfin.Constant(self.time)
+      new_solution = dolfin.Function(self.fn_space)
+      new_form = self.new_form(new_time, new_solution, dependencies, values)
+
+      new_scheme = self.scheme.__class__(new_form, new_solution, new_time)
+      return new_scheme
+
+    def __call__(self, dependencies, values):
+      new_scheme = self.new_scheme(dependencies, values)
       new_solver = dolfin.PointIntegralSolver(new_scheme)
       new_solver.parameters.update(self.solver.parameters)
-
       new_solver.step(self.dt)
 
-      return adjlinalg.Vector(new_solution)
+      return adjlinalg.Vector(new_scheme.solution())
+
+    def derivative_action(self, dependencies, values, variable, contraction_vector, hermitian):
+      assert not hermitian
+
+      new_scheme = self.new_scheme(dependencies, values)
+      tlm_scheme = new_scheme.to_tlm(contraction_vector.data)
+      tlm_solver = dolfin.PointIntegralSolver(tlm_scheme)
+      tlm_solver.parameters.update(self.solver.parameters)
+      tlm_solver.step(self.dt)
+      return adjlinalg.Vector(tlm_scheme.solution())
 
   __all__ = ['PointIntegralSolver']
 else:
