@@ -13,7 +13,7 @@ mesh = UnitIntervalMesh(2)
 #R = FunctionSpace(mesh, "R", 0) # in my opinion, should work, but doesn't
 R = FunctionSpace(mesh, "CG", 1)
 
-def main(u0, c, Solver):
+def main(u0, c, Solver, dt):
 
   u = Function(u0, name="Solution")
   v = TestFunction(R)
@@ -27,11 +27,9 @@ def main(u0, c, Solver):
   ys = [u.vector().array()[0]]
 
   solver = PointIntegralSolver(scheme)
-  dt = 0.2
-
   solver.parameters["newton_solver"]["iterations_to_retabulate_jacobian"] = 1
 
-  for i in range(1):
+  for i in range(int(2.0/dt)):
     solver.step(dt)
     xs.append(float(time))
     ys.append(u.vector().array()[0])
@@ -45,24 +43,34 @@ if __name__ == "__main__":
   c  = interpolate(Constant(c_f), R, name="GrowthRate")
   Solver = BackwardEuler
 
-  (u, xs, ys) = main(u0, c, Solver)
+  exact_u = lambda t: u0_f*exp(c_f*t)
 
-  plot = False
-
+  plot = True
   if plot:
     import matplotlib.pyplot as plt
-    plt.plot(xs, ys, label="Approximate solution")
 
-    exact_u = lambda t: u0_f*exp(c_f*t)
+  dts = [0.1, 0.05, 0.025]
+
+  errors = []
+  for dt in dts:
+    adj_reset()
+    (u, xs, ys) = main(u0, c, Solver, dt=dt)
+
     exact_ys = [exact_u(t) for t in xs]
+    errors.append(abs(ys[-1] - exact_ys[-1]))
 
-    print "xs:" , xs
-    print "ys:" , ys
-    print "exact_ys: ", exact_ys
-    plt.plot(xs, exact_ys, label="Exact solution")
+    if plot:
+      plt.plot(xs, ys, label="Approximate solution (dt %s)" % dt)
+      if dt == dts[-1]:
+        plt.plot(xs, exact_ys, label="Exact solution")
+
+  print "Errors: ", errors
+  print "Convergence order: ", convergence_order(errors)
+
+  if plot:
     plt.legend(loc="best")
     plt.show()
-
+  
   replay = True
 
   if replay:
