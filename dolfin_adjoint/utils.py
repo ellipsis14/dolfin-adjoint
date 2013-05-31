@@ -1,5 +1,5 @@
 import libadjoint
-from dolfin import info_red, info_blue, info
+from dolfin import info_red, info_blue, info, warning
 import adjglobals
 import dolfin
 import numpy
@@ -512,7 +512,7 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
       with_gradient.append(remainder)
 
   if min(with_gradient + no_gradient) < 1e-16:
-    info("Warning: The Taylor remainders are close to machine precision (< %s). Try increasing the seed value in case the Taylor remainder test fails." % min(with_gradient + no_gradient))
+    warning("Warning: The Taylor remainders are close to machine precision (< %s). Try increasing the seed value in case the Taylor remainder test fails." % min(with_gradient + no_gradient))
 
   info("Taylor remainder with gradient information: " + str(with_gradient))
   info("Convergence orders for Taylor remainder with gradient information (should all be 2): " + str(convergence_order(with_gradient)))
