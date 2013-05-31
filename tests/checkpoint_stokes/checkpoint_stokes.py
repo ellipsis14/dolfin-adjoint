@@ -75,8 +75,8 @@ def main(ic, annotate=False):
     temp_bcs = temperature_boundary_conditions(X)
 
     # Temperature variables
-    T_ = Function(ic, annotate=annotate)
-    T = Function(ic, annotate=annotate)
+    T_ = Function(ic, name="T_", annotate=annotate)
+    T = Function(ic, name="T", annotate=annotate)
 
     # Flow variable(s)
     w = Function(W)
@@ -94,16 +94,15 @@ def main(ic, annotate=False):
     # Define temperature equation
     temp_eq = temperature(X, kappa, u, T_, timestep)
 
-
+    adj_start_timestep(t)
     while (t <= end):
         solve(flow_eq[0] == flow_eq[1], w, flow_bcs, annotate=annotate)
 
         solve(temp_eq[0] == temp_eq[1], T, temp_bcs, annotate=annotate)
         T_.assign(T, annotate=annotate)
-        #plot(T)
 
         t += timestep
-        adj_inc_timestep()
+        adj_inc_timestep(t, finished=t>end)
 
     return T_
 
@@ -114,7 +113,7 @@ if __name__ == "__main__":
     # Run model
     T0_expr = "0.5*(1.0 - x[1]*x[1]) + 0.01*cos(pi*x[0]/l)*sin(pi*x[1]/h)"
     T0 = Expression(T0_expr, l=1.0, h=1.0)
-    ic = Function(interpolate(T0, X))
+    ic = interpolate(T0, X, name="InitialCondition")
     T = main(ic, annotate=True)
 
     print "Running adjoint ... "
