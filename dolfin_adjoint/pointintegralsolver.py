@@ -18,8 +18,12 @@ if dolfin.__version__ > '1.2.0':
         var = scheme.solution()
         fn_space = var.function_space()
 
+        current_var = adjglobals.adj_variables[var]
+        if not adjglobals.adjointer.variable_known(current_var):
+          solving.register_initial_conditions([(var, current_var)], linear=True)
+
         identity_block = solving.get_identity(fn_space)
-        rhs = PointIntegralRHS(self, dt)
+        rhs = PointIntegralRHS(self, dt, current_var)
         next_var = adjglobals.adj_variables.next(var)
 
         eqn = libadjoint.Equation(next_var, blocks=[identity_block], targets=[next_var], rhs=rhs)
@@ -34,7 +38,7 @@ if dolfin.__version__ > '1.2.0':
           adjglobals.adjointer.record_variable(next_var, libadjoint.MemoryStorage(adjlinalg.Vector(var)))
 
   class PointIntegralRHS(libadjoint.RHS):
-    def __init__(self, solver, dt):
+    def __init__(self, solver, dt, ic_var):
       self.solver = solver
       self.dt = dt
 
@@ -48,10 +52,10 @@ if dolfin.__version__ > '1.2.0':
 
       solving.register_initial_conditions(zip(self.coeffs, self.deps), linear=True)
 
-      if scheme.solution() in self.coeffs:
-        self.ic_var = adjglobals.adj_variables[scheme.solution()]
-      else:
-        raise NotImplementedError, "Not come across this yet -- please report to patrick.farrell@imperial.ac.uk"
+      self.ic_var = ic_var
+      if scheme.solution() not in self.coeffs:
+        self.coeffs.append(scheme.solution())
+        self.deps.append(ic_var)
 
     def dependencies(self):
       return self.deps
@@ -65,9 +69,10 @@ if dolfin.__version__ > '1.2.0':
     def new_form(self, new_time, new_solution, dependencies, values):
       new_form = dolfin.replace(self.form, dict(zip(self.coeffs, [val.data for val in values])))
 
-      ic_value = values[dependencies.index(self.ic_var)].data
-      new_solution.assign(ic_value, annotate=False)
-      new_form = dolfin.replace(new_form, {ic_value: new_solution})
+      if self.ic_var is not None:
+        ic_value = values[dependencies.index(self.ic_var)].data
+        new_solution.assign(ic_value, annotate=False)
+        new_form = dolfin.replace(new_form, {ic_value: new_solution})
 
       new_form = dolfin.replace(new_form, {self.scheme.t(): new_time})
       return new_form
@@ -96,6 +101,7 @@ if dolfin.__version__ > '1.2.0':
       tlm_solver = dolfin.PointIntegralSolver(tlm_scheme)
       tlm_solver.parameters.update(self.solver.parameters)
       tlm_solver.step(self.dt)
+
       return adjlinalg.Vector(tlm_scheme.solution())
 
   __all__ = ['PointIntegralSolver']
