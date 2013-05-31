@@ -9,7 +9,7 @@ from dolfin import *
 from dolfin_adjoint import *
 import ufl.algorithms
 
-mesh = UnitIntervalMesh(2)
+mesh = UnitIntervalMesh(1)
 #R = FunctionSpace(mesh, "R", 0) # in my opinion, should work, but doesn't
 R = FunctionSpace(mesh, "CG", 1)
 
@@ -45,6 +45,8 @@ if __name__ == "__main__":
   #form = inner(expr(u, v)*dP
   form = lambda u, time: inner(time*u, v)*dP
   exact_u = lambda t: exp(t*t/2.0)
+  #form = lambda u, time: inner(u, v)*dP
+  #exact_u = lambda t: exp(t)
 
   ## Step 0. Check forward order-of-convergence (nothing to do with adjoints)
   check = False
@@ -80,11 +82,13 @@ if __name__ == "__main__":
       plt.legend(loc="best")
       plt.show()
   else:
-    (u, xs, ys) = main(u, form(u, time), time, Solver, dt=0.2)
+    dt = 0.2
+    (u, xs, ys) = main(u, form(u, time), time, Solver, dt=dt)
+    print "Solution: ", ys[-1]
 
   ## Step 1. Check replay correctness
   
-  replay = True
+  replay = False
   if replay:
     assert adjglobals.adjointer.equation_count > 0
     adj_html("forward.html", "forward")
@@ -94,16 +98,21 @@ if __name__ == "__main__":
   ## Step 2. Check TLM correctness
 
   dtm = TimeMeasure()
-  J = Functional(inner(u, u)*dx*dtm[FINISH_TIME])
+  J = Functional(u*dx*dtm[FINISH_TIME])
   m = InitialConditionParameter(u)
-  Jm = assemble(inner(u, u)*dx)
+  assert m.data().vector()[0] == u0.vector()[0]
+  Jm = assemble(u*dx)
   dJdm = compute_gradient_tlm(J, m, forget=False)
 
   def Jhat(ic):
+    print "Perturbed initial condition: ", ic.vector()[0]
     time = Constant(0.0)
     (out, xs, ys) = main(ic, form(ic, time), time, Solver, dt=dt)
-    return assemble(inner(out, out)*dx)
+    print "Perturbed functional value: ", assemble(out*dx)
+    return assemble(out*dx)
 
-  #minconv_tlm = taylor_test(Jhat, m, Jm, dJdm)
-  #assert minconv_tlm > 1.8
+  set_log_level(WARNING)
+  adj_html("forward.html", "forward")
+  minconv_tlm = taylor_test(Jhat, m, Jm, dJdm, perturbation_direction=interpolate(Constant(1.0), R), seed=1.0)
+  assert minconv_tlm > 1.8
 
