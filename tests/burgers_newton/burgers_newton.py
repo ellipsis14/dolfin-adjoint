@@ -58,13 +58,13 @@ if __name__ == "__main__":
 
     print "Running adjoint ... "
 
-    J = Functional(forward*forward*dx*dt[FINISH_TIME])
-    Jic = assemble(forward*forward*dx)
+    J = Functional(forward*forward*dx*dt[FINISH_TIME] + forward*forward*dx*dt[START_TIME])
+    Jic = assemble(forward*forward*dx + ic*ic*dx)
     dJdic = compute_gradient(J, InitialConditionParameter("Velocity"), forget=False)
 
     def Jfunc(ic):
       forward = main(ic, annotate=False)
-      return assemble(forward*forward*dx)
+      return assemble(forward*forward*dx + ic*ic*dx)
 
     HJic = hessian(J, InitialConditionParameter("Velocity"), warn=False)
 
