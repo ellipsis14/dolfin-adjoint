@@ -45,13 +45,13 @@ if __name__ == "__main__":
     ic = project(Expression("sin(2*pi*x[0])"),  V)
     forward = main(ic, annotate=True)
 
-    J = Functional(forward*forward*dx*dt[FINISH_TIME])
-    Jic = assemble(forward*forward*dx)
+    J = Functional(forward*forward*dx*dt[FINISH_TIME] + forward*forward*dx*dt[START_TIME])
+    Jic = assemble(forward*forward*dx + ic*ic*dx)
     dJdic = compute_gradient_tlm(J, InitialConditionParameter("Velocity"), forget=False)
 
     def Jfunc(ic):
       forward = main(ic, annotate=False)
-      return assemble(forward*forward*dx)
+      return assemble(forward*forward*dx + ic*ic*dx)
 
     minconv = taylor_test(Jfunc, InitialConditionParameter("Velocity"), Jic, dJdic, seed=1.0e-3, perturbation_direction=interpolate(Expression("cos(x[0])"), V))
     assert minconv > 1.7
