@@ -371,6 +371,6 @@ class compute_gradient_tlm(object):
         dJdu_vec = dolfin.assemble(dJdu.data)
         grad = _add(grad, dJdu_vec.inner(tlm.vector()))
 
-      # skip the dJdm term for now
+      # skip the dJdm term for now, don't need it for InitialConditionParameter you see
 
     return grad
