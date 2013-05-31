@@ -13,13 +13,8 @@ mesh = UnitIntervalMesh(2)
 #R = FunctionSpace(mesh, "R", 0) # in my opinion, should work, but doesn't
 R = FunctionSpace(mesh, "CG", 1)
 
-def main(u0, c, Solver, dt):
+def main(u, form, time, Solver, dt):
 
-  u = Function(u0, name="Solution")
-  v = TestFunction(R)
-  form = inner(c*u, v)*dP
-
-  time = Constant(0.0)
   scheme = Solver(form, u, time)
   scheme.t().assign(float(time))
 
@@ -37,13 +32,15 @@ def main(u0, c, Solver, dt):
   return (u, xs, ys)
 
 if __name__ == "__main__":
-  u0_f = 1.0
-  u0 = interpolate(Constant(u0_f), R, name="InitialValue")
+  u0 = interpolate(Constant(1.0), R, name="InitialValue")
   c_f = 1.0
-  c  = interpolate(Constant(c_f), R, name="GrowthRate")
-  Solver = BackwardEuler
+  c  = interpolate(Constant(1.0), R, name="GrowthRate")
+  Solver = CrankNicolson
 
-  exact_u = lambda t: u0_f*exp(c_f*t)
+  u = Function(u0, name="Solution")
+  v = TestFunction(R)
+  form = inner(c*u, v)*dP
+  exact_u = lambda t: exp(c_f*t)
 
   plot = True
   if plot:
@@ -53,8 +50,10 @@ if __name__ == "__main__":
 
   errors = []
   for dt in dts:
+    time = Constant(0.0)
+    u.assign(u0)
     adj_reset()
-    (u, xs, ys) = main(u0, c, Solver, dt=dt)
+    (u, xs, ys) = main(u, form, time, Solver, dt=dt)
 
     exact_ys = [exact_u(t) for t in xs]
     errors.append(abs(ys[-1] - exact_ys[-1]))
@@ -71,7 +70,7 @@ if __name__ == "__main__":
     plt.legend(loc="best")
     plt.show()
   
-  replay = True
+  replay = False
 
   if replay:
     assert adjglobals.adjointer.equation_count > 0
