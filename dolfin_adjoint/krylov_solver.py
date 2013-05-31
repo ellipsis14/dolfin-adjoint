@@ -14,6 +14,7 @@ class KrylovSolver(dolfin.KrylovSolver):
     dolfin.KrylovSolver.__init__(self, *args)
     self.solver_parameters = args
     self.nsp = None
+    self.tnsp = None
 
     self.operators = (None, None)
     if len(args) > 0 and isinstance(args[0], dolfin.GenericMatrix):
@@ -26,6 +27,10 @@ class KrylovSolver(dolfin.KrylovSolver):
   def set_nullspace(self, nsp):
     dolfin.KrylovSolver.set_nullspace(self, nsp)
     self.nsp = nsp
+
+  def set_transpose_nullspace(self, tnsp):
+    dolfin.KrylovSolver.set_transpose_nullspace(self, tnsp)
+    self.tnsp = tnsp
 
   def set_operator(self, A):
     dolfin.KrylovSolver.set_operator(self, A)
@@ -72,6 +77,10 @@ class KrylovSolver(dolfin.KrylovSolver):
       fn_space = u.function_space()
       has_preconditioner = P is not None
       nsp = self.nsp
+      tnsp = self.tnsp
+
+      if nsp is not None:
+        assert tnsp is not None, "Need to set transpose nullspace with solver.set_transpose_nullspace"
 
       class KrylovSolverMatrix(adjlinalg.Matrix):
         def __init__(self, *args, **kwargs):
@@ -104,12 +113,16 @@ class KrylovSolver(dolfin.KrylovSolver):
           solver = dolfin.KrylovSolver(*solver_parameters)
           solver.parameters.update(parameters)
 
-          if nsp is not None and self.adjoint is False:
-            solver.set_nullspace(nsp)
-          if nsp is not None and self.adjoint:
-            # maybe add a KrylovSolver.set_adjoint_nullspace?
-            dolfin.info_red("Warning: setting nullspace for adjoint solve to be the same for the forward solve. May not be the actual basis for the nullspace.")
-            solver.set_nullspace(nsp)
+          if self.adjoint:
+            # swap nullspaces
+            (nsp_, tnsp_) = (tnsp, nsp)
+          else:
+            (nsp_, tnsp_) = (nsp, tnsp)
+
+          if nsp_ is not None:
+            solver.set_nullspace(nsp_)
+          if tnsp_ is not None:
+            solver.set_transpose_nullspace(tnsp_)
 
           x = dolfin.Function(fn_space)
           if self.initial_guess is not None and var.type == 'ADJ_FORWARD':
@@ -164,6 +177,9 @@ class KrylovSolver(dolfin.KrylovSolver):
                 solver.set_operators(A, P)
               else:
                 solver.set_operator(A)
+
+          if tnsp_ is not None:
+            tnsp_.orthogonalize(rhs)
 
           solver.solve(x.vector(), rhs)
           return adjlinalg.Vector(x)
