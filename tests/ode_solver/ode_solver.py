@@ -43,7 +43,7 @@ if __name__ == "__main__":
   form = inner(time*u, v)*dP
   exact_u = lambda t: exp(t*t/2.0)
 
-  plot = True
+  plot = False
   if plot:
     import matplotlib.pyplot as plt
 
@@ -71,10 +71,9 @@ if __name__ == "__main__":
     plt.legend(loc="best")
     plt.show()
   
-  replay = False
-
+  replay = True
   if replay:
     assert adjglobals.adjointer.equation_count > 0
     adj_html("forward.html", "forward")
-    success = replay_dolfin(tol=0.0, stop=True)
+    success = replay_dolfin(tol=1.0e-15, stop=True)
     assert success

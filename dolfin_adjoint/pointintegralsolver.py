@@ -70,9 +70,9 @@ if dolfin.__version__ > '1.2.0':
       new_solution.assign(ic_value, annotate=False)
       new_form = dolfin.replace(new_form, {ic_value: new_solution})
 
-      new_time = dolfin.Constant(0.0)
+      new_time = dolfin.Constant(self.time)
+      new_form = dolfin.replace(new_form, {self.scheme.t(): new_time})
       new_scheme = self.scheme.__class__(new_form, new_solution, new_time)
-      new_scheme.t().assign(self.time)
 
       new_solver = dolfin.PointIntegralSolver(new_scheme)
       new_solver.parameters.update(self.solver.parameters)
