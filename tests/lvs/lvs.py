@@ -7,10 +7,10 @@ dolfin.parameters["adjoint"]["record_all"] = True
 mesh = UnitSquareMesh(4, 4)
 V = FunctionSpace(mesh, "CG", 1)
 v = TestFunction(V)
-f = interpolate(Expression("sin(pi*x[0])"), V)
+f = interpolate(Expression("sin(pi*x[0])"), V, name = "initial condition")
 
 def main(f, annotate=False):
-  u = Function(V)
+  u = Function(V, name = "system state")
   w = TrialFunction(V)
   a = w*v*dx
   L = f*v*dx
@@ -28,12 +28,14 @@ def main(f, annotate=False):
 u = main(f, annotate=True)
 replay_dolfin()
 
-grad = compute_gradient(Functional(u*u*dx*dt[FINISH_TIME]), InitialConditionParameter(f))
+grad = compute_gradient(Functional(u*u*dx*dt[FINISH_TIME]), InitialConditionParameter(f), forget = False)
 
 def J(f):
   u = main(f, annotate=False)
   return assemble(u*u*dx)
 
-minconv = test_initial_condition_adjoint(J, f, grad)
+Ju = assemble(u*u*dx)
+#minconv = test_initial_condition_adjoint(J, f, grad)
+minconv = taylor_test(J, InitialConditionParameter(f), Ju, grad)
 if minconv < 1.9:
   sys.exit(1)
