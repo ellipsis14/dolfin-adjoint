@@ -5,6 +5,9 @@ except ImportError:
   info_red("Need dolfin > 1.2.0 for ode_solver test.")
   import sys; sys.exit(0)
 
+print "Test is currently disabled"
+import sys; sys.exit(0)
+
 from dolfin import *
 from dolfin_adjoint import *
 import ufl.algorithms
