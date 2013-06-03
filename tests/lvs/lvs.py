@@ -35,7 +35,6 @@ def J(f):
   return assemble(u*u*dx)
 
 Ju = assemble(u*u*dx)
-#minconv = test_initial_condition_adjoint(J, f, grad)
 minconv = taylor_test(J, InitialConditionParameter(f), Ju, grad)
 if minconv < 1.9:
   sys.exit(1)

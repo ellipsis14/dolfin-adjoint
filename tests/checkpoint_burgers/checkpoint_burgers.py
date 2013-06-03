@@ -19,15 +19,13 @@ V = FunctionSpace(mesh, "CG", 2)
 def Dt(u, u_, timestep):
     return (u - u_)/timestep
 
-def main(ic, annotate=False):
+def main(ic, timestep, end, annotate=False):
 
-    u_ = Function(ic)
+    u_ = Function(ic, name = "system state")
     u = TrialFunction(V)
     v = TestFunction(V)
 
-    nu = Constant(0.0001)
-
-    timestep = Constant(1.0/n)
+    nu = Constant(0.0001, name = "nu")
 
     F = (Dt(u, u_, timestep)*v
          + u_*u.dx(0)*v + nu*u.dx(0)*v.dx(0))*dx
@@ -37,9 +35,6 @@ def main(ic, annotate=False):
     bc = DirichletBC(V, 0.0, "on_boundary")
 
     t = 0.0
-    end = 0.5
-    if annotate: 
-      adj_checkpointing('multistage', int(ceil(end/float(timestep))), 5, 10, verbose=True)
 
     u = Function(V)
     j = 0
@@ -68,26 +63,25 @@ def main(ic, annotate=False):
     return j, u_
 
 if __name__ == "__main__":
-
+    timestep = Constant(1.0/n, name = "timestep")
+    end = 0.5
     
-    ic = project(Expression("sin(2*pi*x[0])"),  V)
-    j, forward = main(ic, annotate=True)
+    adj_checkpointing('multistage', int(ceil(end/float(timestep))), 5, 10, verbose=True)
+   
+    ic = project(Expression("sin(2*pi*x[0])"),  V, name = "initial condition", annotate = True)
+    j, forward = main(ic, timestep, end, annotate=True)
     adj_html("burgers_picard_checkpointing_forward.html", "forward")
     adj_html("burgers_picard_checkpointing_adjoint.html", "adjoint")
-    #print "Running forward replay .... "
-    #replay_dolfin()
-    print "Running adjoint ... "
 
-    timestep = Constant(1.0/n)
     J = Functional(forward*forward*dx*dt)
-    for (adjoint, var) in compute_adjoint(J, forget=False):
-      pass
 
     def Jfunc(ic):
-      j, forward = main(ic, annotate=False)
+      j, forward = main(ic, timestep, end, annotate=False)
       return j 
-
-    minconv = test_initial_condition_adjoint(Jfunc, ic, adjoint, seed=1.0e-3)
+    
+    dJdf = compute_gradient(J, InitialConditionParameter(ic), forget = False)
+    
+    minconv = taylor_test(Jfunc, InitialConditionParameter(ic), j, dJdf, seed=1.0e-4)
     if minconv < 1.9:
       exit_code = 1
     else:
