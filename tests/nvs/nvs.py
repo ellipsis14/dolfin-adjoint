@@ -30,10 +30,7 @@ def J(f):
   u = main(f, annotate=False)
   return assemble(u*u*dx + f*f*dx)
 
-#minconv = test_initial_condition_adjoint(J, f, grad)
 Jf = assemble(u*u*dx + f*f*dx)
-#dJdf = compute_gradient(J, InitialConditionParameter("ic"), forget = False)
-
 minconv = taylor_test(J, InitialConditionParameter("ic"), Jf, grad)
 if minconv < 1.9:
   sys.exit(1)

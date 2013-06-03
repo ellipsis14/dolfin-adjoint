@@ -76,7 +76,6 @@ if __name__ == "__main__":
     def Jhat(ic):
       j, forward = main(ic, annotate=False)
       return j 
- 
+
     minconv = taylor_test(Jhat, m, j, dJdm, seed=1.0e-3, value=ic)
     assert minconv > 1.8
-
