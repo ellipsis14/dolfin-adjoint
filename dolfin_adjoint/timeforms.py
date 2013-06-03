@@ -103,6 +103,9 @@ class TimeForm(object):
             sum = TimeForm(self.terms + (other*dt[FINISH_TIME]).terms)
             return sum
 
+        elif other in [0, 0.0]:
+            return self
+
         else:
             return NotImplemented
 
@@ -110,8 +113,7 @@ class TimeForm(object):
         # Subtract by adding the negation of all the terms.
         
         if isinstance(other, TimeForm):
-            sum = TimeForm()        
-            sum.terms = self.terms + [-term for term in other.terms]
+            sum = TimeForm(self.terms + [-term for term in other.terms])        
             return sum
 
         else:
@@ -120,8 +122,7 @@ class TimeForm(object):
     def __neg__(self):
         # Unary negation occurs by negating the terms.
 
-        neg = TimeForm()
-        neg.terms = [-term for term in other.terms]
+        neg = TimeForm([-term for term in other.terms])
         return neg
 
     def __repr__(self):

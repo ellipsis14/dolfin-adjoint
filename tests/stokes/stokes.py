@@ -66,8 +66,8 @@ def main(ic, annotate=False):
     temp_bcs = temperature_boundary_conditions(X)
 
     # Temperature variables
-    T_ = Function(ic)
-    T = Function(ic)
+    T_ = Function(ic, name="T_", annotate=annotate)
+    T = Function(ic, name="T", annotate=annotate)
 
     # Flow variable(s)
     w = Function(W)
@@ -104,27 +104,20 @@ def main(ic, annotate=False):
 if __name__ == "__main__":
 
     from dolfin_adjoint import *
-    dolfin.parameters["adjoint"]["record_all"] = True
 
     # Run model
     T0_expr = "0.5*(1.0 - x[1]*x[1]) + 0.01*cos(pi*x[0]/l)*sin(pi*x[1]/h)"
     T0 = Expression(T0_expr, l=1.0, h=1.0)
-    ic = Function(interpolate(T0, X))
+    ic = interpolate(T0, X, name="InitialCondition")
     T = main(ic, annotate=True)
 
-    adj_html("stokes_forward.html", "forward")
-    adj_html("stokes_adjoint.html", "adjoint")
-
-    print "Running adjoint ... "
     J = Functional(T*T*dx*dt[FINISH_TIME])
     Jic = assemble(T*T*dx)
     dJdic = compute_gradient(J, InitialConditionParameter(T), forget=False)
 
-    def J(ic):
+    def Jhat(ic):
       T = main(ic, annotate=False)
       return assemble(T*T*dx)
 
-    minconv = taylor_test(J, InitialConditionParameter(T), Jic, dJdic)
-    if minconv < 1.9:
-      sys.exit(1)
-
+    minconv = taylor_test(Jhat, InitialConditionParameter(T), Jic, dJdic)
+    assert minconv > 1.9

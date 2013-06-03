@@ -51,15 +51,7 @@ max_t = 0.5  # Final model time
 
 # Linear solvers
 lu_solver = {"linear_solver":"lu"}
-if has_krylov_solver_method("cgs"):
-  sol = "cgs"
-else:
-  sol = "gmres"
-if has_krylov_solver_preconditioner("eisenstat"):
-  pc = "eisenstat"
-else:
-  pc = "sor"
-dTdt_solver = {"linear_solver":sol, "preconditioner":pc, "krylov_solver":{"relative_tolerance":1.0e-12, "absolute_tolerance":1.0e-16, "divergence_limit":1.0e8}}
+dTdt_solver = {"linear_solver":"gmres", "preconditioner":"sor", "krylov_solver":{"relative_tolerance":1.0e-12, "absolute_tolerance":1.0e-16, "divergence_limit":1.0e8}}
 
 # The model mesh ...
 mesh = Mesh(os.path.join(os.path.abspath(os.path.dirname(__file__)), "data", "square_10-200.xml.gz"))

@@ -24,6 +24,8 @@ import numpy
 from dolfin import *
 from timestepping import *
 
+parameters["form_compiler"]["optimize"] = True
+
 # Model parameters (cgs units)
 L       = 2000.0e5
 beta    = StaticConstant(2.0e-13)

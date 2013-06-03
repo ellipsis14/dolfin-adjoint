@@ -19,13 +19,17 @@ V = FunctionSpace(mesh, "CG", 2)
 def Dt(u, u_, timestep):
     return (u - u_)/timestep
 
-def main(ic, timestep, end, annotate=False):
+def main(ic, annotate=False):
+    timestep = Constant(1.0/n)
+    t = 0.0
+    end = 0.5
+    if annotate: 
+      adj_checkpointing('multistage', int(ceil(end/float(timestep))), 5, 10, verbose=True)
 
-    u_ = Function(ic, name = "system state")
+    u_ = Function(ic, annotate=annotate)
     u = TrialFunction(V)
     v = TestFunction(V)
-
-    nu = Constant(0.0001, name = "nu")
+    nu = Constant(0.0001)
 
     F = (Dt(u, u_, timestep)*v
          + u_*u.dx(0)*v + nu*u.dx(0)*v.dx(0))*dx
@@ -33,8 +37,6 @@ def main(ic, timestep, end, annotate=False):
     (a, L) = system(F)
 
     bc = DirichletBC(V, 0.0, "on_boundary")
-
-    t = 0.0
 
     u = Function(V)
     j = 0
@@ -54,7 +56,7 @@ def main(ic, timestep, end, annotate=False):
         else:
           quad_weight = 1.0
         j += quad_weight*float(timestep)*assemble(u_*u_*dx)
-        
+
         if annotate:
           adj_inc_timestep(time=t, finished=t>end)
         #plot(u)
@@ -63,27 +65,18 @@ def main(ic, timestep, end, annotate=False):
     return j, u_
 
 if __name__ == "__main__":
-    timestep = Constant(1.0/n, name = "timestep")
-    end = 0.5
-    
-    adj_checkpointing('multistage', int(ceil(end/float(timestep))), 5, 10, verbose=True)
-   
-    ic = project(Expression("sin(2*pi*x[0])"),  V, name = "initial condition", annotate = True)
-    j, forward = main(ic, timestep, end, annotate=True)
-    adj_html("burgers_picard_checkpointing_forward.html", "forward")
-    adj_html("burgers_picard_checkpointing_adjoint.html", "adjoint")
+
+    ic = project(Expression("sin(2*pi*x[0])"),  V)
+    j, forward = main(ic, annotate=True)
 
     J = Functional(forward*forward*dx*dt)
+    m = InitialConditionParameter(ic)
+    dJdm = compute_gradient(J, m)
 
-    def Jfunc(ic):
-      j, forward = main(ic, timestep, end, annotate=False)
+    def Jhat(ic):
+      j, forward = main(ic, annotate=False)
       return j 
-    
-    dJdf = compute_gradient(J, InitialConditionParameter(ic), forget = False)
-    
-    minconv = taylor_test(Jfunc, InitialConditionParameter(ic), j, dJdf, seed=1.0e-4)
-    if minconv < 1.9:
-      exit_code = 1
-    else:
-      exit_code = 0
-    sys.exit(exit_code)
+ 
+    minconv = taylor_test(Jhat, m, j, dJdm, seed=1.0e-3, value=ic)
+    assert minconv > 1.8
+

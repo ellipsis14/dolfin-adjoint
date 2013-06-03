@@ -10,6 +10,7 @@ import utils
 dolfin_assign = dolfin.Function.assign
 dolfin_split  = dolfin.Function.split
 dolfin_str    = dolfin.Function.__str__
+dolfin_interpolate = dolfin.Function.interpolate
 
 def dolfin_adjoint_assign(self, other, annotate=None):
   '''We also need to monkeypatch the Function.assign method, as it is often used inside 
@@ -77,6 +78,14 @@ def dolfin_adjoint_str(self):
     else:
       return dolfin_str(self)
 
+def dolfin_adjoint_interpolate(self, other, annotate=None):
+    out = dolfin_interpolate(self, other)
+    if annotate is True:
+      assign.register_assign(self, other, op=dolfin.interpolate)
+      adjglobals.adjointer.record_variable(adjglobals.adj_variables[self], libadjoint.MemoryStorage(adjlinalg.Vector(self)))
+
+    return out
+
 class Function(dolfin.Function):
   '''The Function class is overloaded so that you can give :py:class:`Functions` *names*. For example,
 
@@ -128,7 +137,14 @@ class Function(dolfin.Function):
   def __str__(self):
     return dolfin_adjoint_str(self)
 
+  def interpolate(self, other, annotate=None):
+    if annotate is True and dolfin.parameters["adjoint"]["stop_annotating"]:
+      raise AssertionError("The user insisted on annotation, but stop_annotating is True.")
+
+    return dolfin_adjoint_interpolate(self, other, annotate)
+
 dolfin.Function.assign = dolfin_adjoint_assign # so that Functions produced inside Expression etc. get it too
 dolfin.Function.split  = dolfin_adjoint_split
 dolfin.Function.__str__ = dolfin_adjoint_str
+dolfin.Function.interpolate = dolfin_adjoint_interpolate
 

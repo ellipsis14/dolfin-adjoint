@@ -81,6 +81,8 @@ def compute_tlm(parameter, forget=False):
       storage.set_overwrite(True)
       adjglobals.adjointer.record_variable(tlm_var, storage)
 
+      yield (output.data, tlm_var)
+
       # forget is None: forget *nothing*.
       # forget is True: forget everything we can, forward and adjoint
       # forget is False: forget only unnecessary tlm values
@@ -91,7 +93,6 @@ def compute_tlm(parameter, forget=False):
       else:
         adjglobals.adjointer.forget_tlm_values(i)
 
-      yield (output.data, tlm_var)
 
 def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, output: None, project=False):
   dolfin.parameters["adjoint"]["stop_annotating"] = True
@@ -338,3 +339,38 @@ def _add(value, increment):
   else:
     return value+increment
 
+class compute_gradient_tlm(object):
+  '''Rather than compute the gradient of a functional all at once with
+  the adjoint, compute its action with the tangent linear model. Useful
+  for testing tangent linear models, and might be useful in future where
+  you have many functionals and few parameters.'''
+  def __init__(self, J, m, forget=True, callback=lambda var, output: None, project=False):
+    self.J = J
+    self.m = m
+    self.forget = forget
+    self.cb = callback
+    self.project = project
+
+    if not isinstance(m, InitialConditionParameter):
+      raise Exception("Sorry, only works for InitialConditionParameter at the minute")
+
+  def vector(self):
+    return self
+
+  def inner(self, vec):
+    '''Compute the action of the gradient on the vector vec.'''
+    mdot = self.m.set_perturbation(dolfin.Function(self.m.data().function_space(), vec))
+    
+    grad = 0.0
+
+    for (tlm, tlm_var) in compute_tlm(mdot, forget=self.forget):
+      self.cb(tlm_var, tlm)
+      fwd_var = tlm_var.to_forward()
+      dJdu = adjglobals.adjointer.evaluate_functional_derivative(self.J, fwd_var)
+      if dJdu is not None:
+        dJdu_vec = dolfin.assemble(dJdu.data)
+        grad = _add(grad, dJdu_vec.inner(tlm.vector()))
+
+      # skip the dJdm term for now, don't need it for InitialConditionParameter you see
+
+    return grad

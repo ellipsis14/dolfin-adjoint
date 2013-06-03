@@ -36,7 +36,7 @@ picard = True
 bc = DirichletBC(V, 0.0, "on_boundary")
 
 def problem(u_trial, u_guess, v, f, p):
-  F = inner(grad(v), gamma(u_guess, p) * grad(u_trial))*dx - inner(f, v)*dx
+  F = inner(grad(v), gamma(u_guess, p) * grad(u_trial))*dx - inner(f*f, v)*dx
 
   return F
 
@@ -68,3 +68,14 @@ if __name__ == "__main__":
   u = main(f)
 
   assert replay_dolfin(tol=0.0, stop=True)
+  J = Functional(inner(u, u)*dx)
+  m = TimeConstantParameter(f)
+  Jm = assemble(inner(u, u)*dx)
+  dJdm = compute_gradient(J, m, forget=False)
+
+  def Jhat(f):
+    u = main(f)
+    return assemble(inner(u, u)*dx)
+
+  minconv = taylor_test(Jhat, m, Jm, dJdm)
+  assert minconv > 1.8

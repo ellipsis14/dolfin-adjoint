@@ -43,7 +43,7 @@ def adj_inc_timestep(time=None, finished=False):
 
   if not dolfin.parameters["adjoint"]["stop_annotating"]:
     adj_variables.increment_timestep()
-    if time:
+    if time is not None:
       adjointer.time.next(time)
 
     if finished:

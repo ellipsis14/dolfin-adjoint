@@ -57,6 +57,14 @@ X = FunctionSpace(mesh, "CG", 1)
 
 def main(ic, annotate=False):
 
+    # Time loop
+    t = 0.0
+    end = 1.0
+    timestep = 0.1
+
+    if annotate:
+      adj_checkpointing('multistage', int(ceil(end/float(timestep)))+1, 0, 5, verbose=True)
+
     # Define meshes and function spaces
     V = VectorFunctionSpace(mesh, "CG", 2)
     Q = FunctionSpace(mesh, "CG", 1)
@@ -67,8 +75,8 @@ def main(ic, annotate=False):
     temp_bcs = temperature_boundary_conditions(X)
 
     # Temperature variables
-    T_ = Function(ic)
-    T = Function(ic)
+    T_ = Function(ic, name="T_", annotate=annotate)
+    T = Function(ic, name="T", annotate=annotate)
 
     # Flow variable(s)
     w = Function(W)
@@ -78,7 +86,6 @@ def main(ic, annotate=False):
     Ra = Constant(1.e4)
     nu = Constant(1.0)
     kappa = Constant(1.0)
-    timestep = 0.1
 
     # Define flow equation
     g = as_vector((Ra*T_, 0))
@@ -87,24 +94,15 @@ def main(ic, annotate=False):
     # Define temperature equation
     temp_eq = temperature(X, kappa, u, T_, timestep)
 
-    # Time loop
-    t = 0.0
-    end = 1.0
-
-    if annotate:
-      adj_checkpointing('multistage', int(ceil(end/float(timestep)))+1, 0, 5, verbose=True)
-      print "Velocity: ", w
-      print "Temperature: ", T
-
+    adj_start_timestep(t)
     while (t <= end):
         solve(flow_eq[0] == flow_eq[1], w, flow_bcs, annotate=annotate)
 
         solve(temp_eq[0] == temp_eq[1], T, temp_bcs, annotate=annotate)
         T_.assign(T, annotate=annotate)
-        #plot(T)
 
         t += timestep
-        adj_inc_timestep()
+        adj_inc_timestep(t, finished=t>end)
 
     return T_
 
@@ -115,25 +113,19 @@ if __name__ == "__main__":
     # Run model
     T0_expr = "0.5*(1.0 - x[1]*x[1]) + 0.01*cos(pi*x[0]/l)*sin(pi*x[1]/h)"
     T0 = Expression(T0_expr, l=1.0, h=1.0)
-    ic = Function(interpolate(T0, X))
+    ic = interpolate(T0, X, name="InitialCondition")
     T = main(ic, annotate=True)
-
-    adj_html("stokes_forward.html", "forward")
-    adj_html("stokes_adjoint.html", "adjoint")
 
     print "Running adjoint ... "
     J = Functional(T*T*dx*dt[FINISH_TIME])
-    for (adjoint, var) in compute_adjoint(J, forget=False):
-      pass
+    m = InitialConditionParameter(ic)
 
-    def J(ic):
+    def Jhat(ic):
       T = main(ic, annotate=False)
       return assemble(T*T*dx)
-
-    minconv = test_initial_condition_adjoint(J, ic, adjoint)
-    if minconv < 1.9:
-      exit_code = 1
-    else:
-      exit_code = 0
-    sys.exit(exit_code)
+    
+    JT = assemble(T*T*dx)
+    dJdic = compute_gradient(J, m)
+    minconv = taylor_test(Jhat, m, JT, dJdic, value=ic)
+    assert minconv > 1.9
 

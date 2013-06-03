@@ -8,11 +8,6 @@ import sys
 from dolfin import *
 from dolfin_adjoint import *
 
-dolfin.parameters["adjoint"]["cache_factorizations"] = True
-
-if dolfin.__version__ > '1.2.0':
-  dolfin.parameters["adjoint"]["symmetric_bcs"] = True
-
 n = 30
 mesh = UnitIntervalMesh(n)
 V = FunctionSpace(mesh, "CG", 2)
@@ -50,23 +45,13 @@ if __name__ == "__main__":
     ic = project(Expression("sin(2*pi*x[0])"),  V)
     forward = main(ic, annotate=True)
 
-    adj_html("burgers_newton_forward.html", "forward")
-    adj_html("burgers_newton_adjoint.html", "adjoint")
-
-    print "Running forward replay .... "
-    replay_dolfin(forget=False)
-
-    print "Running adjoint ... "
-
     J = Functional(forward*forward*dx*dt[FINISH_TIME] + forward*forward*dx*dt[START_TIME])
     Jic = assemble(forward*forward*dx + ic*ic*dx)
-    dJdic = compute_gradient(J, InitialConditionParameter("Velocity"), forget=False)
+    dJdic = compute_gradient_tlm(J, InitialConditionParameter("Velocity"), forget=False)
 
     def Jfunc(ic):
       forward = main(ic, annotate=False)
       return assemble(forward*forward*dx + ic*ic*dx)
 
-    HJic = hessian(J, InitialConditionParameter("Velocity"), warn=False)
-
-    minconv = taylor_test(Jfunc, InitialConditionParameter("Velocity"), Jic, dJdic, HJm=HJic, seed=1.0e-3, perturbation_direction=interpolate(Expression("cos(x[0])"), V))
-    assert minconv > 2.7
+    minconv = taylor_test(Jfunc, InitialConditionParameter("Velocity"), Jic, dJdic, seed=1.0e-3, perturbation_direction=interpolate(Expression("cos(x[0])"), V))
+    assert minconv > 1.7
