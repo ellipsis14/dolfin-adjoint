@@ -67,13 +67,14 @@ class DolfinAdjointParameter(libadjoint.Parameter):
 class InitialConditionParameter(DolfinAdjointParameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
   when one wishes to compute dJ/d(initial condition) in a particular direction (perturbation).'''
-  def __init__(self, coeff, perturbation=None):
+  def __init__(self, coeff, value=None, perturbation=None):
     '''coeff: the variable whose initial condition you wish to perturb.
        perturbation: the perturbation direction in which you wish to compute the gradient. Must be a Function.'''
 
     if not (isinstance(coeff, dolfin.Function) or isinstance(coeff, str)):
       raise TypeError, "The coefficient must be a dolfin.Function or a String"
     self.coeff = coeff
+    self.value = value
     self.var = None 
     # Find the first occurance of the coeffcient
     for t in range(adjglobals.adjointer.timestep_count):
@@ -84,7 +85,6 @@ class InitialConditionParameter(DolfinAdjointParameter):
     # Fallback option for cases where the parameter is initialised before the annotation 
     if not self.var:
       self.var = libadjoint.Variable(str(coeff), 0, 0)
-
 
     if perturbation:
       self.perturbation = adjlinalg.Vector(perturbation).duplicate()
@@ -110,12 +110,10 @@ class InitialConditionParameter(DolfinAdjointParameter):
       return None
 
   def data(self):
-    if isinstance(self.coeff, str):
-      coeff = adjglobals.adjointer.get_variable_value(self.var).data
+    if self.value is not None:
+      return self.value
     else:
-      coeff = self.coeff
-
-    return coeff
+      return adjglobals.adjointer.get_variable_value(self.var).data
 
   def set_perturbation(self, m_dot):
     return InitialConditionParameter(self.coeff, perturbation=m_dot)
