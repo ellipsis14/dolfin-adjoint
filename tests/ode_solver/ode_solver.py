@@ -5,8 +5,6 @@ except ImportError:
   info_red("Need dolfin > 1.2.0 for ode_solver test.")
   import sys; sys.exit(0)
 
-print "Test is currently disabled"
-import sys; sys.exit(0)
 
 from dolfin import *
 from dolfin_adjoint import *
@@ -101,20 +99,18 @@ if __name__ == "__main__":
   ## Step 2. Check TLM correctness
 
   dtm = TimeMeasure()
-  J = Functional(u*dx*dtm[FINISH_TIME])
+  J = Functional(inner(u, u)*dx*dtm[FINISH_TIME])
   m = InitialConditionParameter(u)
   assert m.data().vector()[0] == u0.vector()[0]
-  Jm = assemble(u*dx)
+  Jm = assemble(inner(u, u)*dx)
   dJdm = compute_gradient_tlm(J, m, forget=False)
 
   def Jhat(ic):
-    print "Perturbed initial condition: ", ic.vector()[0]
     time = Constant(0.0)
-    (out, xs, ys) = main(ic, form(ic, time), time, Solver, dt=dt)
-    print "Perturbed functional value: ", assemble(out*dx)
-    return assemble(out*dx)
+    (u, xs, ys) = main(ic, form(ic, time), time, Solver, dt=dt)
+    print "Perturbed functional value: ", assemble(inner(u, u)*dx)
+    return assemble(inner(u, u)*dx)
 
-  set_log_level(WARNING)
   adj_html("forward.html", "forward")
   minconv_tlm = taylor_test(Jhat, m, Jm, dJdm, perturbation_direction=interpolate(Constant(1.0), R), seed=1.0)
   assert minconv_tlm > 1.8
