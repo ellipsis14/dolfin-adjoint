@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 # Copyright (C) 2007 Anders Logg
+# Copyright (C) 2007-2011 Anders Logg and Garth N. Wells
 # Copyright (C) 2008-2013 Martin Sandve Alnes
 # Copyright (C) 2010-2012 Anders Logg
 # Copyright (C) 2011-2012 by Imperial College London
@@ -21,6 +22,10 @@
 # Copyright (C) 2007 Anders Logg from FFC file ffc/codesnippets.py, bzr branch
 # 1.1.x 1771
 # Code first added: 2013-04-10
+
+# Copyright (C) 2007-2011 Anders Logg and Garth N. Wells from DOLFIN file
+# dolfin/fem/DirichletBC.cpp, bzr branch 1.2.x 7509
+# Code first added: 2013-06-03
 
 # Copyright (C) 2008-2013 Martin Sandve Alnes from UFL file ufl/form.py, bzr
 # branch 1.1.x 1484
@@ -57,7 +62,7 @@ if ufl_version() < (1, 0, 0) or ufl_version() >= (1, 3, 0):
 if ffc_version() < (1, 0, 0) or ffc_version() >= (1, 3, 0):
   raise VersionException("FFC version %s not supported" % ffc.__version__)
 
-# Backwards compatibility for older versions of DOLFIN.
+# DOLFIN patches.
 if dolfin_version() < (1, 1, 0):
   __all__ += \
     [
@@ -249,8 +254,204 @@ if dolfin_version() < (1, 2, 0):
       return dolfin.as_vector([nm])
     else:
       return nm
+if dolfin_version() < (1, 1, 0):
+  # Modified version of code from DirichletBC.cpp, DOLFIN bzr 1.2.x branch
+  # revision 7509
+  __DirichletBC_zero_columns_code = EmbeddedCpp(
+    includes =
+      """
+      #include <queue>
+      """,
+    code =
+      """
+      DirichletBC::Map bv_map;
+      bc->get_boundary_values(bv_map, bc->method());
 
-# Backwards compatibility for older versions of UFL.
+      // Create lookup table of dofs
+      //const unsigned int nrows = A->size(0); // should be equal to b->size()
+      const unsigned int ncols = A->size(1); // should be equal to max possible dof+1
+
+      std::pair<unsigned int, unsigned int> rows = A->local_range(0);
+
+      std::vector<char> is_bc_dof(ncols);
+      std::vector<double> bc_dof_val(ncols);
+      for (DirichletBC::Map::const_iterator bv = bv_map.begin();  bv != bv_map.end();  ++bv)
+      {
+        is_bc_dof[bv->first] = 1;
+        bc_dof_val[bv->first] = bv->second;
+      }
+
+      // Scan through all columns of all rows, setting to zero if is_bc_dof[column]
+      // At the same time, we collect corrections to the RHS
+
+      std::vector<unsigned int> cols;
+      std::vector<double> vals;
+      std::queue<std::vector<double> > A_vals;
+      std::queue<unsigned int> A_rows;
+      std::queue<std::vector<unsigned int> > A_cols;
+      std::vector<double> b_vals;
+      std::vector<dolfin::la_index> b_rows;
+
+      for (unsigned int row = rows.first; row < rows.second; row++)
+      {
+        // If diag_val is nonzero, the matrix is a diagonal block (nrows==ncols),
+        // and we can set the whole BC row
+        if (diag_val != 0.0 && is_bc_dof[row])
+        {
+          A->getrow(row, cols, vals);
+          for (std::size_t j = 0; j < cols.size(); j++)
+            vals[j] = (cols[j] == row)*diag_val;
+          A_vals.push(std::vector<double>(vals));
+          A_rows.push(row);
+          A_cols.push(std::vector<unsigned int>(cols));
+          b->setitem(row, bc_dof_val[row]*diag_val);
+        }
+        else // Otherwise, we scan the row for BC columns
+        {
+          A->getrow(row, cols, vals);
+          bool row_changed = false;
+          for (std::size_t j = 0; j < cols.size(); j++)
+          {
+            const unsigned int col = cols[j];
+
+            // Skip columns that aren't BC, and entries that are zero
+            if (!is_bc_dof[col] || vals[j] == 0.0)
+              continue;
+
+            // We're going to change the row, so make room for it
+            if (!row_changed)
+            {
+              row_changed = true;
+              b_rows.push_back(row);
+              b_vals.push_back(0.0);
+            }
+
+            b_vals.back() -= bc_dof_val[col]*vals[j];
+            vals[j] = 0.0;
+          }
+          if (row_changed)
+          {
+            A_vals.push(std::vector<double>(vals));
+            A_rows.push(row);
+            A_cols.push(std::vector<unsigned int>(cols));
+          }
+        }
+      }
+
+      while(!A_vals.empty())
+      {
+        A->setrow(A_rows.front(), A_cols.front(), A_vals.front());
+        A_vals.pop();  A_rows.pop();  A_cols.pop();
+      }
+      A->apply("insert");
+      b->add(&b_vals.front(), b_rows.size(), &b_rows.front());
+      b->apply("add");
+      """, bc = dolfin.DirichletBC, A = dolfin.GenericMatrix, b = dolfin.GenericVector, diag_val = float)
+  def DirichletBC_zero_columns(self, A, b, diag_val):
+    __DirichletBC_zero_columns_code.run(bc = self, A = A, b = b, diag_val = diag_val)
+    return
+  dolfin.DirichletBC.zero_columns = DirichletBC_zero_columns
+  del(DirichletBC_zero_columns)
+elif dolfin_version() < (1, 3, 0):
+  # Modified version of code from DirichletBC.cpp, DOLFIN bzr 1.2.x branch
+  # revision 7509
+  __DirichletBC_zero_columns_code = EmbeddedCpp(
+    includes =
+      """
+      #include <queue>
+      """,
+    code =
+      """
+      DirichletBC::Map bv_map;
+      bc->get_boundary_values(bv_map, bc->method());
+
+      // Create lookup table of dofs
+      //const std::size_t nrows = A->size(0); // should be equal to b->size()
+      const std::size_t ncols = A->size(1); // should be equal to max possible dof+1
+
+      std::pair<std::size_t, std::size_t> rows = A->local_range(0);
+
+      std::vector<char> is_bc_dof(ncols);
+      std::vector<double> bc_dof_val(ncols);
+      for (DirichletBC::Map::const_iterator bv = bv_map.begin();  bv != bv_map.end();  ++bv)
+      {
+        is_bc_dof[bv->first] = 1;
+        bc_dof_val[bv->first] = bv->second;
+      }
+
+      // Scan through all columns of all rows, setting to zero if is_bc_dof[column]
+      // At the same time, we collect corrections to the RHS
+
+      std::vector<std::size_t> cols;
+      std::vector<double> vals;
+      std::queue<std::vector<double> > A_vals;
+      std::queue<size_t> A_rows;
+      std::queue<std::vector<size_t> > A_cols;
+      std::vector<double> b_vals;
+      std::vector<dolfin::la_index> b_rows;
+
+      for (std::size_t row = rows.first; row < rows.second; row++)
+      {
+        // If diag_val is nonzero, the matrix is a diagonal block (nrows==ncols),
+        // and we can set the whole BC row
+        if (diag_val != 0.0 && is_bc_dof[row])
+        {
+          A->getrow(row, cols, vals);
+          for (std::size_t j = 0; j < cols.size(); j++)
+            vals[j] = (cols[j] == row)*diag_val;
+          A_vals.push(std::vector<double>(vals));
+          A_rows.push(row);
+          A_cols.push(std::vector<size_t>(cols));
+          b->setitem(row, bc_dof_val[row]*diag_val);
+        }
+        else // Otherwise, we scan the row for BC columns
+        {
+          A->getrow(row, cols, vals);
+          bool row_changed = false;
+          for (std::size_t j = 0; j < cols.size(); j++)
+          {
+            const std::size_t col = cols[j];
+
+            // Skip columns that aren't BC, and entries that are zero
+            if (!is_bc_dof[col] || vals[j] == 0.0)
+              continue;
+
+            // We're going to change the row, so make room for it
+            if (!row_changed)
+            {
+              row_changed = true;
+              b_rows.push_back(row);
+              b_vals.push_back(0.0);
+            }
+
+            b_vals.back() -= bc_dof_val[col]*vals[j];
+            vals[j] = 0.0;
+          }
+          if (row_changed)
+          {
+            A_vals.push(std::vector<double>(vals));
+            A_rows.push(row);
+            A_cols.push(std::vector<size_t>(cols));
+          }
+        }
+      }
+      
+      while(!A_vals.empty())
+      {
+        A->setrow(A_rows.front(), A_cols.front(), A_vals.front());
+        A_vals.pop();  A_rows.pop();  A_cols.pop();
+      }
+      A->apply("insert");
+      b->add(&b_vals.front(), b_rows.size(), &b_rows.front());
+      b->apply("add");
+      """, bc = dolfin.DirichletBC, A = dolfin.GenericMatrix, b = dolfin.GenericVector, diag_val = float)
+  def DirichletBC_zero_columns(self, A, b, diag_val):
+    __DirichletBC_zero_columns_code.run(bc = self, A = A, b = b, diag_val = diag_val)
+    return
+  dolfin.DirichletBC.zero_columns = DirichletBC_zero_columns
+  del(DirichletBC_zero_columns)
+
+# UFL patches.
 if ufl_version() < (1, 1, 0):
   # Modified version of code from coefficient.py, UFL bzr trunk revision 1463
   def Coefficient__eq__(self, other):
@@ -269,7 +470,6 @@ if ufl_version() < (1, 1, 0):
     return NotImplemented
   ufl.Form.__mul__ = Form__mul__
   del(Form__mul__)
-# UFL patches.
 elif ufl_version() >= (1, 2, 0) and ufl_version() < (1, 3, 0):
   __Form_compute_form_data_orig = ufl.Form.compute_form_data
   def Form_compute_form_data(self, object_names = None, common_cell = None, element_mapping = None):

@@ -48,10 +48,17 @@ class EmbeddedCpp:
   Remaining keyword arguments form a list of name:type pairs, with:
     name:          The name of a variable in the code, which will be passed from
                    Python.
-    type:          One of int, float, int_arr, long_arr double_arr, Function,
-                   GenericMatrix, GenericVector, or Mesh, identifying the
-                   variable type.
+    type:          One of int, float, int_arr, long_arr, double_arr,
+                   DirichletBC, Function, GenericMatrix, GenericVector, or Mesh,
+                   identifying the variable type.
   """
+
+  __boost_classes = {dolfin.cpp.DirichletBC:"DirichletBC",
+                     dolfin.DirichletBC:"DirichletBC",
+                     dolfin.Function:"Function",
+                     dolfin.GenericMatrix:"GenericMatrix",
+                     dolfin.GenericVector:"GenericVector",
+                     dolfin.Mesh:"Mesh"}
 
   if dolfin_version() < (1, 1, 0):
     __default_includes = """#include "dolfin.h"
@@ -73,13 +80,13 @@ class EmbeddedCpp:
       if not isinstance(arg, str):
         raise InvalidArgumentException("Argument name must be a string")
     for arg in kwargs.values():
-      if not arg in [int, float, int_arr, double_arr, long_arr, dolfin.Function, dolfin.GenericMatrix, dolfin.GenericVector, dolfin.Mesh]:
-        raise InvalidArgumentException("Argument type must be int, float, int_arr, long_arr, double_arr, Function, GenericMatrix, GenericVector or Mesh")
+      if not arg in [int, float, int_arr, double_arr, long_arr] + self.__boost_classes.keys():
+        raise InvalidArgumentException("Argument type must be int, float, int_arr, long_arr, double_arr, DirichletBC, Function, GenericMatrix, GenericVector or Mesh")
 
     self.__code = code
     self.__includes = """%s
 
-%s""" % (self.__default_includes, includes)
+%s""" % (includes, self.__default_includes)
     self.__include_dirs = copy.copy(include_dirs)
     self.__args = copy.copy(kwargs)
     self.__lib = None
@@ -112,15 +119,8 @@ class EmbeddedCpp:
         while name_mangle in self.__args.keys():
           name_mangle = "%s_" % name_mangle
         args += "void* %s" % name_mangle
-        if arg == dolfin.Function:
-          cast_code += "    boost::shared_ptr<Function> %s = (*((boost::shared_ptr<Function>*)%s));\n" % (name, name_mangle)
-        elif arg == dolfin.GenericMatrix:
-          cast_code += "    boost::shared_ptr<GenericMatrix> %s = (*((boost::shared_ptr<GenericMatrix>*)%s));\n" % (name, name_mangle)
-        elif arg == dolfin.GenericVector:
-          cast_code += "    boost::shared_ptr<GenericVector> %s = (*((boost::shared_ptr<GenericVector>*)%s));\n" % (name, name_mangle)
-        else:
-          assert(arg == dolfin.Mesh)
-          cast_code += "    boost::shared_ptr<Mesh> %s = (*((boost::shared_ptr<Mesh>*)%s));\n" % (name, name_mangle)
+        cast_code += "    boost::shared_ptr<%s> %s = (*((boost::shared_ptr<%s>*)%s));\n" % \
+          (self.__boost_classes[arg], name, self.__boost_classes[arg], name_mangle)
 
     code = \
 """%s
@@ -187,7 +187,7 @@ extern "C" {
       elif isinstance(arg, numpy.ndarray):
         largs.append(arg.ctypes.data)
       else:
-        assert(isinstance(arg, (dolfin.Function, dolfin.GenericMatrix, dolfin.GenericVector, dolfin.Mesh)))
+        assert(isinstance(arg, tuple(self.__boost_classes.keys())))
         largs.append(ctypes.c_void_p(int(arg.this)))
 
     ret = self.__lib.code(*largs)

@@ -244,7 +244,7 @@ t = 0.0
 #s = 0
 T_int = assemble(T[n] * dx)
 T_range = [], [], []
-T_range[0].append(t);  T_range[1].append(T[n].vector().min()), T_range[2].append(T[n].vector().max())
+T_range[0].append(t);  T_range[1].append(T[n].vector().min()); T_range[2].append(T[n].vector().max())
 print "T_int, T_int_err, T_min, T_max = %.17e, %.17e, %.17e, %.17e" % (T_int, abs(T_int - T_int_0), T_range[1][-1], T_range[2][-1])
 #index = 0
 #write_vtu("advection_2d_limiter_rk3", T[n], index = index, t = t)
@@ -253,7 +253,7 @@ while t * (1.0 + 1.0e-9) < 2.0 * numpy.pi:
   t += float(dt)
 #  s += 1
   T_int = assemble(T[n] * dx)
-  T_range[0].append(t);  T_range[1].append(T[n].vector().min()), T_range[2].append(T[n].vector().max())
+  T_range[0].append(t);  T_range[1].append(T[n].vector().min()); T_range[2].append(T[n].vector().max())
   print "T_int, T_int_err, T_min, T_max = %.17e, %.17e, %.17e, %.17e" % (T_int, abs(T_int - T_int_0), T_range[1][-1], T_range[2][-1])
 #  if s % 100 == 0:
 #    index += 1

@@ -381,6 +381,8 @@ def da_annotate_equation_solve(solve):
 
         # Apply boundary conditions
         if apply_a_bcs:
+          if static_a:
+            a = a.copy()
           apply_bcs(a, bcs, L = b, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
         else:
           enforce_bcs(b, bcs)
