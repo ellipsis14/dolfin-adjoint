@@ -1826,20 +1826,23 @@ class ManagedModel:
 
     class Packer:
       def __init__(self, parameters):
+        p = dolfin.MPI.process_number()
+
         l_N = 0
         l_indices = []
         for parameter in parameters:
           if isinstance(parameter, dolfin.Constant):
-            n = 1
+            if p == 0:
+              n = 1
+            else:
+              n = 0
           else:
             n = parameter.vector().local_size()
           l_indices.append((l_N, l_N + n))
           l_N += n
 
         n_p = dolfin.MPI.num_processes()
-        if n_p > 1:
-          p = dolfin.MPI.process_number()
-          
+        if n_p > 1:          
           p_N = dolfin.Vector()
           p_N.resize((p, p + 1))
           p_N.set_local(numpy.array([l_N], dtype = numpy.float_));  p_N.apply("insert")
@@ -1859,6 +1862,7 @@ class ManagedModel:
           self.__g_range = g_range
         else:
           self.__g_N = l_N
+        self.__p = p
         self.__n_p = n_p
         self.__l_N = l_N
         self.__l_indices = l_indices
@@ -1873,30 +1877,42 @@ class ManagedModel:
           return self.__l_vec.gather(self.__g_range)
 
       def serialised_bounds(self, bounds):
-        if self.__n_p == 1:
-          l_bounds = [bound[0] for bound in bounds]
-          u_bounds = [bound[1] for bound in bounds]
-        else:        
-          for i, bound in enumerate(bounds):
+        l_bounds = numpy.empty(self.__l_N, dtype = numpy.float_)
+        u_bounds = numpy.empty(self.__l_N, dtype = numpy.float_)
+        for i, parameter in enumerate(parameters):
+          bound = bounds[i]
+          start, end = self.__l_indices[i]
+          if isinstance(parameter, dolfin.Constant):
+            if self.__p == 0:
+              if bound[0] is None:
+                l_bounds[start] = numpy.NAN
+              else:
+                l_bounds[start] = bound[0]
+              if bound[1] is None:
+                u_bounds[start] = numpy.NAN
+              else:
+                u_bounds[start] = bound[1]
+          else:
             if bound[0] is None:
-              self.__l_arr[i] = numpy.NAN
+              l_bounds[start:end] = numpy.NAN
             else:
-              self.__l_arr[i] = bound[0]
-          l_bounds = self.serialised(self.__l_arr)
-          for i, bound in enumerate(bounds):
+              l_bounds[start:end] = bound[0]
             if bound[1] is None:
-              self.__l_arr[i] = numpy.NAN
+              u_bounds[start:end] = numpy.NAN
             else:
-              self.__l_arr[i] = bound[1]
-          u_bounds = self.serialised(self.__l_arr)
+              u_bounds[start:end] = bound[1]
+        
+        if self.__n_p > 1:
+          l_bounds = self.serialised(l_bounds)
+          u_bounds = self.serialised(u_bounds)
 
         bounds = []
         for i in range(self.__g_N):
           l_bound = l_bounds[i]
-          if not l_bound is None and numpy.isnan(l_bound):
+          if numpy.isnan(l_bound):
             l_bound = None
           u_bound = u_bounds[i]
-          if not u_bound is None and numpy.isnan(u_bound):
+          if numpy.isnan(u_bound):
             u_bound = None
           bounds.append((l_bound, u_bound))
 
@@ -1920,7 +1936,8 @@ class ManagedModel:
         for i, parameter in enumerate(parameters):
           start, end = self.__l_indices[i]
           if isinstance(parameter, dolfin.Constant):
-            l_arr[start] = float(parameter)
+            if self.__p == 0:
+              l_arr[start] = float(parameter)
           elif isinstance(parameter, dolfin.Function):
             l_arr[start:end] = parameter.vector().array()
           else:
@@ -1937,7 +1954,11 @@ class ManagedModel:
         for i, parameter in enumerate(parameters):
           start, end = self.__l_indices[i]
           if isinstance(parameter, dolfin.Constant):
-            parameter.assign(arr[start])
+            if self.__p == 0:
+              val = arr[start]
+            else:
+              val = 0.0
+            parameter.assign(dolfin.MPI.sum(val))
           else:
             assert(isinstance(parameter, dolfin.Function))
             parameter.vector().set_local(arr[start:end])
@@ -1947,37 +1968,6 @@ class ManagedModel:
     packer = Packer(parameters)
   
     if not bounds is None:
-      nbounds = []
-      for i, parameter in enumerate(parameters):
-        if isinstance(parameter, dolfin.Constant):
-          n = 1
-        else:
-          n = parameter.vector().local_size()
-        if bounds[i][0] is None:
-          p_l_bounds = [None for j in range(n)]
-        elif isinstance(bounds[i][0], float):
-          if isinstance(parameter, dolfin.Constant):
-            p_l_bounds = [bounds[i][0]]
-          else:
-            p_l_bounds = numpy.array([bounds[i][0] for j in range(*parameter.vector().local_range(0))])
-        elif isinstance(bounds[i][0], dolfin.Constant):
-          p_l_bounds = [float(bounds[i][0])]
-        else:
-          p_l_bounds = bounds[i][0].vector().array()
-        if bounds[i][1] is None:
-          p_u_bounds = [None for j in range(n)]
-        elif isinstance(bounds[i][1], float):
-          if isinstance(parameter, dolfin.Constant):
-            p_u_bounds = [bounds[i][1]]
-          else:
-            p_u_bounds = numpy.array([bounds[i][1] for j in range(*parameter.vector().local_range(0))])
-        elif isinstance(bounds[i][1], dolfin.Constant):
-          p_u_bounds = [float(bounds[i][1])]
-        else:
-          p_u_bounds = bounds[i][1].vector().array()
-        for j in range(n):
-          nbounds.append((p_l_bounds[j], p_u_bounds[j]))
-      bounds = nbounds;  del(nbounds)
       bounds = packer.serialised_bounds(bounds)
 
     fun_x = packer.empty()
