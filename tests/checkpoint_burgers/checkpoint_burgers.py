@@ -66,16 +66,16 @@ def main(ic, annotate=False):
 
 if __name__ == "__main__":
 
-    ic = project(Expression("sin(2*pi*x[0])"),  V)
+    ic = project(Expression("sin(2*pi*x[0])"),  V, name="InitialCondition")
     j, forward = main(ic, annotate=True)
 
     J = Functional(forward*forward*dx*dt)
-    m = InitialConditionParameter(ic)
+    m = InitialConditionParameter(ic, value=ic)
     dJdm = compute_gradient(J, m)
 
     def Jhat(ic):
       j, forward = main(ic, annotate=False)
       return j 
 
-    minconv = taylor_test(Jhat, m, j, dJdm, seed=1.0e-3, value=ic)
+    minconv = taylor_test(Jhat, m, j, dJdm, seed=1.0e-3)
     assert minconv > 1.8
