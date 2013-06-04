@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+#NP 2
 
 # Copyright (C) 2013 University of Oxford
 #
@@ -47,4 +48,4 @@ system.minimise_functional(T_ic, tolerance = 1.0e-14, parameters_0 = 0.5, bounds
 
 err = (T_ic.vector() - T_ic_orig.vector()).norm("linf")
 print "%.17e" % err
-assert(err < 8.0e-4)
+assert(err < 2.0e-3)

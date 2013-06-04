@@ -1713,12 +1713,13 @@ class ManagedModel:
 
     return orders_2
 
-  def minimise_functional(self, parameters, tolerance, parameters_0 = None, bounds = None, method = None, options = None):
+  def minimise_functional(self, parameters, tolerance, parameters_0 = None,
+    bounds = None, method = None, options = None, update_callback = None,
+    forward_callback = None):
     """
     Minimise the registered functional subject to variations in the supplied
     static Constant s or Function s, to within the specified tolerance. This is
-    a wrapper for SciPy optimisation functions. Currently only works with a
-    single MPI process.
+    a wrapper for SciPy optimisation functions.
 
     Arguments:
       parameters: The Constant s or Function s with respect to which the
@@ -1736,6 +1737,8 @@ class ManagedModel:
       method: Optimisation method.
       options: A dictionary of additional keyword arguments to pass to the SciPy
         optimisation function.
+      update_callback: Called whenever a parameter is changed.
+      forward_callback: Called after each forward model run.
     """
     
     if isinstance(parameters, list):
@@ -1743,7 +1746,7 @@ class ManagedModel:
         if not isinstance(parameter, (dolfin.Constant, dolfin.Function)):
           raise InvalidArgumentException("parameters must be a Constant or Function, or a list of Constant s or Function s")
     elif isinstance(parameters, (dolfin.Constant, dolfin.Function)):
-      kwargs = {"method":method, "options":options}
+      kwargs = {"method":method, "options":options, "update_callback":update_callback, "forward_callback":forward_callback}
       if bounds is None:
         kwargs["bounds"] = None
       else:
@@ -1812,48 +1815,138 @@ class ManagedModel:
       raise InvalidArgumentException("method must be a string")
     if not options is None and not isinstance(options, dict):
       raise InvalidArgumentException("options must be a dictionary")
-    if dolfin.MPI.num_processes() > 1:
-      raise NotImplementedException("minimise_functional cannot be used with more than one MPI process")
+    if not update_callback is None and not callable(update_callback):
+      raise InvalidArgumentException("update_callback must be a callable")
+    if not forward_callback is None and not callable(forward_callback):
+      raise InvalidArgumentException("forward_callback must be a callable")
     if self.__functional is None:
       raise StateException("No functional defined")
  
     dolfin.info("Running functional minimisation")
 
-    N = 0
-    indices = []
-    for parameter in parameters:
-      if isinstance(parameter, dolfin.Constant):
-        n = 1
-      else:
-        n = parameter.vector().local_size()
-      indices.append((N, N + n))
-      N += n
-     
-    def pack(parameters, arr):
-      for i, parameter in enumerate(parameters):
-        start, end = indices[i]
-        if isinstance(parameter, dolfin.Constant):
-          arr[start] = float(parameter)
-        elif isinstance(parameter, dolfin.Function):
-          arr[start:end] = parameter.vector().array()
+    class Packer:
+      def __init__(self, parameters):
+        l_N = 0
+        l_indices = []
+        for parameter in parameters:
+          if isinstance(parameter, dolfin.Constant):
+            n = 1
+          else:
+            n = parameter.vector().local_size()
+          l_indices.append((l_N, l_N + n))
+          l_N += n
+
+        n_p = dolfin.MPI.num_processes()
+        if n_p > 1:
+          p = dolfin.MPI.process_number()
+          
+          p_N = dolfin.Vector()
+          p_N.resize((p, p + 1))
+          p_N.set_local(numpy.array([l_N], dtype = numpy.float_));  p_N.apply("insert")
+          p_N = numpy.array([int(N + 0.5) for N in p_N.gather(numpy.arange(n_p, dtype = numpy.intc))], dtype = numpy.intc)
+          g_N = p_N.sum()
+
+          l_arr = numpy.empty(l_N, dtype = numpy.float_)
+          g_indices = p_N[:p].sum();  g_indices = (g_indices, g_indices + l_N)
+          l_vec = dolfin.Vector()
+          l_vec.resize(g_indices)
+          g_range = numpy.arange(g_N, dtype = numpy.intc)
+
+          self.__g_N = g_N
+          self.__l_arr = l_arr
+          self.__g_indices = g_indices
+          self.__l_vec = l_vec
+          self.__g_range = g_range
         else:
-          assert(isinstance(parameter, dolfin.GenericVector))
-          arr[start:end] = parameter.array()
-      return
-    def unpack(parameters, arr):
-      for i, parameter in enumerate(parameters):
-        start, end = indices[i]
-        if isinstance(parameter, dolfin.Constant):
-          parameter.assign(arr[start])
+          self.__g_N = l_N
+        self.__n_p = n_p
+        self.__l_N = l_N
+        self.__l_indices = l_indices
+          
+        return
+
+      def serialised(self, arr):
+        if self.__n_p == 1:
+          return arr.copy()
         else:
-          assert(isinstance(parameter, dolfin.Function))
-          parameter.vector().set_local(arr[start:end])
-          parameter.vector().apply("insert")
-      return
+          self.__l_vec.set_local(arr);  self.__l_vec.apply("insert")
+          return self.__l_vec.gather(self.__g_range)
+
+      def serialised_bounds(self, bounds):
+        if self.__n_p == 1:
+          l_bounds = [bound[0] for bound in bounds]
+          u_bounds = [bound[1] for bound in bounds]
+        else:        
+          for i, bound in enumerate(bounds):
+            if bound[0] is None:
+              self.__l_arr[i] = numpy.NAN
+            else:
+              self.__l_arr[i] = bound[0]
+          l_bounds = self.serialised(self.__l_arr)
+          for i, bound in enumerate(bounds):
+            if bound[1] is None:
+              self.__l_arr[i] = numpy.NAN
+            else:
+              self.__l_arr[i] = bound[1]
+          u_bounds = self.serialised(self.__l_arr)
+
+        bounds = []
+        for i in range(self.__g_N):
+          l_bound = l_bounds[i]
+          if not l_bound is None and numpy.isnan(l_bound):
+            l_bound = None
+          u_bound = u_bounds[i]
+          if not u_bound is None and numpy.isnan(u_bound):
+            u_bound = None
+          bounds.append((l_bound, u_bound))
+
+        return bounds
+
+      def empty(self):
+        return numpy.empty(self.__g_N, dtype = numpy.float_)
+      
+      def update(self, arr):
+        if self.__n_p == 1:
+          return
+        else:
+          arr[:] = self.serialised(arr[self.__g_indices[0]:self.__g_indices[1]])
+          return
+
+      def pack(self, parameters, arr):
+        if self.__n_p == 1:
+          l_arr = arr
+        else:
+          l_arr = self.__l_arr
+        for i, parameter in enumerate(parameters):
+          start, end = self.__l_indices[i]
+          if isinstance(parameter, dolfin.Constant):
+            l_arr[start] = float(parameter)
+          elif isinstance(parameter, dolfin.Function):
+            l_arr[start:end] = parameter.vector().array()
+          else:
+            assert(isinstance(parameter, dolfin.GenericVector))
+            l_arr[start:end] = parameter.array()
+        if self.__n_p > 1:
+          arr[:] = self.serialised(l_arr)
+            
+        return
+
+      def unpack(self, parameters, arr):
+        if self.__n_p > 1:
+          arr = arr[self.__g_indices[0]:self.__g_indices[1]]
+        for i, parameter in enumerate(parameters):
+          start, end = self.__l_indices[i]
+          if isinstance(parameter, dolfin.Constant):
+            parameter.assign(arr[start])
+          else:
+            assert(isinstance(parameter, dolfin.Function))
+            parameter.vector().set_local(arr[start:end])
+            parameter.vector().apply("insert")
+            
+        return
+    packer = Packer(parameters)
   
-    if bounds is None:
-      bound_arrs = None
-    else:
+    if not bounds is None:
       nbounds = []
       for i, parameter in enumerate(parameters):
         if isinstance(parameter, dolfin.Constant):
@@ -1884,21 +1977,25 @@ class ManagedModel:
           p_u_bounds = bounds[i][1].vector().array()
         for j in range(n):
           nbounds.append((p_l_bounds[j], p_u_bounds[j]))
-      bounds = nbounds
+      bounds = nbounds;  del(nbounds)
+      bounds = packer.serialised_bounds(bounds)
 
-    fun_x = numpy.empty(N)
-    pack(parameters, fun_x)
+    fun_x = packer.empty()
+    packer.pack(parameters, fun_x)
     rerun_forward = [False]
     reassemble_adjoint = [False]
     rerun_adjoint = [True]
     def reassemble_forward(x):
+      packer.update(x)
       if not abs(fun_x - x).max() == 0.0:
         fun_x[:] = x
-        unpack(parameters, x)
+        packer.unpack(parameters, x)
         self.reassemble_forward(*parameters)
         rerun_forward[0] = True
         reassemble_adjoint[0] = True
         rerun_adjoint[0] = True
+        if not update_callback is None:
+          update_callback()
       return
 
     n_fun = [0]
@@ -1907,14 +2004,18 @@ class ManagedModel:
       if rerun_forward[0]:
         fn = self.compute_functional(rerun_forward = True, recheckpoint = True)
         rerun_forward[0] = False
+        if not forward_callback is None:
+          forward_callback()
       else:
         fn = self.compute_functional()
       n_fun[0] += 1
       dolfin.info("Functional evaluation %i       : %.17e" % (n_fun[0], fn))
+      if numpy.isnan(fn):
+        raise StateException("NaN functional value")      
       
       return fn
 
-    garr = numpy.empty(N)
+    garr = packer.empty()
     n_jac = [0]
     def jac(x):
       reassemble_forward(x)
@@ -1927,12 +2028,12 @@ class ManagedModel:
         reassemble_adjoint[0] = False
       if rerun_adjoint[0]:
         grad = self.compute_gradient(parameters)
-        pack(grad, garr)
+        packer.pack(grad, garr)
         rerun_adjoint[0] = False
         
       n_jac[0] += 1
       grad_norm = abs(garr).max()
-      dolfin.info("Gradient evaluation %i inf norm: %.17e" % (n_jac[0], grad_norm))
+      dolfin.info("Gradient calculation %i inf norm: %.17e" % (n_jac[0], grad_norm))
 
       return garr
 
@@ -1944,8 +2045,8 @@ class ManagedModel:
           parameters[i].vector()[:] = parameter_0
         else:
           parameters[i].assign(parameter_0)
-    x = numpy.empty(N)
-    pack(parameters, x)
+    x = packer.empty()
+    packer.pack(parameters, x)
 
     if hasattr(scipy.optimize, "minimize"):
       res = scipy.optimize.minimize(fun, x, method = method, jac = jac, bounds = bounds, tol = tolerance, options = options)
@@ -1977,5 +2078,7 @@ class ManagedModel:
       self.rerun_forward(recheckpoint = True)
     if reassemble_adjoint[0]:
       self.reassemble_adjoint(clear_caches = False, *parameters)
+      
+    dolfin.info("Functional minimisation complete after %i functional evaluation(s) and %i gradient calculation(s)" % (n_fun[0], n_jac[0]))
     
     return res
