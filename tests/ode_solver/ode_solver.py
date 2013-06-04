@@ -5,10 +5,13 @@ except ImportError:
   info_red("Need dolfin > 1.2.0 for ode_solver test.")
   import sys; sys.exit(0)
 
-
 from dolfin import *
 from dolfin_adjoint import *
 import ufl.algorithms
+
+if not hasattr(MultiStageScheme, "to_tlm"):
+  info_red("Need dolfin > 1.2.0 for ode_solver test.")
+  import sys; sys.exit(0)
 
 mesh = UnitIntervalMesh(1)
 #R = FunctionSpace(mesh, "R", 0) # in my opinion, should work, but doesn't

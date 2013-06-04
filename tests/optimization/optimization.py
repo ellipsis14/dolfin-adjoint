@@ -59,7 +59,7 @@ if __name__ == "__main__":
     lb = project(Expression("-1"),  V)
     
     # Define the reduced funtional
-    reduced_functional = ReducedFunctional(J, InitialConditionParameter(u), derivative_cb = derivative_cb)
+    reduced_functional = ReducedFunctional(J, InitialConditionParameter(u, value=ic), derivative_cb = derivative_cb)
 
     try:
       print "\n === Solving problem with L-BFGS-B. === \n"

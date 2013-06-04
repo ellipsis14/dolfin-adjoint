@@ -22,7 +22,7 @@ def main(ic, annotate=False):
 
 if __name__ == "__main__":
 
-  ic = project(Expression("x[0]*(x[0]-1)*x[1]*(x[1]-1)"), V)
+  ic = project(Expression("x[0]*(x[0]-1)*x[1]*(x[1]-1)"), V, name="InitialCondition")
   soln = main(ic, annotate=True)
   parameters["adjoint"]["stop_annotating"] = True
 
@@ -31,42 +31,15 @@ if __name__ == "__main__":
   for i in range(len(vec)):
     vec[i] = random.random()
 
-  ICParam = InitialConditionParameter(ic, perturbation_direction)
+  m = InitialConditionParameter(ic, perturbation=perturbation_direction, value=ic)
+  Jm = assemble(soln*soln*dx)
+  J = Functional(soln*soln*dx)
+  dJdm = compute_gradient_tlm(J, m, forget=False)
 
-  for (dudm, tlm_var) in compute_tlm(ICParam):
-    # just keep iterating until we get the last dudm
-    pass
-
-  dudm_np = dudm.vector()
-
-  dJdu = derivative(soln*dx, soln)
-  dJdu_np = assemble(dJdu)
-
-  dJdm = dJdu_np.inner(dudm_np)
-  print "Got dJdm: ", dJdm
-
-  def J(soln):
-    return assemble(soln*dx)
-
-  perturbed_ic = Function(ic)
-  vec = perturbed_ic.vector()
-  vec.axpy(1.0, perturbation_direction.vector())
-  perturbed_soln = main(perturbed_ic, annotate=False)
-
-  Jdiff = J(perturbed_soln) - J(soln)
-  print "J(ic+perturbation) - J(ic): ", Jdiff
-  fail = abs(Jdiff - dJdm) > 1.0e-15
-  if fail:
-    sys.exit(1)
-
-  def J(ic):
+  def Jhat(ic):
     soln = main(ic, annotate=False)
     return assemble(soln*soln*dx)
 
-  dJ = assemble(derivative(soln*soln*dx, soln))
-
-  minconv = test_initial_condition_tlm(J, dJ, ic, seed=1.0e-4)
-  fail = minconv < 1.9
-  if fail:
-    sys.exit(1)
+  minconv = taylor_test(Jhat, m, Jm, dJdm)
+  assert minconv > 1.9
 
