@@ -234,6 +234,16 @@ if dolfin_version() < (1, 1, 0):
       return __GenericVector_gather_orig(self, *args)
   dolfin.GenericVector.gather = GenericVector_gather
   del(GenericVector_gather)
+  __Vector_gather_orig = dolfin.Vector.gather
+  def Vector_gather(self, *args):
+    if len(args) == 1 and isinstance(args[0], numpy.ndarray) and len(args[0].shape) == 1 and args[0].dtype == "int32":
+      x = numpy.empty(args[0].shape[0])
+      __GenericVector_gather_code.run(n = args[0].shape[0], nodes = args[0], v = self, x = x)
+      return x
+    else:
+      return __Vector_gather_orig(self, *args)
+  dolfin.Vector.gather = Vector_gather
+  del(Vector_gather)
 if dolfin_version() < (1, 2, 0):
   __all__ += \
     [
