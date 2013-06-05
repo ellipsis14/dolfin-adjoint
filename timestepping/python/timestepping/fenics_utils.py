@@ -40,6 +40,7 @@ __all__ = \
     "is_empty_form",
     "is_general_constant",
     "is_r0_function",
+    "is_r0_function_space",
     "is_zero_rhs",
     "lumped_mass"
   ]
@@ -81,7 +82,17 @@ def is_r0_function(fn):
   if not isinstance(fn, dolfin.Function):
     raise InvalidArgumentException("fn must be a Function")
 
-  e = fn.function_space().ufl_element()
+  return is_r0_function_space(fn.function_space())
+
+def is_r0_function_space(space):
+  """
+  Return whether the supplied FunctionSpace is R0 (i.e. a Real over the mesh).
+  """
+  
+  if not isinstance(space, dolfin.FunctionSpaceBase):
+    raise InvalidArgumentException("space must be a FunctionSpace")
+
+  e = space.ufl_element()
   return e.family() == "Real" and e.degree() == 0
 
 def evaluate_expr(expr, copy = False):

@@ -208,6 +208,8 @@ class TimeSystem:
           raise InvalidArgumentException("initial_guess must be a Function")
         initial_guess = s_kwargs["initial_guess"]
         del(s_kwargs["initial_guess"])
+      else:
+        initial_guess = None
       if "adjoint_solver_parameters" in s_kwargs:
         if not isinstance(s_kwargs["adjoint_solver_parameters"], dict):
           raise InvalidArgumentException("adjoint_solver_parameters must be a dictionary")
@@ -216,8 +218,6 @@ class TimeSystem:
         if not isinstance(s_kwargs["pre_assembly_parameters"], dict):
           raise InvalidArgumentException("pre_assembly_parameters must be a dictionary")
         del(s_kwargs["pre_assembly_parameters"])
-      else:
-        initial_guess = None
       if "form_compiler_parameters" in s_kwargs:
         raise NotImplementedException("form_compiler_parameters argument not supported")
       

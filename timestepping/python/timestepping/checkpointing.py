@@ -62,7 +62,11 @@ class Checkpointer:
         raise CheckpointException("Invalid checkpoint data for Constant with value %.6g, error %.6g" % (float(c), err))
     else:
       assert(isinstance(c, dolfin.Function))
-      err = abs(c.vector().array() - c_c).max()
+      assert(c_c.shape[0] == c.vector().local_size())
+      if c_c.shape[0] == 0:
+        err = 0.0
+      else:
+        err = abs(c.vector().array() - c_c).max()
       if err > tolerance:
         raise CheckpointException("Invalid checkpoint data for Function %s, error %.6g" % (c.name(), err))
 

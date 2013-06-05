@@ -328,9 +328,13 @@ class PALinearForm(PAForm):
     non_pre_assembled_L = []
     
     def matrix_optimisation(tform):
+      args = ufl.algorithms.extract_arguments(tform)
+      if not len(args) == 1:
+        return None
       tcs = extract_non_static_coefficients(tform)
       if not len(tcs) == 1 or not isinstance(tcs[0], dolfin.Function) or \
-        (not dolfin.MPI.num_processes() == 1 and not tcs[0].function_space().num_sub_spaces() == 0):
+        (not dolfin.MPI.num_processes() == 1 and not tcs[0].function_space().num_sub_spaces() == 0) or \
+        (not dolfin.MPI.num_processes() == 1 and (is_r0_function_space(args[0].function_space()) or is_r0_function(tcs[0]))):
         return None
       fn = tcs[0]
         
@@ -370,7 +374,7 @@ class PALinearForm(PAForm):
               else:
                 pterm[1].append(mform)
             else:
-              pterm[2].append(tform)
+              pterm[2].append(stform)
           if len(pterm[0]) == 0 and len(pterm[1]) == 0:
             tform = QForm([ufl.Integral(term[0], *iargs)], quadrature_degree = quadrature_degree)
             non_pre_assembled_L.append(tform)

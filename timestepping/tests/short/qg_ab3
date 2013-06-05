@@ -174,8 +174,8 @@ def add_pv_inversion(n):
     else:
       system.add_solve((inner(grad(test), grad(trial)) - ss[i] * inner(test, trial)) * dx - (test * dot(grad(trial), nm)) * ds == -inner(test, zeta_m[i][n]) * dx, \
         psi0[i][n], bc_zero, solver_parameters = lu_solver)
-      system.add_solve(inner(ctest, psi1[i] * ctrial) * dx == -inner(ctest, psi0[i][n]) * dx,
-        c[i][n], solver_parameters = lu_solver)
+      system.add_solve(inner(ctest, psi1[i]) * dx == -inner(ctest, psi0[i][n]) * dx,
+        c[i][n])
       system.add_solve(psi0[i][n] + c[i][n] * psi1[i], psi_m[i][n])
     system.add_solve(LinearCombination(*[(modes_to_z[i][j], psi_m[j][n]) for j in range(layers)]), psi[i][n])
 
