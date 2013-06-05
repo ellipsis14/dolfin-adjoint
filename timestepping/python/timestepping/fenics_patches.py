@@ -260,7 +260,7 @@ if dolfin_version() < (1, 1, 0):
       """,
     mat = dolfin.GenericMatrix)
   def GenericMatrix_compress(self):
-    if dolfin.MPI.num_processes() == 0 or self.size(0) == self.size(1):
+    if dolfin.MPI.num_processes() == 1 or self.size(0) == self.size(1):
       __GenericMatrix_compress_code.run(mat = self)
     return
   dolfin.GenericMatrix.compress = GenericMatrix_compress
@@ -366,7 +366,7 @@ if dolfin_version() < (1, 1, 0):
 elif dolfin_version() < (1, 3, 0):
   __GenericMatrix_compress_orig = dolfin.GenericMatrix.compress
   def GenericMatrix_compress(self):
-    if dolfin.MPI.num_processes() == 0 or self.size(0) == self.size(1):
+    if dolfin.MPI.num_processes() == 1 or self.size(0) == self.size(1):
       __GenericMatrix_compress_orig(self)
     return
   dolfin.GenericMatrix.compress = GenericMatrix_compress
