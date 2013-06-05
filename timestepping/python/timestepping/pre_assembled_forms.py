@@ -336,7 +336,9 @@ class PALinearForm(PAForm):
         return None
       fn = tcs[0]
         
-      mat_form = derivative(tform, fn)
+      expand = dolfin.MPI.num_processes() == 1 or \
+        (not is_r0_function_space(args[0].function_space()) and not is_r0_function(fn))
+      mat_form = derivative(tform, fn, expand = expand)
       
       if n_non_static_coefficients(mat_form) > 0:
         return None

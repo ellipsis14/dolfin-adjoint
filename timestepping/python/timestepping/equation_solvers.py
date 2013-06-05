@@ -544,7 +544,12 @@ class EquationSolver:
       raise InvalidArgumentException("parameter must be a Constant or Function")
 
     if self.is_linear():
-      form = action(self.__eq.lhs, self.__x)
+      if extract_form_data(self.__eq.lhs).rank == 1:
+        args = ufl.algorithms.extract_arguments(self.__eq.lhs)
+        assert(len(args) == 1)
+        form = replace(self.__eq.lhs, {args[0]:(args[0] * self.__x)})
+      else:
+        form = action(self.__eq.lhs, self.__x)
     else:
       form = self.__eq.lhs
     if not is_zero_rhs(self.__eq.rhs):
