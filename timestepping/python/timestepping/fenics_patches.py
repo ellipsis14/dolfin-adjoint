@@ -109,7 +109,62 @@ if dolfin_version() < (1, 1, 0):
       if tp == "size_t":
         tp = "uint"
       return dolfin.MeshFunction.__new__(cls, tp, *args)
-
+      
+  __GenericVector_gather_orig = dolfin.GenericVector.gather
+  __GenericVector_gather_code = EmbeddedCpp(
+    code =
+      """
+      Array< double > lx(n);
+      Array< unsigned int > lnodes(n);
+      for(size_t i = 0;i < n;i++){
+        lnodes[i] = nodes[i];
+      }
+      v->gather(lx, lnodes);
+      for(size_t i = 0;i < n;i++){
+        x[i] = lx[i];
+      }
+      """,
+    n = int, nodes = int_arr, v = dolfin.GenericVector, x = double_arr)
+  def GenericVector_gather(self, *args):
+    if len(args) == 1 and isinstance(args[0], numpy.ndarray) and len(args[0].shape) == 1 and args[0].dtype == "int32":
+      x = numpy.empty(args[0].shape[0])
+      __GenericVector_gather_code.run(n = args[0].shape[0], nodes = args[0], v = self, x = x)
+      return x
+    else:
+      return __GenericVector_gather_orig(self, *args)
+  dolfin.GenericVector.gather = GenericVector_gather
+  del(GenericVector_gather)
+  __Vector_gather_orig = dolfin.Vector.gather
+  def Vector_gather(self, *args):
+    if len(args) == 1 and isinstance(args[0], numpy.ndarray) and len(args[0].shape) == 1 and args[0].dtype == "int32":
+      x = numpy.empty(args[0].shape[0])
+      __GenericVector_gather_code.run(n = args[0].shape[0], nodes = args[0], v = self, x = x)
+      return x
+    else:
+      return __Vector_gather_orig(self, *args)
+  dolfin.Vector.gather = Vector_gather
+  del(Vector_gather)
+if dolfin_version() < (1, 2, 0):
+  __all__ += \
+    [
+      "grad", 
+      "FacetNormal"
+    ]
+              
+  def grad(f):
+    g = dolfin.grad(f)
+    if len(g.shape()) == 0:
+      return dolfin.as_vector([g])
+    else:
+      return g
+  
+  def FacetNormal(mesh):
+    nm = dolfin.FacetNormal(mesh)
+    if len(nm.shape()) == 0:
+      return dolfin.as_vector([nm])
+    else:
+      return nm
+if dolfin_version() < (1, 1, 0):
   # Modified version of code from GenericMatrix.cpp, DOLFIN bzr 1.2.x branch
   # revision 7509
   __GenericMatrix_compress_code = EmbeddedCpp(
@@ -205,66 +260,12 @@ if dolfin_version() < (1, 1, 0):
       """,
     mat = dolfin.GenericMatrix)
   def GenericMatrix_compress(self):
-    __GenericMatrix_compress_code.run(mat = self)
+    if dolfin.MPI.num_processes() == 0 or self.size(0) == self.size(1):
+      __GenericMatrix_compress_code.run(mat = self)
     return
   dolfin.GenericMatrix.compress = GenericMatrix_compress
   del(GenericMatrix_compress)
-      
-  __GenericVector_gather_orig = dolfin.GenericVector.gather
-  __GenericVector_gather_code = EmbeddedCpp(
-    code =
-      """
-      Array< double > lx(n);
-      Array< unsigned int > lnodes(n);
-      for(size_t i = 0;i < n;i++){
-        lnodes[i] = nodes[i];
-      }
-      v->gather(lx, lnodes);
-      for(size_t i = 0;i < n;i++){
-        x[i] = lx[i];
-      }
-      """,
-    n = int, nodes = int_arr, v = dolfin.GenericVector, x = double_arr)
-  def GenericVector_gather(self, *args):
-    if len(args) == 1 and isinstance(args[0], numpy.ndarray) and len(args[0].shape) == 1 and args[0].dtype == "int32":
-      x = numpy.empty(args[0].shape[0])
-      __GenericVector_gather_code.run(n = args[0].shape[0], nodes = args[0], v = self, x = x)
-      return x
-    else:
-      return __GenericVector_gather_orig(self, *args)
-  dolfin.GenericVector.gather = GenericVector_gather
-  del(GenericVector_gather)
-  __Vector_gather_orig = dolfin.Vector.gather
-  def Vector_gather(self, *args):
-    if len(args) == 1 and isinstance(args[0], numpy.ndarray) and len(args[0].shape) == 1 and args[0].dtype == "int32":
-      x = numpy.empty(args[0].shape[0])
-      __GenericVector_gather_code.run(n = args[0].shape[0], nodes = args[0], v = self, x = x)
-      return x
-    else:
-      return __Vector_gather_orig(self, *args)
-  dolfin.Vector.gather = Vector_gather
-  del(Vector_gather)
-if dolfin_version() < (1, 2, 0):
-  __all__ += \
-    [
-      "grad", 
-      "FacetNormal"
-    ]
-              
-  def grad(f):
-    g = dolfin.grad(f)
-    if len(g.shape()) == 0:
-      return dolfin.as_vector([g])
-    else:
-      return g
   
-  def FacetNormal(mesh):
-    nm = dolfin.FacetNormal(mesh)
-    if len(nm.shape()) == 0:
-      return dolfin.as_vector([nm])
-    else:
-      return nm
-if dolfin_version() < (1, 1, 0):
   # Modified version of code from DirichletBC.cpp, DOLFIN bzr 1.2.x branch
   # revision 7509
   __DirichletBC_zero_columns_code = EmbeddedCpp(
@@ -363,6 +364,14 @@ if dolfin_version() < (1, 1, 0):
   dolfin.DirichletBC.zero_columns = DirichletBC_zero_columns
   del(DirichletBC_zero_columns)
 elif dolfin_version() < (1, 3, 0):
+  __GenericMatrix_compress_orig = dolfin.GenericMatrix.compress
+  def GenericMatrix_compress(self):
+    if dolfin.MPI.num_processes() == 0 or self.size(0) == self.size(1):
+      __GenericMatrix_compress_orig(self)
+    return
+  dolfin.GenericMatrix.compress = GenericMatrix_compress
+  del(GenericMatrix_compress)
+  
   # Modified version of code from DirichletBC.cpp, DOLFIN bzr 1.2.x branch
   # revision 7509
   __DirichletBC_zero_columns_code = EmbeddedCpp(
