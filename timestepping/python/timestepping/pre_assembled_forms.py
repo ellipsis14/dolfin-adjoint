@@ -332,13 +332,15 @@ class PALinearForm(PAForm):
       if not len(args) == 1:
         return None
       tcs = extract_non_static_coefficients(tform)
-      if not len(tcs) == 1 or not isinstance(tcs[0], dolfin.Function) or \
-        (not dolfin.MPI.num_processes() == 1 and not tcs[0].function_space().num_sub_spaces() == 0) or \
-        (not dolfin.MPI.num_processes() == 1 and (is_r0_function_space(args[0].function_space()) or is_r0_function(tcs[0]))):
+      if not len(tcs) == 1 or not isinstance(tcs[0], dolfin.Function):
         return None
       fn = tcs[0]
         
-      mat_form = derivative(tform, fn)
+      expand = dolfin.MPI.num_processes() == 1 or \
+        (args[0].function_space().num_sub_spaces() == 0 and tcs[0].function_space().num_sub_spaces() == 0 \
+         and not is_r0_function_space(args[0].function_space()) and not is_r0_function(tcs[0]))
+      mat_form = derivative(tform, fn, expand = expand)
+      
       if n_non_static_coefficients(mat_form) > 0:
         return None
       else:

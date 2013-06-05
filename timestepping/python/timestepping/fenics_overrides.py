@@ -273,7 +273,7 @@ def rhs(form):
   else:
     return nform
 
-def derivative(form, u, du = None):
+def derivative(form, u, du = None, expand = True):
   """
   Wrapper for the DOLFIN derivative function. This attempts to select an
   appropriate du if one is not supplied. Correctly handles QForm s.
@@ -281,21 +281,18 @@ def derivative(form, u, du = None):
   
   if du is None:
     if isinstance(u, dolfin.Constant):
-      der = dolfin.derivative(form, u, du = Constant(1.0))
+      du = Constant(1.0)
     elif isinstance(u, dolfin.Function):
       rank = extract_form_data(form).rank
       if rank == 0:
-        der = dolfin.derivative(form, u, du = dolfin.TestFunction(u.function_space()))
+        du = dolfin.TestFunction(u.function_space())
       elif rank == 1:
-        der = dolfin.derivative(form, u, du = dolfin.TrialFunction(u.function_space()))
-      else:
-        der = dolfin.derivative(form, u)
-    else:
-      der = dolfin.derivative(form, u)
-  else:
-    der = dolfin.derivative(form, u, du = du)
+        du = dolfin.TrialFunction(u.function_space())
     
-  der = ufl.algorithms.expand_derivatives(der)
+  der = dolfin.derivative(form, u, du = du)
+  if expand:
+    der = ufl.algorithms.expand_derivatives(der)
+    
   if isinstance(form, QForm):
     return QForm(der, quadrature_degree = form.quadrature_degree())
   else:
