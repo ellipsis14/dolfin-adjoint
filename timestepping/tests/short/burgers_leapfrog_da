@@ -112,4 +112,4 @@ assert(err < 6.0e-15)
 
 err = abs(float(grad[1]) - grad_da[1])
 print "%.17e %.17e" % (grad_da[1], err)
-assert(err < 3.0e-12)
+assert(err < 4.0e-12)

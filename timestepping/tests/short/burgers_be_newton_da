@@ -105,7 +105,7 @@ assert((orders > 2.0).all())
 orders = system.taylor_test(nu, J = J, grad = grad[1])
 assert((orders > 1.99).all())
 
-assert(replay_dolfin(forget = False, tol = 2.0e-16, stop = True))
+assert(replay_dolfin(forget = False, tol = 3.0e-16, stop = True))
 
 grad_da = compute_gradient(Functional(u[N] * u[N] * dx * dolfin_adjoint.dt[FINISH_TIME]), [InitialConditionParameter(ic), ScalarParameter(nu)])
 

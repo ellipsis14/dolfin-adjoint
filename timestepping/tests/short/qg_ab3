@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+#NP 2
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
@@ -27,6 +28,8 @@ from dolfin import *
 from timestepping import *
 
 import numpy
+
+parameters["form_compiler"]["optimize"] = True
 
 Constant = StaticConstant
 DirichletBC = StaticDirichletBC
@@ -258,14 +261,14 @@ def check(f, ref, tol, scale = None):
   assert(err < tol)
   return
 
-check(q[0][-2], 2.20073680358033627e+06, 8.0e-9)
-check(q[1][-2], 2.20073680358033627e+06, 8.0e-9)
-check(q[2][-2], 2.20073680358033627e+06, 8.0e-9)
+check(q[0][-2], 2.20073680358033627e+06, 9.0e-9)
+check(q[1][-2], 2.20073680358033627e+06, 9.0e-9)
+check(q[2][-2], 2.20073680358033627e+06, 9.0e-9)
 check(q[0][-1], 2.20076449380046502e+06, 8.0e-9)
-check(q[1][-1], 2.20073797596434690e+06, 2.0e-8)
-check(q[2][-1], 2.20073726492761029e+06, 1.0e-8)
+check(q[1][-1], 2.20073797596434690e+06, 3.0e-8)
+check(q[2][-1], 2.20073726492761029e+06, 2.0e-8)
 check(q[0][0], 2.20079218441609666e+06, 9.0e-9)
-check(q[1][0], 2.20073914890155755e+06, 8.0e-9)
+check(q[1][0], 2.20073914890155755e+06, 9.0e-9)
 check(q[2][0], 2.20073772634891700e+06, 8.0e-9)
 
 t = 2.0 * float(dt)
@@ -286,7 +289,7 @@ while t < mtime:
 
 system.finalise()
 
-system.verify_checkpoints()
+system.verify_checkpoints(tolerance = 9.0e-9)
 
 gradPsi = grad(psi[2][N])
 system.set_functional(0.5 * dot(gradPsi, gradPsi) * dx)
@@ -299,7 +302,7 @@ orders = system.taylor_test(tau0, J = J, grad = g[0])
 assert((orders > 1.99).all())
 
 orders = system.taylor_test(beta_y, J = J, grad = g[1])
-assert((orders > 1.99).all())
+assert((orders > 1.97).all())
 
 orders = system.taylor_test(alpha, J = J, grad = g[2], fact = 2.5e-3)
 assert((orders > 1.94).all())
