@@ -32,7 +32,7 @@ for mesh, e in [(UnitIntervalMesh(10), [("CG", 1), ("CG", 2), ("CG", 3), ("DG", 
 
     filename = "%iD_P%i_%s" % (mesh.geometry().dim(), args[1], args[0])
     write_vtu(filename, F)
-    G = read_vtu(filename, space)["u"]
+    G = read_vtu(filename, space)[F.name()]
 
     err = (F.vector() - G.vector()).norm("linf")
     print "%iD, P%i_%s: %.17e" % (mesh.geometry().dim(), args[1], args[0], err)

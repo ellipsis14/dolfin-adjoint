@@ -1561,12 +1561,12 @@ class ManagedModel:
     ngrad = []
     for i, parameter in enumerate(parameters):
       if isinstance(grad[i], float):
-        ngrad.append(Constant(grad[i]))
+        ngrad.append(dolfin.Constant(grad[i]))
       else:
         assert(isinstance(grad[i], dolfin.GenericVector))
         if project:
           space = parameter.function_space()
-          ngrad.append((grad[i], Function(space, name = "gradient_%s" % parameter.name())))
+          ngrad.append((grad[i], dolfin.Function(space, name = "gradient_%s" % parameter.name())))
           mass = dolfin.inner(dolfin.TestFunction(space), dolfin.TrialFunction(space)) * dolfin.dx
           solver = solver_cache.solver(mass, solver_parameters = project_solver_parameters, static = True)
           solver.set_operator(assembly_cache.assemble(mass))
@@ -1647,7 +1647,7 @@ class ManagedModel:
         perturb = fact
     else:
       assert(isinstance(parameter, dolfin.Function))
-      parameter_orig = Function(parameter, name = "%s_original" % parameter.name())
+      parameter_orig = dolfin.Function(parameter, name = "%s_original" % parameter.name())
       parameter_orig_arr = parameter_orig.vector().array()
       perturb = parameter_orig.vector().copy()
       shape = parameter_orig_arr.shape
@@ -1663,7 +1663,7 @@ class ManagedModel:
     errs_2 = []
     for i in range(ntest - 1, -1, -1):
       if isinstance(parameter, dolfin.Constant):
-        parameter.assign(Constant(parameter_orig + (2 ** i) * perturb))
+        parameter.assign(dolfin.Constant(parameter_orig + (2 ** i) * perturb))
 
         self.reassemble_forward(parameter)
         Jp = self.compute_functional(rerun_forward = True)

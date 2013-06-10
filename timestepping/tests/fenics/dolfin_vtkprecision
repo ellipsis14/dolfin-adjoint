@@ -39,7 +39,7 @@ n = vtu.GetNumberOfPoints()
 data = vtu.GetPointData()
 coords = vtu.GetPoints().GetData()
 coords = numpy.array([coords.GetTuple3(i) for i in range(n)])
-arr = data.GetArray("u")
+arr = data.GetArray(F.name())
 arr = numpy.array([arr.GetValue(i) for i in range(n)])
 print "%.17e, %.17e, %.17e" % (coords[2, 0], arr.min(), arr.max())
 

@@ -40,7 +40,7 @@ def StaticConstant(*args, **kwargs):
   Constant function.
   """
   
-  c = Constant(*args, **kwargs)
+  c = dolfin.Constant(*args, **kwargs)
   if isinstance(c, ufl.tensors.ListTensor):
     for c_c in c:
       assert(isinstance(c_c, dolfin.Constant))
@@ -57,7 +57,7 @@ def StaticFunction(*args, **kwargs):
   Function function.
   """
   
-  fn = Function(*args, **kwargs)
+  fn = dolfin.Function(*args, **kwargs)
   fn._time_static = True
 
   return fn

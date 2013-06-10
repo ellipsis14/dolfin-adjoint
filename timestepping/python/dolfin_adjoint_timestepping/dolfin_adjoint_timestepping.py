@@ -50,8 +50,23 @@ dolfin.parameters["timestepping"]["pre_assembly"]["linear_forms"]["matrix_optimi
 dolfin.parameters["timestepping"]["pre_assembly"]["linear_forms"]["term_optimisation"] = False
 
 # Resolve namespace clashes
-fenics_overrides._Constant = dolfin_adjoint.Constant
-fenics_overrides._Function = dolfin_adjoint.Function
+
+def Constant__getattr__(self, key):
+  if key == "adj_name":
+    return self.name()
+  else:
+    return object.__getattr__(self, key)
+dolfin.Constant.__getattr__ = Constant__getattr__
+del(Constant__getattr__)
+    
+# Modified version of code from dolfin-adjoint bzr trunk 717
+def get_constant(a):
+  if isinstance(a, dolfin.Constant):
+    return a
+  else:
+    return constant_objects[a]
+dolfin_adjoint.constant.get_constant.func_code = get_constant.func_code
+
 fenics_overrides._KrylovSolver = dolfin_adjoint.KrylovSolver
 fenics_overrides._LinearSolver = dolfin_adjoint.LinearSolver
 fenics_overrides._LUSolver = dolfin_adjoint.LUSolver
@@ -271,7 +286,7 @@ def da_annotate_equation_solve(solve):
       rhs = nrhs;  del(nrhs)
     if isinstance(rhs, (float, int, ufl.constantvalue.FloatValue, ufl.constantvalue.IntValue, ufl.constantvalue.Zero)):
       # This is a direct assignment, so register an assignment
-      return da_annotate_assign(Constant(rhs), x_fn)
+      return da_annotate_assign(dolfin.Constant(rhs), x_fn)
     elif isinstance(rhs, (dolfin.Constant, dolfin.Function)):
       # This is a direct assignment, so register an assignment
       return da_annotate_assign(rhs, x_fn)

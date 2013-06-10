@@ -177,7 +177,7 @@ print "%.17e" % comp
 print "%.17e" % ref
 print "%.17e" % err
 if dolfin_version() < (1, 1, 0):
-  assert(err < 4.0e-13)
+  assert(err < 5.0e-13)
 else:
   assert(err < 8.0e-12)
 

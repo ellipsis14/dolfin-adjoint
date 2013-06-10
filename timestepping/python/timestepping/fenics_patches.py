@@ -45,7 +45,6 @@ import dolfin
 import ffc
 import instant
 import numpy
-import scipy.optimize
 import ufl
 
 from embedded_cpp import *
@@ -61,6 +60,8 @@ if ufl_version() < (1, 0, 0) or ufl_version() >= (1, 3, 0):
   raise VersionException("UFL version %s not supported" % ufl.__version__)
 if ffc_version() < (1, 0, 0) or ffc_version() >= (1, 3, 0):
   raise VersionException("FFC version %s not supported" % ffc.__version__)
+if instant_version() < (1, 0, 0) or instant_version() >= (1, 3, 0):
+  raise VersionException("Instant version %s not supported" % instant.__version__)
 
 # DOLFIN patches.
 if dolfin_version() < (1, 1, 0):
@@ -134,6 +135,7 @@ if dolfin_version() < (1, 1, 0):
       return __GenericVector_gather_orig(self, *args)
   dolfin.GenericVector.gather = GenericVector_gather
   del(GenericVector_gather)
+  
   __Vector_gather_orig = dolfin.Vector.gather
   def Vector_gather(self, *args):
     if len(args) == 1 and isinstance(args[0], numpy.ndarray) and len(args[0].shape) == 1 and args[0].dtype == "int32":
@@ -164,6 +166,51 @@ if dolfin_version() < (1, 2, 0):
       return dolfin.as_vector([nm])
     else:
       return nm
+if dolfin_version() <= (1, 2, 0):    
+  __name_counter = [0]
+  __Constant__init__orig = dolfin.Constant.__init__
+  def Constant__init__(self, *args, **kwargs):
+    kwargs = copy.copy(kwargs)
+    if "label" in kwargs:
+      label = kwargs["label"]
+      del(kwargs["label"])
+    else:
+      label = "a Constant"
+    if "name" in kwargs:
+      name = kwargs["name"]
+      del(kwargs["name"])
+    else:
+      name = "f_%i" % __name_counter[0]
+      __name_counter[0] += 1
+      
+    __Constant__init__orig(self, *args, **kwargs)
+    self.rename(name, label)
+    
+    return      
+  dolfin.Constant.__init__ = Constant__init__
+  del(Constant__init__)
+    
+  __Function__init__orig = dolfin.Function.__init__
+  def Function__init__(self, *args, **kwargs):
+    kwargs = copy.copy(kwargs)
+    if "label" in kwargs:
+      label = kwargs["label"]
+      del(kwargs["label"])
+    else:
+      label = "a Function"
+    if "name" in kwargs:
+      name = kwargs["name"]
+      del(kwargs["name"])
+    else:
+      name = "f_%i" % __name_counter[0]
+      __name_counter[0] += 1
+      
+    __Function__init__orig(self, *args, **kwargs)
+    self.rename(name, label)
+    
+    return      
+  dolfin.Function.__init__ = Function__init__
+  del(Function__init__)
 if dolfin_version() < (1, 1, 0):
   # Modified version of code from GenericMatrix.cpp, DOLFIN bzr 1.2.x branch
   # revision 7509

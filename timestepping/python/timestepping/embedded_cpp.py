@@ -53,7 +53,7 @@ class EmbeddedCpp:
                    identifying the variable type.
   """
 
-  __boost_classes = {dolfin.cpp.DirichletBC:"DirichletBC",
+  __boost_classes = {dolfin.cpp.DirichletBC:dolfin.DirichletBC,
                      dolfin.DirichletBC:"DirichletBC",
                      dolfin.Function:"Function",
                      dolfin.GenericMatrix:"GenericMatrix",
@@ -83,12 +83,20 @@ class EmbeddedCpp:
       if not arg in [int, float, int_arr, double_arr, long_arr] + self.__boost_classes.keys():
         raise InvalidArgumentException("Argument type must be int, float, int_arr, long_arr, double_arr, DirichletBC, Function, GenericMatrix, GenericVector or Mesh")
 
+    args = copy.copy(kwargs)
+    for arg in args:
+      if arg in self.__boost_classes.keys():
+        cls = self.__boost_classes[arg]
+        while not isinstance(cls, str):
+          cls = self.__boost_classes[cls]
+        args[arg] = cls
+
     self.__code = code
     self.__includes = """%s
 
 %s""" % (includes, self.__default_includes)
     self.__include_dirs = copy.copy(include_dirs)
-    self.__args = copy.copy(kwargs)
+    self.__args = args
     self.__lib = None
 
     return

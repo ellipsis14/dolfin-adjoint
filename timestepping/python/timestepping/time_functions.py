@@ -47,9 +47,11 @@ class WrappedFunction(dolfin.Function):
     name: A string defining the name of the function.
   """
   
-  def __init__(self, arg, name = "u"):
+  def __init__(self, arg, name = "u", label = "a WrappedFunction"):
     if not isinstance(name, str):
       raise InvalidArgumentException("name must be a string")
+    if not isinstance(label, str):
+      raise InvalidArgumentException("label must be a string")
     self.__fn = None
     if isinstance(arg, dolfin.FunctionSpaceBase):
       self.__space = arg
@@ -61,6 +63,7 @@ class WrappedFunction(dolfin.Function):
     else:
       raise InvalidArgumentException("Require FunctionSpace or Function as first argument")
     self.__name = name
+    self.__label = label
 
     return
 
@@ -69,7 +72,7 @@ class WrappedFunction(dolfin.Function):
     Wrap a newly allocated Function.
     """
     
-    self.wrap(Function(self.__space, name = self.__name))
+    self.wrap(dolfin.Function(self.__space, name = self.__name, label = self.__label))
 
     return
 
@@ -143,6 +146,13 @@ class WrappedFunction(dolfin.Function):
     
     return self.__name
 
+  def label(self):
+    """
+    Return the function label, as a string.
+    """
+    
+    return self.__label
+
   def rename(self, name, label):
     """
     Rename the WrappedFunction.
@@ -152,6 +162,7 @@ class WrappedFunction(dolfin.Function):
       raise InvalidArgumentException("name must be a string")
     
     self.__name = name
+    self.__label = label
 
     return
       
@@ -178,7 +189,7 @@ class TimeFunction(TimeLevels):
     fns = {}
     lfns = {}
     for level in tlevels.levels():
-      fns[level] = WrappedFunction(Function(space, name = "%s_%s" % (name, level)), name = "%s_%s" % (name, level))
+      fns[level] = WrappedFunction(dolfin.Function(space, name = "%s_%s" % (name, level)), name = "%s_%s" % (name, level))
       fns[level]._time_level_data = (self, level)
 
       nlevel = N + level.offset()
@@ -382,7 +393,7 @@ class AdjointTimeFunction(TimeLevels):
 
     fns = {}
     for level in tfn.levels():
-      fns[level] = Function(name = "%s_%s_adjoint" % (name, level), *[tfn.function_space()])
+      fns[level] = dolfin.Function(name = "%s_%s_adjoint" % (name, level), *[tfn.function_space()])
       fns[level]._time_level_data = (self, level)
       fns[level]._adjoint_data = [tfn[level]]
     for level in tfn.initial_levels():

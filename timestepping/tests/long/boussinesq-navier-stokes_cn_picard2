@@ -370,7 +370,7 @@ system.finalise()
 # Verify incompressibility
 err = div_U.vector().norm("linf")
 print "%.17e" % err
-assert(err < 6.0e-12)
+assert(err < 1.0e-11)
 
 # Verify pressure zero point
 p0 = numpy.empty(1);  p0[:] = numpy.NAN

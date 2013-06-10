@@ -100,8 +100,8 @@ class Version:
       other = Version(other)
     n = min(len(self.__ver), len(other.__ver))
     for i in range(n):
-      if self.__ver[i] > other.__ver[i]:
-        return True
+      if other.__ver[i] > self.__ver[i]:
+        return False
     for i in range(n, len(self.__ver)):
       if self.__ver[i] > 0:
         return True

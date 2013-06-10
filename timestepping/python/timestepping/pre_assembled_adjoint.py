@@ -91,7 +91,7 @@ class AdjointVariableMap:
         return var._adjoint_data[0]
       else:
         if not var in self.__a_fns:
-          a_fn = Function(name = "%s_adjoint" % var.name(), *[var.function_space()])
+          a_fn = dolfin.Function(name = "%s_adjoint" % var.name(), *[var.function_space()])
           a_fn._adjoint_data = [var]
           self.__a_fns[var] = a_fn
           self.__f_fns[a_fn] = var

@@ -111,7 +111,7 @@ def read_vtu(filename, space):
       else:
         for k in range(vtu_cell.GetNumberOfIds()):
           data[cell[cell_map[k]]] = point_data.GetTuple1(vtu_cell.GetId(k))
-    field = Function(space, name = name)
+    field = dolfin.Function(space, name = name)
     field.vector().set_local(data)
     field.vector().apply("insert")
 
@@ -162,7 +162,7 @@ def write_vtu(filename, fns, index = None, t = None):
     fns = []
     for i in range(n_sub_spaces):
       sub_space = space.sub(i).collapse()
-      sub_fn = Function(sub_space, name = "%s_%i" % (fn.name(), i + 1))
+      sub_fn = dolfin.Function(sub_space, name = "%s_%i" % (fn.name(), i + 1))
       sub_dofs = numpy.array(space.dofmap().extract_sub_dofmap(numpy.array([i], dtype = "uintp"), mesh).collapse(mesh)[1].values(), dtype = "intc")
       sub_fn.vector().set_local(fn.vector().gather(sub_dofs))
       sub_fn.vector().apply("insert")
@@ -217,7 +217,7 @@ def write_vtu(filename, fns, index = None, t = None):
 
   if not t is None:
     for space in spaces:
-      lt = Function(space, name = "time")
+      lt = dolfin.Function(space, name = "time")
       if isinstance(t, float):
         lt.vector()[:] = t
       else:

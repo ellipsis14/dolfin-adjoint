@@ -26,16 +26,11 @@ from quadrature import *
 
 __all__ = \
   [
-    "_Constant",
-    "_DirichletBC",
-    "_Function",
     "_KrylovSolver",
     "_LinearSolver",
     "_LUSolver",
     "_assemble",
     "_assemble_classes",
-    "Constant",
-    "Function",
     "DirichletBC",
     "LinearSolver",
     "action",
@@ -48,59 +43,20 @@ __all__ = \
     "rhs"
   ]
   
-# These are classes / functions that are wrapped in this module. These can be
-# replaced with custom subclasses / functions.
-_Constant = dolfin.Constant
-_DirichletBC = dolfin.DirichletBC
-_Function = dolfin.Function
+# Assembly and solver functions and classes used in this module. These can be
+# overridden externally.
 _KrylovSolver = dolfin.KrylovSolver
 _LinearSolver = dolfin.LinearSolver
 _LUSolver = dolfin.LUSolver
 _assemble = dolfin.assemble
-  
-def Constant(value, cell = None, name = "u"):
-  """
-  Wrapper for DOLFIN Constant constructor. Returns either a rank 0 Constant or a
-  ListTensor. Adds "name" as a keyword argument. Otherwise, arguments are
-  identical to the DOLFIN Constant constructor.
-  """
 
-  if not isinstance(name, str):
-    raise InvalidArgumentException("name must be a string")
-  
-  if isinstance(value, tuple):
-    c = dolfin.as_vector([Constant(val, cell = cell, name = "%s_%i" % (name, i)) for i, val in enumerate(value)])
-  else:
-    c = _Constant(value, cell = cell)
-    c.rename(name, name)
-
-  return c
-
-def Function(*args, **kwargs):
-  """
-  Wrapper for DOLFIN Function constructor. Adds "name" as a keyword argument.
-  Otherwise, arguments are identical to the DOLFIN Function constructor.
-  """
-  
-  kwargs = copy.copy(kwargs)
-  if "name" in kwargs:
-    name = kwargs["name"]
-    del(kwargs["name"])
-  else:
-    name = "u"
-
-  fn = _Function(*args, **kwargs)
-  fn.rename(name, name)
-
-  return fn
-
-class DirichletBC(_DirichletBC):
+class DirichletBC(dolfin.DirichletBC):
   """
   Wrapper for DOLFIN DirichletBC. Adds homogenized method.
   """
   
   def __init__(self, *args, **kwargs):
-    _DirichletBC.__init__(self, *args, **kwargs)
+    dolfin.DirichletBC.__init__(self, *args, **kwargs)
     
     self.__hbc = None
     
@@ -112,7 +68,7 @@ class DirichletBC(_DirichletBC):
     """
     
     if self.__hbc is None:
-      self.__hbc = _DirichletBC(self.function_space(), self.value(), *self.domain_args, method = self.method())
+      self.__hbc = dolfin.DirichletBC(self.function_space(), self.value(), *self.domain_args, method = self.method())
       self.__hbc.homogenize()
       if hasattr(self, "_time_static"):
         self.__hbc._time_static = self._time_static
@@ -283,7 +239,7 @@ def derivative(form, u, du = None, expand = True):
   
   if du is None:
     if isinstance(u, dolfin.Constant):
-      du = Constant(1.0)
+      du = dolfin.Constant(1.0)
     elif isinstance(u, dolfin.Function):
       rank = extract_form_data(form).rank
       if rank == 0:
