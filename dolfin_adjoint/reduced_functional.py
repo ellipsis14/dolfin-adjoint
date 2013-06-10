@@ -26,27 +26,35 @@ def get_global(m_list):
 
     m_global = []
     for m in m_list:
+
         # Parameters of type float
         if m == None or type(m) == float:
             m_global.append(m)
+
         elif hasattr(m, "tolist"): 
             m_global += m.tolist()
+
         # Function parameters of type Function 
-        elif hasattr(m, "vector"): 
-            m_v = m.vector()
-            m_a = cpp.DoubleArray(m.vector().size())
+        elif hasattr(m, "vector") or hasattr(m, "gather"): 
+            if not hasattr(m, "gather"):
+                m_v = m.vector()
+            else:
+                m_v = m
+            m_a = cpp.DoubleArray(m_v.size())
             try:
-                m.vector().gather(m_a, numpy.arange(m_v.size(), dtype='I'))
+                m_v.gather(m_a, numpy.arange(m_v.size(), dtype='I'))
                 m_global += m_a.array().tolist()
             except TypeError:
-                m_a = m.vector().gather(numpy.arange(m_v.size(), dtype='intc'))
+                m_a = m_v.gather(numpy.arange(m_v.size(), dtype='intc'))
                 m_global += m_a.tolist()
+
         # Parameters of type Constant 
         elif hasattr(m, "value_size"): 
             a = numpy.zeros(m.value_size())
             p = numpy.zeros(m.value_size())
             m.eval(a, p)
             m_global += a.tolist()
+
         else:
             raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
 
