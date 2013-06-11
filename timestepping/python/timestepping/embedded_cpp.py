@@ -133,6 +133,9 @@ class EmbeddedCpp:
     code = \
 """%s
 
+// Keep SWIG happy
+namespace dolfin {
+}
 using namespace dolfin;
 
 extern "C" {
@@ -144,7 +147,15 @@ extern "C" {
   }
 }""" % (self.__includes, args, cast_code, self.__code)
 
-    mod = instant.build_module(code = code, cppargs = dolfin.parameters["form_compiler"]["cpp_optimize_flags"], lddargs = "-ldolfin", include_dirs = self.__include_dirs)
+    if instant_version() < (1, 2, 0):
+      mod = instant.build_module(code = code,
+        cppargs = dolfin.parameters["form_compiler"]["cpp_optimize_flags"],
+        lddargs = "-ldolfin", include_dirs = self.__include_dirs)
+    else:
+      mod = instant.build_module(code = code,
+        cppargs = dolfin.parameters["form_compiler"]["cpp_optimize_flags"],
+        lddargs = "-ldolfin", include_dirs = self.__include_dirs,
+        cmake_packages = ["DOLFIN"])
     path = os.path.dirname(mod.__file__)
     name = os.path.split(path)[-1]
     self.__lib = ctypes.cdll.LoadLibrary(os.path.join(path, "_%s.so" % name))
