@@ -152,12 +152,8 @@ class LimiterSolver(AssignmentSolver):
     self.__T = T
     self.__ele_list = ele_list_arr
     self.__kernel = kernel = CellKernel(mesh,
-      includes = \
-        """
-        #define EPS 1.0e-14
-        """,
       initialisation_code = \
-        """
+        """      
         boost::shared_ptr<GenericVector> T_0_vec = T_0->vector();
         boost::shared_ptr<GenericVector> T_i_vec = T_i->vector();
         boost::shared_ptr<GenericVector> T_vec = T->vector();
@@ -184,9 +180,9 @@ class LimiterSolver(AssignmentSolver):
         std::vector<la_index> cell_dofs = dofmap->cell_dofs(cell);
         for(size_t i = 0; i < 3;i++){
           double T_val = T_vals[i] = T_i_vec->getitem(cell_dofs[i]) - lT_0;
-          if(T_val > EPS){
+          if(T_val > DOLFIN_EPS){
             alpha = std::min(alpha, (T_max - lT_0) / T_val);
-          }else if(T_val < -EPS){
+          }else if(T_val < -DOLFIN_EPS){
             alpha = std::min(alpha, (T_min - lT_0) / T_val);
           }
         }
