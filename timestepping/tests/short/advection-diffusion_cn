@@ -63,11 +63,14 @@ T_bc.apply(T_ic.vector())
 system = TimeSystem()
 system.add_solve(inner(test, T[0]) * dx == inner(test, T_ic) * dx,
   T[0], T_bc, solver_parameters = {"linear_solver":"lu"})
-T_h = 0.5 * (T[n] + T[n + 1])
-test_supg = test + 0.5 * CellSize(mesh) * dot(U, grad(test)) / sqrt(dot(U, U))
-system.add_solve((1.0 / dt) * inner(test_supg, T[n + 1] - T[n]) * dx
-  + inner(test_supg, dot(U, grad(T_h))) * dx
-  == inner(test, kappa * dot(grad(T_h), FacetNormal(mesh))) * ds - inner(grad(test), kappa * grad(T_h)) * dx,
+T_h = 0.5 * (T[n + 1] + T[n])
+# Residual
+F = (1.0 / dt) * (T[n + 1] - T[n]) + dot(U, grad(T_h))
+# Functional to minimise -- squared L^2 norm of the residual, plus a term which
+# penalises gradients (leading to diffusion)
+J = inner(F, F) * dx + (1.0 / dt) * inner(grad(T_h), kappa * grad(T_h)) * dx
+# Newton optimisation. Converges in one iteration as J is quadratic.
+system.add_solve(action(derivative(derivative(J, T[n + 1]), T[n + 1]), T[n + 1]) == -replace(derivative(J, T[n + 1]), {T[n + 1]:0}),
   T[n + 1], T_bc, solver_parameters = {"linear_solver":"lu"})
 
 system = system.assemble(adjoint = True, functional = T[N] * T[N] * dx)

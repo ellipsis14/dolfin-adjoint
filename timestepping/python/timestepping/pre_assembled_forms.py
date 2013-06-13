@@ -359,9 +359,9 @@ class PALinearForm(PAForm):
             terms = [(integrand, expand_expr(integrand))]
         else:
           if isinstance(integrand, ufl.algebra.Sum):
-            terms = [[(term, term)] for term in integrand.operands()]
+            terms = [(term, [term]) for term in integrand.operands()]
           else:
-            terms = [[(term, term)]]        
+            terms = [(integrand, [integrand])]
         for term in terms:
           pterm = [], [], []
           for sterm in term[1]:
