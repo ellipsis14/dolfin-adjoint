@@ -40,6 +40,7 @@ if dolfin.__version__ > '1.2.0':
   class PointIntegralRHS(libadjoint.RHS):
     def __init__(self, solver, dt, ic_var):
       self.solver = solver
+      self.solver.reset()
       self.dt = dt
 
       self.scheme = scheme = solver.scheme()

@@ -26,7 +26,6 @@ def main(u, form, time, Solver, dt):
   ys = [u.vector().array()[0]]
 
   solver = PointIntegralSolver(scheme)
-  solver.parameters["newton_solver"]["iterations_to_retabulate_jacobian"] = 1
 
   for i in range(int(0.2/dt)):
     solver.step(dt)
