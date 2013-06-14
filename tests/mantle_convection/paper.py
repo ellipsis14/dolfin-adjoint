@@ -86,9 +86,10 @@ top_temperature = DirichletBC(Q, 0.0, "x[1] == %g" % height, "geometric")
 bottom_temperature = DirichletBC(Q, 1.0, "x[1] == 0.0", "geometric")
 T_bcs = [bottom_temperature, top_temperature]
 constant_dt = 3.0e-5
-finish = 10*constant_dt
+finish = 0.005
+#finish = 10*constant_dt
 
-#adj_checkpointing('multistage', steps=int(math.floor(finish/constant_dt)), snaps_on_disk=30, snaps_in_ram=30, verbose=True)
+adj_checkpointing('multistage', steps=int(math.floor(finish/constant_dt)), snaps_on_disk=30, snaps_in_ram=30, verbose=True)
 
 def main(T_ic, annotate=False):
   # Define initial and end time
@@ -194,7 +195,11 @@ if __name__ == "__main__":
   m = InitialConditionParameter("InitialTemperature")
   Jm = assemble(-(1.0/Nu2)*grad(Tfinal)[1]*ds2)
   dJdm = compute_gradient(J, m, forget=False)
-  dJdm_p = compute_gradient(J, m, forget=False, project=True)
+
+  # project to trial space
+  M = assemble(inner(TestFunction(Q), TrialFunction(Q))*dx)
+  dJdm_p = Function(Q)
+  solve(M, dJdm_p.vector(), dJdm.vector())
 
   adjoint_vtu = File("bin-final/gradient.pvd", "compressed")
   adjoint_vtu << dJdm_p
