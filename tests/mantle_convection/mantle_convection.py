@@ -2,7 +2,7 @@ __author__ = "Lyudmyla Vynnytska and Marie E. Rognes"
 __copyright__ = "Copyright (C) 2011 Simula Research Laboratory and %s" % __author__
 __license__  = "GNU LGPL Version 3 or any later version"
 
-# Last changed: 2012-02-14
+# Last changed: 2013-06-14
 
 import time
 import numpy
@@ -94,7 +94,9 @@ def main(T_, annotate=False):
   top = DirichletBC(W.sub(0).sub(1), 0.0, "x[1] == %g" % height)
   left = DirichletBC(W.sub(0).sub(0), 0.0, "x[0] == 0.0")
   right = DirichletBC(W.sub(0).sub(0), 0.0, "x[0] == %g" % length)
-  bcs = [bottom, top, left, right]
+  evil = DirichletBC(W.sub(1), 0.0, "x[0] < DOLFIN_EPS && x[1] < DOLFIN_EPS",
+                     "pointwise")
+  bcs = [bottom, top, left, right, evil]
 
   rho = interpolate(rho0, Q)
 
@@ -128,7 +130,7 @@ def main(T_, annotate=False):
 
     # Solve for predicted temperature in terms of previous velocity
     (a, L) = energy(Q, Constant(dt), u_, T_)
-    solve(a == L, T_pr, T_bcs, solver_parameters={"krylov_solver": {"relative_tolerance": 1.0e-14}}, annotate=annotate)
+    solve(a == L, T_pr, T_bcs, annotate=annotate)
 
     # Solve for predicted flow
     eta = viscosity(T_pr)
@@ -137,7 +139,7 @@ def main(T_, annotate=False):
 
     # Solve for corrected temperature T in terms of predicted and previous velocity
     (a, L) = energy_correction(Q, Constant(dt), u_pr, u_, T_)
-    solve(a == L, T, T_bcs, annotate=annotate, solver_parameters={"krylov_solver": {"relative_tolerance": 1.0e-14}})
+    solve(a == L, T, T_bcs, annotate=annotate)
 
     # Solve for corrected flow
     eta = viscosity(T)
@@ -189,7 +191,7 @@ if __name__ == "__main__":
 
   #print "Replaying forward run ... "
   #adj_html("forward.html", "forward")
-  #replay_dolfin(forget=False)
+  #success = replay_dolfin(forget=False, stop=True)
 
   print "Running adjoint ... "
   adj_html("adjoint.html", "adjoint")
