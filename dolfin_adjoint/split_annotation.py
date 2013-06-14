@@ -8,7 +8,7 @@ import expressions
 import adjrhs
 
 import hashlib
-import time
+import random
 
 def annotate_split(bigfn, idx, smallfn, bcs):
   fn_space = smallfn.function_space().collapse()
@@ -16,7 +16,7 @@ def annotate_split(bigfn, idx, smallfn, bcs):
   trial = dolfin.TrialFunction(fn_space)
   eq_lhs = dolfin.inner(test, trial)*dolfin.dx
 
-  diag_name = "Split:%s:" % idx + hashlib.md5(str(eq_lhs) + "split" + str(smallfn) + str(bigfn) + str(idx) + str(time.time())).hexdigest()
+  diag_name = "Split:%s:" % idx + hashlib.md5(str(eq_lhs) + "split" + str(smallfn) + str(bigfn) + str(idx) + str(random.random())).hexdigest()
 
   diag_deps = []
   diag_block = libadjoint.Block(diag_name, dependencies=diag_deps, test_hermitian=dolfin.parameters["adjoint"]["test_hermitian"], test_derivative=dolfin.parameters["adjoint"]["test_derivative"])

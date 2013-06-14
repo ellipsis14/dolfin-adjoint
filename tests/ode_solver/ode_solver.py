@@ -86,13 +86,13 @@ if __name__ == "__main__":
       plt.legend(loc="best")
       plt.show()
   else:
-    dt = 0.2
+    dt = 0.1
     (u, xs, ys) = main(u, form(u, time), time, Solver, dt=dt)
     print "Solution: ", ys[-1]
 
   ## Step 1. Check replay correctness
   
-  replay = False
+  replay = True
   if replay:
     assert adjglobals.adjointer.equation_count > 0
     adj_html("forward.html", "forward")
