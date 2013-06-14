@@ -86,13 +86,15 @@ top_temperature = DirichletBC(Q, 0.0, "x[1] == %g" % height, "geometric")
 bottom_temperature = DirichletBC(Q, 1.0, "x[1] == 0.0", "geometric")
 T_bcs = [bottom_temperature, top_temperature]
 constant_dt = 3.0e-5
-finish = 0.005
+finish = 10*constant_dt
 
-adj_checkpointing('multistage', steps=int(math.floor(finish/constant_dt)), snaps_on_disk=30, snaps_in_ram=30, verbose=True)
+#adj_checkpointing('multistage', steps=int(math.floor(finish/constant_dt)), snaps_on_disk=30, snaps_in_ram=30, verbose=True)
 
-def main(T_, annotate=False):
+def main(T_ic, annotate=False):
   # Define initial and end time
   t = 0.0
+
+  T_ = Function(T_ic, annotate=annotate)
 
   # Define boundary conditions for the velocity and pressure u
   bottom = DirichletBC(W.sub(0), (0.0, 0.0), "x[1] == 0.0" )
@@ -171,7 +173,7 @@ def Nusselt():
 
     # Define markers (2) for top boundary, remaining facets are marked
     # by 0
-    markers = FacetFunction("sizet", mesh)
+    markers = FacetFunction("size_t", mesh)
     markers.set_all(0)
     top = compile_subdomains("near(x[1], %s)" % height)
     top.mark(markers, 2)
@@ -183,22 +185,19 @@ def Nusselt():
     return (ds(2), Nu2)
 
 if __name__ == "__main__":
-  Tic = interpolate(InitialTemperature(Ra, length), Q)
-  ic_copy = Function(Tic)
-  another_copy = Function(Tic)
+  Tic = interpolate(InitialTemperature(Ra, length), Q, name="InitialTemperature")
 
   Tfinal = main(Tic, annotate=True)
   (ds2, Nu2) = Nusselt()
 
-  print "Running adjoint ... "
-  adj_html("adjoint.html", "adjoint")
-
   J = Functional(-(1.0/Nu2)*grad(Tfinal)[1]*ds2*dt[FINISH_TIME])
-  for (adjoint, var) in compute_adjoint(J, forget=False):
-    pass
+  m = InitialConditionParameter("InitialTemperature")
+  Jm = assemble(-(1.0/Nu2)*grad(Tfinal)[1]*ds2)
+  dJdm = compute_gradient(J, m, forget=False)
+  dJdm_p = compute_gradient(J, m, forget=False, project=True)
 
-  adjoint_vtu = File("bin-final/adjoint.pvd", "compressed")
-  adjoint_vtu << adjoint
+  adjoint_vtu = File("bin-final/gradient.pvd", "compressed")
+  adjoint_vtu << dJdm_p
 
   def J(ic):
     Tfinal = main(ic)
@@ -206,7 +205,4 @@ if __name__ == "__main__":
 
   perturbation_direction = Function(Q)
   perturbation_direction.vector()[:] = 1.0
-  minconv = test_initial_condition_adjoint_cdiff(J, ic_copy, adjoint, seed=0.1, perturbation_direction=perturbation_direction)
-
-  if minconv < 2.9:
-    sys.exit(1)
+  minconv = taylor_test(J, m, Jm, dJdm)
