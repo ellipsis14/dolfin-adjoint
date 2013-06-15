@@ -29,6 +29,7 @@ import adjlinalg
 import misc
 import lusolver
 import utils
+import caching
 
 def annotate(*args, **kwargs):
   '''This routine handles all of the annotation, recording the solves as they
@@ -183,7 +184,9 @@ def annotate(*args, **kwargs):
     value_coeffs=[v.data for v in values]
     expressions.update_expressions(frozen_expressions)
     constant.update_constants(frozen_constants)
-    eq_l=dolfin.replace(eq_lhs, dict(zip(diag_coeffs, value_coeffs)))
+    eq_l = dolfin.replace(eq_lhs, dict(zip(diag_coeffs, value_coeffs)))
+
+    kwargs = {"cache": eq_l in caching.assembled_fwd_forms} # should we cache our matrices on the way backwards?
 
     if hermitian:
       # Homogenise the adjoint boundary conditions. This creates the adjoint
@@ -194,7 +197,6 @@ def annotate(*args, **kwargs):
       else:
         adjoint_bcs = misc.uniq(adjoint_bcs)
 
-      kwargs = {}
       kwargs['bcs'] = adjoint_bcs
       kwargs['solver_parameters'] = solver_parameters
       kwargs['adjoint'] = True
@@ -205,10 +207,9 @@ def annotate(*args, **kwargs):
       if replace_map:
         kwargs['replace_map'] = dict(zip(diag_coeffs, value_coeffs))
 
-      return (matrix_class(dolfin.adjoint(eq_l), **kwargs), adjlinalg.Vector(None, fn_space=u.function_space()))
+      return (matrix_class(dolfin.adjoint(eq_l, reordered_arguments=ufl.algorithms.extract_arguments(eq_l)), **kwargs), adjlinalg.Vector(None, fn_space=u.function_space()))
     else:
 
-      kwargs = {}
       kwargs['bcs'] = misc.uniq(eq_bcs)
       kwargs['solver_parameters'] = solver_parameters
       kwargs['adjoint'] = False

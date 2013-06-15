@@ -6,6 +6,7 @@ import os
 import os.path
 import numpy
 import misc
+import caching
 
 class Vector(libadjoint.Vector):
   '''This class implements the libadjoint.Vector abstract base class for the Dolfin adjoint.
@@ -223,19 +224,37 @@ class Matrix(libadjoint.Matrix):
   together, duplicating matrices, etc., that occur in the process of constructing
   the adjoint equations.'''
 
-  def __init__(self, data, bcs=None, solver_parameters=None, adjoint=None):
+  def __init__(self, data, bcs=None, solver_parameters=None, adjoint=None, cache=False):
 
     if bcs is None:
       self.bcs = []
     else:
       self.bcs=bcs
 
-    self.data=data
+    self.data = data
 
     if solver_parameters is not None:
       self.solver_parameters = solver_parameters
     else:
       self.solver_parameters = {}
+
+    self.cache = cache
+
+  def assemble_data(self):
+    assert not isinstance(self.data, IdentityMatrix)
+    if not self.cache:
+      return dolfin.assemble(self.data)
+    else:
+      if self.data in caching.assembled_adj_forms:
+        if dolfin.parameters["adjoint"]["debug_cache"]:
+          dolfin.info_green("Got an assembly cache hit")
+        return caching.assembled_adj_forms[self.data]
+      else:
+        if dolfin.parameters["adjoint"]["debug_cache"]:
+          dolfin.info_red("Got an assembly cache miss")
+        M = dolfin.assemble(self.data)
+        caching.assembled_adj_forms[self.data] = M
+        return M
 
   def basic_solve(self, var, b):
 
@@ -263,7 +282,7 @@ class Matrix(libadjoint.Matrix):
         dolfin.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
       elif isinstance(b.data, dolfin.Function):
 
-        assembled_lhs = dolfin.assemble(self.data)
+        assembled_lhs = self.assemble_data()
         [bc.apply(assembled_lhs) for bc in bcs]
         assembled_rhs = dolfin.Function(b.data).vector()
         [bc.apply(assembled_rhs) for bc in bcs]
@@ -276,7 +295,7 @@ class Matrix(libadjoint.Matrix):
           J = dolfin.replace(b.nonlinear_J, {b.nonlinear_u: x.data})
           dolfin.fem.solving.solve(F == 0, x.data, b.nonlinear_bcs, J=J, solver_parameters=self.solver_parameters)
         else:
-          assembled_lhs = dolfin.assemble(self.data)
+          assembled_lhs = self.assemble_data()
           [bc.apply(assembled_lhs) for bc in bcs]
           assembled_rhs = wrap_assemble(b.data, test)
           [bc.apply(assembled_rhs) for bc in bcs]
@@ -316,7 +335,7 @@ class Matrix(libadjoint.Matrix):
             assembled_lhs = dolfin.Matrix()
             assembler.assemble(assembled_lhs)
           else:
-            assembled_lhs = dolfin.assemble(self.data)
+            assembled_lhs = self.assemble_data()
             [bc.apply(assembled_lhs) for bc in bcs]
 
           adjglobals.lu_solvers[var] = dolfin.LUSolver(assembled_lhs, "mumps")

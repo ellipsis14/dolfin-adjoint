@@ -1,6 +1,7 @@
 import dolfin
 import copy
 import utils
+import caching
 
 dolfin_assemble = dolfin.assemble
 def assemble(*args, **kwargs):
@@ -10,6 +11,8 @@ def assemble(*args, **kwargs):
   even when the user calls the lower-level :py:data:`solve(A, x, b)`.
   """
   form = args[0]
+  caching.assembled_fwd_forms.add(form)
+  cache = kwargs.pop("cache", False)
 
   to_annotate = utils.to_annotate(kwargs.pop("annotate", None))
 
@@ -17,6 +20,9 @@ def assemble(*args, **kwargs):
   if not isinstance(output, float) and to_annotate:
     output.form = form
     output.assemble_system = False
+
+  if cache:
+    caching.assembled_adj_forms[form] = output
 
   return output
 
@@ -54,6 +60,10 @@ def assemble_system(*args, **kwargs):
   """
   lhs = args[0]
   rhs = args[1]
+  caching.assembled_fwd_forms.add(lhs)
+  caching.assembled_fwd_forms.add(rhs)
+
+  cache = kwargs.pop("cache", False)
 
   if 'bcs' in kwargs:
     bcs = kwargs['bcs']
@@ -75,5 +85,9 @@ def assemble_system(*args, **kwargs):
     rhs_out.form = rhs
     rhs_out.bcs = bcs
     rhs_out.assemble_system = True
+
+  if cache:
+    caching.assembled_adj_forms[lhs] = lhs_out
+    caching.assembled_adj_forms[rhs] = rhs_out
 
   return (lhs_out, rhs_out)

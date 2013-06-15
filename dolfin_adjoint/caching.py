@@ -1,5 +1,8 @@
 import re
 
+
+### Stuff for LU caching
+
 soa_to_adj = re.compile(r'\[(?P<func>Functional:.*?):.*\]')
 
 # For caching strategies: a dictionary that maps adj_variable to LUSolver
@@ -30,3 +33,7 @@ class LUCache(dict):
   def __contains__(self, x):
     return dict.__contains__(self, canonicalise(x))
 
+
+### Stuff for preassembly caching
+assembled_fwd_forms = set()
+assembled_adj_forms = {}

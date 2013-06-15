@@ -67,6 +67,9 @@ def adj_reset_cache():
 
   dolfin.parameters["adjoint"]["stop_annotating"] = False
 
+  caching.assembled_fwd_forms.clear()
+  caching.assembled_adj_forms.clear()
+
 def adj_html(*args, **kwargs):
   '''This routine dumps the current state of the adjglobals.adjointer to a HTML visualisation.
   Use it like:
