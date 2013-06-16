@@ -155,7 +155,7 @@ if __name__ == "__main__":
   print "Ratio: ", ratio
 
   assert success
-  assert ratio < 1.2
+  assert ratio < 2.0
 
   J = Functional(inner(soln, soln)**1*dx*dt[FINISH_TIME] + inner(soln, soln)*dx*dt[START_TIME])
   m = InitialConditionParameter(soln)
