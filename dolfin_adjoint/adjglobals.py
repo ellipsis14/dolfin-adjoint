@@ -57,18 +57,16 @@ function_names = set()
 def adj_check_checkpoints():
   adjointer.check_checkpoints()
 
-lu_solvers = caching.LUCache()
-
 def adj_reset_cache():
   if dolfin.parameters["adjoint"]["debug_cache"]:
     dolfin.info_blue("Reseting solver cache")
 
-  lu_solvers.clear()
 
   dolfin.parameters["adjoint"]["stop_annotating"] = False
 
   caching.assembled_fwd_forms.clear()
   caching.assembled_adj_forms.clear()
+  caching.lu_solvers.clear()
 
 def adj_html(*args, **kwargs):
   '''This routine dumps the current state of the adjglobals.adjointer to a HTML visualisation.

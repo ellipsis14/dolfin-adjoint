@@ -327,7 +327,7 @@ class Matrix(libadjoint.Matrix):
             assembled_rhs = b.data.vector()
         [bc.apply(assembled_rhs) for bc in bcs]
 
-        if not var in adjglobals.lu_solvers:
+        if not var in caching.lu_solvers:
           if dolfin.parameters["adjoint"]["debug_cache"]:
             dolfin.info_red("Got a cache miss for %s" % var)
 
@@ -338,13 +338,13 @@ class Matrix(libadjoint.Matrix):
             assembled_lhs = self.assemble_data()
             [bc.apply(assembled_lhs) for bc in bcs]
 
-          adjglobals.lu_solvers[var] = dolfin.LUSolver(assembled_lhs, "mumps")
-          adjglobals.lu_solvers[var].parameters["reuse_factorization"] = True
+          caching.lu_solvers[var] = dolfin.LUSolver(assembled_lhs, "mumps")
+          caching.lu_solvers[var].parameters["reuse_factorization"] = True
         else:
           if dolfin.parameters["adjoint"]["debug_cache"]:
             dolfin.info_green("Got a cache hit for %s" % var)
 
-        adjglobals.lu_solvers[var].solve(output.data.vector(), assembled_rhs)
+        caching.lu_solvers[var].solve(output.data.vector(), assembled_rhs)
 
     return output
 
