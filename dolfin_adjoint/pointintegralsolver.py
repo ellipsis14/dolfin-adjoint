@@ -40,7 +40,7 @@ if dolfin.__version__ > '1.2.0':
   class PointIntegralRHS(libadjoint.RHS):
     def __init__(self, solver, dt, ic_var):
       self.solver = solver
-      self.solver.reset()
+      if hasattr(self.solver, 'reset'): self.solver.reset()
       self.dt = dt
 
       self.scheme = scheme = solver.scheme()
@@ -95,15 +95,21 @@ if dolfin.__version__ > '1.2.0':
       return adjlinalg.Vector(new_scheme.solution())
 
     def derivative_action(self, dependencies, values, variable, contraction_vector, hermitian):
-      assert not hermitian
-
       new_scheme = self.new_scheme(dependencies, values)
-      tlm_scheme = new_scheme.to_tlm(contraction_vector.data)
-      tlm_solver = dolfin.PointIntegralSolver(tlm_scheme)
-      tlm_solver.parameters.update(self.solver.parameters)
-      tlm_solver.step(self.dt)
+      if not hermitian:
+        tlm_scheme = new_scheme.to_tlm(contraction_vector.data)
+        tlm_solver = dolfin.PointIntegralSolver(tlm_scheme)
+        tlm_solver.parameters.update(self.solver.parameters)
+        tlm_solver.step(self.dt)
 
-      return adjlinalg.Vector(tlm_scheme.solution())
+        return adjlinalg.Vector(tlm_scheme.solution())
+      else:
+        adm_scheme = new_scheme.to_adm(contraction_vector.data)
+        adm_solver = dolfin.PointIntegralSolver(adm_scheme)
+        adm_solver.parameters.update(self.solver.parameters)
+        adm_solver.step(self.dt)
+
+        return adjlinalg.Vector(adm_scheme.solution())
 
   __all__ = ['PointIntegralSolver']
 else:
