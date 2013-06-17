@@ -36,7 +36,7 @@ parameters["adjoint"]["debug_cache"] = True
 
 # Load mesh from file
 #mesh = Mesh("lshape.xml.gz")
-mesh = UnitSquareMesh(128, 128)
+mesh = UnitSquareMesh(192, 192)
 
 # Define function spaces (P2-P1)
 V = VectorFunctionSpace(mesh, "CG", 2)
@@ -167,4 +167,6 @@ if __name__ == "__main__":
   print "Adjoint time: ", adj_time
   ratio = adj_time / fwd_time
   print "Ratio: ", ratio
-  
+
+  if '--ignore' not in sys.argv:
+    assert ratio < 1.5

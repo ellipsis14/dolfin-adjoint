@@ -1,4 +1,5 @@
 import re
+import ufl.algorithms
 
 ### A general dictionary that applies a key function before lookup
 class KeyedDict(dict):
@@ -42,7 +43,10 @@ lu_solvers = KeyedDict(keyfunc=lu_canonicalisation)
 ### Stuff for preassembly caching
 
 def form_key(form):
-  return form
+  try:
+    return ufl.algorithms.expand_indices(form)
+  except:
+    return form
 
 assembled_fwd_forms = set()
 assembled_adj_forms = KeyedDict(keyfunc=form_key)
