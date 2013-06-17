@@ -105,7 +105,6 @@ if __name__ == "__main__":
   m = InitialConditionParameter(u)
   assert m.data().vector()[0] == u0.vector()[0]
   Jm = assemble(inner(u, u)*dx)
-  dJdm = compute_gradient_tlm(J, m, forget=False)
 
   def Jhat(ic):
     time = Constant(0.0)
@@ -113,7 +112,12 @@ if __name__ == "__main__":
     print "Perturbed functional value: ", assemble(inner(u, u)*dx)
     return assemble(inner(u, u)*dx)
 
-  adj_html("forward.html", "forward")
+  dJdm = compute_gradient_tlm(J, m, forget=False)
   minconv_tlm = taylor_test(Jhat, m, Jm, dJdm, perturbation_direction=interpolate(Constant(1.0), R), seed=1.0)
   assert minconv_tlm > 1.8
 
+  ## Step 3. Check ADM correctness
+
+  dJdm = compute_gradient(J, m, forget=False)
+  minconv_adm = taylor_test(Jhat, m, Jm, dJdm, perturbation_direction=interpolate(Constant(1.0), R), seed=1.0)
+  assert minconv_adm > 1.8
