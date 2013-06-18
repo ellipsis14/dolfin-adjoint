@@ -80,12 +80,13 @@ class Functional(libadjoint.Functional):
   def __call__(self, adjointer, timestep, dependencies, values):
     
     functional_value = self._substitute_form(adjointer, timestep, dependencies, values)
-    args = ufl.algorithms.extract_arguments(functional_value)
-    if len(args) > 0:
-      dolfin.info_red("The form passed into Functional must be rank-0 (a scalar)! You have passed in a rank-%s form." % len(args))
-      raise libadjoint.exceptions.LibadjointErrorInvalidInputs
 
     if functional_value is not None:
+      args = ufl.algorithms.extract_arguments(functional_value)
+      if len(args) > 0:
+        dolfin.info_red("The form passed into Functional must be rank-0 (a scalar)! You have passed in a rank-%s form." % len(args))
+        raise libadjoint.exceptions.LibadjointErrorInvalidInputs
+
       return dolfin.assemble(functional_value)
     else:
       return 0.0
