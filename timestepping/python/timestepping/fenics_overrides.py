@@ -166,6 +166,7 @@ def adjoint(form, reordered_arguments = None, adjoint_arguments = None):
       raise InvalidArgumentException("adjoint_arguments must be a pair of Argument s")
 
     a_test, a_trial = adjoint_arguments
+    assert(a_test.count() == a_trial.count() - 1)
 
     adj = dolfin.adjoint(form)
     args = ufl.algorithms.extract_arguments(adj)

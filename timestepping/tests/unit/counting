@@ -16,6 +16,7 @@
 
 from dolfin import *
 from timestepping import *
+import ufl
 
 ngrid = 1
 a = StaticConstant(1.0)
@@ -57,7 +58,7 @@ class Functional(TimeFunctional):
     if s >= self.__min_s:
       return derivative(self.__u * dx, param)
     else:
-      return Form([])
+      return ufl.form.Form([])
   def set_min_s(self, min_s):
     self.__min_s = min_s
     return
@@ -116,7 +117,7 @@ class Functional(TimeFunctional):
     if s >= self.__min_s:
       return derivative(s * self.__u * dx, param)
     else:
-      return Form([])
+      return ufl.form.Form([])
   def set_min_s(self, min_s):
     self.__min_s = min_s
     return

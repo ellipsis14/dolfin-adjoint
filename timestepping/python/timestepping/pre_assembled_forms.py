@@ -89,18 +89,19 @@ class PAForm:
 
   Constructor arguments:
     form: The Form to be pre-assembled.
-    parameters: Parameters defining detailed optimisation options.
+    pre_assembly_parameters: Parameters defining detailed optimisation options.
   """
   
-  def __init__(self, form, parameters = {}, default_parameters = dolfin.parameters["timestepping"]["pre_assembly"]["forms"]):
-    if not isinstance(default_parameters, dolfin.Parameters):
-      raise InvalidArgumentException("default_parameters must be a Parameters")
+  def __init__(self, form, pre_assembly_parameters = {},
+    default_pre_assembly_parameters = dolfin.parameters["timestepping"]["pre_assembly"]["forms"]):
+    if not isinstance(default_pre_assembly_parameters, dolfin.Parameters):
+      raise InvalidArgumentException("default_pre_assembly_parameters must be a Parameters")
     
-    nparameters = default_parameters.copy()
-    nparameters.update(parameters)
-    parameters = nparameters;  del(nparameters)
+    npre_assembly_parameters = default_pre_assembly_parameters.copy()
+    npre_assembly_parameters.update(pre_assembly_parameters)
+    pre_assembly_parameters = npre_assembly_parameters;  del(npre_assembly_parameters)
 
-    self.parameters = parameters
+    self.pre_assembly_parameters = pre_assembly_parameters
     self.__set(form)
 
     return
@@ -119,7 +120,7 @@ class PAForm:
   def _set_optimise(self, form):
     if is_static_form(form):
       self._set_pa([form], [])
-    elif self.parameters["term_optimisation"]:
+    elif self.pre_assembly_parameters["term_optimisation"]:
       quadrature_degree = form_quadrature_degree(form)
 
       pre_assembled_L = []
@@ -127,7 +128,7 @@ class PAForm:
       
       for integral in form_integrals(form):
         integrand, iargs = preprocess_integral(form, integral)
-        if self.parameters["expand_form"]:
+        if self.pre_assembly_parameters["expand_form"]:
           if isinstance(integrand, ufl.algebra.Sum):
             terms = [(term, expand_expr(term)) for term in integrand.operands()]
           else:
@@ -165,7 +166,7 @@ class PAForm:
       l_L = pre_assembled_L[0]
       for L in pre_assembled_L[1:]:
         l_L += L
-      self._pre_assembled_L = assembly_cache.assemble(l_L)
+      self._pre_assembled_L = assembly_cache.assemble(l_L, compress = self.pre_assembly_parameters["compress_matrices"])
 
     if len(non_pre_assembled_L) == 0:
       self._non_pre_assembled_L = None
@@ -265,11 +266,13 @@ class PABilinearForm(PAForm):
   default parameters.
   """
   
-  def __init__(self, form, parameters = {}):
+  def __init__(self, form, pre_assembly_parameters = {}):
     if not extract_form_data(form).rank == 2:
       raise InvalidArgumentException("form must be a rank 2 form")
     
-    PAForm.__init__(self, form, parameters = parameters, default_parameters = dolfin.parameters["timestepping"]["pre_assembly"]["bilinear_forms"])
+    PAForm.__init__(self, form,
+      pre_assembly_parameters = pre_assembly_parameters,
+      default_pre_assembly_parameters = dolfin.parameters["timestepping"]["pre_assembly"]["bilinear_forms"])
 
     return
 
@@ -314,11 +317,13 @@ class PALinearForm(PAForm):
   optimisations specific to linear forms. Also has different default parameters.
   """
   
-  def __init__(self, form, parameters = {}):
+  def __init__(self, form, pre_assembly_parameters = {}):
     if not extract_form_data(form).rank == 1:
       raise InvalidArgumentException("form must be a rank 1 form")
     
-    PAForm.__init__(self, form, parameters = parameters, default_parameters = dolfin.parameters["timestepping"]["pre_assembly"]["linear_forms"])
+    PAForm.__init__(self, form,
+      pre_assembly_parameters = pre_assembly_parameters,
+      default_pre_assembly_parameters = dolfin.parameters["timestepping"]["pre_assembly"]["linear_forms"])
 
     return
 
@@ -347,12 +352,12 @@ class PALinearForm(PAForm):
     
     if is_static_form(form):
       pre_assembled_L.append(form)
-    elif self.parameters["term_optimisation"]:
+    elif self.pre_assembly_parameters["term_optimisation"]:
       quadrature_degree = form_quadrature_degree(form)
     
       for integral in form_integrals(form):
         integrand, iargs = preprocess_integral(form, integral)
-        if self.parameters["expand_form"]:
+        if self.pre_assembly_parameters["expand_form"]:
           if isinstance(integrand, ufl.algebra.Sum):
             terms = [(term, expand_expr(term)) for term in integrand.operands()]
           else:
@@ -368,7 +373,7 @@ class PALinearForm(PAForm):
             stform = QForm([ufl.Integral(sterm, *iargs)], quadrature_degree = quadrature_degree)
             if is_static_form(stform):
               pterm[0].append(stform)
-            elif self.parameters["matrix_optimisation"]:
+            elif self.pre_assembly_parameters["matrix_optimisation"]:
               mform = matrix_optimisation(stform)
               if mform is None:
                 pterm[2].append(stform)
@@ -387,7 +392,7 @@ class PALinearForm(PAForm):
               else:
                 mult_assembled_L[mform[0]] = [mform[1]]
             non_pre_assembled_L += pterm[2]
-    elif self.parameters["matrix_optimisation"]:
+    elif self.pre_assembly_parameters["matrix_optimisation"]:
       mform = matrix_optimisation(form)
       if mform is None:
         non_pre_assembled_L.append(form)
@@ -420,7 +425,7 @@ class PALinearForm(PAForm):
         mat_form = mat_forms[0]
         for lmat_form in mat_forms[1:]:
           mat_form += lmat_form
-        self._mult_assembled_L.append([assembly_cache.assemble(mat_form), fn])
+        self._mult_assembled_L.append([assembly_cache.assemble(mat_form, compress = self.pre_assembly_parameters["compress_matrices"]), fn])
 
     if len(non_pre_assembled_L) == 0:
       self._non_pre_assembled_L = None

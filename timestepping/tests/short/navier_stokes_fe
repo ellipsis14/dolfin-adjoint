@@ -1,0 +1,185 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2010-2011 Anders Logg
+# Copyright (C) 2013 University of Oxford
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# DOLFIN modification dates:
+# Modified by Mikael Mortensen 2011
+# First added:  2010-08-30
+# Last changed: 2011-06-30
+
+# Based on dolfin-adjoint pre_assemble_efficiency test, bzr trunk 735
+# Code first added: 2013-06-
+
+from dolfin import *
+from timestepping import *
+import ufl
+
+# Work around a Heisenbug somewhere deep in the FEniCS system
+parameters["form_compiler"]["representation"] = "quadrature"
+
+# Model mesh
+mesh = UnitSquareMesh(192, 192)
+
+# Define function spaces (P2-P1)
+V = VectorFunctionSpace(mesh, "CG", 2)
+Q = FunctionSpace(mesh, "CG", 1)
+
+# Define trial and test functions
+u = TrialFunction(V)
+p = TrialFunction(Q)
+v = TestFunction(V)
+q = TestFunction(Q)
+
+# Set parameter values
+dt = 0.01
+T = 0.05
+nu = 0.01
+ic = StaticFunction(V)
+
+# Define time-dependent pressure boundary condition
+p_in = Expression("sin(3.0*t)", t=0.0)
+
+# Define boundary conditions
+noslip  = StaticDirichletBC(V, (0, 0),
+                      "on_boundary && \
+                        (x[0] < DOLFIN_EPS | x[1] < DOLFIN_EPS | \
+                        (x[0] > 0.5 - DOLFIN_EPS && x[1] > 0.5 - DOLFIN_EPS))")
+inflow  = DirichletBC(Q, p_in, "x[1] > 1.0 - DOLFIN_EPS")
+outflow = StaticDirichletBC(Q, 0, "x[0] > 1.0 - DOLFIN_EPS")
+bcu = [noslip]
+bcp = [inflow, outflow]
+
+# Create functions
+levels = TimeLevels(levels = [n, n + 1], cycle_map = {n:n + 1})
+Us = TimeFunction(levels, V, name = "TentativeVelocity")
+U = TimeFunction(levels, V, name = "Velocity")
+P = TimeFunction(levels, Q, name = "Pressure")
+u0 = U[n]
+u1s = Us[n + 1]
+u1 = U[n + 1]
+p1 = P[n + 1]
+
+system = TimeSystem()
+
+# Define coefficients
+k = StaticConstant(dt)
+f = StaticConstant((0, 0))
+
+# Tentative velocity step
+F1 = (1/k)*inner(u - u0, v)*dx + inner(grad(u0)*u0, v)*dx + \
+      nu*inner(grad(u), grad(v))*dx - inner(f, v)*dx
+a1 = lhs(F1)
+L1 = rhs(F1)
+
+# Pressure update
+a2 = inner(grad(p), grad(q))*dx
+L2 = -(1/k)*div(u1s)*q*dx
+
+# Velocity update
+a3 = inner(u, v)*dx
+L3 = inner(u1s, v)*dx - k*inner(grad(p1), v)*dx
+
+prec = "amg" if has_krylov_solver_preconditioner("amg") else "default"
+
+## The following is how the model should be initialised, with a projection of the
+## initial velocity
+#system.add_solve(ic, Us[0])
+#system.add_solve(a2 == replace(L2, {u1s:Us[0]}),
+#  P[0], bcp, solver_parameters = {"linear_solver":"gmres", "preconditioner":prec})
+#system.add_solve(a3 == replace(L3, {u1s:Us[0], p1:P[0]}),
+#  U[0], bcu, solver_parameters = {"linear_solver":"gmres", "preconditioner":"default"},
+#  pre_assembly_parameters = {"bilinear_forms":{"compress_matrices":False}})
+
+# The following duplicates the initialisation used by the dolfin-adjoint
+# preassembly_efficiency test
+system.add_solve(ic, U[0])
+
+system.add_solve(a1 == L1,
+  u1s, bcu, solver_parameters = {"linear_solver":"gmres", "preconditioner":"default"},
+  pre_assembly_parameters = {"bilinear_forms":{"compress_matrices":False}})
+system.add_solve(a2 == L2,
+  p1, bcp, solver_parameters = {"linear_solver":"gmres", "preconditioner":prec})
+system.add_solve(a3 == L3,
+  u1, bcu, solver_parameters = {"linear_solver":"gmres", "preconditioner":"default"},
+  pre_assembly_parameters = {"bilinear_forms":{"compress_matrices":False}})
+def update(s, cs = None):
+  p_in.t = s * dt
+  return
+system.set_update(update)
+
+system = system.assemble(adjoint = True, initialise = False)
+max_s = int((T / dt) + 0.5)
+class Functional(TimeFunctional):
+  def __init__(self):
+    TimeFunctional.__init__(self)
+    self.__J = inner(U[n], U[n]) * dx
+    self.initialise()
+    return
+  def initialise(self, val = 0.0):
+    self.__val = 0.0
+    return
+  def value(self):
+    return self.__val
+  def addto(self, s):
+    if s in [0, max_s]:
+      self.__val += assemble(self.__J)
+    return
+  def derivative(self, parameter, s):
+    if s in [0, max_s] and parameter == U[n]:
+      return derivative(self.__J, U[n])
+    else:
+      return ufl.form.Form([])
+  def dependencies(self, s = None, non_symbolic = False):
+    if s is None or s in [0, max_s]:
+      return [U[n]]
+    else:
+      return []
+system.set_functional(Functional())
+
+# Time-stepping
+timer = Timer("forward")
+system.initialise()
+t = dt
+#s = 0
+while t < T + DOLFIN_EPS:
+  system.timestep()
+  t += dt
+#  s += 1
+#assert(s == max_s)
+system.finalise()
+print "Forward time: %.6f" % timer.stop()
+
+comp = U[N].vector().norm("l2")
+ref = 2.41757348438711750e+00
+err = abs(comp - ref)
+print "%.17e" % comp
+print "%.17e" % ref
+print "%.17e" % err
+assert(err < 2.0e-14)
+
+timer = Timer("adjoint")
+dJdm = system.compute_gradient(ic)
+print "Adjoint time: %.6f" % timer.stop()
+comp = dJdm.norm("l2")
+ref = 2.69417333042878485e-05
+err = abs(comp - ref)
+print "%.17e" % comp
+print "%.17e" % ref
+print "%.17e" % err
+assert(err < 3.0e-19)
+
+orders = system.taylor_test(ic, grad = dJdm, fact = 1.0e-7)
+assert((orders > 1.99).all())

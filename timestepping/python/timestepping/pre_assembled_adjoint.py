@@ -309,22 +309,25 @@ class PAAdjointSolvers:
           static_bcs = n_non_static_bcs(self.__a_bcs[i]) == 0
           static_form = is_static_form(self.__a_a_forms[i])
           if len(self.__a_bcs[i]) > 0 and static_bcs and static_form:
-            a_a = assembly_cache.assemble(self.__a_a_forms[i], bcs = self.__a_bcs[i], symmetric_bcs = self.__a_pre_assembly_parameters[i]["equations"]["symmetric_boundary_conditions"])
+            a_a = assembly_cache.assemble(self.__a_a_forms[i],
+              bcs = self.__a_bcs[i],
+              symmetric_bcs = self.__a_pre_assembly_parameters[i]["equations"]["symmetric_boundary_conditions"],
+              compress = self.__a_pre_assembly_parameters[i]["bilinear_forms"]["compress_matrices"])
             a_solver = solver_cache.solver(self.__a_a_forms[i], self.__a_solver_parameters[i], static = True, bcs = self.__a_bcs[i], symmetric_bcs = self.__a_pre_assembly_parameters[i]["equations"]["symmetric_boundary_conditions"])
           else:
-            a_a = PABilinearForm(self.__a_a_forms[i], parameters = self.__a_pre_assembly_parameters[i]["bilinear_forms"])
+            a_a = PABilinearForm(self.__a_a_forms[i], pre_assembly_parameters = self.__a_pre_assembly_parameters[i]["bilinear_forms"])
             a_solver = solver_cache.solver(self.__a_a_forms[i], self.__a_solver_parameters[i], static = a_a.is_static() and static_bcs, bcs = self.__a_bcs[i], symmetric_bcs = self.__a_pre_assembly_parameters[i]["equations"]["symmetric_boundary_conditions"])
         else:
           assert(a_a_rank == 1)
           assert(self.__a_solver_parameters[i] is None)
-          a_a = PALinearForm(self.__a_a_forms[i], parameters = self.__a_pre_assembly_parameters[i]["linear_forms"])
+          a_a = PALinearForm(self.__a_a_forms[i], pre_assembly_parameters = self.__a_pre_assembly_parameters[i]["linear_forms"])
           a_solver = None
       return a_a, a_solver
     def assemble_rhs(i):
       if self.__a_L_forms[i] is None:
         return None
       else:
-        return PALinearForm(self.__a_L_forms[i], parameters = self.__a_pre_assembly_parameters[i]["linear_forms"])
+        return PALinearForm(self.__a_L_forms[i], pre_assembly_parameters = self.__a_pre_assembly_parameters[i]["linear_forms"])
     
     if len(args) == 0:
       la_a, la_solvers = [], []
@@ -499,7 +502,7 @@ class PAAdjointSolvers:
       self.__a_L_rhs = [None for i in range(len(self.__a_x))]
       for i, a_x in enumerate(a_rhs):
         if a_x in self.__a_keys:
-          self.__a_L_rhs[self.__a_keys[a_x]] = PALinearForm(a_rhs[a_x], parameters = self.__a_pre_assembly_parameters[i]["linear_forms"])
+          self.__a_L_rhs[self.__a_keys[a_x]] = PALinearForm(a_rhs[a_x], pre_assembly_parameters = self.__a_pre_assembly_parameters[i]["linear_forms"])
       self.__functional = functional
     elif isinstance(functional, TimeFunctional):
       self.__a_L_rhs = [None for i in range(len(self.__a_x))]
