@@ -31,8 +31,6 @@ from dolfin_adjoint import *
 # Print log messages only from the root process in parallel
 parameters["std_out_all_processes"] = False;
 parameters["adjoint"]["debug_cache"] = True
-parameters["form_compiler"]["cpp_optimize"] = True
-parameters["form_compiler"]["cpp_optimize_flags"] = "-O3 -ffast-math -march=native"
 
 #parameters["mesh_partitioner"] = "SCOTCH";
 
