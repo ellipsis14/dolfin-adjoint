@@ -114,7 +114,10 @@ class PAEquationSolver(EquationSolver):
         raise InvalidArgumentException("Invalid equation")
         
     # Initial guess sanity checking
-    if not initial_guess is None:
+    if initial_guess is None:
+      if "krylov_solver" in solver_parameters and "nonzero_initial_guess" in solver_parameters["krylov_solver"] and solver_parameters["krylov_solver"]["nonzero_initial_guess"]:
+        initial_guess = x
+    else:
       if is_linear and eq_lhs_rank == 1:
         # Supplied an initial guess for a linear solve with a rank 1 LHS -
         # ignore it
@@ -265,21 +268,10 @@ class PAEquationSolver(EquationSolver):
     initial guess.
     """
     
-    def uses_x_as_initial_guess():
-      if not self.is_linear():
-        return self.__initial_guess is None
-      solver = self.solver()
-      if solver is None:
-        return False
-      else:
-        return self.__initial_guess is None and hasattr(solver.parameters, "nonzero_initial_guess") and solver.parameters["nonzero_initial_guess"]
-    
     if not non_symbolic:
       return EquationSolver.dependencies(self, non_symbolic = False)
     elif not self.__initial_guess is None:
       return EquationSolver.dependencies(self, non_symbolic = True) + [self.__initial_guess]
-    elif uses_x_as_initial_guess():
-      return EquationSolver.dependencies(self, non_symbolic = True) + [self.x()]
     else:
       return EquationSolver.dependencies(self, non_symbolic = True)
 
@@ -298,7 +290,7 @@ class PAEquationSolver(EquationSolver):
     """
     
     x, pre_assembly_parameters = self.x(), self.pre_assembly_parameters()
-    if not self.__initial_guess is None:
+    if not self.__initial_guess is None and not self.__initial_guess is x:
       x.assign(self.__initial_guess)
     
     if self.is_linear():

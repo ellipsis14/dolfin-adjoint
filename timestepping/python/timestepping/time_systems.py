@@ -230,8 +230,6 @@ class TimeSystem:
       x_deps = ufl.algorithms.extract_coefficients(eq.lhs)
       if not is_zero_rhs(eq.rhs):
         x_deps += ufl.algorithms.extract_coefficients(eq.rhs)
-      if not initial_guess is None:
-        x_deps.append(initial_guess)
       eq_lhs = eq.lhs
 
       lhs_data = extract_form_data(eq_lhs)
@@ -239,6 +237,8 @@ class TimeSystem:
         for dep in x_deps:
           if dep is x:
             raise DependencyException("Invalid non-linear solve")
+      if not initial_guess is None:
+        x_deps.append(initial_guess)
     
     if not hasattr(x, "_time_level_data"):
       raise InvalidArgumentException("Missing time level data")

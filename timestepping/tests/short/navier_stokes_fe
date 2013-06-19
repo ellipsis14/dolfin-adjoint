@@ -21,7 +21,7 @@
 # Last changed: 2011-06-30
 
 # Based on dolfin-adjoint pre_assemble_efficiency test, bzr trunk 735
-# Code first added: 2013-06-
+# Code first added: 2013-06-19
 
 from dolfin import *
 from timestepping import *
