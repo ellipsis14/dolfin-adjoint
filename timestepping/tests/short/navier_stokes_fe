@@ -168,7 +168,7 @@ err = abs(comp - ref)
 print "%.17e" % comp
 print "%.17e" % ref
 print "%.17e" % err
-assert(err < 2.0e-14)
+assert(err < 3.0e-14)
 
 timer = Timer("adjoint")
 dJdm = system.compute_gradient(ic)
@@ -179,7 +179,7 @@ err = abs(comp - ref)
 print "%.17e" % comp
 print "%.17e" % ref
 print "%.17e" % err
-assert(err < 3.0e-19)
+assert(err < 4.0e-18)
 
 orders = system.taylor_test(ic, grad = dJdm, fact = 1.0e-7)
 assert((orders > 1.99).all())
