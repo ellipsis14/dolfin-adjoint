@@ -26,6 +26,8 @@ def main(u, form, time, Solver, dt):
   ys = [u.vector().array()[0]]
 
   solver = PointIntegralSolver(scheme)
+  solver.parameters.reset_stage_solutions = True
+  solver.parameters.newton_solver.reset_each_step = True
 
   for i in range(int(0.2/dt)):
     solver.step(dt)
