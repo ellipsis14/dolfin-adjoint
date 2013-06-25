@@ -1,6 +1,6 @@
 import libadjoint
 import numpy
-from dolfin import cpp, info, project, Function
+from dolfin import cpp, info, project, Function, info_blue
 from dolfin_adjoint import adjlinalg, adjrhs, constant, utils, drivers
 from dolfin_adjoint.adjglobals import adjointer, mem_checkpoints, disk_checkpoints, adj_reset_cache
 
@@ -218,7 +218,10 @@ class ReducedFunctional(object):
                 scaled_dfunc_value.append(Function(df.function_space(), self.scale * df.vector()))
             else:
                 scaled_dfunc_value.append(self.scale * df)
-
+        
+        if self.current_func_value is None:
+            self(self.parameter)
+        
         if self.derivative_cb:
             self.derivative_cb(self.scale * self.current_func_value, unlist(scaled_dfunc_value), unlist([p.data() for p in self.parameter]))
 
@@ -253,7 +256,7 @@ class ReducedFunctional(object):
         # Now its time to update the parameter values using the given array  
         m = [p.data() for p in self.parameter]
         set_local(m, m_array)
-
+        info_blue("\nEvaluating functional at m = {0} \n".format(m_array))
         return self(m)
 
     def derivative_array(self, m_array, taylor_test = False, seed = 0.001, forget = True):
@@ -270,7 +273,7 @@ class ReducedFunctional(object):
         m = [p.data() for p in self.parameter]
         if (m_array != get_global(m)).any():
             self.eval_array(m_array) 
-
+        info_blue("\nEvaluating gradient m = {0} \n".format(m_array))
         dJdm = self.derivative(forget=forget) 
         dJdm_global = get_global(dJdm)
 
@@ -300,7 +303,7 @@ class ReducedFunctional(object):
             # Clear the adjoint solution as we need to recompute them 
             for i in range(adjglobals.adjointer.equation_count):
                 adjglobals.adjointer.forget_adjoint_values(i)
-
+        info_blue("\nEvaluating Hessian at m = {0} \n".format(m_array))
         set_local(m, m_array)
         self.H.update(m)
 
