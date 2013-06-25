@@ -866,6 +866,7 @@ class AdjointModel:
       self.__a_initial_cycle1.set_functional(None)
       self.__a_initial_cycle2.set_functional(None)
       self.__a_cycle.set_functional(None)
+      self.__a_final_solves.set_functional(None)
     elif isinstance(functional, ufl.form.Form):
       if not extract_form_data(functional).rank == 0:
         raise InvalidArgumentException("functional must be rank 0")
@@ -882,11 +883,13 @@ class AdjointModel:
       self.__a_initial_cycle1.set_functional(functional)
       self.__a_initial_cycle2.set_functional(None)
       self.__a_cycle.set_functional(None)
+      self.__a_final_solves.set_functional(None)
     elif isinstance(functional, TimeFunctional):
       self.__a_initial_solves.set_functional(None)
       self.__a_initial_cycle1.set_functional(None)
       self.__a_initial_cycle2.set_functional(functional)
       self.__a_cycle.set_functional(functional)
+      self.__a_final_solves.set_functional(functional)
     else:
       raise InvalidArgumentException("functional must be a Form or a TimeFunctional")
       
@@ -904,7 +907,9 @@ class AdjointModel:
       raise InvalidArgumentException("s must be a non-negative integer")
     
     if isinstance(self.__functional, TimeFunctional):
-      if self.__s == 0:
+      if s == 0:
+        self.__a_final_solves.update_functional(s)
+      elif self.__s == 0:
         self.__a_initial_cycle2.update_functional(s)
       else:
         self.__a_cycle.update_functional(s)
@@ -1550,6 +1555,7 @@ class ManagedModel:
 
     self.__adjoint.final_cycle()
     self.__restore_timestep_checkpoint(-2)
+    self.__adjoint.update_functional(0)
     self.__adjoint.finalise()
     addto_grad(-1, self.__adjoint._AdjointModel__a_final_solves, self.__a_map)
     if not callback is None:
@@ -1684,7 +1690,10 @@ class ManagedModel:
     self.reassemble_forward(parameter)
     self.__restore_timestep_checkpoint(-4)
     if isinstance(self.__functional, TimeFunctional):
-      self.__functional.initialise(val = J)
+      if self.__functional.initialise.im_func.func_code.co_argcount < 2:
+        self.rerun_forward()
+      else:
+        self.__functional.initialise(val = J)
 
     dolfin.info("Taylor remainder test, no adjoint errors  : %s" % str(errs_1))
     dolfin.info("Taylor remainder test, with adjoint errors: %s" % str(errs_2))
