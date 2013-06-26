@@ -1,4 +1,5 @@
 import coeffstore
+import expressions
 import caching
 import libadjoint
 import dolfin
@@ -61,7 +62,6 @@ def adj_reset_cache():
   if dolfin.parameters["adjoint"]["debug_cache"]:
     dolfin.info_blue("Reseting solver cache")
 
-
   dolfin.parameters["adjoint"]["stop_annotating"] = False
 
   caching.assembled_fwd_forms.clear()
@@ -80,6 +80,7 @@ def adj_html(*args, **kwargs):
 def adj_reset():
   '''Forget all annotation, and reset the entire dolfin-adjoint state.'''
   adjointer.reset()
+  expressions.expression_attrs.clear()
   adj_variables.__init__()
   function_names.__init__()
   lusolver.lu_solvers = {}
