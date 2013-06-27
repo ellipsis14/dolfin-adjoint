@@ -2,13 +2,13 @@ Source: dolfin-adjoint
 Section: python
 Priority: optional
 Maintainer: Patrick Farrell <patrick.farrell06@imperial.org>
-Build-Depends: debhelper (>> 5.0.0), cdbs, python, python-all-dev, python-central, python-numpy
+Build-Depends: debhelper (>> 5.0.0), cdbs, python, python-all-dev, python-central
 XS-Python-Version: >= 2.5
 Standards-Version: 3.9.1
 
 Package: python-dolfin-adjoint
 Architecture: any
-Depends: ${shlibs:Depends}, ${python:Depends}, ${misc:Depends}, python-libadjoint, python-dolfin
+Depends: ${shlibs:Depends}, ${python:Depends}, ${misc:Depends}, python-libadjoint, python-dolfin, python-numpy, python-scipy
 XB-Python-Version: ${python:Versions}
 Description: Automatically derive the discrete adjoints of DOLFIN models
  This package automatically derives the discrete adjoint and tangent linear

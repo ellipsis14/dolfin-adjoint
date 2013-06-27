@@ -1,8 +1,6 @@
 import ufl
 import dolfin
 
-import numpy
-
 import libadjoint
 
 import solving

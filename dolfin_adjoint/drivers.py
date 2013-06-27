@@ -3,7 +3,6 @@ from parameter import *
 from dolfin import info_red, info_blue, info
 import adjglobals
 import dolfin
-import numpy
 import constant
 import adjresidual
 import ufl.algorithms
