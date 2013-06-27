@@ -32,10 +32,9 @@ def minimize_scipy_generic(J, dJ, m, method, bounds = None, H = None, **kwargs):
 
     try:
         from scipy.optimize import minimize as scipy_minimize
-        from scipy.optimize import basinhopping
     except ImportError:
         print "**************** Deprecated warning *****************"
-        print "You have an old version of scipy (<0.12). This version is not supported by dolfin-adjoint."
+        print "You have an old version of scipy (<0.11). This version is not supported by dolfin-adjoint."
         raise ImportError
 
     m_global = get_global(m)
@@ -63,6 +62,13 @@ def minimize_scipy_generic(J, dJ, m, method, bounds = None, H = None, **kwargs):
         kwargs["hessp"] = H
 
     if method=="basinhopping":
+        try:
+            from scipy.optimize import basinhopping
+        except ImportError:
+            print "**************** Outdated scipy version warning *****************"
+            print "The basin hopping optimisation algorithm requires scipy >= 0.12."
+            raise ImportError
+
         del kwargs["options"]
         del kwargs["jac"]
         kwargs["minimizer_kwargs"]["jac"]=dJ
