@@ -35,7 +35,7 @@ def minimize_scipy_generic(J, dJ, m, method, bounds = None, H = None, **kwargs):
         from scipy.optimize import basinhopping
     except ImportError:
         print "**************** Deprecated warning *****************"
-        print "You have a old version of scipy (<0.11). This version is not supported by dolfin-adjoint."
+        print "You have an old version of scipy (<0.12). This version is not supported by dolfin-adjoint."
         raise ImportError
 
     m_global = get_global(m)
