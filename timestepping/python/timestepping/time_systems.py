@@ -372,10 +372,10 @@ class TimeSystem:
       for level in tfn.levels():
         if level > last_past_level:
           if not tfn[level] in self.__solves:
-            dolfin.info_red("Missing time level %s solve for TimeFunction %s" % (level, tfn.name()))
+            dolfin.warning("Missing time level %s solve for TimeFunction %s" % (level, tfn.name()))
         else:
           if not tfn.has_level(level.offset()) or not tfn[level.offset()] in self.__init_solves:
-            dolfin.info_red("Missing time level %i solve for TimeFunction %s" % (level.offset(), tfn.name()))
+            dolfin.warning("Missing time level %i solve for TimeFunction %s" % (level.offset(), tfn.name()))
 
     return
 
@@ -784,7 +784,7 @@ class AdjointModel:
     """
     
     if self.__functional is None:
-      dolfin.info_red("Warning: Running adjoint model with no functional defined")
+      dolfin.warning("Running adjoint model with no functional defined")
 
     self.__a_map.zero_adjoint()
 
@@ -1469,8 +1469,8 @@ class ManagedModel:
         cp_cs = copy.copy(s_cp_cs)
         for c in self.__functional.dependencies(s, non_symbolic = True):
           if isinstance(c, dolfin.Function) and hasattr(c, "_time_level_data"):
-            if not isinstance(c._time_level_data[1], TimeLevel):
-              raise DependencyException("Unexpected initial or final time level functional dependency")
+            if not isinstance(c._time_level_data[1], (int, Fraction, TimeLevel)):
+              raise DependencyException("Unexpected final time level functional dependency")
             cp_cs.add(c)
         return cp_cs
       def update_cs(s):
@@ -2019,7 +2019,7 @@ class ManagedModel:
     def jac(x):
       reassemble_forward(x)
       if rerun_forward[0]:
-        dolfin.info_red("Warning: Re-running forward model")
+        dolfin.warning("Re-running forward model")
         self.rerun_forward(recheckpoint = True)
         rerun_forward[0] = False
       if reassemble_adjoint[0]:
@@ -2073,7 +2073,7 @@ class ManagedModel:
 
     reassemble_forward(x)
     if rerun_forward[0]:
-      dolfin.info_red("Warning: Re-running forward model")
+      dolfin.warning("Re-running forward model")
       self.rerun_forward(recheckpoint = True)
     if reassemble_adjoint[0]:
       self.reassemble_adjoint(clear_caches = False, *parameters)

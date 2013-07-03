@@ -273,6 +273,25 @@ class PABilinearForm(PAForm):
     PAForm.__init__(self, form,
       pre_assembly_parameters = pre_assembly_parameters,
       default_pre_assembly_parameters = dolfin.parameters["timestepping"]["pre_assembly"]["bilinear_forms"])
+    
+    if not self._non_pre_assembled_L is None and not self._pre_assembled_L is None:
+      # Work around a (rare) reproducibility issue:
+      # assemble(form, tensor = tensor, reset_sparsity = False) can give (very
+      # slightly) different results if given matrices with different sparsity
+      # patterns.
+      
+      # The coefficients may contain invalid data, or be non-wrapping
+      # WrappedFunction s. Replace the coefficients with Constant(1.0).
+      form = self._non_pre_assembled_L
+      one = dolfin.Constant(1.0)
+      repl = {c:one for c in ufl.algorithms.extract_coefficients(form)}
+      form = replace(form, repl)
+      
+      # Set up the matrices
+      L = self.__non_pre_assembled_L_tensor = assemble(form)
+      L.axpy(1.0, self._pre_assembled_L, False)
+      self._pre_assembled_L = self._pre_assembled_L.copy()
+      self._pre_assembled_L.axpy(0.0, L, False)
 
     return
 
@@ -302,12 +321,7 @@ class PABilinearForm(PAForm):
           L.axpy(1.0, self._pre_assembled_L, True)
       else:
         L = self.__non_pre_assembled_L_tensor = assemble(self._non_pre_assembled_L)
-        if not self._pre_assembled_L is None:
-          self._pre_assembled_L = self._pre_assembled_L.copy()
-          L.axpy(1.0, self._pre_assembled_L, False)
-          # Ensure that the pre-assembled matrix and the matrix used to store
-          # the non-pre-assembled matrix data have the same sparsity pattern.
-          self._pre_assembled_L.axpy(0.0, L, False)
+        assert(self._pre_assembled_L is None)
 
     return L
     

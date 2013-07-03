@@ -539,7 +539,7 @@ class PAAdjointSolvers:
     self.__a_L_rhs = [None for i in range(len(self.__a_x))]
     for a_x in a_rhs:
       if not a_x in self.__a_keys:
-        dolfin.info_red("Warning: Missing functional dependency %s" % a_x.name())
+        dolfin.warning("Missing functional dependency %s" % a_x.name())
       else:
         self.__a_L_rhs[self.__a_keys[a_x]] = a_rhs[a_x]
 

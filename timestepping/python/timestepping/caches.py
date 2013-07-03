@@ -115,9 +115,9 @@ class AssemblyCache:
     for key in self.__cache.keys():
       counts[extract_form_data(key[0]).rank] += 1
 
-    dolfin.info_blue("Assembly cache status:")
+    dolfin.info("Assembly cache status:")
     for i in range(3):
-      dolfin.info_blue("Pre-assembled rank %i forms: %i" % (i, counts[i]))
+      dolfin.info("Pre-assembled rank %i forms: %i" % (i, counts[i]))
 
     return
 

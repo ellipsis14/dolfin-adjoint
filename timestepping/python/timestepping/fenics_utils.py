@@ -261,7 +261,7 @@ def expand_expr(expr):
                          ufl.operators.Conditional)):
     return [expr]
   else:
-    dolfin.info_red("Warning: Expr type %s not expanded by expand_expr" % expr.__class__)
+    dolfin.warning("Expr type %s not expanded by expand_expr" % expr.__class__)
     return [expr]
 
 def lumped_mass(space, du = None):

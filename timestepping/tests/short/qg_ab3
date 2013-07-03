@@ -154,7 +154,8 @@ bc_zero = DirichletBC(space, 0.0, "on_boundary")
 bc_one  = DirichletBC(space, 1.0, "on_boundary")
 
 beta_y.interpolate(Expression("beta * x[1]", beta = float(beta)))
-pa_solve(inner(test, trial) * dx == inner(test, (1.0 / H[0]) * Wind()) * dx, q_wind, solver_parameters = lu_solver)
+q_wind.interpolate(Wind())
+q_wind.vector()[:] /= float(H[0])
 for i in range(layers):
   if i == blayer:
 #    a = inner(grad(test), grad(trial)) * dx - (test * dot(grad(trial), nm)) * ds
@@ -192,14 +193,17 @@ def add_rel_solve(n):
   return
 
 def add_pv_update(n):
-  for i in range(layers):
-    if i > 0:
-      if i < layers - 1:
-        system.add_solve(LinearCombination((1.0, rel[i][n]), (1.0, beta_y), (s[i][0], psi[i - 1][n]), (-s[i][0] - s[i][1], psi[i][n]), (s[i][1], psi[i + 1][n])), q[i][n])
+  if layers == 1:
+    system.add_solve(LinearCombination((1.0, rel[0][n]), (1.0, beta_y)), q[0][n])
+  else:
+    for i in range(layers):
+      if i > 0:
+        if i < layers - 1:
+          system.add_solve(LinearCombination((1.0, rel[i][n]), (1.0, beta_y), (s[i][0], psi[i - 1][n]), (-s[i][0] - s[i][1], psi[i][n]), (s[i][1], psi[i + 1][n])), q[i][n])
+        else:
+          system.add_solve(LinearCombination((1.0, rel[i][n]), (1.0, beta_y), (s[i][0], psi[i - 1][n]), (-s[i][0], psi[i][n])), q[i][n])
       else:
-        system.add_solve(LinearCombination((1.0, rel[i][n]), (1.0, beta_y), (s[i][0], psi[i - 1][n]), (-s[i][0], psi[i][n])), q[i][n])
-    else:
-      system.add_solve(LinearCombination((1.0, rel[i][n]), (1.0, beta_y), (-s[i][1], psi[i][n]), (s[i][1], psi[i + 1][n])), q[i][n])
+        system.add_solve(LinearCombination((1.0, rel[i][n]), (1.0, beta_y), (-s[i][1], psi[i][n]), (s[i][1], psi[i + 1][n])), q[i][n])
 
   return
 
@@ -289,7 +293,7 @@ while t < mtime:
 
 system.finalise()
 
-system.verify_checkpoints(tolerance = 9.0e-9)
+system.verify_checkpoints(tolerance = 1.0e-8)
 
 gradPsi = grad(psi[2][N])
 system.set_functional(0.5 * dot(gradPsi, gradPsi) * dx)

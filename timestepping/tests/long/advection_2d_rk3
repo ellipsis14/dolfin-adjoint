@@ -72,8 +72,7 @@ def laplace(T):
 
 # Generate a smoothed top hat initial condition
 T_ic_unsmoothed = StaticFunction(space, name = "T_ic_unsmoothed")
-pa_solve(inner(test, T_ic_unsmoothed) * dx == inner(test, Expression("x[0] > 0.2 && x[0] < 0.4 && x[1] > -0.1 && x[1] < 0.1 ? 1.0 : 0.0")) * dx,
-  T_ic_unsmoothed, solver_parameters = {"linear_solver":"lu"})
+T_ic_unsmoothed.interpolate(Expression("x[0] > 0.2 && x[0] < 0.4 && x[1] > -0.1 && x[1] < 0.1 ? 1.0 : 0.0"))
 T_ic = StaticFunction(space, name = "T_ic")
 pa_solve(alpha_s * alpha_s * laplace(T_ic) + inner(test, T_ic_unsmoothed - T_ic) * dx == 0,
   T_ic, solver_parameters = {"linear_solver":"lu"})
