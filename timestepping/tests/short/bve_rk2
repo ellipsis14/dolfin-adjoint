@@ -44,7 +44,7 @@ betay = StaticFunction(space, name = "betay")
 betay.interpolate(Expression("beta * x[1]", beta = float(beta)))
 
 F = StaticFunction(space, name = "F")
-F.interpolate(Expression("-A * sin(pi * (x[1] / L))", A = (1.0 / 1.0e5) * (pi / L), L = L))
+F.interpolate(Expression("-A * sin(pi * (x[1] / L))", A = (1.0 / 1.0e5) * (pi / L), L = L, element = space.ufl_element()))
 
 psi_bc = StaticDirichletBC(space, 0.0, "on_boundary")
 def add_psi_solve(n):
