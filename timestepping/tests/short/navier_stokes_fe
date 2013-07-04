@@ -184,7 +184,7 @@ if dolfin_version() < (1, 1, 0):
   print "%.17e" % comp
   print "%.17e" % ref
   print "%.17e" % err
-  assert(err < 2.0e-19)
+  assert(err < 2.0e-18)
 else:
   ref = 2.67535924915400351e-05
   err = abs(comp - ref)
@@ -194,4 +194,7 @@ else:
   assert(err < 7.0e-19)
 
 orders = system.taylor_test(ic, grad = dJdm, fact = 1.0e-7)
-assert((orders > 2.0).all())
+if dolfin_version() < (1, 1, 0):
+  assert((orders > 1.99).all())
+else:
+  assert((orders > 2.0).all())
