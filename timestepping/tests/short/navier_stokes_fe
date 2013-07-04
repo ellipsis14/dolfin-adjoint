@@ -95,18 +95,13 @@ L3 = inner(u1s, v)*dx - k*inner(grad(p1), v)*dx
 
 prec = "amg" if has_krylov_solver_preconditioner("amg") else "default"
 
-## The following is how the model should be initialised, with a projection of the
-## initial velocity
-#system.add_solve(ic, Us[0])
-#system.add_solve(a2 == replace(L2, {u1s:Us[0]}),
-#  P[0], bcp, solver_parameters = {"linear_solver":"gmres", "preconditioner":prec})
-#system.add_solve(a3 == replace(L3, {u1s:Us[0], p1:P[0]}),
-#  U[0], bcu, solver_parameters = {"linear_solver":"gmres", "preconditioner":"default"},
-#  pre_assembly_parameters = {"bilinear_forms":{"compress_matrices":False}})
-
-# The following duplicates the initialisation used by the dolfin-adjoint
-# preassembly_efficiency test
-system.add_solve(ic, U[0])
+# Note: P[0] is used as working memory here
+system.add_solve(ic, Us[0])
+system.add_solve(a2 == -div(Us[0]) * q * dx,
+  P[0], bcp, solver_parameters = {"linear_solver":"gmres", "preconditioner":prec})
+system.add_solve(a3 == inner(Us[0], v) * dx - inner(grad(P[0]), v) * dx,
+  U[0], bcu, solver_parameters = {"linear_solver":"gmres", "preconditioner":"default"},
+  pre_assembly_parameters = {"bilinear_forms":{"compress_matrices":False}})
 
 system.add_solve(a1 == L1,
   u1s, bcu, solver_parameters = {"linear_solver":"gmres", "preconditioner":"default"},
@@ -184,22 +179,19 @@ dJdm = system.compute_gradient(ic)
 print "Adjoint time: %.6f" % timer.stop()
 comp = dJdm.norm("l2")
 if dolfin_version() < (1, 1, 0):
-  ref = 2.69416999369057252e-05
+  ref = 2.67535582626851603e-05
   err = abs(comp - ref)
   print "%.17e" % comp
   print "%.17e" % ref
   print "%.17e" % err
   assert(err < 2.0e-19)
 else:
-  ref = 2.69417333042916534e-05
+  ref = 2.67535924915400351e-05
   err = abs(comp - ref)
   print "%.17e" % comp
   print "%.17e" % ref
   print "%.17e" % err
-  assert(err < 6.0e-19)
+  assert(err < 7.0e-19)
 
 orders = system.taylor_test(ic, grad = dJdm, fact = 1.0e-7)
-if dolfin_version() < (1, 1, 0):
-  assert((orders > 2.0).all())
-else:
-  assert((orders > 1.99).all())
+assert((orders > 2.0).all())
