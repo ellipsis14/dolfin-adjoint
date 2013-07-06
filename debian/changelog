@@ -1,3 +1,9 @@
+dolfin-adjoint (1.2.0) precise; urgency=low
+
+  * Bump our version number to match DOLFIN's
+
+ -- Patrick Farrell <patrick.farrell@imperial.ac.uk>  Thu, 27 Jun 2013 14:49:40 +0100
+
 dolfin-adjoint (1.1.0) unstable; urgency=low
 
   * New release. Loads of new features.

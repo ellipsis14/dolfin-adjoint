@@ -372,10 +372,10 @@ class TimeSystem:
       for level in tfn.levels():
         if level > last_past_level:
           if not tfn[level] in self.__solves:
-            dolfin.info_red("Missing time level %s solve for TimeFunction %s" % (level, tfn.name()))
+            dolfin.warning("Missing time level %s solve for TimeFunction %s" % (level, tfn.name()))
         else:
           if not tfn.has_level(level.offset()) or not tfn[level.offset()] in self.__init_solves:
-            dolfin.info_red("Missing time level %i solve for TimeFunction %s" % (level.offset(), tfn.name()))
+            dolfin.warning("Missing time level %i solve for TimeFunction %s" % (level.offset(), tfn.name()))
 
     return
 
@@ -784,7 +784,7 @@ class AdjointModel:
     """
     
     if self.__functional is None:
-      dolfin.info_red("Warning: Running adjoint model with no functional defined")
+      dolfin.warning("Running adjoint model with no functional defined")
 
     self.__a_map.zero_adjoint()
 
@@ -866,6 +866,7 @@ class AdjointModel:
       self.__a_initial_cycle1.set_functional(None)
       self.__a_initial_cycle2.set_functional(None)
       self.__a_cycle.set_functional(None)
+      self.__a_final_solves.set_functional(None)
     elif isinstance(functional, ufl.form.Form):
       if not extract_form_data(functional).rank == 0:
         raise InvalidArgumentException("functional must be rank 0")
@@ -882,11 +883,13 @@ class AdjointModel:
       self.__a_initial_cycle1.set_functional(functional)
       self.__a_initial_cycle2.set_functional(None)
       self.__a_cycle.set_functional(None)
+      self.__a_final_solves.set_functional(None)
     elif isinstance(functional, TimeFunctional):
       self.__a_initial_solves.set_functional(None)
       self.__a_initial_cycle1.set_functional(None)
       self.__a_initial_cycle2.set_functional(functional)
       self.__a_cycle.set_functional(functional)
+      self.__a_final_solves.set_functional(functional)
     else:
       raise InvalidArgumentException("functional must be a Form or a TimeFunctional")
       
@@ -904,7 +907,9 @@ class AdjointModel:
       raise InvalidArgumentException("s must be a non-negative integer")
     
     if isinstance(self.__functional, TimeFunctional):
-      if self.__s == 0:
+      if s == 0:
+        self.__a_final_solves.update_functional(s)
+      elif self.__s == 0:
         self.__a_initial_cycle2.update_functional(s)
       else:
         self.__a_cycle.update_functional(s)
@@ -1464,8 +1469,8 @@ class ManagedModel:
         cp_cs = copy.copy(s_cp_cs)
         for c in self.__functional.dependencies(s, non_symbolic = True):
           if isinstance(c, dolfin.Function) and hasattr(c, "_time_level_data"):
-            if not isinstance(c._time_level_data[1], TimeLevel):
-              raise DependencyException("Unexpected initial or final time level functional dependency")
+            if not isinstance(c._time_level_data[1], (int, Fraction, TimeLevel)):
+              raise DependencyException("Unexpected final time level functional dependency")
             cp_cs.add(c)
         return cp_cs
       def update_cs(s):
@@ -1550,6 +1555,7 @@ class ManagedModel:
 
     self.__adjoint.final_cycle()
     self.__restore_timestep_checkpoint(-2)
+    self.__adjoint.update_functional(0)
     self.__adjoint.finalise()
     addto_grad(-1, self.__adjoint._AdjointModel__a_final_solves, self.__a_map)
     if not callback is None:
@@ -1684,7 +1690,10 @@ class ManagedModel:
     self.reassemble_forward(parameter)
     self.__restore_timestep_checkpoint(-4)
     if isinstance(self.__functional, TimeFunctional):
-      self.__functional.initialise(val = J)
+      if self.__functional.initialise.im_func.func_code.co_argcount < 2:
+        self.rerun_forward()
+      else:
+        self.__functional.initialise(val = J)
 
     dolfin.info("Taylor remainder test, no adjoint errors  : %s" % str(errs_1))
     dolfin.info("Taylor remainder test, with adjoint errors: %s" % str(errs_2))
@@ -2010,7 +2019,7 @@ class ManagedModel:
     def jac(x):
       reassemble_forward(x)
       if rerun_forward[0]:
-        dolfin.info_red("Warning: Re-running forward model")
+        dolfin.warning("Re-running forward model")
         self.rerun_forward(recheckpoint = True)
         rerun_forward[0] = False
       if reassemble_adjoint[0]:
@@ -2064,7 +2073,7 @@ class ManagedModel:
 
     reassemble_forward(x)
     if rerun_forward[0]:
-      dolfin.info_red("Warning: Re-running forward model")
+      dolfin.warning("Re-running forward model")
       self.rerun_forward(recheckpoint = True)
     if reassemble_adjoint[0]:
       self.reassemble_adjoint(clear_caches = False, *parameters)

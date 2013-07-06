@@ -201,9 +201,9 @@ class MemoryCheckpointer(Checkpointer):
     try:
       for c in c_cs:
         self._Checkpointer__verify(c, c_cs[c], tolerance = tolerance)
-      dolfin.info_green("Verified checkpoint with key %s" % str(key))
+      dolfin.info("Verified checkpoint with key %s" % str(key))
     except CheckpointException as e:
-      dolfin.info_red(str(e))
+      dolfin.info(str(e))
       raise CheckpointException("Failed to verify checkpoint with key %s" % str(key))
 
     return
@@ -350,9 +350,9 @@ class DiskCheckpointer(Checkpointer):
       for c_id in c_cs:
         c = id_map[c_id]
         self._Checkpointer__verify(c, c_cs[c_id], tolerance = tolerance)
-      dolfin.info_green("Verified checkpoint with key %s" % key)
+      dolfin.info("Verified checkpoint with key %s" % key)
     except CheckpointException as e:
-      dolfin.info_red(str(e))
+      dolfin.info(str(e))
       raise CheckpointException("Failed to verify checkpoint with key %s" % key)
 
     return

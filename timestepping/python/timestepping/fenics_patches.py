@@ -146,6 +146,14 @@ if dolfin_version() < (1, 1, 0):
       return __Vector_gather_orig(self, *args)
   dolfin.Vector.gather = Vector_gather
   del(Vector_gather)
+  
+  def Constant__getattribute__(self, key):
+    if key == "gather":
+      raise AttributeError
+    else:
+      return object.__getattribute__(self, key)
+  dolfin.Constant.__getattribute__ = Constant__getattribute__
+  del(Constant__getattribute__)
 if dolfin_version() < (1, 2, 0):
   __all__ += \
     [

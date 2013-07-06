@@ -34,7 +34,7 @@ def minimize_scipy_generic(J, dJ, m, method, bounds = None, H = None, **kwargs):
         from scipy.optimize import minimize as scipy_minimize
     except ImportError:
         print "**************** Deprecated warning *****************"
-        print "You have a old version of scipy (<0.11). This version is not supported by dolfin-adjoint."
+        print "You have an old version of scipy (<0.11). This version is not supported by dolfin-adjoint."
         raise ImportError
 
     m_global = get_global(m)
@@ -61,7 +61,21 @@ def minimize_scipy_generic(J, dJ, m, method, bounds = None, H = None, **kwargs):
     if method in ["Newton-CG"]:
         kwargs["hessp"] = H
 
-    if bounds != None:
+    if method=="basinhopping":
+        try:
+            from scipy.optimize import basinhopping
+        except ImportError:
+            print "**************** Outdated scipy version warning *****************"
+            print "The basin hopping optimisation algorithm requires scipy >= 0.12."
+            raise ImportError
+
+        del kwargs["options"]
+        del kwargs["jac"]
+        kwargs["minimizer_kwargs"]["jac"]=dJ
+
+        res = basinhopping(J, m_global, **kwargs)
+
+    elif bounds != None:
         bounds = serialise_bounds(bounds, m)
         res = scipy_minimize(J, m_global, method = method, bounds = bounds, **kwargs)
     else:
@@ -101,6 +115,7 @@ optimization_algorithms_dict = {'L-BFGS-B': ('The L-BFGS-B implementation in sci
                                 'Powell': ('Gradient-free Powells method', minimize_scipy_generic),
                                 'Newton-CG': ('Newton-CG method', minimize_scipy_generic),
                                 'Anneal': ('Gradient-free simulated annealing', minimize_scipy_generic),
+                                'basinhopping': ('Global basin hopping method', minimize_scipy_generic),
                                 'COBYLA': ('Gradient-free constrained optimization by linear approxition method', minimize_scipy_generic),
                                 'Custom': ('User-provided optimization algorithm', minimize_custom)
                                 }

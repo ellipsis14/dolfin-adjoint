@@ -15,10 +15,6 @@ import os
 import os.path
 import random
 
-import numpy
-import scipy
-import scipy.linalg
-
 import assembly
 import expressions
 import constant

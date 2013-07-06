@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from collections import OrderedDict
+import copy
 
 import dolfin
 import numpy
@@ -156,21 +157,23 @@ def write_vtu(filename, fns, index = None, t = None):
     raise NotImplementedException("Mesh dimension %i not supported by write_vtu" % dim)
 
   def expand_sub_fns(fn):
-    space = fn.function_space()
-    n_sub_spaces = space.num_sub_spaces()
-    assert(n_sub_spaces > 1)
-    fns = []
-    for i in range(n_sub_spaces):
-      sub_space = space.sub(i).collapse()
-      sub_fn = dolfin.Function(sub_space, name = "%s_%i" % (fn.name(), i + 1))
-      sub_dofs = numpy.array(space.dofmap().extract_sub_dofmap(numpy.array([i], dtype = "uintp"), mesh).collapse(mesh)[1].values(), dtype = "intc")
-      sub_fn.vector().set_local(fn.vector().gather(sub_dofs))
-      sub_fn.vector().apply("insert")
-      if sub_space.num_sub_spaces() == 0:
-        fns.append(sub_fn)
-      else:
-        fns += expand_sub_fns(sub_fn)
-    return fns
+    n_sub_spaces = fn.function_space().num_sub_spaces()
+    if n_sub_spaces > 1:
+      fns = fn.split(deepcopy = True)
+      for i, sfn in enumerate(copy.copy(fns)):
+        sfn.rename("%s_%i" % (fn.name(), i + 1), "%s_%i" % (fn.name(), i + 1))
+        if sfn.function_space().num_sub_spaces() > 0:
+          fns.remove(sfn)
+          fns += expand_sub_fns(sfn)
+      return fns
+    elif n_sub_spaces == 1:
+      e = fn.function_space().ufl_element().extract_component(0)[1]
+      space = dolfin.FunctionSpace(mesh, e.family(), e.degree())
+      sfn = dolfin.Function(space, name = "%s_1" % fn.name())
+      sfn.vector()[:] = fn.vector()
+      return [sfn]
+    else:
+      return [fn]
 
   nfns = []
   for i, fn in enumerate(fns):
@@ -178,10 +181,7 @@ def write_vtu(filename, fns, index = None, t = None):
     if not space.mesh().id() == mesh.id():
       raise InvalidArgumentException("Require exactly one mesh in write_vtu")
     n_sub_spaces = space.num_sub_spaces()
-    if n_sub_spaces == 0:
-      nfns.append(fn)
-    else:
-      nfns += expand_sub_fns(fn)
+    nfns += expand_sub_fns(fn)
   fns = nfns;  del(nfns)
   
   spaces = []

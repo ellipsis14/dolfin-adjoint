@@ -4,7 +4,6 @@ import ufl
 import adjglobals
 import os
 import os.path
-import numpy
 import misc
 import caching
 

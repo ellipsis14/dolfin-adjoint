@@ -29,7 +29,7 @@ class KrylovSolver(dolfin.KrylovSolver):
     self.nsp = nsp
 
   def set_transpose_nullspace(self, tnsp):
-    dolfin.KrylovSolver.set_transpose_nullspace(self, tnsp)
+    if hasattr(dolfin.KrylovSolver, 'set_transpose_nullspace'): dolfin.KrylovSolver.set_transpose_nullspace(self, tnsp)
     self.tnsp = tnsp
 
   def set_operator(self, A):
@@ -121,7 +121,7 @@ class KrylovSolver(dolfin.KrylovSolver):
 
           if nsp_ is not None:
             solver.set_nullspace(nsp_)
-          if tnsp_ is not None:
+          if tnsp_ is not None and hasattr(solver, 'set_transpose_nullspace'):
             solver.set_transpose_nullspace(tnsp_)
 
           x = dolfin.Function(fn_space)
