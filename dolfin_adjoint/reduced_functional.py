@@ -119,7 +119,7 @@ class ReducedFunctional(object):
     ''' This class implements the reduced functional for a given functional/parameter combination. The core idea 
         of the reduced functional is to consider the problem as a pure function of the parameter value which 
         implicitly solves the recorded PDE. '''
-    def __init__(self, functional, parameter, scale = 1.0, eval_cb = None, derivative_cb = None, replay_cb = None):
+    def __init__(self, functional, parameter, scale = 1.0, eval_cb = None, derivative_cb = None, replay_cb = None, hessian_cb = None):
         ''' Creates a reduced functional object, that evaluates the functional value for a given parameter value.
             The arguments are as follows:
             * 'functional' must be a dolfin_adjoint.Functional object. 
@@ -129,8 +129,11 @@ class ReducedFunctional(object):
               The interace must be eval_cb(j, m) where j is the functional value and 
               m is the parameter value at which the functional is evaluated.
             * 'derivative_cb' is an optional callback that is executed after each functional gradient evaluation. 
-              The interace must be eval_cb(j, dj, m) where j and dj are the functional and functional gradient values, and 
+              The interface must be eval_cb(j, dj, m) where j and dj are the functional and functional gradient values, and 
               m is the parameter value at which the gradient is evaluated.
+            * 'hessian_cb' is an optional callback that is executed after each hessian action evaluation. The interface must be
+               hessian_cb(j, m, mdot, h) where mdot is the direction in which the hessian action is evaluated and h the value
+               of the hessian action.
             '''
         self.functional = functional
         if not isinstance(parameter, (list, tuple)):
@@ -142,6 +145,7 @@ class ReducedFunctional(object):
         self.scale = scale
         self.eval_cb = eval_cb
         self.derivative_cb = derivative_cb
+        self.hessian_cb = hessian_cb
         self.replay_cb = replay_cb
         self.current_func_value = None
 
@@ -233,7 +237,12 @@ class ReducedFunctional(object):
           Hm = self.H(m_dot[0])
         else:
           Hm = self.H(m_dot)
-
+        if self.hessian_cb:
+            self.hessian_cb(self.scale * self.current_func_value,
+                            unlist([p.data() for p in self.parameter]),
+                            m_dot,
+                            Hm.vector() * self.scale)
+        
         if hasattr(Hm, 'function_space'):
             return [Function(Hm.function_space(), Hm.vector() * self.scale)]
         else:

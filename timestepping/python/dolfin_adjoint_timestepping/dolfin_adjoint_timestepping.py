@@ -353,11 +353,13 @@ def da_annotate_equation_solve(solve):
             # The cache is empty
             static_a = False
             a = assemble(self.data)
-            apply_a_bcs = True
+            apply_a_bcs = len(bcs) > 0
           else:              
             # The cache contains a matrix, let's use it
             static_a = True
             a, apply_a_bcs = cache[("pa_a", var.type)]
+            if apply_a_bcs:
+              a = a.copy()
         else:
           if extract_form_data(self.__eq.lhs).rank == 2:
             assert(not self.__x_fn in ufl.algorithms.extract_coefficients(self.__eq.lhs))
@@ -371,13 +373,20 @@ def da_annotate_equation_solve(solve):
             static_a = is_static_form(self.data)
           if static_a:
             # The matrix is static, so we can cache it
-            if not self.parameters["equations"]["symmetric_boundary_conditions"] and static_bcs:
+            if not self.parameters["equations"]["symmetric_boundary_conditions"] and len(bcs) > 0 and static_bcs:
               # Cache with boundary conditions
-              a = assembly_cache.assemble(self.data, bcs = bcs, symmetric_bcs = False)
+              a = assembly_cache.assemble(self.data,
+                bcs = bcs, symmetric_bcs = False,
+                compress = self.parameters["bilinear_forms"]["compress_matrices"])
               apply_a_bcs = False
+            elif len(bcs) == 0:
+              # Cache, no boundary conditions
+              a = assembly_cache.assemble(self.data,
+                compress = self.parameters["bilinear_forms"]["compress_matrices"])
+              apply_a_bcs = False              
             else:
               # Cache without boundary conditions
-              a = assembly_cache.assemble(self.data)
+              a = assemble(self.data)
               apply_a_bcs = True
             # Cache
             cache[("pa_a", var.type)] = a, apply_a_bcs
@@ -386,21 +395,7 @@ def da_annotate_equation_solve(solve):
             # entry to the cache to prevent repeated processing.
             cache[("pa_a", var.type)] = None
             a = assemble(self.data)
-            apply_a_bcs = True
-        
-        # Assemble the RHS
-        if isinstance(b.data, ufl.form.Form):
-          b = assemble(b.data)
-        else:
-          b = b.data.vector()
-
-        # Apply boundary conditions
-        if apply_a_bcs:
-          if static_a:
-            a = a.copy()
-          apply_bcs(a, bcs, L = b, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
-        else:
-          enforce_bcs(b, bcs)
+            apply_a_bcs = len(bcs) > 0
 
         if ("solver", var.type) in cache:
           # Extract a linear solver from the cache
@@ -411,7 +406,32 @@ def da_annotate_equation_solve(solve):
             solver_parameters = self.__adjoint_solver_parameters
           else:
             solver_parameters = self.__solver_parameters
-          solver = cache[("solver", var.type)] = solver_cache.solver(self.data, solver_parameters, static = static_a and static_bcs, bcs = bcs, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
+          if static_a:
+            if apply_a_bcs:
+              solver = cache[("solver", var.type)] = solver_cache.solver(self.data,
+                solver_parameters,
+                bcs = bcs, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
+            else:
+              solver = cache[("solver", var.type)] = solver_cache.solver(self.data,
+                solver_parameters,
+                bcs = bcs, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"],
+                a = a)
+          else:
+            solver = cache[("solver", var.type)] = solver_cache.solver(self.data,
+              solver_parameters,
+              bcs = bcs, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
+        
+        # Assemble the RHS
+        if isinstance(b.data, ufl.form.Form):
+          b = assemble(b.data)
+        else:
+          b = b.data.vector()
+
+        # Apply boundary conditions
+        if apply_a_bcs:
+          apply_bcs(a, bcs, L = b, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
+        else:
+          enforce_bcs(b, bcs)
 
         # RHS solution vector
         x = adjlinalg.Vector(dolfin.Function(self.__x.function_space()))
