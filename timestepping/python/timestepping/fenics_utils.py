@@ -41,6 +41,7 @@ __all__ = \
     "is_general_constant",
     "is_r0_function",
     "is_r0_function_space",
+    "is_self_adjoint_form",
     "is_zero_rhs",
     "lumped_mass"
   ]
@@ -303,6 +304,37 @@ def expand(form, dim = None):
 
   return ufl.algorithms.expand_indices(ufl.algorithms.expand_derivatives(form, dim = dim))
 
+def is_self_adjoint_form(form):
+  """
+  Return True if the supplied Form is self-adjoint. May return false negatives.
+  """
+  
+  if not isinstance(form, ufl.form.Form):
+    raise InvalidArgumentException("form must be a Form")
+  
+  def arguments(form):
+    args = ufl.algorithms.extract_arguments(form)
+    assert(len(args) == 2)
+    test, trial = args
+    if test.count() > trial.count():
+      test, trial = trial, test
+    return test, trial
+  
+  a_form = dolfin.adjoint(form)
+  
+  test, trial = arguments(form)
+  a_test, a_trial = arguments(a_form)
+  assert(a_test.count() == a_trial.count() - 1)
+  
+  if not test.element() == a_trial.element():
+    return False
+  elif not trial.element() == a_test.element():
+    return False
+  
+  a_form = dolfin.replace(a_form, {a_test:trial, a_trial:test})
+  
+  return expand(form) == expand(a_form)
+
 def apply_bcs(a, bcs, L = None, symmetric_bcs = False):
   """
   Apply boundary conditions to the supplied LHS matrix and (optionally) RHS
@@ -396,7 +428,16 @@ def expand_solver_parameters(solver_parameters, default_solver_parameters = {}):
   
   if not len(default_solver_parameters) == 0:
     solver_parameters = apply(solver_parameters, default_solver_parameters)
-  return apply(solver_parameters, {"linear_solver":"default", "lu_solver":dolfin.parameters["lu_solver"].to_dict(), "krylov_solver":dolfin.parameters["krylov_solver"].to_dict()})
+  solver_parameters = apply(solver_parameters, {"linear_solver":"default",
+    "lu_solver":dolfin.parameters["lu_solver"].to_dict(),
+    "krylov_solver":dolfin.parameters["krylov_solver"].to_dict()})
+  
+  if solver_parameters["linear_solver"] in ["default", "lu"] or dolfin.has_lu_solver_method(solver_parameters["linear_solver"]):
+    del(solver_parameters["krylov_solver"])
+  else:
+    del(solver_parameters["lu_solver"])
+  
+  return solver_parameters
   
 def is_empty_form(form):
   """

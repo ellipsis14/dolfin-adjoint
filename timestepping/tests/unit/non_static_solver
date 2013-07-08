@@ -28,8 +28,8 @@ test2, trial2 = TestFunction(space2), TrialFunction(space2)
 form1 = inner(test1, trial1) * dx
 form2 = inner(test2, trial2) * dx
 
-solver1 = solver_cache.solver(form1, {"linear_solver":"lu"}, static = False)
-solver2 = solver_cache.solver(form2, {"linear_solver":"lu"}, static = False)
+solver1 = solver_cache.solver(form1, {"linear_solver":"lu"})
+solver2 = solver_cache.solver(form2, {"linear_solver":"lu"})
 
 F1 = Function(space1)
 F2 = Function(space2)

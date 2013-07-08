@@ -24,6 +24,7 @@ import ufl
 from exceptions import *
 from fenics_overrides import *
 from fenics_utils import *
+from versions import *
 
 __all__ = \
   [
@@ -58,15 +59,16 @@ class AssemblyCache:
 
     return
 
-  def assemble(self, form, bcs = [], symmetric_bcs = False, compress = True):
+  def assemble(self, form, bcs = [], symmetric_bcs = False, compress = False):
     """
-    Return the result of assembling the supplied Form, optionally with boundary
-    conditions, which are optionally applied so as to yield a symmetric matrix.
-    The compress argument can be used to enable or disable matrix compression.
-    If an assembled version of the Form exists in the cache, return the cached
-    result. Note that this does not check that the Form dependencies are
-    unchanged between subsequent assemble calls -- that is deemed the
-    responsibility of the caller.
+    Return the result of assembling the supplied Form.
+
+    Arguments:
+      form: The form.
+      bcs: Dirichlet BCs applied to a matrix.
+      symmetric_bcs: Whether Dirichlet BCs should be applied so as to yield a
+        symmetric matrix.
+      compress: Whether a matrix should be compressed.
     """
     
     if not isinstance(form, ufl.form.Form):
@@ -160,16 +162,114 @@ class SolverCache:
 
     return
 
-  def solver(self, form, solver_parameters, static = False, bcs = [], symmetric_bcs = False):
+  def solver(self, form, solver_parameters,
+    pre_assembly_parameters = None,
+    static = None,
+    bcs = [], symmetric_bcs = False,
+    a = None):
     """
-    Return an LUSolver or KrylovSolver suitable for solving an equation with the
-    supplied rank 2 Form defining the LHS. If such a solver exists in the cache,
-    return the cached solver. Optionally accepts boundary conditions which
-    are optionally applied so as to yield a symmetric matrix. If static is true
-    then it is assumed that the Form is "static", and solver caching
-    options are enabled. The appropriate value of the static argument is
-    deemed the responsibility of the caller.
+    Return a linear solver suitable for solving an equation with the supplied
+    rank 2 Form defining the LHS. If such a solver exists in the cache, return
+    the cached solver.
+
+    Arguments:
+      form: The form defining the matrix.
+      solver_parameters: Linear solver parameters.
+      bcs: Dirichlet BCs applied to the matrix.
+      symmetric_bcs: Whether the Dirichlet BCs are applied so as to yield a
+        symmetric matrix.
+    and then either:
+      pre_assembly_parameters: Pre-assembly parameters used to pre-assemble the
+        form. Optional. Use an empty dictionary to denote the use of default
+        pre-assembly parameters.
+      static: Whether the form is static. Defaults to False if not supplied.
+    or:
+      a: A GenericMatrix resulting from the assembly of the form.
+      
+    This has three intended use cases:
+      1. Pre-assembled form:
+           solver = solver_cache.solver(form,
+             solver_parameters, pre_assembly_parameters,
+             static = static,
+             bcs = bcs, symmetric_bcs = symmetric_bcs)
+         If the default pre-assembly parameters are used, then an empty
+         dictionary should be passed as the third argument. Assemble the form
+         using:
+           pa_form = PABilinearForm(form,
+             pre_assembly_parameters = pre_assembly_parameters)
+           a = assemble(pa_form, ...)
+           apply_bcs(a, bcs, ..., symmetric_bcs = symmetric_bcs)
+      2. Cached matrix:
+           a = assembly_cache.assemble(form, ...)
+           apply_bcs(a, bcs, ..., symmetric_bcs = symmetric_bcs)
+           solver = solver_cache.solver(form,
+             solver_parameters,
+             bcs = bcs, symmetric_bcs = symmetric_bcs,
+             a = a)
+      3. Custom assembled form:
+           solver = solver_cache.solver(form,
+             solver_parameters,
+             bcs = bcs, symmetric_bcs = symmetric_bcs)
+         and then assemble the form using:
+           a = assemble(form, ...)
+           apply_bcs(a, bcs, ..., symmetric_bcs = symmetric_bcs)
     """
+    
+    def expanded_solver_parameters(form, solver_parameters, static, bcs, symmetric_bcs):
+      if static:
+        default = {"lu_solver":{"reuse_factorization":True, "same_nonzero_pattern":True},
+                   "krylov_solver":{"preconditioner":{"reuse":True}}}
+        if dolfin_version() >= (1, 1, 0) and (len(bcs) == 0 or symmetric_bcs) and is_self_adjoint_form(form):
+          default["lu_solver"]["symmetric_operator"] = True
+        solver_parameters = expand_solver_parameters(solver_parameters,
+          default_solver_parameters = default)
+      else:
+        default = {"lu_solver":{"reuse_factorization":False, "same_nonzero_pattern":False},
+                   "krylov_solver":{"preconditioner":{"reuse":False}}}
+        if dolfin_version() >= (1, 1, 0) and (len(bcs) == 0 or symmetric_bcs) and is_self_adjoint_form(form):
+          default["lu_solver"]["symmetric_operator"] = True
+        solver_parameters = expand_solver_parameters(solver_parameters,
+          default_solver_parameters = default)
+        
+        static_parameters = False
+        if solver_parameters["linear_solver"] in ["direct", "lu"] or dolfin.has_lu_solver_method(solver_parameters["linear_solver"]):
+          static_parameters = solver_parameters["lu_solver"]["reuse_factorization"] or \
+                              solver_parameters["lu_solver"]["same_nonzero_pattern"]
+        else:
+          static_parameters = solver_parameters["krylov_solver"]["preconditioner"]["reuse"]
+        if static_parameters:
+          raise ParameterException("Non-static solve supplied with static solver parameters")
+        
+      return solver_parameters
+    
+    def form_key(form, static):
+      if static:
+        return expand(form)
+      else:
+        args = ufl.algorithms.extract_arguments(form)
+        assert(len(args) == 2)
+        test, trial = args
+        if test.count() > trial.count():
+          test, trial = trial, test
+        return test, trial
+    
+    def bc_key(bcs, symmetric_bcs):
+      if len(bcs) == 0:
+        return None
+      else:
+        return tuple(bcs), symmetric_bcs
+
+    def parameters_key(opts):
+      if opts is None:
+        return None
+      assert(isinstance(opts, (dolfin.Parameters, dict)))
+      fopts = []
+      for key in opts.keys():
+        if isinstance(opts[key], (dolfin.Parameters, dict)):
+          fopts.append(parameters_key(opts[key]))
+        else:
+          fopts.append((key, opts[key]))
+      return tuple(fopts)
     
     if not isinstance(form, ufl.form.Form):
       raise InvalidArgumentException("form must be a rank 2 Form")
@@ -177,53 +277,48 @@ class SolverCache:
       raise InvalidArgumentException("form must be a rank 2 Form")
     if not isinstance(solver_parameters, dict):
       raise InvalidArgumentException("solver_parameters must be a dictionary")
-    if not isinstance(bcs, list):
-      raise InvalidArgumentException("bcs must be a list of DirichletBC s")
-    for bc in bcs:
-      if not isinstance(bc, dolfin.cpp.DirichletBC):
+      
+    if a is None:
+      if static is None:
+        static = False
+        
+      if not pre_assembly_parameters is None and not isinstance(pre_assembly_parameters, (dolfin.Parameters, dict)):
+        raise InvalidArgumentException("pre_assembly_parameters must be None, a Parameters, or dictionary")
+      if not isinstance(bcs, list):
         raise InvalidArgumentException("bcs must be a list of DirichletBC s")
-
-    def flatten_parameters(opts):
-      assert(isinstance(opts, dict))
-      fopts = []
-      for key in opts.keys():
-        if isinstance(opts[key], dict):
-          fopts.append(flatten_parameters(opts[key]))
-        else:
-          fopts.append((key, opts[key]))
-      return tuple(fopts)
-
-    if static:
-      if not "linear_solver" in solver_parameters or solver_parameters["linear_solver"] in ["direct", "lu"] or dolfin.has_lu_solver_method(solver_parameters["linear_solver"]):
-        solver_parameters = expand_solver_parameters(solver_parameters, default_solver_parameters = {"lu_solver":{"reuse_factorization":True, "same_nonzero_pattern":True}})
-      else:
-        solver_parameters = expand_solver_parameters(solver_parameters, default_solver_parameters = {"krylov_solver":{"preconditioner":{"reuse":True}}})
+      for bc in bcs:
+        if not isinstance(bc, dolfin.cpp.DirichletBC):
+          raise InvalidArgumentException("bcs must be a list of DirichletBC s")
+      
+      solver_parameters = expanded_solver_parameters(form, solver_parameters, static, bcs, symmetric_bcs)
+      if not pre_assembly_parameters is None:
+        npre_assembly_parameters = dolfin.parameters["timestepping"]["pre_assembly"]["bilinear_forms"].copy()
+        npre_assembly_parameters.update(pre_assembly_parameters)
+        pre_assembly_parameters = npre_assembly_parameters;  del(npre_assembly_parameters)
+              
+      key = (form_key(form, static),
+             parameters_key(solver_parameters),
+             parameters_key(pre_assembly_parameters),
+             bc_key(bcs, symmetric_bcs),
+             None)
     else:
-      solver_parameters = expand_solver_parameters(solver_parameters)
-
-      static_parameters = False
-      if solver_parameters["linear_solver"] in ["direct", "lu"] or dolfin.has_lu_solver_method(solver_parameters["linear_solver"]):
-        static_parameters = solver_parameters["lu_solver"]["reuse_factorization"] or solver_parameters["lu_solver"]["same_nonzero_pattern"]
-      else:
-        static_parameters = solver_parameters["krylov_solver"]["preconditioner"]["reuse"]
-      if static_parameters:
-        raise ParameterException("Non-static solve supplied with static solver parameters")
-
-    if static:
-      if len(bcs) == 0:
-        key = (expand(form), None, None, flatten_parameters(solver_parameters))
-      else:
-        key = (expand(form), tuple(bcs), symmetric_bcs, flatten_parameters(solver_parameters))
-    else:
-      args = ufl.algorithms.extract_arguments(form)
-      assert(len(args) == 2)
-      test, trial = args
-      if test.count() > trial.count():
-        test, trial = trial, test
-      if len(bcs) == 0:
-        key = ((test, trial), None, None, flatten_parameters(solver_parameters))
-      else:
-        key = ((test, trial), tuple(bcs), symmetric_bcs, flatten_parameters(solver_parameters))
+      if not isinstance(a, dolfin.GenericMatrix):
+        raise InvalidArgumentException("a must be a GenericMatrix")
+      
+      if not pre_assembly_parameters is None:
+        raise InvalidArgumentException("Cannot supply pre_assembly_parameters argument if a GenericMatrix is supplied")
+      if not static is None:
+        raise InvalidArgumentException("Cannot supply static argument if a GenericMatrix is supplied")
+      
+      static = True      
+      
+      solver_parameters = expanded_solver_parameters(form, solver_parameters, True, bcs, symmetric_bcs)    
+      
+      key = (form_key(form, True),
+             parameters_key(solver_parameters),
+             None,
+             bc_key(bcs, symmetric_bcs),
+             a.id())
 
     if not key in self.__cache:
       if static:
@@ -232,7 +327,10 @@ class SolverCache:
         cache_info("Creating new non-static linear solver", dolfin.info_red)
       self.__cache[key] = LinearSolver(solver_parameters)
     else:
-      cache_info("Using cached linear solver", dolfin.info_green)
+      if static:
+        cache_info("Using cached static linear solver", dolfin.info_green)
+      else:
+        cache_info("Using cached non-static linear solver", dolfin.info_green)
     return self.__cache[key]
 
   def clear(self, *args):

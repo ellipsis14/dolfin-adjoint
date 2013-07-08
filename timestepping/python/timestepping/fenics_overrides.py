@@ -156,7 +156,7 @@ def adjoint(form, reordered_arguments = None, adjoint_arguments = None):
   """
   
   if adjoint_arguments is None:
-    adj = dolfin.adjoint(form, reordered_arguments = reordered_arguments)
+    a_form = dolfin.adjoint(form, reordered_arguments = reordered_arguments)
   elif not reordered_arguments is None:
     raise InvalidArgumentException("Cannot supply both reordered_arguments and adjoint_arguments keyword arguments")
   else:
@@ -168,8 +168,8 @@ def adjoint(form, reordered_arguments = None, adjoint_arguments = None):
     a_test, a_trial = adjoint_arguments
     assert(a_test.count() == a_trial.count() - 1)
 
-    adj = dolfin.adjoint(form)
-    args = ufl.algorithms.extract_arguments(adj)
+    a_form = dolfin.adjoint(form)
+    args = ufl.algorithms.extract_arguments(a_form)
     assert(len(args) == 2)
     test, trial = args
     if test.count() > trial.count():
@@ -178,12 +178,12 @@ def adjoint(form, reordered_arguments = None, adjoint_arguments = None):
 
     if not test.element() == a_test.element() or not trial.element() == a_trial.element():
       raise InvalidArgumentException("Invalid adjoint_arguments")
-    adj = replace(adj, {test:a_test, trial:a_trial})
+    a_form = replace(a_form, {test:a_test, trial:a_trial})
 
   if isinstance(form, QForm):
-    return QForm(adj, quadrature_degree = form.quadrature_degree())
+    return QForm(a_form, quadrature_degree = form.quadrature_degree())
   else:
-    return adj
+    return a_form
 
 def replace(e, mapping):
   """

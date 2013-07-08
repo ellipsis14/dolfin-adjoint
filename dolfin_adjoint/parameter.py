@@ -283,10 +283,6 @@ class ScalarParameters(DolfinAdjointParameter):
     if dv is not None:
       self.dv = dv
 
-  def __iter__(self):
-    for p in self.v:
-      yield ScalarParameter(p)
-
   def __call__(self, adjointer, i, dependencies, values, variable):
     diff_form = None
     assert self.dv is not None, "Need a perturbation direction to use in the TLM."

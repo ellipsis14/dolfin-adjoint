@@ -206,7 +206,7 @@ class LimiterSolver(AssignmentSolver):
       space_p0 = self.__T_0.function_space()
       test_p0 = TestFunction(space_p0)
       self.__T_0_solver = PAEquationSolver(lumped_mass(space_p0) == inner(test_p0, self.__T_i) * dx,
-                                           self.__T_0, solver_parameters = {"linear_solver":"lu"})
+                                           self.__T_0)
     return
 
   def solve(self):
