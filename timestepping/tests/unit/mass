@@ -61,10 +61,9 @@ for solve in system._ManagedModel__forward._ForwardModel__init_solves \
   + system._ManagedModel__forward._ForwardModel__final_solves:
   if isinstance(solve, PAEquationSolver):
     a, L = solve._PAEquationSolver__a, solve._PAEquationSolver__L
-    assert(isinstance(a, PABilinearForm))
+    assert(isinstance(a, dolfin.GenericMatrix))
     assert(isinstance(L, PALinearForm))
-    print solve.x().name(), a.n_pre_assembled(), a.n_non_pre_assembled(), L.n_pre_assembled(), L.n_non_pre_assembled()
-    assert(a.n_non_pre_assembled() == 0)
+    print solve.x().name(), L.n_pre_assembled(), L.n_non_pre_assembled()
     assert(L.n_non_pre_assembled() == 0)
 
 system.timestep()

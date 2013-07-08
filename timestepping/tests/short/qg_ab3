@@ -264,9 +264,9 @@ def check(f, ref, tol, scale = None):
   assert(err < tol)
   return
 
-check(q[0][-2], 2.20073680358033627e+06, 9.0e-9)
-check(q[1][-2], 2.20073680358033627e+06, 9.0e-9)
-check(q[2][-2], 2.20073680358033627e+06, 9.0e-9)
+check(q[0][-2], 2.20073680358033627e+06, 2.0e-8)
+check(q[1][-2], 2.20073680358033627e+06, 2.0e-8)
+check(q[2][-2], 2.20073680358033627e+06, 2.0e-8)
 check(q[0][-1], 2.20076449380046502e+06, 8.0e-9)
 check(q[1][-1], 2.20073797596434690e+06, 3.0e-8)
 check(q[2][-1], 2.20073726492761029e+06, 2.0e-8)
@@ -287,12 +287,12 @@ while t < mtime:
     check(q[2][n], 2.20073818778413581e+06, 8.0e-9)
   elif c == 2:
     check(q[0][n], 2.20084756830502208e+06, 2.0e-8)
-    check(q[1][n], 2.20074149579874752e+06, 8.0e-9)
+    check(q[1][n], 2.20074149579874752e+06, 9.0e-9)
     check(q[2][n], 2.20073864923472283e+06, 8.0e-9)
 
 system.finalise()
 
-system.verify_checkpoints(tolerance = 1.0e-8)
+system.verify_checkpoints(tolerance = 2.0e-8)
 
 gradPsi = grad(psi[2][N])
 system.set_functional(0.5 * dot(gradPsi, gradPsi) * dx)

@@ -1574,8 +1574,11 @@ class ManagedModel:
           space = parameter.function_space()
           ngrad.append((grad[i], dolfin.Function(space, name = "gradient_%s" % parameter.name())))
           mass = dolfin.inner(dolfin.TestFunction(space), dolfin.TrialFunction(space)) * dolfin.dx
-          solver = solver_cache.solver(mass, solver_parameters = project_solver_parameters, static = True)
-          solver.set_operator(assembly_cache.assemble(mass))
+          a = assembly_cache.assemble(mass)
+          solver = solver_cache.solver(mass,
+            project_solver_parameters,
+            a = a)
+          solver.set_operator(a)
           solver.solve(ngrad[-1][1].vector(), ngrad[-1][0])
         else:
           ngrad.append(grad[i])

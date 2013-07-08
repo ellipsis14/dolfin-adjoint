@@ -80,8 +80,8 @@ if dolfin_version() < (1, 1, 0):
       "has_lu_solver_method"
     ]
 
-  GenericLinearSolver = dolfin.GenericLinearSolver = (dolfin.KrylovSolver, dolfin.LUSolver, dolfin.LinearSolver, dolfin.PETScLUSolver, dolfin.PETScKrylovSolver)
-  GenericLUSolver = dolfin.GenericLUSolver = (dolfin.LUSolver, dolfin.PETScLUSolver)
+  GenericLinearSolver = dolfin.GenericLinearSolver = dolfin.cpp.GenericLinearSolver
+  GenericLUSolver = dolfin.GenericLUSolver = dolfin.cpp.GenericLUSolver
   UnitCubeMesh = dolfin.UnitCube
   UnitIntervalMesh = dolfin.UnitInterval
   UnitSquareMesh = dolfin.UnitSquare
