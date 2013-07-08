@@ -95,6 +95,17 @@ def main(ic):
   A3 = assemble(a3)
 
   prec = "amg" if has_krylov_solver_preconditioner("amg") else "default"
+  
+  begin("Projecting initial velocity")
+  phi = Function(Q, name = "ScalarPotential")
+  b = assemble(-div(u0) * q * dx)
+  [bc.apply(A2, b) for bc in bcp]
+  solve(A2, phi.vector(), b, "gmres", prec)
+  b = assemble(inner(u0, v) * dx - inner(grad(phi), v) * dx)
+  [bc.apply(A3, b) for bc in bcu]  
+  solve(A3, u0.vector(), b, "gmres", "default")
+  del(phi, b)
+  end()
 
   # Time-stepping
   t = dt
