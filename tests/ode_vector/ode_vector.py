@@ -64,6 +64,7 @@ if __name__ == "__main__":
   
   replay = True
   if replay:
+    info_blue("Checking replay correctness .. ")
     assert adjglobals.adjointer.equation_count > 0
     adj_html("forward.html", "forward")
     success = replay_dolfin(tol=1.0e-15, stop=True)
