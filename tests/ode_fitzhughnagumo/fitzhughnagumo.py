@@ -283,9 +283,6 @@ def rhs(states, time, parameters, dy=None):
 
     I = (v - v_rest)*(v - v_th)*(v_peak - v)*c_1/(v_amp*v_amp) - (v -\
         v_rest)*c_2*s/v_amp
-    I = (v - v_rest)*(v - v_th)*(v_peak - v)*c_1/(v_amp*v_amp)
-    I = (v - v_rest)*c_2*s/v_amp
-    I = dolfin.Constant(0)
 
     # Init test function
     _v = dolfin.TestFunction(states.function_space())

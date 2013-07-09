@@ -73,7 +73,7 @@ if __name__ == "__main__":
   ## Step 2. Check TLM correctness
 
   dtm = TimeMeasure()
-  J = Functional(inner(u[0], u[0])*dx*dtm[FINISH_TIME])
+  J = Functional(inner(u, u)*dx*dtm[FINISH_TIME])
   m = InitialConditionParameter(u)
   assert m.data().vector()[0] == u0.vector()[0]
   Jm = assemble(inner(u, u)*dx)
