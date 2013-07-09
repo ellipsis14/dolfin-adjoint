@@ -280,8 +280,12 @@ def rhs(states, time, parameters, dy=None):
     a, b, c_1, c_2, c_3, v_peak, v_rest = dolfin.split(parameters)
     v_amp = v_peak - v_rest
     v_th = v_rest + a*v_amp
+
     I = (v - v_rest)*(v - v_th)*(v_peak - v)*c_1/(v_amp*v_amp) - (v -\
         v_rest)*c_2*s/v_amp
+    I = (v - v_rest)*(v - v_th)*(v_peak - v)*c_1/(v_amp*v_amp)
+    I = (v - v_rest)*c_2*s/v_amp
+    I = dolfin.Constant(0)
 
     # Init test function
     _v = dolfin.TestFunction(states.function_space())
@@ -290,7 +294,7 @@ def rhs(states, time, parameters, dy=None):
     dy = ((-c_3*s + v - v_rest)*b)*_v[0]
 
     # Derivative for state v
-    #dy += (-I)*_v[1]
+    dy += (-I)*_v[1]
 
     # Return dy
     return dy

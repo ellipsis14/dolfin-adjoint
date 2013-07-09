@@ -88,12 +88,12 @@ if __name__ == "__main__":
 
   dJdm = compute_gradient_tlm(J, m, forget=False)
   minconv_tlm = taylor_test(Jhat, m, Jm, dJdm, \
-                            perturbation_direction=interpolate(Constant((0.1,)*num_states), V), seed=1.0)
+                            perturbation_direction=interpolate(Constant((0.1,)*num_states), V), seed=1.0e-1)
   assert minconv_tlm > 1.8
 
   ## Step 3. Check ADM correctness
 
   dJdm = compute_gradient(J, m, forget=False)
   minconv_adm = taylor_test(Jhat, m, Jm, dJdm, \
-                            perturbation_direction=interpolate(Constant((0.1,)*num_states), V), seed=1.0)
+                            perturbation_direction=interpolate(Constant((0.1,)*num_states), V), seed=1.0e-1)
   assert minconv_adm > 1.8
