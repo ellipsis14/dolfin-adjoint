@@ -1,5 +1,60 @@
 from __future__ import division
 
+import numpy as _np
+list_types = (_np.ndarray, list)
+inf = float("infinity")
+
+def value_formatter(value, width=0):
+    """
+    Return a formated string of a value
+
+    Arguments
+    ---------
+    value : any
+        The value which is formatted
+    width : int
+        A min str length value
+    """
+    ret = None
+    if isinstance(value, list_types):
+        if len(value)>4:
+            if isinstance(value[0], integers):
+                formatstr = "[%d, %d, ..., %d, %d]"
+            elif isinstance(value[0], scalars):
+                formatstr = "[%%.%(ff)s, %%.%(ff)s, ..., %%.%(ff)s, %%.%(ff)s]" % \
+                            float_format()
+            else:
+                formatstr = "[%s, %s, ..., %s, %s]"
+            ret = formatstr % (value[0], value[1], value[-2], value[-1])
+        elif len(value) == 0:
+            ret = "[]"
+        else:
+            if isinstance(value[0], integers):
+                formatstr = "%d"
+            elif isinstance(value[0], scalars):
+                formatstr = "%%.%(ff)s" % float_format()
+            else:
+                formatstr = "%s"
+
+            formatstr = "[%s]" % (", ".join(formatstr for i in range(len(value))) )
+            ret = formatstr % tuple(value)
+    
+    elif isinstance(value, float):
+        if value == inf:
+            ret = "\xe2\x88\x9e"
+        elif value == -inf:
+            ret = "-\xe2\x88\x9e"
+    
+    elif isinstance(value, str):
+        ret = repr(value)
+        
+    if ret is None:
+        ret = str(value)
+    
+    if width == 0:
+        return ret
+    return VALUE_JUST(ret, width)
+
 class Range(object):
     """
     A simple class for helping checking a given value is within a certain range
