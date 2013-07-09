@@ -40,7 +40,7 @@ if __name__ == "__main__":
   u0 = interpolate(Constant(1.0), R, name="InitialValue")
   c_f = 1.0
   c  = interpolate(Constant(1.0), R, name="GrowthRate")
-  Solver = BackwardEuler
+  Solver = RK4
 
   u = Function(u0, name="Solution")
   v = TestFunction(R)
