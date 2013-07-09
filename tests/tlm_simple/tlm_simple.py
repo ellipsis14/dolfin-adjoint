@@ -43,3 +43,4 @@ if __name__ == "__main__":
   minconv = taylor_test(Jhat, m, Jm, dJdm)
   assert minconv > 1.9
 
+  adj_reset()
