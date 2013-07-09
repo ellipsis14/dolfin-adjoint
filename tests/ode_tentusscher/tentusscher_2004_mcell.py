@@ -485,9 +485,9 @@ def rhs(states, time, parameters, dy=None):
     # Derivative for state Xr1
     dy = ((-Xr1 + xr1_inf)/tau_xr1)*_v[0]
 
-#    # Derivative for state Xr2
-#    dy += ((-Xr2 + xr2_inf)/tau_xr2)*_v[1]
-#
+    # Derivative for state Xr2
+    dy += ((-Xr2 + xr2_inf)/tau_xr2)*_v[1]
+
     # Derivative for state Xs
     dy += ((-Xs + xs_inf)/tau_xs)*_v[2]
 

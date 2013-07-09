@@ -35,6 +35,8 @@ def main(u, form, time, Scheme, dt):
   solver = PointIntegralSolver(scheme)
   solver.parameters.reset_stage_solutions = True
   solver.parameters.newton_solver.reset_each_step = True
+  solver.parameters.newton_solver.absolute_tolerance = 1.0e-12
+  solver.parameters.newton_solver.maximum_iterations = 50
 
   for i in range(4):
     solver.step(dt)
@@ -73,31 +75,37 @@ if __name__ == "__main__":
 
   ## Step 2. Check TLM correctness
 
-  seed = 1e-2
+  seed = 1e-4
   dtm = TimeMeasure()
-  Jform = lambda u: inner(u[1], u[1])*dx
-  J = Functional(Jform(u)*dtm[FINISH_TIME])
-  m = InitialConditionParameter(u)
-  Jm = assemble(Jform(u))
 
-  def Jhat(ic):
-    time = Constant(0.0)
-    form = model.rhs(ic, time, params)*dP
-    
-    (u, xs, ys) = main(ic, form, time, Scheme, dt=dt)
-    return assemble(Jform(u))
+  for i in range(16):
+    if i != 7: continue
+    Jform = lambda u: inner(u[i], u[i])*dx
+    J = Functional(Jform(u)*dtm[FINISH_TIME])
+    m = InitialConditionParameter(u)
+    Jm = assemble(Jform(u))
 
-  tlm = False
-  # FIXME: Takes for ever...
-  if tlm:
-    dJdm = compute_gradient_tlm(J, m, forget=False)
-    minconv_tlm = taylor_test(Jhat, m, Jm, dJdm, \
+    def Jhat(ic):
+      time = Constant(0.0)
+      form = model.rhs(ic, time, params)*dP
+      
+      (u, xs, ys) = main(ic, form, time, Scheme, dt=dt)
+      return assemble(Jform(u))
+
+    tlm = False
+    # FIXME: Takes for ever...
+    if tlm:
+      dJdm = compute_gradient_tlm(J, m, forget=False)
+      minconv_tlm = taylor_test(Jhat, m, Jm, dJdm, \
+                                perturbation_direction=interpolate(Constant((0.1,)*num_states), V), seed=seed)
+      assert minconv_tlm > 1.8
+
+    ## Step 3. Check ADM correctness
+
+    dJdm = compute_gradient(J, m, forget=False)
+    minconv_adm = taylor_test(Jhat, m, Jm, dJdm, \
                               perturbation_direction=interpolate(Constant((0.1,)*num_states), V), seed=seed)
-    assert minconv_tlm > 1.8
-
-  ## Step 3. Check ADM correctness
-
-  dJdm = compute_gradient(J, m, forget=False)
-  minconv_adm = taylor_test(Jhat, m, Jm, dJdm, \
-                            perturbation_direction=interpolate(Constant((0.1,)*num_states), V), seed=seed)
-  assert minconv_adm > 1.8
+    if minconv_adm > 1.8:
+      info_green("(%d) Pass" % i)
+    else:
+      info_red("(%d) Fail" % i)
