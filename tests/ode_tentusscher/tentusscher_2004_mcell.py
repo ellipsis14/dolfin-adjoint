@@ -485,58 +485,58 @@ def rhs(states, time, parameters, dy=None):
     # Derivative for state Xr1
     dy = ((-Xr1 + xr1_inf)/tau_xr1)*_v[0]
 
-    # Derivative for state Xr2
-    dy += ((-Xr2 + xr2_inf)/tau_xr2)*_v[1]
-
-    # Derivative for state Xs
-    dy += ((-Xs + xs_inf)/tau_xs)*_v[2]
-
-    # Derivative for state m
-    dy += ((-m + m_inf)/tau_m)*_v[3]
-
-    # Derivative for state h
-    dy += ((-h + h_inf)/tau_h)*_v[4]
-
-    # Derivative for state j
-    dy += ((j_inf - j)/tau_j)*_v[5]
-
-    # Derivative for state d
-    dy += ((d_inf - d)/tau_d)*_v[6]
-
-    # Derivative for state f
-    dy += ((-f + f_inf)/tau_f)*_v[7]
-
-    # Derivative for state fCa
-    dy += ((1.0 - 1.0/((1.0 + ufl.exp(60.0 + V))*(1.0 + ufl.exp(-10.0*fCa +\
-        10.0*fCa_inf))))*d_fCa)*_v[8]
-
-    # Derivative for state s
-    dy += ((-s + s_inf)/tau_s)*_v[9]
-
-    # Derivative for state r
-    dy += ((-r + r_inf)/tau_r)*_v[10]
-
-    # Derivative for state Ca_SR
-    dy += ((-i_leak + i_up - i_rel)*Ca_sr_bufsr*V_c/V_sr)*_v[11]
-
-    # Derivative for state Ca_i
-    dy += ((-i_up - (i_CaL + i_p_Ca + i_b_Ca - 2.0*i_NaCa)*Cm/(2.0*F*V_c) +\
-        i_leak + i_rel)*Ca_i_bufc)*_v[12]
-
-    # Derivative for state g
-    dy += ((1.0 - 1.0/((1.0 + ufl.exp(60.0 + V))*(1.0 + ufl.exp(-10.0*g +\
-        10.0*g_inf))))*d_g)*_v[13]
-
-    # Derivative for state Na_i
-    dy += ((-3.0*i_NaK - 3.0*i_NaCa - i_Na - i_b_Na)*Cm/(F*V_c))*_v[14]
-
-    # Derivative for state V
-    dy += (-i_Ks - i_to - i_Kr - i_p_K - i_NaK - i_NaCa - i_Na - i_p_Ca -\
-        i_b_Na - i_CaL - i_Stim - i_K1 - i_b_Ca)*_v[15]
-
-    # Derivative for state K_i
-    dy += ((-i_Ks - i_to - i_Kr - i_p_K - i_Stim - i_K1 +\
-        2.0*i_NaK)*Cm/(F*V_c))*_v[16]
+#    # Derivative for state Xr2
+#    dy += ((-Xr2 + xr2_inf)/tau_xr2)*_v[1]
+#
+#    # Derivative for state Xs
+#    dy += ((-Xs + xs_inf)/tau_xs)*_v[2]
+#
+#    # Derivative for state m
+#    dy += ((-m + m_inf)/tau_m)*_v[3]
+#
+#    # Derivative for state h
+#    dy += ((-h + h_inf)/tau_h)*_v[4]
+#
+#    # Derivative for state j
+#    dy += ((j_inf - j)/tau_j)*_v[5]
+#
+#    # Derivative for state d
+#    dy += ((d_inf - d)/tau_d)*_v[6]
+#
+#    # Derivative for state f
+#    dy += ((-f + f_inf)/tau_f)*_v[7]
+#
+#    # Derivative for state fCa
+#    dy += ((1.0 - 1.0/((1.0 + ufl.exp(60.0 + V))*(1.0 + ufl.exp(-10.0*fCa +\
+#        10.0*fCa_inf))))*d_fCa)*_v[8]
+#
+#    # Derivative for state s
+#    dy += ((-s + s_inf)/tau_s)*_v[9]
+#
+#    # Derivative for state r
+#    dy += ((-r + r_inf)/tau_r)*_v[10]
+#
+#    # Derivative for state Ca_SR
+#    dy += ((-i_leak + i_up - i_rel)*Ca_sr_bufsr*V_c/V_sr)*_v[11]
+#
+#    # Derivative for state Ca_i
+#    dy += ((-i_up - (i_CaL + i_p_Ca + i_b_Ca - 2.0*i_NaCa)*Cm/(2.0*F*V_c) +\
+#        i_leak + i_rel)*Ca_i_bufc)*_v[12]
+#
+#    # Derivative for state g
+#    dy += ((1.0 - 1.0/((1.0 + ufl.exp(60.0 + V))*(1.0 + ufl.exp(-10.0*g +\
+#        10.0*g_inf))))*d_g)*_v[13]
+#
+#    # Derivative for state Na_i
+#    dy += ((-3.0*i_NaK - 3.0*i_NaCa - i_Na - i_b_Na)*Cm/(F*V_c))*_v[14]
+#
+#    # Derivative for state V
+#    dy += (-i_Ks - i_to - i_Kr - i_p_K - i_NaK - i_NaCa - i_Na - i_p_Ca -\
+#        i_b_Na - i_CaL - i_Stim - i_K1 - i_b_Ca)*_v[15]
+#
+#    # Derivative for state K_i
+#    dy += ((-i_Ks - i_to - i_Kr - i_p_K - i_Stim - i_K1 +\
+#        2.0*i_NaK)*Cm/(F*V_c))*_v[16]
 
     # Return dy
     return dy

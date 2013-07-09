@@ -73,20 +73,18 @@ if __name__ == "__main__":
 
   ## Step 2. Check TLM correctness
 
-  seed = 1e-8
+  seed = 1e-1
   dtm = TimeMeasure()
-  J = Functional(inner(u[15], u[15])*dx*dtm[FINISH_TIME])
+  J = Functional(inner(u[0], u[0])*dx*dtm[FINISH_TIME])
   m = InitialConditionParameter(u)
-  assert m.data().vector()[15] == u0.vector()[15]
-  Jm = assemble(inner(u[15], u[15])*dx)
+  Jm = assemble(inner(u[0], u[0])*dx)
 
   def Jhat(ic):
     time = Constant(0.0)
     form = model.rhs(ic, time, params)*dP
     
     (u, xs, ys) = main(ic, form, time, Scheme, dt=dt)
-    print "Perturbed functional value: ", assemble(inner(u[15], u[15])*dx)
-    return assemble(inner(u[15], u[15])*dx)
+    return assemble(inner(u[0], u[0])*dx)
 
   tlm = False
   # FIXME: Takes for ever...
