@@ -73,18 +73,19 @@ if __name__ == "__main__":
 
   ## Step 2. Check TLM correctness
 
-  seed = 1e-1
+  seed = 1e-2
   dtm = TimeMeasure()
-  J = Functional(inner(u[0], u[0])*dx*dtm[FINISH_TIME])
+  Jform = lambda u: inner(u[1], u[1])*dx
+  J = Functional(Jform(u)*dtm[FINISH_TIME])
   m = InitialConditionParameter(u)
-  Jm = assemble(inner(u[0], u[0])*dx)
+  Jm = assemble(Jform(u))
 
   def Jhat(ic):
     time = Constant(0.0)
     form = model.rhs(ic, time, params)*dP
     
     (u, xs, ys) = main(ic, form, time, Scheme, dt=dt)
-    return assemble(inner(u[0], u[0])*dx)
+    return assemble(Jform(u))
 
   tlm = False
   # FIXME: Takes for ever...
