@@ -197,3 +197,103 @@ def maximize(reduced_func, method = 'L-BFGS-B', scale = 1.0, **kwargs):
 
 minimise = minimize
 maximise = maximize
+
+def minimize_steepest_descent(rf, tol=None, options={}, **args):
+    from dolfin import inner, assemble, dx, Function
+
+    if tol != None:
+        print "Warning: steepest descent does not support the tol parameter. Use options['gtol'] instead."
+    # Set the default options values
+    if "gtol" in options:
+        gtol = options["gtol"]
+    else:
+        gtol = 1e-4
+    if "maxiter" in options:
+        maxiter = options["maxiter"]
+    else:
+        maxiter = 200
+    if "startalpha" in options:
+        start_alpha = options["startalpha"]
+    else:
+        start_alpha = 1.0
+    if "disp" in options:
+        disp = options["disp"]
+    else:
+        disp = True
+    if "c1" in options:
+        c1 = options["c1"] 
+    else:
+        c1 = 1e-4
+    if "c2" in options:
+        c2 = options["c2"] 
+    else:
+        c2 = 0.1
+
+    if disp:
+      print "Optimising using steepest descent with Armijo rule." 
+      print "Maximum iterations: %i" % maxiter 
+      print "Armijo constants: c1 = %f, c2 = %f" % (c1, c2) 
+
+    if len(rf.parameter) != 1:
+        raise ValueError, "Steepest descent currently does only support a single optimisation parameter."
+
+    m = [p.data() for p in rf.parameter][0]
+    J = lambda m: rf(m)
+    dJ = lambda **args: rf.derivative(**args)
+
+    j = J(m)
+    dj = dJ(forget=None)[0]
+    s = dJ(forget=None, project=True)[0] # The search direction is the Riesz representation of the gradient
+
+    def normL2(x):
+        return assemble(inner(x, x)*dx)**0.5
+
+    def innerL2(x, y):
+        return assemble(inner(x, y)*dx)
+
+    it = 0
+    while (normL2(s) > gtol) and it < maxiter:
+        # Perform line search with Armijo rule 
+        alpha = start_alpha 
+        armijo_iter = 0
+        while True:
+            try:
+                m_new = Function(m - alpha*s)
+            except TypeError:
+                m_new = Function(m.function_space())
+                m_new.vector()[:] = m.vector().array() - alpha*s.vector().array()
+
+            j_new = J(m_new)
+            dj_new = dJ(forget=None)[0]
+            s_new = dJ(project=True)[0] 
+            # Check the Armijo and Wolfe conditions 
+            if j_new <= j + c1*alpha*innerL2(dj, s) and innerL2(dj_new, s) >= c2*innerL2(dj, s):
+                break
+            else: 
+                armijo_iter += 1
+                alpha /= 2
+        # Adaptively change the starting alpha
+        if armijo_iter < 2:
+            start_alpha *= 2
+            if disp:
+                print "Adaptively increase default step size to %s" % start_alpha
+        if armijo_iter > 4:
+            start_alpha /= 2
+            if disp:
+                print "Adaptively decrease default step size to %s" % start_alpha
+
+        m = m_new 
+        j = j_new
+        dj = dj_new
+        s = s_new
+        it += 1
+
+        if disp: 
+            print "Iteration %i\tJ = %s\t|dJ| = %s" % (it, j, normL2(s))
+
+    if disp and iter <= maxiter:
+        print "\nMaximum number of iterations reached."
+    elif normL2(s) <= tol: 
+        print "\nTolerance reached: |dJ| < tol."
+
+    return m
