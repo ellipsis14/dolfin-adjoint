@@ -212,9 +212,9 @@ class ReducedFunctional(object):
             self.eval_cb(self.scale * func_value, unlist(value))
         return self.scale * func_value
 
-    def derivative(self, forget=True):
+    def derivative(self, forget=True, project=False):
         ''' Evaluates the derivative of the reduced functional for the lastly evaluated parameter value. ''' 
-        dfunc_value = drivers.compute_gradient(self.functional, self.parameter, forget=forget)
+        dfunc_value = drivers.compute_gradient(self.functional, self.parameter, forget=forget, project=project)
         adjointer.reset_revolve()
         scaled_dfunc_value = []
         for df in list(dfunc_value):
