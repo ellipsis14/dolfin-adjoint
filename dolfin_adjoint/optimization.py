@@ -223,21 +223,22 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
     else:
         c1 = 1e-4
 
-    if disp:
-      print "Optimising using steepest descent with an Armijo line search." 
-      print "Maximum iterations: %i" % maxiter 
-      print "Armijo constant: c1 = %f" % (c1)
-
+    # Check the validness of the user supplied parameters
     assert 0 < c1 < 1
+    if len(rf.parameter) != 1:
+        raise NotImplementedError, "Steepest descent currently is only implemented for a single optimisation parameter."
 
+    # Define the norm and the inner product in the relevant function spaces
     def normL2(x):
         return assemble(inner(x, x)*dx)**0.5
 
     def innerL2(x, y):
         return assemble(inner(x, y)*dx)
 
-    if len(rf.parameter) != 1:
-        raise NotImplementedError, "Steepest descent currently is only implemented for a single optimisation parameter."
+    if disp:
+      print "Optimising using steepest descent with an Armijo line search." 
+      print "Maximum iterations: %i" % maxiter 
+      print "Armijo constant: c1 = %f" % (c1)
 
     m = [p.data() for p in rf.parameter][0]
     J = lambda m: rf(m)
@@ -283,7 +284,7 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
                 alpha /= 2
 
                 if alpha < 1e-16:
-                    raise RuntimeError, "The line search stepsize dropped below below machine precision."
+                    raise RuntimeError, "The line search stepsize dropped below below machine precision. Maybe your gradient is not correct?"
 
         # Adaptively change start_alpha (the initial step size)
         if armijo_iter < 2:
@@ -291,6 +292,7 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
         if armijo_iter > 4:
             start_alpha /= 2
 
+        # Update the current iterate
         m = m_new 
         j_prev = j
         j = j_new
@@ -301,6 +303,7 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
         if "callback" in options:
             options["callback"](m)
 
+    # Print the reason for convergence
     if disp:
         if maxiter != None and iter <= maxiter:
             print "\nMaximum number of iterations reached.\n"
