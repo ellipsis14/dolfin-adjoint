@@ -38,7 +38,7 @@ def solve_optimal_control(n):
     # Run the optimisation 
     rf = ReducedFunctional(J, InitialConditionParameter(m, value=m))
 
-    m = minimize_steepest_descent(rf, options={"gtol": 1e-16, "maxiter": 20})
+    m = minimize_steepest_descent(rf, options={"gtol": 1e-16, "maxiter": 2000})
     solve_pde(u, V, m)
 
     # Define the analytical expressions

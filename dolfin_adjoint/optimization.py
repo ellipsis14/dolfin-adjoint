@@ -263,6 +263,9 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
         s = dJ(forget=None, project=True)[0] # The search direction is the Riesz representation of the gradient
         s.vector()[:] = -s.vector().array()
         djs = innerL2(dj, s)
+        if djs >= 0:
+            raise RuntimeError, "Negative gradient is not a descent direction. Is your gradient correct?" 
+
 
         # Perform a backtracking line search until the Armijo condition is satisfied 
         def phi(alpha):
@@ -284,7 +287,7 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
                 alpha /= 2
 
                 if alpha < 1e-16:
-                    raise RuntimeError, "The line search stepsize dropped below below machine precision. Maybe your gradient is not correct?"
+                    raise RuntimeError, "The line search stepsize dropped below below machine precision."
 
         # Adaptively change start_alpha (the initial step size)
         if armijo_iter < 2:
