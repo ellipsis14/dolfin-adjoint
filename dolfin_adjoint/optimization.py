@@ -198,11 +198,9 @@ def maximize(reduced_func, method = 'L-BFGS-B', scale = 1.0, **kwargs):
 minimise = minimize
 maximise = maximize
 
-def minimize_steepest_descent(rf, tol=None, options={}, **args):
+def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
     from dolfin import inner, assemble, dx, Function
 
-    if tol != None:
-        print "Warning: steepest descent does not support the tol parameter. Use options['gtol'] instead."
     # Set the default options values
     if "gtol" in options:
         gtol = options["gtol"]
@@ -224,26 +222,13 @@ def minimize_steepest_descent(rf, tol=None, options={}, **args):
         c1 = options["c1"] 
     else:
         c1 = 1e-4
-    if "c2" in options:
-        c2 = options["c2"] 
-    else:
-        c2 = 0.1
 
     if disp:
-      print "Optimising using steepest descent with Armijo rule." 
+      print "Optimising using steepest descent with an Armijo line search." 
       print "Maximum iterations: %i" % maxiter 
-      print "Armijo constants: c1 = %f, c2 = %f" % (c1, c2) 
+      print "Armijo constant: c1 = %f" % (c1)
 
-    if len(rf.parameter) != 1:
-        raise ValueError, "Steepest descent currently does only support a single optimisation parameter."
-
-    m = [p.data() for p in rf.parameter][0]
-    J = lambda m: rf(m)
-    dJ = lambda **args: rf.derivative(**args)
-
-    j = J(m)
-    dj = dJ(forget=None)[0]
-    s = dJ(forget=None, project=True)[0] # The search direction is the Riesz representation of the gradient
+    assert 0 < c1 < 1
 
     def normL2(x):
         return assemble(inner(x, x)*dx)**0.5
@@ -251,49 +236,77 @@ def minimize_steepest_descent(rf, tol=None, options={}, **args):
     def innerL2(x, y):
         return assemble(inner(x, y)*dx)
 
+    if len(rf.parameter) != 1:
+        raise NotImplementedError, "Steepest descent currently is only implemented for a single optimisation parameter."
+
+    m = [p.data() for p in rf.parameter][0]
+    J = lambda m: rf(m)
+    dJ = lambda **args: rf.derivative(**args)
+
+    j = None 
+    j_prev = None
+    dj = None 
+    s = None
+
+    # Start the optimisation loop
     it = 0
-    while (normL2(s) > gtol) and it < maxiter:
-        # Perform line search with Armijo rule 
+    while ((gtol == None or s == None or normL2(s) > gtol) and 
+           (tol == None or j == None or j_prev == None or abs(j-j_prev)) > tol and 
+           (maxiter == None or it < maxiter)):
+
+        # Evaluate the functional at the current iterate
+        if j == None:
+            j = J(m)
+        dj = dJ(forget=None)[0]
+        # TODO: Instead of reevaluating the gradient, we should just project dj 
+        s = dJ(forget=None, project=True)[0] # The search direction is the Riesz representation of the gradient
+        s.vector()[:] = -s.vector().array()
+        djs = innerL2(dj, s)
+
+        # Perform a backtracking line search until the Armijo condition is satisfied 
+        def phi(alpha):
+            try:
+                m_new = Function(m + alpha*s)
+            except TypeError:
+                m_new = Function(m.function_space())
+                m_new.vector()[:] = m.vector().array() + alpha*s.vector().array()
+            return J(m_new), m_new
+
         alpha = start_alpha 
         armijo_iter = 0
         while True:
-            try:
-                m_new = Function(m - alpha*s)
-            except TypeError:
-                m_new = Function(m.function_space())
-                m_new.vector()[:] = m.vector().array() - alpha*s.vector().array()
-
-            j_new = J(m_new)
-            dj_new = dJ(forget=None)[0]
-            s_new = dJ(project=True)[0] 
-            # Check the Armijo and Wolfe conditions 
-            if j_new <= j + c1*alpha*innerL2(dj, s) and innerL2(dj_new, s) >= c2*innerL2(dj, s):
+            j_new, m_new = phi(alpha)
+            if j_new <= j + c1*alpha*djs:
                 break
             else: 
                 armijo_iter += 1
                 alpha /= 2
-        # Adaptively change the starting alpha
+
+                if alpha < 1e-16:
+                    raise RuntimeError, "The line search stepsize dropped below below machine precision."
+
+        # Adaptively change start_alpha (the initial step size)
         if armijo_iter < 2:
             start_alpha *= 2
-            if disp:
-                print "Adaptively increase default step size to %s" % start_alpha
         if armijo_iter > 4:
             start_alpha /= 2
-            if disp:
-                print "Adaptively decrease default step size to %s" % start_alpha
 
         m = m_new 
+        j_prev = j
         j = j_new
-        dj = dj_new
-        s = s_new
         it += 1
 
         if disp: 
             print "Iteration %i\tJ = %s\t|dJ| = %s" % (it, j, normL2(s))
+        if "callback" in options:
+            options["callback"](m)
 
-    if disp and iter <= maxiter:
-        print "\nMaximum number of iterations reached."
-    elif normL2(s) <= tol: 
-        print "\nTolerance reached: |dJ| < tol."
+    if disp:
+        if maxiter != None and iter <= maxiter:
+            print "\nMaximum number of iterations reached.\n"
+        elif gtol != None and normL2(s) <= gtol: 
+            print "\nTolerance reached: |dJ| < gtol.\n"
+        elif tol != None and j_prev != None and abs(j-j_prev) <= tol:
+            print "\nTolerance reached: |delta j| < tol.\n"
 
     return m
