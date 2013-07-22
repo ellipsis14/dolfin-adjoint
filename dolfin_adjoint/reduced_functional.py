@@ -119,7 +119,7 @@ class ReducedFunctional(object):
     ''' This class implements the reduced functional for a given functional/parameter combination. The core idea 
         of the reduced functional is to consider the problem as a pure function of the parameter value which 
         implicitly solves the recorded PDE. '''
-    def __init__(self, functional, parameter, scale = 1.0, eval_cb = None, derivative_cb = None, replay_cb = None, hessian_cb = None):
+    def __init__(self, functional, parameter, scale = 1.0, eval_cb = None, derivative_cb = None, replay_cb = None, hessian_cb = None, ignore = []):
         ''' Creates a reduced functional object, that evaluates the functional value for a given parameter value.
             The arguments are as follows:
             * 'functional' must be a dolfin_adjoint.Functional object. 
@@ -148,6 +148,7 @@ class ReducedFunctional(object):
         self.hessian_cb = hessian_cb
         self.replay_cb = replay_cb
         self.current_func_value = None
+        self.ignore = ignore
 
         # TODO: implement a drivers.hessian function that supports a list of parameters
         if len(parameter) == 1:
@@ -214,7 +215,7 @@ class ReducedFunctional(object):
 
     def derivative(self, forget=True, project=False):
         ''' Evaluates the derivative of the reduced functional for the lastly evaluated parameter value. ''' 
-        dfunc_value = drivers.compute_gradient(self.functional, self.parameter, forget=forget, project=project)
+        dfunc_value = drivers.compute_gradient(self.functional, self.parameter, forget=forget, ignore=self.ignore, project=project)
         adjointer.reset_revolve()
         scaled_dfunc_value = []
         for df in list(dfunc_value):
