@@ -204,8 +204,9 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
     # Set the default options values
     gtol = options.get("gtol", 1e-4)
     maxiter = options.get("maxiter", 200)
-    start_alpha = options.get("startalpha", 1.0)
     disp = options.get("disp", True)
+    start_alpha = options.get("start_alpha", 1.0)
+    line_search_algorithm = options.get("line_search_algorithm", "backtracking")
     c1 = options.get("c1", 1e-4)
 
     # Check the validness of the user supplied parameters
@@ -255,34 +256,47 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
         if djs >= 0:
             raise RuntimeError, "Negative gradient is not a descent direction. Is your gradient correct?" 
 
-        # Perform a backtracking line search until the Armijo condition is satisfied 
-        def phi(alpha):
+        if line_search_algorithm == "backtracking":
+            # Perform a backtracking line search until the Armijo condition is satisfied 
+            def phi(alpha):
+                try:
+                    m_new = Function(m + alpha*s)
+                except TypeError:
+                    m_new = Function(m.function_space())
+                    m_new.vector()[:] = m.vector() + alpha*s.vector()
+
+                return J(m_new), m_new
+
+            alpha = start_alpha 
+            armijo_iter = 0
+            while True:
+                j_new, m_new = phi(alpha)
+                if j_new <= j + c1*alpha*djs:
+                    break
+                else: 
+                    armijo_iter += 1
+                    alpha /= 2
+
+                    if alpha < numpy.finfo(numpy.float).eps:
+                        raise RuntimeError, "The line search stepsize dropped below below machine precision."
+
+            # Adaptively change start_alpha (the initial step size)
+            if armijo_iter < 2:
+                start_alpha *= 2
+            if armijo_iter > 4:
+                start_alpha /= 2
+
+        elif line_search_algorithm == "fixed":
             try:
-                m_new = Function(m + alpha*s)
+                m_new = Function(m + start_alpha*s)
             except TypeError:
                 m_new = Function(m.function_space())
-                m_new.vector()[:] = m.vector() + alpha*s.vector()
+                m_new.vector()[:] = m.vector() + start_alpha*s.vector()
 
-            return J(m_new), m_new
+            j_new = J(m_new)
 
-        alpha = start_alpha 
-        armijo_iter = 0
-        while True:
-            j_new, m_new = phi(alpha)
-            if j_new <= j + c1*alpha*djs:
-                break
-            else: 
-                armijo_iter += 1
-                alpha /= 2
-
-                if alpha < numpy.finfo(numpy.float).eps:
-                    raise RuntimeError, "The line search stepsize dropped below below machine precision."
-
-        # Adaptively change start_alpha (the initial step size)
-        if armijo_iter < 2:
-            start_alpha *= 2
-        if armijo_iter > 4:
-            start_alpha /= 2
+        else:
+            raise ValueError, "Unknown line search specified. Valid values are 'backtracking' and 'fixed'."
 
         # Update the current iterate
         m.assign(m_new)
@@ -293,7 +307,7 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
         if disp: 
             print "Iteration %i\tJ = %s\t|dJ| = %s" % (it, j, normL2(s))
         if "callback" in options:
-            options["callback"](m)
+            options["callback"](j, s, m)
 
     # Print the reason for convergence
     if disp:
