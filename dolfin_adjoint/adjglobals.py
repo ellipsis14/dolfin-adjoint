@@ -60,7 +60,7 @@ def adj_check_checkpoints():
 
 def adj_reset_cache():
   if dolfin.parameters["adjoint"]["debug_cache"]:
-    dolfin.info_blue("Reseting solver cache")
+    dolfin.info_blue("Resetting solver cache")
 
   dolfin.parameters["adjoint"]["stop_annotating"] = False
 

@@ -202,26 +202,11 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
     from dolfin import inner, assemble, dx, Function
 
     # Set the default options values
-    if "gtol" in options:
-        gtol = options["gtol"]
-    else:
-        gtol = 1e-4
-    if "maxiter" in options:
-        maxiter = options["maxiter"]
-    else:
-        maxiter = 200
-    if "startalpha" in options:
-        start_alpha = options["startalpha"]
-    else:
-        start_alpha = 1.0
-    if "disp" in options:
-        disp = options["disp"]
-    else:
-        disp = True
-    if "c1" in options:
-        c1 = options["c1"] 
-    else:
-        c1 = 1e-4
+    gtol = options.get("gtol", 1e-4)
+    maxiter = options.get("maxiter", 200)
+    start_alpha = options.get("startalpha", 1.0)
+    disp = options.get("disp", True)
+    c1 = options.get("c1", 1e-4)
 
     # Check the validness of the user supplied parameters
     assert 0 < c1 < 1
@@ -241,8 +226,8 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
       print "Armijo constant: c1 = %f" % (c1)
 
     m = [p.data() for p in rf.parameter][0]
-    J = lambda m: rf(m)
-    dJ = lambda **args: rf.derivative(**args)
+    J =  rf
+    dJ = rf.derivative
 
     j = None 
     j_prev = None
@@ -261,11 +246,14 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
         dj = dJ(forget=None)[0]
         # TODO: Instead of reevaluating the gradient, we should just project dj 
         s = dJ(forget=None, project=True)[0] # The search direction is the Riesz representation of the gradient
-        s.vector()[:] = -s.vector().array()
-        djs = innerL2(dj, s)
+        try:
+            s.assign(-1*s)
+        except TypeError:
+            s.vector()[:] = -s.vector() 
+
+        djs = dj.vector().inner(s.vector()) # Slope at current point
         if djs >= 0:
             raise RuntimeError, "Negative gradient is not a descent direction. Is your gradient correct?" 
-
 
         # Perform a backtracking line search until the Armijo condition is satisfied 
         def phi(alpha):
@@ -273,7 +261,8 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
                 m_new = Function(m + alpha*s)
             except TypeError:
                 m_new = Function(m.function_space())
-                m_new.vector()[:] = m.vector().array() + alpha*s.vector().array()
+                m_new.vector()[:] = m.vector() + alpha*s.vector()
+
             return J(m_new), m_new
 
         alpha = start_alpha 
@@ -286,7 +275,7 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
                 armijo_iter += 1
                 alpha /= 2
 
-                if alpha < 1e-16:
+                if alpha < numpy.finfo(numpy.float).eps:
                     raise RuntimeError, "The line search stepsize dropped below below machine precision."
 
         # Adaptively change start_alpha (the initial step size)
@@ -296,7 +285,7 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
             start_alpha /= 2
 
         # Update the current iterate
-        m = m_new 
+        m.assign(m_new)
         j_prev = j
         j = j_new
         it += 1
