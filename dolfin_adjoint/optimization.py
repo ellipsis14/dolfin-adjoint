@@ -73,6 +73,10 @@ def minimize_scipy_generic(J, dJ, m, method, bounds = None, H = None, **kwargs):
         del kwargs["jac"]
         kwargs["minimizer_kwargs"]["jac"]=dJ
 
+        if "bounds" in kwargs["minimizer_kwargs"]:
+          kwargs["minimizer_kwargs"]["bounds"] = \
+              serialise_bounds(kwargs["minimizer_kwargs"]["bounds"], m)
+
         res = basinhopping(J, m_global, **kwargs)
 
     elif bounds != None:
