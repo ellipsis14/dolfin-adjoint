@@ -225,10 +225,10 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
     def innerL2(x, y):
         return assemble(inner(x, y)*dx)
 
-    if disp:
+    if disp and MPI.process_number()==0:
       print "Optimising using steepest descent with an Armijo line search." 
       print "Maximum iterations: %i" % maxiter 
-      print "Armijo constant: c1 = %f" % (c1)
+      print "Armijo constant: c1 = %f" % c1
 
     m = [p.data() for p in rf.parameter][0]
     J =  rf
@@ -308,18 +308,22 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
         j = j_new
         it += 1
 
-        if disp: 
-            print "Iteration %i\tJ = %s\t|dJ| = %s" % (it, j, normL2(s))
+        if disp:
+            n = normL2(s)
+            if MPI.process_number()==0: 
+                print "Iteration %i\tJ = %s\t|dJ| = %s" % (it, j, n)
         if "callback" in options:
             options["callback"](j, s, m)
 
     # Print the reason for convergence
     if disp:
-        if maxiter != None and iter <= maxiter:
-            print "\nMaximum number of iterations reached.\n"
-        elif gtol != None and normL2(s) <= gtol: 
-            print "\nTolerance reached: |dJ| < gtol.\n"
-        elif tol != None and j_prev != None and abs(j-j_prev) <= tol:
-            print "\nTolerance reached: |delta j| < tol.\n"
+        n = normL2(s)
+        if MPI.process_number()==0:
+            if maxiter != None and iter <= maxiter:
+                print "\nMaximum number of iterations reached.\n"
+            elif gtol != None and n <= gtol: 
+                print "\nTolerance reached: |dJ| < gtol.\n"
+            elif tol != None and j_prev != None and abs(j-j_prev) <= tol:
+                print "\nTolerance reached: |delta j| < tol.\n"
 
     return m
