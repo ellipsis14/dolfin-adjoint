@@ -139,10 +139,10 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
 
       if last_timestep > adj_var.timestep:
         # We have hit a new timestep, and need to compute this timesteps' \partial J/\partial m contribution
-        last_timestep = adj_var.timestep
         out = lparam[j].functional_partial_derivative(adjglobals.adjointer, J, adj_var.timestep)
         dJdparam[j] = _add(dJdparam[j], out)
 
+    last_timestep = adj_var.timestep
 
     if forget is None:
       pass
