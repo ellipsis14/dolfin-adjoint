@@ -78,13 +78,14 @@ if __name__ == "__main__":
     b = rf.derivative(forget=False)
     time_b = t.stop()
 
-    print a
-    print b
-
     assert max(abs(a[0].vector().array() - b[0].vector().array())) == 0
     assert float(a[1]) == float(b[1]) 
     assert time_a/time_b > 200 # Check that speed-up is significant
 
+    # Finally, let's check caching of the Hessian 
+    # TODO
+
     # Check that the cache file gets created
     del rf  
     assert os.path.isfile(cache_file) 
+

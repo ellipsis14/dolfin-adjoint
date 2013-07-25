@@ -297,7 +297,7 @@ class ReducedFunctional(object):
             fnspaces = [p.data().function_space() if isinstance(p.data(), Function) else None for p in self.parameter]
 
             if hash in self._cache["derivative_cache"]:
-                info_green("Got a cache hit.")
+                info_green("Got a derivative cache hit.")
                 return cache_load(self._cache["derivative_cache"][hash], fnspaces)
 
         dfunc_value = drivers.compute_gradient(self.functional, self.parameter, forget=forget, ignore=self.ignore, project=project)
@@ -315,7 +315,7 @@ class ReducedFunctional(object):
             self.derivative_cb(self.scale * self.current_func_value, unlist(scaled_dfunc_value), unlist([p.data() for p in self.parameter]))
 
         if self.cache is not None:
-            info_red("Got cache miss")
+            info_red("Got a derivative cache miss")
             self._cache["derivative_cache"][hash] = cache_store(scaled_dfunc_value, self.cache)
 
         return scaled_dfunc_value
@@ -323,6 +323,14 @@ class ReducedFunctional(object):
     def hessian(self, m_dot):
         ''' Evaluates the Hessian action in direction m_dot. '''
         assert(len(self.parameter) == 1)
+
+        if self.cache is not None:
+            hash = value_hash([x.data() for x in self.parameter] + [m_dot])
+            fnspaces = [p.data().function_space() if isinstance(p.data(), Function) else None for p in self.parameter]
+
+            if hash in self._cache["hessian_cache"]:
+                info_green("Got a Hessian cache hit.")
+                return cache_load(self._cache["hessian_cache"][hash], fnspaces)
 
         if isinstance(m_dot, list):
           assert len(m_dot) == 1
@@ -334,11 +342,17 @@ class ReducedFunctional(object):
                             unlist([p.data() for p in self.parameter]),
                             m_dot,
                             Hm.vector() * self.scale)
-        
+
         if hasattr(Hm, 'function_space'):
-            return [Function(Hm.function_space(), Hm.vector() * self.scale)]
+            val = [Function(Hm.function_space(), Hm.vector() * self.scale)]
         else:
-            return [self.scale * Hm]
+            val = [self.scale * Hm]
+
+        if self.cache is not None:
+            info_red("Got a Hessian cache miss")
+            self._cache["hessian_cache"][hash] = cache_store(val, self.cache)
+
+        return val        
 
     def eval_array(self, m_array):
         ''' An implementation of the reduced functional evaluation
