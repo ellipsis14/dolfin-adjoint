@@ -1,8 +1,10 @@
 import libadjoint
 import numpy
-from dolfin import cpp, info, project, Function
+from dolfin import cpp, info, project, Function, Constant, info_red, info_green
 from dolfin_adjoint import adjlinalg, adjrhs, constant, utils, drivers
 from dolfin_adjoint.adjglobals import adjointer, mem_checkpoints, disk_checkpoints, adj_reset_cache
+import cPickle as pickle
+import hashlib
 
 def unlist(x):
     ''' If x is a list of length 1, return its element. Otherwise return x. '''
@@ -19,6 +21,18 @@ def copy_data(m):
         return Constant(m(()))
     else:
         raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
+
+def value_hash(value):
+    if isinstance(value, Constant):
+        return str(float(value))
+    elif isinstance(value, Function):
+        m = hashlib.md5()
+        m.update(str(value.vector().norm("l2")) + str(value.vector().norm("l1")) + str(value.vector().norm("linf")))
+        return m.hexdigest()
+    elif isinstance (value, list):
+        return "".join(map(value_hash, value))
+    else:
+        raise Exception, "Don't know how to take a hash of %s" % value
 
 def get_global(m_list):
     ''' Takes a list of distributed objects and returns one numpy array containing their (serialised) values '''
@@ -126,7 +140,7 @@ class ReducedFunctional(object):
     ''' This class implements the reduced functional for a given functional/parameter combination. The core idea 
         of the reduced functional is to consider the problem as a pure function of the parameter value which 
         implicitly solves the recorded PDE. '''
-    def __init__(self, functional, parameter, scale = 1.0, eval_cb = None, derivative_cb = None, replay_cb = None, hessian_cb = None, ignore = []):
+    def __init__(self, functional, parameter, scale = 1.0, eval_cb = None, derivative_cb = None, replay_cb = None, hessian_cb = None, ignore = [], cache = None):
         ''' Creates a reduced functional object, that evaluates the functional value for a given parameter value.
             The arguments are as follows:
             * 'functional' must be a dolfin_adjoint.Functional object. 
@@ -156,10 +170,23 @@ class ReducedFunctional(object):
         self.replay_cb = replay_cb
         self.current_func_value = None
         self.ignore = ignore
+        self.cache = cache
 
         # TODO: implement a drivers.hessian function that supports a list of parameters
         if len(parameter) == 1:
             self.H = drivers.hessian(functional, parameter[0], warn=False)
+
+        if cache is not None:
+            try:
+                self._cache = pickle.load(open(cache, "r"))
+            except IOError: # didn't exist
+                self._cache = {"functional_cache": {},
+                                "gradient_cache": {},
+                                "hessian_cache": {}}
+
+    def __del__(self):
+        if self.cache is not None:
+            pickle.dump(self._cache, open(self.cache, "w"))
 
     def __call__(self, value):
         ''' Evaluates the reduced functional for the given parameter value, by replaying the forward model.
@@ -173,6 +200,13 @@ class ReducedFunctional(object):
         # Update the parameter values
         for i in range(len(value)):
             replace_tape_ic_value(self.parameter[i], value[i])
+
+        if self.cache:
+            hash = value_hash(value)
+            if hash in self._cache["functional_cache"]:
+                # Found a cache
+                info_green("Got a functional cache hit")
+                return self._cache["functional_cache"][hash]
 
         # Replay the annotation and evaluate the functional
         func_value = 0.
@@ -217,7 +251,13 @@ class ReducedFunctional(object):
         self.current_func_value = func_value 
         if self.eval_cb:
             self.eval_cb(self.scale * func_value, unlist(value))
-        return self.scale * func_value
+
+        if self.cache:
+            # Add result to cache
+            info_red("Got a functional cache miss")
+            self._cache["functional_cache"][hash] = self.scale*func_value
+
+        return self.scale*func_value
 
     def derivative(self, forget=True, project=False):
         ''' Evaluates the derivative of the reduced functional for the lastly evaluated parameter value. ''' 
