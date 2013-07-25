@@ -151,24 +151,23 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
     else:
       adjglobals.adjointer.forget_adjoint_values(i)
 
-  def project_test(func):
-    if isinstance(func, dolfin.Function):
-      V = func.function_space()
-      u = dolfin.TrialFunction(V)
-      v = dolfin.TestFunction(V)
-      M = dolfin.assemble(dolfin.inner(u, v)*dolfin.dx)
-      proj = dolfin.Function(V)
-      dolfin.solve(M, proj.vector(), func.vector())
-      return proj
-    else:
-      return func
-
-
   for i, parameter in enumerate(lparam):
     if isinstance(dJdparam[i], dolfin.Function):
       dJdparam[i].rename("d(%s)/d(%s)" % (str(J), str(parameter)), "a Function from dolfin-adjoint")
 
   return postprocess(dJdparam, project)
+
+def project_test(func):
+  if isinstance(func, dolfin.Function):
+    V = func.function_space()
+    u = dolfin.TrialFunction(V)
+    v = dolfin.TestFunction(V)
+    M = dolfin.assemble(dolfin.inner(u, v)*dolfin.dx)
+    proj = dolfin.Function(V)
+    dolfin.solve(M, proj.vector(), func.vector())
+    return proj
+  else:
+    return func
 
 def postprocess(dJdparam, project):
   if project:
