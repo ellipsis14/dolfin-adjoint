@@ -1,6 +1,6 @@
 import libadjoint
 import numpy
-from dolfin import cpp, info, project, Function, Constant, info_red, info_green
+from dolfin import cpp, info, project, Function, Constant, info_red, info_green, File, FunctionSpace
 from dolfin_adjoint import adjlinalg, adjrhs, constant, utils, drivers
 from dolfin_adjoint.adjglobals import adjointer, mem_checkpoints, disk_checkpoints, adj_reset_cache
 import cPickle as pickle
@@ -10,6 +10,13 @@ def unlist(x):
     ''' If x is a list of length 1, return its element. Otherwise return x. '''
     if len(x) == 1:
         return x[0]
+    else:
+        return x
+
+def enlist(x):
+    ''' Opposite of unlist '''
+    if not isinstance(x, (list, tuple)):
+        return [x]
     else:
         return x
 
@@ -33,6 +40,29 @@ def value_hash(value):
         return "".join(map(value_hash, value))
     else:
         raise Exception, "Don't know how to take a hash of %s" % value
+
+def cache_load(value, V):
+    if isinstance(value, (list, tuple)):
+        return [cache_load(value[i], V[i]) for i in range(len(value))]
+    elif isinstance(value, float):
+        return Constant(value)
+    elif isinstance(value, str):
+        return Function(V, value)
+    return
+
+def cache_store(value, cache):
+    if isinstance(value, (list, tuple)):
+        return tuple(cache_store(x, cache) for x in value)
+    elif isinstance(value, Constant):
+        return float(value)
+    elif isinstance(value, Function):
+        hash = value_hash(value)
+        filename = "%s_dir/%s.xml.gz" % (cache, hash)
+        File(filename) << value
+        return filename
+    else:
+        raise Exception, "Don't know how to store %s" % value
+    return
 
 def get_global(m_list):
     ''' Takes a list of distributed objects and returns one numpy array containing their (serialised) values '''
@@ -181,7 +211,7 @@ class ReducedFunctional(object):
                 self._cache = pickle.load(open(cache, "r"))
             except IOError: # didn't exist
                 self._cache = {"functional_cache": {},
-                                "gradient_cache": {},
+                                "derivative_cache": {},
                                 "hessian_cache": {}}
 
     def __del__(self):
@@ -261,7 +291,18 @@ class ReducedFunctional(object):
 
     def derivative(self, forget=True, project=False):
         ''' Evaluates the derivative of the reduced functional for the lastly evaluated parameter value. ''' 
+
+        if self.cache is not None:
+            hash = value_hash([x.data() for x in self.parameter])
+            fnspaces = [p.data().function_space() if isinstance(p.data(), Function) else None for p in self.parameter]
+
+            if hash in self._cache["derivative_cache"]:
+                info_green("Got a cache hit.")
+                return cache_load(self._cache["derivative_cache"][hash], fnspaces)
+
         dfunc_value = drivers.compute_gradient(self.functional, self.parameter, forget=forget, ignore=self.ignore, project=project)
+        dfunc_value = enlist(dfunc_value)
+
         adjointer.reset_revolve()
         scaled_dfunc_value = []
         for df in list(dfunc_value):
@@ -272,6 +313,10 @@ class ReducedFunctional(object):
 
         if self.derivative_cb:
             self.derivative_cb(self.scale * self.current_func_value, unlist(scaled_dfunc_value), unlist([p.data() for p in self.parameter]))
+
+        if self.cache is not None:
+            info_red("Got cache miss")
+            self._cache["derivative_cache"][hash] = cache_store(scaled_dfunc_value, self.cache)
 
         return scaled_dfunc_value
 

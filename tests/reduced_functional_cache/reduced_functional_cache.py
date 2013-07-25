@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
     try:
         os.remove(cache_file)
-    except IOError:
+    except OSError:
         pass
 
     ic = project(Expression("sin(2*pi*x[0])"),  V)
@@ -55,6 +55,7 @@ if __name__ == "__main__":
     m1 = InitialConditionParameter("Velocity")
     m2 = ScalarParameter("nu")
 
+    # Test caching of the reduced functional evaluation 
     rf = ReducedFunctional(J, [m1, m2], cache=cache_file)
 
     t = dolfin.Timer("")
@@ -66,8 +67,24 @@ if __name__ == "__main__":
     time_b = t.stop()
 
     assert a == b 
-    del rf  # Create the cache file
-    assert os.path.isfile(cache_file) 
-
     assert time_a/time_b > 50 # Check that speed-up is significant
 
+    # Now let's test the caching of the functional gradient 
+    t = dolfin.Timer("")
+    a = rf.derivative(forget=False)
+    time_a = t.stop()
+
+    t = dolfin.Timer("")
+    b = rf.derivative(forget=False)
+    time_b = t.stop()
+
+    print a
+    print b
+
+    assert max(abs(a[0].vector().array() - b[0].vector().array())) == 0
+    assert float(a[1]) == float(b[1]) 
+    assert time_a/time_b > 200 # Check that speed-up is significant
+
+    # Check that the cache file gets created
+    del rf  
+    assert os.path.isfile(cache_file) 

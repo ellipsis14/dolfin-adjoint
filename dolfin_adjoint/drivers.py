@@ -168,16 +168,18 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
     if isinstance(dJdparam[i], dolfin.Function):
       dJdparam[i].rename("d(%s)/d(%s)" % (str(J), str(parameter)), "a Function from dolfin-adjoint")
 
-  if scalar:
-    if project is False:
-      return dJdparam[0]
-    else:
-      return project_test(dJdparam[0])
+  return postprocess(dJdparam, project)
+
+def postprocess(dJdparam, project):
+  if project:
+    dJdparam = map(project_test, dJdparam)
+
+  dJdparam = [dolfin.Constant(x) if isinstance(x, float) else x for x in dJdparam]
+
+  if len(dJdparam) == 1:
+    return dJdparam[0]
   else:
-    if project is False:
-      return dJdparam
-    else:
-      return map(project_test, dJdparam)
+    return dJdparam
 
 def hessian(J, m, warn=True):
   '''Choose which Hessian the user wants.'''

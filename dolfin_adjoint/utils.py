@@ -500,7 +500,7 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
   with_gradient = []
   if isinstance(m, parameter.ScalarParameter):
     for i in range(len(perturbations)):
-      remainder = abs(functional_values[i] - Jm - dJdm*perturbations[i])
+      remainder = abs(functional_values[i] - Jm - float(dJdm)*perturbations[i])
       with_gradient.append(remainder)
   elif isinstance(m, parameter.ScalarParameters):
     for i in range(len(perturbations)):
