@@ -521,7 +521,7 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
     with_hessian = []
     if isinstance(m, parameter.ScalarParameter):
       for i in range(len(perturbations)):
-        remainder = abs(functional_values[i] - Jm - dJdm*perturbations[i] - 0.5*perturbations[i]*HJm(perturbations[i]))
+        remainder = abs(functional_values[i] - Jm - float(dJdm)*perturbations[i] - 0.5*perturbations[i]*HJm(perturbations[i]))
         with_hessian.append(remainder)
     elif isinstance(m, parameter.ScalarParameters):
       for i in range(len(perturbations)):
