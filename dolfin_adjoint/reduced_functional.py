@@ -12,6 +12,7 @@ def unlist(x):
         return x
 
 def copy_data(m):
+    ''' Returns a deep copy of the given Function/Constant. '''
     if hasattr(m, "vector"): 
         return Function(m.function_space())
     elif hasattr(m, "value_size"): 
@@ -20,7 +21,7 @@ def copy_data(m):
         raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
 
 def get_global(m_list):
-    ''' Takes a (optional a list of) distributed object(s) and returns one numpy array containing their global values '''
+    ''' Takes a list of distributed objects and returns one numpy array containing their (serialised) values '''
     if not isinstance(m_list, (list, tuple)):
         m_list = [m_list]
 
@@ -86,11 +87,10 @@ def set_local(m_list, m_global_array):
             raise TypeError, 'Unknown parameter type %s' % m.__class__
 
 global_eqn_list = {}
-def replace_tape_ic_value(variable, new_value):
-    ''' Replaces the initial condition value of the given variable by registering a new equation of the rhs. '''
-    class DummyEquation(object):
-        pass
+def replace_tape_ic_value(parameter, new_value):
+    ''' Replaces the initial condition value of the given parameter by registering a new equation of the rhs. '''
 
+    # Case 1: The parameter value and new_vale are Functions
     if hasattr(new_value, 'vector'):
         # ... since these are duplicated and then occur as rhs in the annotation. 
         # Therefore, we need to update the right hand side callbacks for
@@ -101,17 +101,24 @@ def replace_tape_ic_value(variable, new_value):
         init_rhs.axpy(1.0, adjlinalg.Vector(new_value))
         rhs = adjrhs.RHS(init_rhs)
         # Register the new rhs in the annotation
+        class DummyEquation(object):
+            pass
+
         eqn = DummyEquation() 
+        variable = parameter.var
         eqn_nb = variable.equation_nb(adjointer)
         eqn.equation = adjointer.adjointer.equations[eqn_nb]
         rhs.register(eqn)
         # Store the equation as a class variable in order to keep a python reference in the memory
         global_eqn_list[variable.equation_nb] = eqn
+
+    # Case 2: The parameter value and new_value are Constants
     elif hasattr(new_value, "value_size"): 
         # Constants are not duplicated in the annotation. That is, changing a constant that occurs
         # in the forward model will also change the forward replay with libadjoint.
-        # However, this is not the case for functions...
-        pass
+        constant = parameter.data()
+        constant.assign(new_value(()))
+
     else:
         raise NotImplementedError, "Can only replace a dolfin.Functions or dolfin.Constants"
 
@@ -165,8 +172,7 @@ class ReducedFunctional(object):
 
         # Update the parameter values
         for i in range(len(value)):
-            if hasattr(self.parameter[i], "var"):
-              replace_tape_ic_value(self.parameter[i].var, value[i])
+            replace_tape_ic_value(self.parameter[i], value[i])
 
         # Replay the annotation and evaluate the functional
         func_value = 0.
