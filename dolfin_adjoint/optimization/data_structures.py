@@ -1,6 +1,9 @@
 import dolfin
 
 class CoefficientList(list):
+    ''' This class enables easy manipulation and operations of multiple 
+        dolfin.Coefficient that are common for optimisation algorithms.
+    '''
 
     def scale(self, s):
         ''' Scales all coefficients by s. '''
