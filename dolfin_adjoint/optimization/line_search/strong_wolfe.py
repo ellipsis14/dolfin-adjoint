@@ -65,7 +65,6 @@ class StrongWolfeLineSearch:
         stp = self.start_stp
         f = phi(0)
         g = dphi(0)
-        print "g", g
 
         while True:
             stp, task, isave, dsave = self.__csrch__(f, g, stp, task, isave, dsave)
@@ -85,7 +84,6 @@ class StrongWolfeLineSearch:
             return stp
 
     def __csrch__(self, f, g, stp, task, isave, dsave):
-        print "g= ", g
         stp, task, isave, dsave = dcsrch(stp, f, g, self.ftol, self.gtol, self.xtol, task, self.stpmin, self.stpmax, isave, dsave)
         return stp, task, isave, dsave
 

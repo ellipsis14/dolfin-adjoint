@@ -29,7 +29,6 @@ def test_wolfe(shift, ftol = 0.998, gtol=0.999):
     myphi = lambda x: phi(x, shift, scale)
     mydphi = lambda x: dphi(x, shift, scale)
 
-    print mydphi(0)
     assert(mydphi(0) < 0)
     stp = ls.search(myphi, mydphi)
 
