@@ -71,6 +71,9 @@ def compute_adjoint(functional, forget=True, ignore=[]):
 
 def compute_tlm(parameter, forget=False):
 
+  if isinstance(parameter, (list, tuple)):
+    parameter = ListParameter(parameter)
+
   for i in range(adjglobals.adjointer.equation_count):
       (tlm_var, output) = adjglobals.adjointer.get_tlm_solution(i, parameter)
       if output.data:
@@ -96,14 +99,11 @@ def compute_tlm(parameter, forget=False):
 def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, output: None, project=False):
   dolfin.parameters["adjoint"]["stop_annotating"] = True
 
-  try:
-    scalar = False
-    dJdparam = [None for i in range(len(param))]
-    lparam = param
-  except TypeError:
-    scalar = True
-    dJdparam = [None]
-    lparam = [param]
+  if isinstance(param, (list, tuple)):
+    param = ListParameter(param)
+
+  dJdparam = None
+
   last_timestep = adjglobals.adjointer.timestep_count
 
   ignorelist = []
@@ -133,14 +133,13 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
     adjglobals.adjointer.record_variable(adj_var, storage)
     fwd_var = libadjoint.Variable(adj_var.name, adj_var.timestep, adj_var.iteration)
 
-    for j in range(len(lparam)):
-      out = lparam[j].equation_partial_derivative(adjglobals.adjointer, output.data, i, fwd_var)
-      dJdparam[j] = _add(dJdparam[j], out)
+    out = param.equation_partial_derivative(adjglobals.adjointer, output.data, i, fwd_var)
+    dJdparam = _add(dJdparam, out)
 
-      if last_timestep > adj_var.timestep:
-        # We have hit a new timestep, and need to compute this timesteps' \partial J/\partial m contribution
-        out = lparam[j].functional_partial_derivative(adjglobals.adjointer, J, adj_var.timestep)
-        dJdparam[j] = _add(dJdparam[j], out)
+    if last_timestep > adj_var.timestep:
+      # We have hit a new timestep, and need to compute this timesteps' \partial J/\partial m contribution
+      out = param.functional_partial_derivative(adjglobals.adjointer, J, adj_var.timestep)
+      dJdparam = _add(dJdparam, out)
 
     last_timestep = adj_var.timestep
 
@@ -151,11 +150,15 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
     else:
       adjglobals.adjointer.forget_adjoint_values(i)
 
-  for i, parameter in enumerate(lparam):
-    if isinstance(dJdparam[i], dolfin.Function):
-      dJdparam[i].rename("d(%s)/d(%s)" % (str(J), str(parameter)), "a Function from dolfin-adjoint")
+  rename(J, dJdparam, param)
 
   return postprocess(dJdparam, project)
+
+def rename(J, dJdparam, param):
+  if isinstance(dJdparam, list):
+    [rename(J, dJdm, m) for (dJdm, m) in zip(dJdparam, param.parameters)]
+  elif isinstance(dJdparam, dolfin.Function):
+    dJdparam.rename("d(%s)/d(%s)" % (str(J), str(param)), "a Function from dolfin-adjoint")
 
 def project_test(func):
   if isinstance(func, dolfin.Function):
@@ -170,15 +173,16 @@ def project_test(func):
     return func
 
 def postprocess(dJdparam, project):
-  if project:
-    dJdparam = map(project_test, dJdparam)
-
-  dJdparam = [dolfin.Constant(x) if isinstance(x, float) else x for x in dJdparam]
-
-  if len(dJdparam) == 1:
-    return dJdparam[0]
+  if isinstance(dJdparam, list):
+    return [postprocess(x, project) for x in dJdparam]
   else:
-    return dJdparam
+    if project:
+      dJdparam = project_test(dJdparam)
+
+    if isinstance(dJdparam, float):
+      dJdparam = dolfin.Constant(dJdparam)
+
+  return dJdparam
 
 def hessian(J, m, warn=True):
   '''Choose which Hessian the user wants.'''
@@ -332,12 +336,18 @@ class BasicHessian(libadjoint.Matrix):
 
 def _add(value, increment):
   # Add increment to value correctly taking into account None.
+
   if increment is None:
     return value
   elif value is None:
     return increment
   else:
-    return value+increment
+    if isinstance(value, list) or isinstance(increment, list):
+      assert isinstance(value, list) and isinstance(increment, list)
+      return [_add(val, inc) for (val, inc) in zip(value, increment)]
+
+    else:
+      return value+increment
 
 class compute_gradient_tlm(object):
   '''Rather than compute the gradient of a functional all at once with

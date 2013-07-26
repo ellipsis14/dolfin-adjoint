@@ -1,6 +1,6 @@
 from assembly import assemble, assemble_system
 from functional import Functional
-from parameter import InitialConditionParameter, ScalarParameter, ScalarParameters, TimeConstantParameter, SteadyParameter
+from parameter import InitialConditionParameter, ScalarParameter, ScalarParameters, TimeConstantParameter, SteadyParameter, ListParameter
 from lusolver import LUSolver
 from solving import solve, adj_checkpointing, annotate, record
 from adjglobals import adj_start_timestep, adj_inc_timestep, adjointer, adj_check_checkpoints, adj_html, adj_reset

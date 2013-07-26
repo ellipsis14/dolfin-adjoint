@@ -405,6 +405,15 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
   import random
   import parameter
 
+  if isinstance(m, parameter.ListParameter):
+    if perturbation_direction is None:
+      perturbation_direction = [None] * len(m.parameters)
+
+    if value is None:
+      value = [None] * len(m.parameters)
+
+    return min(taylor_test(J, m[i], Jm, dJdm[i], HJm, seed, perturbation_direction[i], value[i]) for i in range(len(m.parameters)))
+
   def get_const(val):
     if isinstance(val, str):
       return float(constant.constant_values[val])
