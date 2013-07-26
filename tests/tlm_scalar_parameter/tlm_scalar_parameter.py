@@ -45,8 +45,8 @@ if __name__ == "__main__":
 
     forward = main(ic, nu, annotate=True)
 
-    J = Functional(forward*forward*dx*dt[FINISH_TIME] + forward*forward*dx*dt[START_TIME])
-    Jm = assemble(forward*forward*dx + ic*ic*dx)
+    J = Functional(forward*forward*dx*dt[FINISH_TIME] + forward*forward*dx*dt[START_TIME] + nu*nu*dx*dt[START_TIME])
+    Jm = assemble(forward*forward*dx + ic*ic*dx + nu*nu*dx)
     m = ScalarParameter(nu)
     dJdm = compute_gradient_tlm(J, m, forget=False)
 
@@ -61,7 +61,7 @@ if __name__ == "__main__":
         lnu = m
 
       forward = main(lic, lnu, annotate=False)
-      return assemble(forward*forward*dx + lic*lic*dx)
+      return assemble(forward*forward*dx + lic*lic*dx + lnu*lnu*dx)
 
     minconv = taylor_test(Jfunc, m, Jm, dJdm)
     assert minconv > 1.7
