@@ -361,26 +361,39 @@ class compute_gradient_tlm(object):
     self.cb = callback
     self.project = project
 
-    if not isinstance(m, InitialConditionParameter):
-      raise Exception("Sorry, only works for InitialConditionParameter at the minute")
-
   def vector(self):
     return self
 
+  def __float__(self):
+    return self.inner(1.0)
+
   def inner(self, vec):
     '''Compute the action of the gradient on the vector vec.'''
-    mdot = self.m.set_perturbation(dolfin.Function(self.m.data().function_space(), vec))
+    def make_mdot(vec):
+      if isinstance(self.m, InitialConditionParameter):
+        mdot = self.m.set_perturbation(dolfin.Function(self.m.data().function_space(), vec))
+      elif isinstance(self.m, ScalarParameter):
+        mdot = self.m.set_perturbation(dolfin.Constant(vec))
+
+      return mdot
+
+    mdot = make_mdot(vec)
     
     grad = 0.0
+    last_timestep = -1
 
     for (tlm, tlm_var) in compute_tlm(mdot, forget=self.forget):
       self.cb(tlm_var, tlm)
       fwd_var = tlm_var.to_forward()
       dJdu = adjglobals.adjointer.evaluate_functional_derivative(self.J, fwd_var)
-      if dJdu is not None:
+      if dJdu is not None and tlm is not None:
         dJdu_vec = dolfin.assemble(dJdu.data)
         grad = _add(grad, dJdu_vec.inner(tlm.vector()))
 
-      # skip the dJdm term for now, don't need it for InitialConditionParameter you see
+      if last_timestep < tlm_var.timestep:
+        out = self.m.functional_partial_derivative(adjglobals.adjointer, self.J, tlm_var.timestep)
+        grad = _add(grad, out)
+
+      last_timestep = tlm_var.timestep
 
     return grad

@@ -141,7 +141,7 @@ class ScalarParameter(DolfinAdjointParameter):
 
       fn_space = ufl.algorithms.extract_arguments(form)[0].function_space()
       dparam = dolfin.Function(dolfin.FunctionSpace(fn_space.mesh(), "R", 0))
-      dparam.vector()[:] = 1.0 * self.coeff
+      dparam.vector()[:] = 1.0 * float(self.coeff)
 
       diff_form = ufl.algorithms.expand_derivatives(dolfin.derivative(form, get_constant(self.a), dparam))
 
