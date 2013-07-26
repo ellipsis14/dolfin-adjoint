@@ -15,10 +15,6 @@ def minimize_multistage(rf, coarse_mesh, levels):
     for l in range(levels - 1):
         rfs.append()
 
-    from IPython import embed
-    embed()
-
-
 def mg_opt(rf, meshes, current_mesh_idx):
     if current_mesh_idx == len(meshes) - 1:
         info_green("Solve problem on coarsest grid")
