@@ -1,5 +1,6 @@
 from dolfin import MPI, inner, assemble, dx, Function
 from data_structures import CoefficientList
+from line_search import armijo, strong_wolfe
 import numpy
 
 def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
@@ -39,6 +40,8 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
             print "Optimising using steepest descent without line search." 
             print "Maximum optimisation iterations: %i" % maxiter 
 
+    ls = get_line_search(line_search)
+
     m = CoefficientList([p.data() for p in rf.parameter]) 
     m_prev = m.deep_copy()
     J =  rf
@@ -73,40 +76,24 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
         if djs >= 0:
             raise RuntimeError, "Negative gradient is not a descent direction. Is your gradient correct?" 
 
-        if line_search == "backtracking":
-            # Perform a backtracking line search until the Armijo condition is satisfied 
-            def phi(alpha):
-                m.assign(m_prev)
-                m.axpy(alpha, s) # m = m_prev + alpha*s
-
-                return J(m)
-
-            alpha = start_alpha 
-            armijo_iter = 0
-            while True:
-                j_new = phi(alpha)
-                if j_new <= j + c1*alpha*djs:
-                    break
-                else: 
-                    armijo_iter += 1
-                    alpha /= 2
-
-                    if alpha < numpy.finfo(numpy.float).eps:
-                        raise RuntimeError, "The line search stepsize dropped below below machine precision."
-
-            # Adaptively change start_alpha (the initial step size)
-            if armijo_iter < 2:
-                start_alpha *= 2
-            if armijo_iter > 4:
-                start_alpha /= 2
-
-        elif line_search == "fixed":
+        # Define the real-valued reduced function in the s-direction 
+        def phi(alpha):
             m.assign(m_prev)
-            m.axpy(start_alpha, s) # m = m_prev + start_alpha*s
-            j_new = J(m)
+            m.axpy(alpha, s) # m = m_prev + alpha*s
 
-        else:
-            raise ValueError, "Unknown line search specified. Valid values are 'backtracking' and 'fixed'."
+            return J(m)
+
+        def phi_and_dphi(alpha):
+            p = phi(alpha) 
+            dj = CoefficientList(dJ(forget=None))
+            djs = dj.inner(s) 
+            return p, djs
+
+        dphi = lambda alpha: phi_and_dphi(alpha)[1]
+        alpha = ls.search(phi, dphi)
+
+        # update m and j_new
+        j_new = phi(alpha)
 
         # Update the current iterate
         m_prev.assign(m)
@@ -133,3 +120,18 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
                 print "\nTolerance reached: |delta j| < tol.\n"
 
     return m, {"Number of iterations": it}
+
+def get_line_search(line_search):
+    if line_search == "backtracking":
+        ls = armijo.ArmijoLineSearch()
+    elif line_search == "fixed":
+        class FixedLineSearch:
+            def __init__(self, start_stp = 1.0):
+                self.start_stp = start_stp
+            def search(self, phi=None, dphi=None):
+                return self.start_stp
+        ls = FixedLineSearch()
+    else:
+        raise ValueError, "Unknown line search specified. Valid values are 'backtracking' and 'fixed'."
+
+    return ls
