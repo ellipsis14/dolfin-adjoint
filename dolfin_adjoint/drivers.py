@@ -356,6 +356,10 @@ class compute_gradient_tlm(object):
   you have many functionals and few parameters.'''
   def __init__(self, J, m, forget=True, callback=lambda var, output: None, project=False):
     self.J = J
+
+    if isinstance(m, (list, tuple)):
+      m = ListParameter(m)
+
     self.m = m
     self.forget = forget
     self.cb = callback
@@ -366,6 +370,10 @@ class compute_gradient_tlm(object):
 
   def __float__(self):
     return self.inner(1.0)
+
+  def __getitem__(self, i):
+    assert isinstance(self.m, ListParameter)
+    return compute_gradient_tlm(self.J, self.m[i], self.forget, self.cb, self.project)
 
   def inner(self, vec):
     '''Compute the action of the gradient on the vector vec.'''
