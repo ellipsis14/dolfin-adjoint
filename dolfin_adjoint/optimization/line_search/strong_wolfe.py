@@ -34,7 +34,13 @@ class StrongWolfeLineSearch:
            stpmin    | a nonnegative lower bound for the step.
            stpmax    | a nonnegative upper bound for the step.
 
+        References:
+         Mor'e, J.J., and Thuente, D.J., 1992, Line search algorithms with guaranteed 
+              sufficient decrease: Preprint MCS-P330-1092, Argonne National Laboratory.
+         Averick, B.M., and Mor'e, J.J., 1993, FORTRAN subroutines dcstep and dcsrch 
+              from MINPACK-2, 1993, Argonne National Laboratory and University of Minnesota.
         '''
+
         self.ftol       = ftol 
         self.gtol       = gtol
         self.xtol       = xtol
