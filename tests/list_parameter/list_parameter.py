@@ -46,14 +46,21 @@ if __name__ == "__main__":
 
     J = Functional(forward*forward*dx*dt[FINISH_TIME] + forward*forward*dx*dt[START_TIME])
     Jm = assemble(forward*forward*dx + ic*ic*dx)
-    m = InitialConditionParameter("Velocity")
-    m = ListParameter([InitialConditionParameter("Velocity")])
+    m = ListParameter([InitialConditionParameter("Velocity"), ScalarParameter(nu)])
     dJdm = compute_gradient(J, m, forget=False)
 
     def Jfunc(m):
-      ic = m
-      forward = main(ic, nu, annotate=False)
-      return assemble(forward*forward*dx + ic*ic*dx)
+      if hasattr(m, 'vector'):
+        info_green("Perturbing initial condition!!")
+        lic = m
+        lnu = nu
+      else:
+        info_green("Perturbing diffusivity!!")
+        lic = ic
+        lnu = m
+
+      forward = main(lic, lnu, annotate=False)
+      return assemble(forward*forward*dx + lic*lic*dx)
 
     minconv = taylor_test(Jfunc, m, Jm, dJdm)
     assert minconv > 1.7
