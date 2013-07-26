@@ -26,19 +26,21 @@ def solve_optimal_control(n):
     V = FunctionSpace(mesh, "CG", 1)
     u = Function(V, name='State')
     W = FunctionSpace(mesh, "DG", 0)
+    s = Constant(1.0, name='ScalarControl')
     m = Function(W, name='Control')
 
     u_d = 1/(2*pi**2)*sin(pi*x[0])*sin(pi*x[1]) 
 
-    J = Functional((inner(u-u_d, u-u_d))*dx*dt[FINISH_TIME])
+    J = Functional((inner(u-u_d, u-u_d) + s*s)*dx*dt[FINISH_TIME])
 
     # Run the forward model once to create the annotation
     solve_pde(u, V, m)
 
     # Run the optimisation 
-    rf = ReducedFunctional(J, InitialConditionParameter(m, value=m))
+    p = [InitialConditionParameter(m, value=m), ScalarParameter(s)]
+    rf = ReducedFunctional(J, p)
 
-    m = minimize_steepest_descent(rf, options={"gtol": 1e-16, "maxiter": 20})
+    m = minimize_steepest_descent(rf, options={"gtol": 1e-16, "maxiter": 20})[0]
     solve_pde(u, V, m)
 
     # Define the analytical expressions
@@ -63,10 +65,10 @@ try:
         adj_reset()
         parameters["adjoint"]["stop_annotating"] = False
 
-    info_green("Control errors: " + str(control_errors))
+    info_green("Control errors: "      + str(control_errors))
     info_green("Control convergence: " + str(convergence_order(control_errors, base = 2)))
-    info_green("State errors: " + str(state_errors))
-    info_green("State convergence: " + str(convergence_order(state_errors, base = 2)))
+    info_green("State errors: "        + str(state_errors))
+    info_green("State convergence: "   + str(convergence_order(state_errors, base = 2)))
 
     if min(convergence_order(control_errors)) < 0.9:
         info_red("Convergence order below tolerance") 

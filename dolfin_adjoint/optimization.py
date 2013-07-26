@@ -202,6 +202,68 @@ def maximize(reduced_func, method = 'L-BFGS-B', scale = 1.0, **kwargs):
 minimise = minimize
 maximise = maximize
 
+class CoefficientList(list):
+
+    def scale(self, s):
+        ''' Scales all coefficients by s. '''
+        for c in self:
+            # c is Function
+            if hasattr(c, "vector"):
+                try:
+                    c.assign(s*c)
+                except TypeError:
+                    c.vector()[:] = s*c.vector() 
+            # c is Constant
+            else:
+                c.assign(float(s*c))
+
+    def inner(self, ll):
+        ''' Computes the componentwise inner product with of itself and ll. ''' 
+        assert len(ll) == len(self)
+
+        r = 0
+        for c1, c2 in zip(self, ll):
+            # c1 is Function
+            if hasattr(c1, "vector"):
+                r += c1.vector().inner(c2.vector()) 
+            # c1 is Constant
+            else:
+                r += float(c1)*float(c2)
+
+        return r
+
+    def deep_copy(self):
+        ll = []
+        for c in self:
+            # c is Function
+            if hasattr(c, "vector"):
+                ll.append(dolfin.Function(c))
+            # c is Constant
+            else:
+                ll.append(dolfin.Constant(float(c)))
+
+        return CoefficientList(ll)
+    
+    def axpy(self, a, x):
+        ''' Computes componentwise self = self + a*x. '''
+        assert(len(self) == len(x))
+
+        for yi, xi in zip(self, x):
+            # yi is Function
+            if hasattr(yi, "vector"):
+                yi.vector()[:] += a*xi.vector()
+            # yi is Constant
+            else:
+                yi.assign(float(yi) + a*float(xi))
+
+    def assign(self, x):
+        ''' Assigns componentwise self = x. '''
+        assert(len(self) == len(x))
+
+        for yi, xi in zip(self, x):
+            yi.assign(xi)
+
+
 def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
     from dolfin import inner, assemble, dx, Function
 
@@ -215,12 +277,18 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
 
     # Check the validness of the user supplied parameters
     assert 0 < c1 < 1
-    if len(rf.parameter) != 1:
-        raise NotImplementedError, "Steepest descent currently is only implemented for a single optimisation parameter."
 
     # Define the norm and the inner product in the relevant function spaces
     def normL2(x):
-        return assemble(inner(x, x)*dx)**0.5
+        n = 0
+        for c in x:
+            # c is Function
+            if hasattr(c, "vector"):
+                n += assemble(inner(c, c)*dx)**0.5
+            else:
+            # c is Constant
+                n += abs(float(c))
+        return n
 
     def innerL2(x, y):
         return assemble(inner(x, y)*dx)
@@ -230,7 +298,8 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
       print "Maximum iterations: %i" % maxiter 
       print "Armijo constant: c1 = %f" % c1
 
-    m = [p.data() for p in rf.parameter][0]
+    m = CoefficientList([p.data() for p in rf.parameter]) 
+    m_prev = m.deep_copy()
     J =  rf
     dJ = rf.derivative
 
@@ -241,40 +310,39 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
 
     # Start the optimisation loop
     it = 0
-    while ((gtol == None or s == None or normL2(s) > gtol) and 
-           (tol == None or j == None or j_prev == None or abs(j-j_prev)) > tol and 
-           (maxiter == None or it < maxiter)):
+    while True:
 
         # Evaluate the functional at the current iterate
         if j == None:
             j = J(m)
-        dj = dJ(forget=None)[0]
+        dj = CoefficientList(dJ(forget=None))
         # TODO: Instead of reevaluating the gradient, we should just project dj 
-        s = dJ(forget=None, project=True)[0] # The search direction is the Riesz representation of the gradient
-        try:
-            s.assign(-1*s)
-        except TypeError:
-            s.vector()[:] = -s.vector() 
+        s = CoefficientList(dJ(forget=None, project=True)) # The search direction is the Riesz representation of the gradient
+        s.scale(-1)
 
-        djs = dj.vector().inner(s.vector()) # Slope at current point
+        # Check for convergence                                                              # Reason:
+        if not ((gtol    == None or s == None or normL2(s) > gtol) and                       # ||\nabla j|| < gtol
+                (tol     == None or j == None or j_prev == None or abs(j-j_prev)) > tol and  # \Delta j < tol
+                (maxiter == None or it < maxiter)):                                          # maximum iteration reached
+            break
+
+        djs = dj.inner(s) # Slope at current point
+
         if djs >= 0:
             raise RuntimeError, "Negative gradient is not a descent direction. Is your gradient correct?" 
 
         if line_search_algorithm == "backtracking":
             # Perform a backtracking line search until the Armijo condition is satisfied 
             def phi(alpha):
-                try:
-                    m_new = Function(m + alpha*s)
-                except TypeError:
-                    m_new = Function(m.function_space())
-                    m_new.vector()[:] = m.vector() + alpha*s.vector()
+                m.assign(m_prev)
+                m.axpy(alpha, s) # m = m_prev + alpha*s
 
-                return J(m_new), m_new
+                return J(m)
 
             alpha = start_alpha 
             armijo_iter = 0
             while True:
-                j_new, m_new = phi(alpha)
+                j_new = phi(alpha)
                 if j_new <= j + c1*alpha*djs:
                     break
                 else: 
@@ -291,19 +359,15 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
                 start_alpha /= 2
 
         elif line_search_algorithm == "fixed":
-            try:
-                m_new = Function(m + start_alpha*s)
-            except TypeError:
-                m_new = Function(m.function_space())
-                m_new.vector()[:] = m.vector() + start_alpha*s.vector()
-
-            j_new = J(m_new)
+            m.assign(m_prev)
+            m.axpy(start_alpha, s) # m = m_prev + start_alpha*s
+            j_new = J(m)
 
         else:
             raise ValueError, "Unknown line search specified. Valid values are 'backtracking' and 'fixed'."
 
         # Update the current iterate
-        m.assign(m_new)
+        m_prev.assign(m)
         j_prev = j
         j = j_new
         it += 1
