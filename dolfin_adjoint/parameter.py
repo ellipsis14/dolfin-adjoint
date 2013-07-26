@@ -163,7 +163,7 @@ class ScalarParameter(DolfinAdjointParameter):
       mesh = ufl.algorithms.extract_arguments(form)[0].function_space().mesh()
       fn_space = dolfin.FunctionSpace(mesh, "R", 0)
       dparam = dolfin.Function(fn_space)
-      dparam.vector()[:] = 1.0 * self.coeff
+      dparam.vector()[:] = 1.0 * float(self.coeff)
 
       diff_form = ufl.algorithms.expand_derivatives(dolfin.derivative(form, get_constant(self.a), dparam))
 
@@ -188,9 +188,9 @@ class ScalarParameter(DolfinAdjointParameter):
       mesh = ufl.algorithms.extract_arguments(form)[0].function_space().mesh()
       fn_space = dolfin.FunctionSpace(mesh, "R", 0)
       dparam = dolfin.Function(fn_space)
-      dparam.vector()[:] = 1.0 * self.coeff
+      dparam.vector()[:] = 1.0 * float(self.coeff)
       d2param = dolfin.Function(fn_space)
-      d2param.vector()[:] = 1.0 * self.coeff * m_dot
+      d2param.vector()[:] = 1.0 * float(self.coeff) * m_dot
 
       diff_form = ufl.algorithms.expand_derivatives(dolfin.derivative(form, get_constant(self.a), dparam))
       if diff_form is None:
@@ -227,7 +227,7 @@ class ScalarParameter(DolfinAdjointParameter):
         pass
 
     dparam = dolfin.Function(fn_space)
-    dparam.vector()[:] = 1.0 * self.coeff
+    dparam.vector()[:] = 1.0 * float(self.coeff)
 
     d = dolfin.derivative(form, get_constant(self.a), dparam)
     d = ufl.algorithms.expand_derivatives(d)
@@ -251,13 +251,13 @@ class ScalarParameter(DolfinAdjointParameter):
         pass
 
     dparam = dolfin.Function(fn_space)
-    dparam.vector()[:] = 1.0 * self.coeff
+    dparam.vector()[:] = 1.0 * float(self.coeff)
 
     d = dolfin.derivative(form, get_constant(self.a), dparam)
     d = ufl.algorithms.expand_derivatives(d)
 
     d2param = dolfin.Function(fn_space)
-    d2param.vector()[:] = 1.0 * self.coeff * m_dot
+    d2param.vector()[:] = 1.0 * float(self.coeff) * m_dot
 
     d = dolfin.derivative(d, get_constant(self.a), d2param)
     d = ufl.algorithms.expand_derivatives(d)
@@ -370,7 +370,7 @@ class ListParameter(DolfinAdjointParameter):
 
     calls = [p(adjointer, i, dependencies, values, variable) for p in self.parameters]
 
-    return reduce(_add, calls, initializer=None)
+    return reduce(_add, calls, None)
 
   def equation_partial_derivative(self, adjointer, adjoint, i, variable):
     '''This function computes the contribution to the functional gradient
