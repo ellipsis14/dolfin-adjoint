@@ -40,15 +40,15 @@ def solve_optimal_control(n):
     p = [InitialConditionParameter(m, value=m), ScalarParameter(s)]
     rf = ReducedFunctional(J, p)
 
-    m = minimize_steepest_descent(rf, options={"gtol": 1e-16, "maxiter": 20})[0]
-    solve_pde(u, V, m)
+    m_opt, info = minimize_steepest_descent(rf, options={"gtol": 1e-16, "maxiter": 20})
+    solve_pde(u, V, m_opt[0])
 
     # Define the analytical expressions
     m_analytic = Expression("sin(pi*x[0])*sin(pi*x[1])")
     u_analytic = Expression("1/(2*pi*pi)*sin(pi*x[0])*sin(pi*x[1])")
 
     # Compute the error
-    control_error = errornorm(m_analytic, m)
+    control_error = errornorm(m_analytic, m_opt[0])
     state_error = errornorm(u_analytic, u)
     return control_error, state_error
 

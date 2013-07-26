@@ -272,7 +272,7 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
     maxiter = options.get("maxiter", 200)
     disp = options.get("disp", True)
     start_alpha = options.get("start_alpha", 1.0)
-    line_search_algorithm = options.get("line_search_algorithm", "backtracking")
+    line_search = options.get("line_search", "backtracking")
     c1 = options.get("c1", 1e-4)
 
     # Check the validness of the user supplied parameters
@@ -294,9 +294,13 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
         return assemble(inner(x, y)*dx)
 
     if disp and MPI.process_number()==0:
-      print "Optimising using steepest descent with an Armijo line search." 
-      print "Maximum iterations: %i" % maxiter 
-      print "Armijo constant: c1 = %f" % c1
+        if line_search == "backtracking":
+            print "Optimising using steepest descent with an Armijo line search." 
+            print "Maximum optimisation iterations: %i" % maxiter 
+            print "Armijo constant: c1 = %f" % c1
+        elif line_search == "fixed":
+            print "Optimising using steepest descent without line search." 
+            print "Maximum optimisation iterations: %i" % maxiter 
 
     m = CoefficientList([p.data() for p in rf.parameter]) 
     m_prev = m.deep_copy()
@@ -326,12 +330,13 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
                 (maxiter == None or it < maxiter)):                                          # maximum iteration reached
             break
 
-        djs = dj.inner(s) # Slope at current point
+        # Compute slope at current point
+        djs = dj.inner(s) 
 
         if djs >= 0:
             raise RuntimeError, "Negative gradient is not a descent direction. Is your gradient correct?" 
 
-        if line_search_algorithm == "backtracking":
+        if line_search == "backtracking":
             # Perform a backtracking line search until the Armijo condition is satisfied 
             def phi(alpha):
                 m.assign(m_prev)
@@ -358,7 +363,7 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
             if armijo_iter > 4:
                 start_alpha /= 2
 
-        elif line_search_algorithm == "fixed":
+        elif line_search == "fixed":
             m.assign(m_prev)
             m.axpy(start_alpha, s) # m = m_prev + start_alpha*s
             j_new = J(m)
@@ -390,4 +395,4 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
             elif tol != None and j_prev != None and abs(j-j_prev) <= tol:
                 print "\nTolerance reached: |delta j| < tol.\n"
 
-    return m
+    return m, {"Number of iterations": it}
