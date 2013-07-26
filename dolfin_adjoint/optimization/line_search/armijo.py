@@ -1,5 +1,3 @@
-from dcsrch import dcsrch
-
 class ArmijoLineSearch:
     def __init__(self, ftol = 1e-4, start_stp = 1.0, stpmin = 1e-10, adaptive_stp=True):
         '''

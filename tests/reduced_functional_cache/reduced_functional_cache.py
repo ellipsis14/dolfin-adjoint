@@ -89,3 +89,4 @@ if __name__ == "__main__":
     del rf  
     assert os.path.isfile(cache_file) 
 
+    info_green("Test passed")
