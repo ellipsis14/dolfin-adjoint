@@ -1,6 +1,6 @@
 from dolfin import MPI, inner, assemble, dx, Function
 from data_structures import CoefficientList
-from line_search import armijo, strong_wolfe, fixed
+from line_search import FixedLineSearch, ArmijoLineSearch, StrongWolfeLineSearch 
 import numpy
 
 def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
@@ -122,9 +122,9 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
 
 def get_line_search(line_search):
     if line_search == "backtracking":
-        ls = armijo.ArmijoLineSearch()
+        ls = ArmijoLineSearch()
     elif line_search == "fixed":
-        ls = fixed.FixedLineSearch()
+        ls = FixedLineSearch()
     else:
         raise ValueError, "Unknown line search specified. Valid values are 'backtracking' and 'fixed'."
 
