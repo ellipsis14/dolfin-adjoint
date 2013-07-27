@@ -1,4 +1,6 @@
-class ArmijoLineSearch:
+from line_search import LineSearch
+
+class ArmijoLineSearch(LineSearch):
     def __init__(self, ftol = 1e-4, start_stp = 1.0, stpmin = 1e-10, adaptive_stp=True):
         '''
         This class implements a line search algorithm whose steps 
@@ -46,18 +48,18 @@ class ArmijoLineSearch:
         if it > 4:
             self.start_stp /= 2
 
-    def search(self, phi, dphi):
+    def search(self, phi, phi_dphi):
         ''' Performs the line search on the function phi. 
 
-            dphi must implement the derivative of phi.
-            Both phi and dphi must be functions [0, oo] -> R.
+            phi must be a function [0, oo] -> R.
+            phi_dphi must evaluate phi and its derivative, and 
+            must be a function [0, oo] -> (R, R).
 
             The return value is a step that satisfies the Armijo condition. 
         '''
             
         stp = self.start_stp
-        finit = phi(0)
-        ginit = dphi(0)
+        finit, ginit = phi_dphi(0)
         f = finit 
         
         it = 0

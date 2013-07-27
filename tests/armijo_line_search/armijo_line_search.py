@@ -27,9 +27,10 @@ def test_armijo(shift, ftol = 0.998):
 
     myphi = lambda x: phi(x, shift, scale)
     mydphi = lambda x: dphi(x, shift, scale)
+    myphi_dphi = lambda x: (myphi(x), mydphi(x))
 
     assert(mydphi(0) < 0)
-    stp = ls.search(myphi, mydphi)
+    stp = ls.search(myphi, myphi_dphi)
 
     def decrease_condition(phi, dphi, stp, ftol):
         return phi(stp) <= (phi(0) + ftol*stp*dphi(0))

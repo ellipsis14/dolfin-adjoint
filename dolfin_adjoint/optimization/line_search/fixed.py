@@ -1,4 +1,6 @@
-class FixedLineSearch:
+from line_search import LineSearch
+
+class FixedLineSearch(LineSearch):
     def __init__(self, start_stp = 1.0):
         '''
         This class implements a dummy line search algorithm whose steps 
@@ -7,7 +9,7 @@ class FixedLineSearch:
 
         self.start_stp    = start_stp
 
-    def search(self, phi, dphi):
+    def search(self, phi, phi_dphi):
         ''' Performs the dummy line search on the function phi. 
 
             The return value is the starting step. 

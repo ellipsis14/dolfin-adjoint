@@ -83,14 +83,13 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
 
             return J(m)
 
-        def phi_and_dphi(alpha):
+        def phi_dphi(alpha):
             p = phi(alpha) 
             dj = CoefficientList(dJ(forget=None))
             djs = dj.inner(s) 
             return p, djs
 
-        dphi = lambda alpha: phi_and_dphi(alpha)[1]
-        alpha = ls.search(phi, dphi)
+        alpha = ls.search(phi, phi_dphi)
 
         # update m and j_new
         j_new = phi(alpha)
