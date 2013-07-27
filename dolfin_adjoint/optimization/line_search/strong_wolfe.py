@@ -1,7 +1,8 @@
+from line_search import LineSearch
 from dcsrch import dcsrch
 from numpy import zeros
 
-class StrongWolfeLineSearch:
+class StrongWolfeLineSearch(LineSearch):
     def __init__(self, ftol = 1e-4, gtol = 0.9, xtol = 1e-1, start_stp = 1.0, stpmin = None, stpmax = None):
         '''
         This class implements a line search algorithm whose steps 
@@ -48,11 +49,12 @@ class StrongWolfeLineSearch:
         self.stpmin     = stpmin
         self.stpmax     = stpmax
 
-    def search(self, phi, dphi):
+    def search(self, phi, phi_dphi):
         ''' Performs the line search on the function phi. 
 
-            dphi must implement the derivative of phi.
-            Both phi and dphi must be functions [0, oo] -> R.
+            phi must be a function [0, oo] -> R.
+            phi_dphi must evaluate phi and its derivative, and 
+            must be a function [0, oo] -> (R, R).
 
             The return value is a step that satisfies the strong Wolfe condition. 
         '''
@@ -63,15 +65,13 @@ class StrongWolfeLineSearch:
         task = "START"
 
         stp = self.start_stp
-        f = phi(0)
-        g = dphi(0)
+        f, g = phi_dphi(0)
 
         while True:
             stp, task, isave, dsave = self.__csrch__(f, g, stp, task, isave, dsave)
 
             if task in ("START", "FG"):
-                f = phi(stp)
-                g = dphi(stp)
+                f, g = phi_dphi(stp)
             else:
                 break
 
