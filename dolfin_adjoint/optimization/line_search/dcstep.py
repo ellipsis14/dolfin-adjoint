@@ -129,7 +129,7 @@ def dcstep(stx, fx, dx, sty, fy, dy, stp, fp, dp, brackt, stpmin, stpmax):
         s = max(abs(theta), abs(dx), abs(dp))
         gamma = s*sqrt((theta/s)**2-(dx/s)*(dp/s))
 
-        if stp < stx: 
+        if stp > stx: 
             gamma = -gamma
         p = (gamma-dp) + theta
         q = ((gamma-dp)+gamma) + dx
