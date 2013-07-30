@@ -36,4 +36,5 @@ import genericmatrix
 import genericvector
 import optimization
 import reduced_functional 
+from optimization import optimization
 from ui import *
