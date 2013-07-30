@@ -90,6 +90,18 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
             return p, djs
 
         alpha = ls.search(phi, phi_dphi)
+        # For testing purposes: compare line search step produced by the python implementation with the original Fortran version 
+        # In order for this to work, you need to compile the Fortran version with "cd dcsrch_fortran; python build", and make sure
+        # that the build path is in the PYTHONPATH, i.e. import pswolfe should not through an error message.
+        test_fortran = False
+        if test_fortran:
+            import pyswolfe
+
+            dphi = lambda x: phi_dphi(x)[1]
+            ls_fort = pyswolfe.StrongWolfeLineSearch(phi(0), dphi(0), 1.0, phi, dphi, gtol=0.01) 
+            ls_fort.search()
+
+            assert ls_fort.stp == alpha
 
         # update m and j_new
         j_new = phi(alpha)
@@ -121,11 +133,13 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
     return m, {"Number of iterations": it}
 
 def get_line_search(line_search):
-    if line_search == "backtracking":
+    if line_search == "strong_wolfe":
+        ls = StrongWolfeLineSearch(ftol=1e-4, gtol=0.1)
+    elif line_search == "backtracking":
         ls = ArmijoLineSearch()
     elif line_search == "fixed":
         ls = FixedLineSearch()
     else:
-        raise ValueError, "Unknown line search specified. Valid values are 'backtracking' and 'fixed'."
+        raise ValueError, "Unknown line search specified. Valid values are 'backtracking', 'strong_wolfe' and 'fixed'."
 
     return ls
