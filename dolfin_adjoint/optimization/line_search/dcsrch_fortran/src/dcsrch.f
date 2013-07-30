@@ -229,21 +229,6 @@ c        Restore local variables.
       end if
 
 
-      print *,   "stage ", stage
-      print *,   "ginit  ", ginit
-      print *,  "gtest ", gtest
-       print *,  "gx ", gx
-      print *, "gy ", gy
-      print *,  "finit ", finit
-      print *,  " fx ", fx 
-      print *,  " fy ", fy
-       print *, "  stx ", stx
-       print *, " sty ", sty
-       print *, "  stmin ", stmin
-      print *, "  stmax  ", stmax
-       print *, "  width ", width
-       print *, "  width1 ", width1
-
 c     If psi(stp) <= 0 and f'(stp) >= 0 for some step, then the
 c     algorithm enters the second stage.
 
