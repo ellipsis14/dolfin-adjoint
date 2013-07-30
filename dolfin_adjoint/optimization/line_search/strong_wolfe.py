@@ -67,6 +67,10 @@ class StrongWolfeLineSearch(LineSearch):
         stp = self.start_stp
         f, g = phi_dphi(0)
 
+        # Compute an estimate for the maximum step size 
+        if not self.stpmax:
+            self.stpmax = max(4*min(self.start_stp, 1.0), 0.1*f/(-g*self.ftol))
+
         while True:
             stp, task, isave, dsave = self.__csrch__(f, g, stp, task, isave, dsave)
 
