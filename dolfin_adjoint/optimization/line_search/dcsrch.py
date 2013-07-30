@@ -145,13 +145,13 @@ def dcsrch(stp, f, g, ftol, gtol, xtol, task, stpmin, stpmax, isave, dsave):
     xtrapl=1.1
     xtrapu=4.0
 
-    if stpmin is None:
-      stpmin = 0
-    if stpmax is None:
-      stpmax = 1e999
-
     # Initialization block.
     if task == 'START':
+
+        if stpmin is None:
+          stpmin = 0
+        if stpmax is None:
+          stpmax = 1e999
 
         # Check the input arguments for errors.
         if stp < stpmin: 
