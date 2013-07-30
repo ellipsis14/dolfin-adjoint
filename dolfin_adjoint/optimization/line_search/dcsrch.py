@@ -202,11 +202,7 @@ def dcsrch(stp, f, g, ftol, gtol, xtol, task, stpmin, stpmax, isave, dsave):
         task = 'FG'
 
         # Save local variables.
-        if brackt:
-            isave[1] = 1
-        else:
-            isave[1] = 0
-
+        isave[1] = brackt
         isave[2] = stage
         dsave[1] = ginit
         dsave[2] = gtest
@@ -226,11 +222,7 @@ def dcsrch(stp, f, g, ftol, gtol, xtol, task, stpmin, stpmax, isave, dsave):
 
     else:
         # Restore local variables.
-        if isave[1] == 1:
-            brackt = True
-        else:
-            brackt = False
-
+        brackt = isave[1]
         stage = isave[2]
         ginit = dsave[1]
         gtest = dsave[2]
@@ -269,10 +261,7 @@ def dcsrch(stp, f, g, ftol, gtol, xtol, task, stpmin, stpmax, isave, dsave):
     # Test for termination.
     if "Warning" in task or task == 'Convergence': 
         # Save local variables.
-        if brackt:
-            isave[1] = 1
-        else:
-            isave[1] = 0
+        isave[1] = brackt
         isave[2] = stage
         dsave[1] = ginit
         dsave[2] = gtest
@@ -342,10 +331,7 @@ def dcsrch(stp, f, g, ftol, gtol, xtol, task, stpmin, stpmax, isave, dsave):
     task = 'FG'
 
     # Save local variables.
-    if brackt:
-        isave[1] = 1
-    else:
-        isave[1] = 0
+    isave[1] = brackt
     isave[2] = stage
     dsave[1] = ginit
     dsave[2] = gtest
