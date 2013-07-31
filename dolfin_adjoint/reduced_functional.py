@@ -1,171 +1,11 @@
 import libadjoint
-import numpy
-from dolfin import cpp, info, project, Function, Constant, info_red, info_green, File, FunctionSpace
-from dolfin_adjoint import adjlinalg, adjrhs, constant, utils, drivers
-from dolfin_adjoint.adjglobals import adjointer, mem_checkpoints, disk_checkpoints, adj_reset_cache
+from dolfin import Function, Constant, info_red, info_green, File
+from dolfin_adjoint import adjlinalg, adjrhs, constant, drivers
+from dolfin_adjoint.adjglobals import adjointer, mem_checkpoints, disk_checkpoints
 import cPickle as pickle
 import hashlib
 
-def unlist(x):
-    ''' If x is a list of length 1, return its element. Otherwise return x. '''
-    if len(x) == 1:
-        return x[0]
-    else:
-        return x
-
-def enlist(x):
-    ''' Opposite of unlist '''
-    if not isinstance(x, (list, tuple)):
-        return [x]
-    else:
-        return x
-
-def copy_data(m):
-    ''' Returns a deep copy of the given Function/Constant. '''
-    if hasattr(m, "vector"): 
-        return Function(m.function_space())
-    elif hasattr(m, "value_size"): 
-        return Constant(m(()))
-    else:
-        raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
-
-def value_hash(value):
-    if isinstance(value, Constant):
-        return str(float(value))
-    elif isinstance(value, Function):
-        m = hashlib.md5()
-        m.update(str(value.vector().norm("l2")) + str(value.vector().norm("l1")) + str(value.vector().norm("linf")))
-        return m.hexdigest()
-    elif isinstance (value, list):
-        return "".join(map(value_hash, value))
-    else:
-        raise Exception, "Don't know how to take a hash of %s" % value
-
-def cache_load(value, V):
-    if isinstance(value, (list, tuple)):
-        return [cache_load(value[i], V[i]) for i in range(len(value))]
-    elif isinstance(value, float):
-        return Constant(value)
-    elif isinstance(value, str):
-        return Function(V, value)
-    return
-
-def cache_store(value, cache):
-    if isinstance(value, (list, tuple)):
-        return tuple(cache_store(x, cache) for x in value)
-    elif isinstance(value, Constant):
-        return float(value)
-    elif isinstance(value, Function):
-        hash = value_hash(value)
-        filename = "%s_dir/%s.xml.gz" % (cache, hash)
-        File(filename) << value
-        return filename
-    else:
-        raise Exception, "Don't know how to store %s" % value
-    return
-
-def get_global(m_list):
-    ''' Takes a list of distributed objects and returns one numpy array containing their (serialised) values '''
-    if not isinstance(m_list, (list, tuple)):
-        m_list = [m_list]
-
-    m_global = []
-    for m in m_list:
-
-        # Parameters of type float
-        if m == None or type(m) == float:
-            m_global.append(m)
-
-        elif hasattr(m, "tolist"): 
-            m_global += m.tolist()
-
-        # Function parameters of type Function 
-        elif hasattr(m, "vector") or hasattr(m, "gather"): 
-            if not hasattr(m, "gather"):
-                m_v = m.vector()
-            else:
-                m_v = m
-            m_a = cpp.DoubleArray(m_v.size())
-            try:
-                m_v.gather(m_a, numpy.arange(m_v.size(), dtype='I'))
-                m_global += m_a.array().tolist()
-            except TypeError:
-                m_a = m_v.gather(numpy.arange(m_v.size(), dtype='intc'))
-                m_global += m_a.tolist()
-
-        # Parameters of type Constant 
-        elif hasattr(m, "value_size"): 
-            a = numpy.zeros(m.value_size())
-            p = numpy.zeros(m.value_size())
-            m.eval(a, p)
-            m_global += a.tolist()
-
-        else:
-            raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
-
-    return numpy.array(m_global, dtype='d')
-
-def set_local(m_list, m_global_array):
-    ''' Sets the local values of one or a list of distributed object(s) to the values contained in the global array m_global_array '''
-
-    if not isinstance(m_list, (list, tuple)):
-        m_list = [m_list]
-
-    offset = 0
-    for m in m_list:
-        # Function parameters of type dolfin.Function 
-        if hasattr(m, "vector"): 
-            range_begin, range_end = m.vector().local_range()
-            m_a_local = m_global_array[offset + range_begin:offset + range_end]
-            m.vector().set_local(m_a_local)
-            m.vector().apply('insert')
-            offset += m.vector().size() 
-        # Parameters of type dolfin.Constant 
-        elif hasattr(m, "value_size"): 
-            m.assign(constant.Constant(numpy.reshape(m_global_array[offset:offset+m.value_size()], m.shape())))
-            offset += m.value_size()    
-        elif isinstance(m, numpy.ndarray): 
-            m[:] = m_global_array[offset:offset+len(m)]
-            offset += len(m)
-        else:
-            raise TypeError, 'Unknown parameter type %s' % m.__class__
-
 global_eqn_list = {}
-def replace_tape_ic_value(parameter, new_value):
-    ''' Replaces the initial condition value of the given parameter by registering a new equation of the rhs. '''
-
-    # Case 1: The parameter value and new_vale are Functions
-    if hasattr(new_value, 'vector'):
-        # ... since these are duplicated and then occur as rhs in the annotation. 
-        # Therefore, we need to update the right hand side callbacks for
-        # the equation that targets the associated variable.
-
-        # Create a RHS object with the new control values
-        init_rhs = adjlinalg.Vector(new_value).duplicate()
-        init_rhs.axpy(1.0, adjlinalg.Vector(new_value))
-        rhs = adjrhs.RHS(init_rhs)
-        # Register the new rhs in the annotation
-        class DummyEquation(object):
-            pass
-
-        eqn = DummyEquation() 
-        variable = parameter.var
-        eqn_nb = variable.equation_nb(adjointer)
-        eqn.equation = adjointer.adjointer.equations[eqn_nb]
-        rhs.register(eqn)
-        # Store the equation as a class variable in order to keep a python reference in the memory
-        global_eqn_list[variable.equation_nb] = eqn
-
-    # Case 2: The parameter value and new_value are Constants
-    elif hasattr(new_value, "value_size"): 
-        # Constants are not duplicated in the annotation. That is, changing a constant that occurs
-        # in the forward model will also change the forward replay with libadjoint.
-        constant = parameter.data()
-        constant.assign(new_value(()))
-
-    else:
-        raise NotImplementedError, "Can only replace a dolfin.Functions or dolfin.Constants"
-
 class ReducedFunctional(object):
     ''' This class implements the reduced functional for a given functional/parameter combination. The core idea 
         of the reduced functional is to consider the problem as a pure function of the parameter value which 
@@ -354,72 +194,95 @@ class ReducedFunctional(object):
 
         return val        
 
-    def eval_array(self, m_array):
-        ''' An implementation of the reduced functional evaluation
-            that accepts the parameter as an array of scalars '''
+def replace_tape_ic_value(parameter, new_value):
+    ''' Replaces the initial condition value of the given parameter by registering a new equation of the rhs. '''
 
-        # In case the annotation is not reused, we need to reset any prior annotation of the adjointer before reruning the forward model.
-        if not self.replays_annotation:
-            solving.adj_reset()
+    # Case 1: The parameter value and new_vale are Functions
+    if hasattr(new_value, 'vector'):
+        # ... since these are duplicated and then occur as rhs in the annotation. 
+        # Therefore, we need to update the right hand side callbacks for
+        # the equation that targets the associated variable.
 
-        # We move in parameter space, so we also need to reset the factorisation cache
-        adj_reset_cache()
+        # Create a RHS object with the new control values
+        init_rhs = adjlinalg.Vector(new_value).duplicate()
+        init_rhs.axpy(1.0, adjlinalg.Vector(new_value))
+        rhs = adjrhs.RHS(init_rhs)
+        # Register the new rhs in the annotation
+        class DummyEquation(object):
+            pass
 
-        # Now its time to update the parameter values using the given array  
-        m = [p.data() for p in self.parameter]
-        set_local(m, m_array)
+        eqn = DummyEquation() 
+        variable = parameter.var
+        eqn_nb = variable.equation_nb(adjointer)
+        eqn.equation = adjointer.adjointer.equations[eqn_nb]
+        rhs.register(eqn)
+        # Store the equation as a class variable in order to keep a python reference in the memory
+        global_eqn_list[variable.equation_nb] = eqn
 
-        return self(m)
+    # Case 2: The parameter value and new_value are Constants
+    elif hasattr(new_value, "value_size"): 
+        # Constants are not duplicated in the annotation. That is, changing a constant that occurs
+        # in the forward model will also change the forward replay with libadjoint.
+        constant = parameter.data()
+        constant.assign(new_value(()))
 
-    def derivative_array(self, m_array, taylor_test = False, seed = 0.001, forget = True):
-        ''' An implementation of the reduced functional derivative evaluation 
-            that accepts the parameter as an array of scalars  
-            If taylor_test = True, the derivative is automatically verified 
-            by the Taylor remainder convergence test. The perturbation direction 
-            is random and the perturbation size can be controlled with the seed argument.
-            '''
+    else:
+        raise NotImplementedError, "Can only replace a dolfin.Functions or dolfin.Constants"
 
-        # In the case that the parameter values have changed since the last forward run, 
-        # we first need to rerun the forward model with the new parameters to have the 
-        # correct forward solutions
-        m = [p.data() for p in self.parameter]
-        if (m_array != get_global(m)).any():
-            self.eval_array(m_array) 
+def unlist(x):
+    ''' If x is a list of length 1, return its element. Otherwise return x. '''
+    if len(x) == 1:
+        return x[0]
+    else:
+        return x
 
-        dJdm = self.derivative(forget=forget) 
-        dJdm_global = get_global(dJdm)
+def enlist(x):
+    ''' Opposite of unlist '''
+    if not isinstance(x, (list, tuple)):
+        return [x]
+    else:
+        return x
 
-        # Perform the gradient test
-        if taylor_test:
-            minconv = utils.test_gradient_array(self.eval_array, self.scale * dJdm_global, m_array, 
-                                                seed = seed) 
-            if minconv < 1.9:
-                raise RuntimeWarning, "A gradient test failed during execution."
-            else:
-                info("Gradient test succesfull.")
-            self.eval_array(m_array) 
+def copy_data(m):
+    ''' Returns a deep copy of the given Function/Constant. '''
+    if hasattr(m, "vector"): 
+        return Function(m.function_space())
+    elif hasattr(m, "value_size"): 
+        return Constant(m(()))
+    else:
+        raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
 
-        return dJdm_global 
+def value_hash(value):
+    if isinstance(value, Constant):
+        return str(float(value))
+    elif isinstance(value, Function):
+        m = hashlib.md5()
+        m.update(str(value.vector().norm("l2")) + str(value.vector().norm("l1")) + str(value.vector().norm("linf")))
+        return m.hexdigest()
+    elif isinstance (value, list):
+        return "".join(map(value_hash, value))
+    else:
+        raise Exception, "Don't know how to take a hash of %s" % value
 
-    def hessian_array(self, m_array, m_dot_array):
-        ''' An implementation of the reduced functional hessian action evaluation 
-            that accepts the parameter as an array of scalars. ''' 
+def cache_load(value, V):
+    if isinstance(value, (list, tuple)):
+        return [cache_load(value[i], V[i]) for i in range(len(value))]
+    elif isinstance(value, float):
+        return Constant(value)
+    elif isinstance(value, str):
+        return Function(V, value)
+    return
 
-        # In the case that the parameter values have changed since the last forward run, 
-        # we first need to rerun the forward model with the new parameters to have the 
-        # correct forward solutions
-        m = [p.data() for p in self.parameter]
-        if (m_array != get_global(m)).any():
-            self.eval_array(m_array) 
-
-            # Clear the adjoint solution as we need to recompute them 
-            for i in range(adjglobals.adjointer.equation_count):
-                adjglobals.adjointer.forget_adjoint_values(i)
-
-        set_local(m, m_array)
-        self.H.update(m)
-
-        m_dot = [copy_data(p.data()) for p in self.parameter] 
-        set_local(m_dot, m_dot_array)
-
-        return get_global(self.hessian(m_dot)) 
+def cache_store(value, cache):
+    if isinstance(value, (list, tuple)):
+        return tuple(cache_store(x, cache) for x in value)
+    elif isinstance(value, Constant):
+        return float(value)
+    elif isinstance(value, Function):
+        hash = value_hash(value)
+        filename = "%s_dir/%s.xml.gz" % (cache, hash)
+        File(filename) << value
+        return filename
+    else:
+        raise Exception, "Don't know how to store %s" % value
+    return

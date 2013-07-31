@@ -1,7 +1,8 @@
 import dolfin
 from dolfin import MPI 
 from dolfin_adjoint import constant 
-from ..reduced_functional import ReducedFunctional, get_global, set_local
+from ..reduced_functional_numpy import ReducedFunctionalNumPy, get_global, set_local
+from ..reduced_functional import ReducedFunctional
 import numpy
 import sys
 
@@ -131,7 +132,7 @@ def print_optimization_methods():
     for function_name, (description, func) in optimization_algorithms_dict.iteritems():
         print function_name, ': ', description
 
-def minimize(reduced_func, method = 'L-BFGS-B', scale = 1.0, **kwargs):
+def minimize(rf, method = 'L-BFGS-B', scale = 1.0, **kwargs):
     ''' Solves the minimisation problem with PDE constraint:
 
            min_m func(u, m) 
@@ -144,7 +145,7 @@ def minimize(reduced_func, method = 'L-BFGS-B', scale = 1.0, **kwargs):
         The optimization problem is solved using a gradient based optimization algorithm and the functional gradients are computed by solving the associated adjoint system.
 
         The function arguments are as follows:
-        * 'reduced_func' must be a ReducedFunctional object. 
+        * 'rf' must be a ReducedFunctional object. 
         * 'method' specifies the optimization method to be used to solve the problem. The available methods can be listed with the print_optimization_methods function.
         * 'scale' is a factor to scale to problem (default: 1.0). 
         * 'bounds' is an optional keyword parameter to support control constraints: bounds = (lb, ub). lb and ub must be of the same type than the parameters m. 
@@ -152,7 +153,12 @@ def minimize(reduced_func, method = 'L-BFGS-B', scale = 1.0, **kwargs):
         Additional arguments specific for the optimization algorithms can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimization algorithm. For detailed information about which arguments are supported for each optimization algorithm, please refer to the documentaton of the optimization algorithm.
         '''
 
-    reduced_func.scale = scale
+    if isinstance(rf, ReducedFunctional):
+        rf_numpy = ReducedFunctionalNumPy(rf)
+    else:
+        rf_numpy = rf # Assume the user know what he is doing - he might for example written his own reduced functional class (as in OpenTidalFarm)
+
+    rf_numpy.scale = scale
 
     try:
         algorithm = optimization_algorithms_dict[method][1]
@@ -164,20 +170,20 @@ def minimize(reduced_func, method = 'L-BFGS-B', scale = 1.0, **kwargs):
         kwargs["method"] = method 
 
     if method in ["Newton-CG", "Custom"]:
-        dj = lambda m: reduced_func.derivative_array(m, taylor_test = dolfin.parameters["optimization"]["test_gradient"], 
-                                                        seed = dolfin.parameters["optimization"]["test_gradient_seed"],
-                                                        forget = None)
+        dj = lambda m: rf_numpy.derivative(m, taylor_test = dolfin.parameters["optimization"]["test_gradient"], 
+                                           seed = dolfin.parameters["optimization"]["test_gradient_seed"],
+                                           forget = None)
     else:
-        dj = lambda m: reduced_func.derivative_array(m, taylor_test = dolfin.parameters["optimization"]["test_gradient"], 
-                                                        seed = dolfin.parameters["optimization"]["test_gradient_seed"])
+        dj = lambda m: rf_numpy.derivative(m, taylor_test = dolfin.parameters["optimization"]["test_gradient"], 
+                                           seed = dolfin.parameters["optimization"]["test_gradient_seed"])
 
-    opt = algorithm(reduced_func.eval_array, dj, [p.data() for p in reduced_func.parameter], H = reduced_func.hessian_array, **kwargs)
+    opt = algorithm(rf_numpy.__call__, dj, [p.data() for p in rf_numpy.parameter], H = rf_numpy.hessian, **kwargs)
     if len(opt) == 1:
         return opt[0]
     else:
         return opt
 
-def maximize(reduced_func, method = 'L-BFGS-B', scale = 1.0, **kwargs):
+def maximize(rf, method = 'L-BFGS-B', scale = 1.0, **kwargs):
     ''' Solves the maximisation problem with PDE constraint:
 
            max_m func(u, m) 
@@ -190,14 +196,14 @@ def maximize(reduced_func, method = 'L-BFGS-B', scale = 1.0, **kwargs):
         The optimization problem is solved using a gradient based optimization algorithm and the functional gradients are computed by solving the associated adjoint system.
 
         The function arguments are as follows:
-        * 'reduced_func' must be a ReducedFunctional object. 
+        * 'rf' must be a ReducedFunctional object. 
         * 'method' specifies the optimization method to be used to solve the problem. The available methods can be listed with the print_optimization_methods function.
         * 'scale' is a factor to scale to problem (default: 1.0). 
         * 'bounds' is an optional keyword parameter to support control constraints: bounds = (lb, ub). lb and ub must be of the same type than the parameters m. 
         
         Additional arguments specific for the optimization methods can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimization method. For detailed information about which arguments are supported for each optimization method, please refer to the documentaton of the optimization algorithm.
         '''
-    return minimize(reduced_func, method, scale = -scale, **kwargs)
+    return minimize(rf, method, scale = -scale, **kwargs)
 
 minimise = minimize
 maximise = maximize
