@@ -4,17 +4,34 @@ from line_search import FixedLineSearch, ArmijoLineSearch, StrongWolfeLineSearch
 import numpy
 
 def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
+    """
+        Implements the steepest descent method to minimise a functional.
+
+        Arguments:
+         * rf: the reduced functional to be minimised
+         * tol: Functional reduction stopping tolerance: |j - j_prev| < tol. Default: 1e-4.
+         * options: A dictionary containing additional options for the steepest descent algorithm. Valid options are:
+            - maxiter: Maximum number of iterations before the algorithm terminates. Default: 200. 
+            - disp: dis/enable outputs to screen during the optimisation. Default: True
+            - gtol: Gradient norm stopping tolerance: ||grad j|| < gtol.
+            - line_search: defines the line search algorithm to use. Default: armijo
+            - line_search_options: additional options for the line search algorithm. The specific options read the help 
+              for the line search algorithm.
+
+        Return value:
+          * m: The optimised control values. 
+          * d: A dictionary with additional information about the optimisation run. It contains:
+             "Number of iterations": The number of iterations performed. 
+
+     """
+
 
     # Set the default options values
     gtol = options.get("gtol", 1e-4)
     maxiter = options.get("maxiter", 200)
     disp = options.get("disp", True)
-    start_alpha = options.get("start_alpha", 1.0)
-    line_search = options.get("line_search", "backtracking")
-    c1 = options.get("c1", 1e-4)
-
-    # Check the validness of the user supplied parameters
-    assert 0 < c1 < 1
+    line_search = options.get("line_search", "armijo")
+    line_search_options = options.get("line_search_options", {})
 
     # Define the norm and the inner product in the relevant function spaces
     def normL2(x):
@@ -32,15 +49,10 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
         return assemble(inner(x, y)*dx)
 
     if disp and MPI.process_number()==0:
-        if line_search == "backtracking":
-            print "Optimising using steepest descent with an Armijo line search." 
-            print "Maximum optimisation iterations: %i" % maxiter 
-            print "Armijo constant: c1 = %f" % c1
-        elif line_search == "fixed":
-            print "Optimising using steepest descent without line search." 
-            print "Maximum optimisation iterations: %i" % maxiter 
+        print "Optimising using steepest descent with a " + line_search + " line search." 
+        print "Maximum optimisation iterations: %i" % maxiter 
 
-    ls = get_line_search(line_search)
+    ls = get_line_search(line_search, line_search_options)
 
     m = CoefficientList([p.data() for p in rf.parameter]) 
     m_prev = m.deep_copy()
@@ -90,18 +102,6 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
             return p, djs
 
         alpha = ls.search(phi, phi_dphi)
-        # For testing purposes: compare line search step produced by the python implementation with the original Fortran version 
-        # In order for this to work, you need to compile the Fortran version with "cd dcsrch_fortran; python build", and make sure
-        # that the build path is in the PYTHONPATH, i.e. import pswolfe should not through an error message.
-        test_fortran = False
-        if test_fortran:
-            import pyswolfe
-
-            dphi = lambda x: phi_dphi(x)[1]
-            ls_fort = pyswolfe.StrongWolfeLineSearch(phi(0), dphi(0), 1.0, phi, dphi, gtol=0.01) 
-            ls_fort.search()
-
-            assert ls_fort.stp == alpha
 
         # update m and j_new
         j_new = phi(alpha)
@@ -132,14 +132,14 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
 
     return m, {"Number of iterations": it}
 
-def get_line_search(line_search):
+def get_line_search(line_search, line_search_options):
     if line_search == "strong_wolfe":
-        ls = StrongWolfeLineSearch(ftol=1e-4, gtol=0.1)
-    elif line_search == "backtracking":
-        ls = ArmijoLineSearch()
+        ls = StrongWolfeLineSearch(**line_search_options)
+    elif line_search == "armijo":
+        ls = ArmijoLineSearch(**line_search_options)
     elif line_search == "fixed":
-        ls = FixedLineSearch()
+        ls = FixedLineSearch(**line_search_options)
     else:
-        raise ValueError, "Unknown line search specified. Valid values are 'backtracking', 'strong_wolfe' and 'fixed'."
+        raise ValueError, "Unknown line search specified. Valid values are 'armijo', 'strong_wolfe' and 'fixed'."
 
     return ls

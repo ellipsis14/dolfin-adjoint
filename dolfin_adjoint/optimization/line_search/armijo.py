@@ -23,6 +23,9 @@ class ArmijoLineSearch(LineSearch):
            stpmin       | a nonnegative lower bound for the step.
            adaptive_stp | dis/enables the adaptive step size algorithm.
 
+        Returns:
+          A step size that satisfies the Armijo condition
+
         '''
 
         if ftol <= 0:

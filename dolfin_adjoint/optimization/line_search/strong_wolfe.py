@@ -1,9 +1,10 @@
 from line_search import LineSearch
 from dcsrch import dcsrch
 from numpy import zeros
+from dolfin import info_red
 
 class StrongWolfeLineSearch(LineSearch):
-    def __init__(self, ftol = 1e-4, gtol = 0.9, xtol = 1e-1, start_stp = 1.0, stpmin = None, stpmax = None):
+    def __init__(self, ftol = 1e-4, gtol = 0.9, xtol = 1e-1, start_stp = 1.0, stpmin = None, stpmax = None, verify = False):
         '''
         This class implements a line search algorithm whose steps 
         satisfy the strong Wolfe conditions (i.e. they satisfies a 
@@ -34,6 +35,9 @@ class StrongWolfeLineSearch(LineSearch):
            start_stp | a guess for an initial step size. 
            stpmin    | a nonnegative lower bound for the step.
            stpmax    | a nonnegative upper bound for the step.
+           verify    | if True, the step is compared to the Fortran implementation 
+                       (note: this assumes that the Python module dcsrch_fortran is compiled
+                        and in the PYTHONPATH)
 
         References:
          Mor'e, J.J., and Thuente, D.J., 1992, Line search algorithms with guaranteed 
@@ -48,6 +52,7 @@ class StrongWolfeLineSearch(LineSearch):
         self.start_stp  = start_stp
         self.stpmin     = stpmin
         self.stpmax     = stpmax
+        self.verify     = verify
 
     def search(self, phi, phi_dphi):
         ''' Performs the line search on the function phi. 
@@ -85,7 +90,36 @@ class StrongWolfeLineSearch(LineSearch):
             raise Warning, task
         else:
             assert task=="Convergence"
+
+            if self.verify:
+                # Recompute the step with the Fortran implementation and compare
+                stp_fort = self.search_fortran(phi, phi_dphi)
+                if stp_fort is not None and stp_fort != stp:
+                    raise RuntimeError, "The line search verification failed!" 
+
             return stp
+
+    def search_fortran(self, phi, phi_dphi):
+        ''' Performs the line search on the function phi using the Fortran implementation
+            of the line search algorithm. 
+
+            phi must be a function [0, oo] -> R.
+            phi_dphi must evaluate phi and its derivative, and 
+            must be a function [0, oo] -> (R, R).
+
+            The return value is a step that satisfies the strong Wolfe condition. 
+        '''
+
+        try: 
+            import pyswolfe
+
+            dphi = lambda x: phi_dphi(x)[1]
+            ls_fort = pyswolfe.StrongWolfeLineSearch(phi(0), dphi(0), 1.0, phi, dphi, gtol=self.gtol)
+            ls_fort.search()
+            return ls_fort.stp 
+
+        except ImportError:
+            info_red("The line search could not be verified. Did you compile the pyswolfe Fotran module?")
 
     def __csrch__(self, f, g, stp, task, isave, dsave):
         stp, task, isave, dsave = dcsrch(stp, f, g, self.ftol, self.gtol, self.xtol, task, self.stpmin, self.stpmax, isave, dsave)
