@@ -40,7 +40,7 @@ def solve_optimal_control(n):
     p = [InitialConditionParameter(m, value=m), ScalarParameter(s)]
     rf = ReducedFunctional(J, p)
 
-    line_search_options = {"ftol": 1e-4, "gtol": 0.1, "verify": True}
+    line_search_options = {"ftol": 1e-4, "gtol": 0.1, "verify": True, "ignore_warnings": False}
     m_opt, info = minimize_steepest_descent(rf, options={"gtol": 1e-16, "maxiter": 40, "line_search": "strong_wolfe", "line_search_options": line_search_options})
     solve_pde(u, V, m_opt[0])
 
