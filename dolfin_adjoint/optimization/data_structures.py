@@ -52,7 +52,7 @@ class CoefficientList(list):
         for yi, xi in zip(self, x):
             # yi is Function
             if hasattr(yi, "vector"):
-                yi.vector()[:] += a*xi.vector()
+                yi.vector().axpy(a, xi.vector())
             # yi is Constant
             else:
                 yi.assign(float(yi) + a*float(xi))
