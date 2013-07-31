@@ -40,7 +40,8 @@ def solve_optimal_control(n):
     p = [InitialConditionParameter(m, value=m), ScalarParameter(s)]
     rf = ReducedFunctional(J, p)
 
-    m_opt, info = minimize_steepest_descent(rf, options={"gtol": 1e-16, "maxiter": 20})
+    line_search_options = {"ftol": 1e-4, "gtol": 0.1, "verify": True}
+    m_opt, info = minimize_steepest_descent(rf, options={"gtol": 1e-16, "maxiter": 40, "line_search": "strong_wolfe", "line_search_options": line_search_options})
     solve_pde(u, V, m_opt[0])
 
     # Define the analytical expressions
@@ -73,7 +74,7 @@ try:
     if min(convergence_order(control_errors)) < 0.9:
         info_red("Convergence order below tolerance") 
         sys.exit(1)
-    if min(convergence_order(state_errors)) < 1.9:
+    if min(convergence_order(state_errors)) < 1.8:
         info_red("Convergence order below tolerance") 
         sys.exit(1)
     info_green("Test passed")    
