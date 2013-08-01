@@ -1,5 +1,5 @@
 import numpy as np
-from dolfin import cpp, info, Constant, Function, TestFunction, TrialFunction, assemble, inner, dx
+from dolfin import cpp, info, info_red, Constant, Function, TestFunction, TrialFunction, assemble, inner, dx
 from dolfin_adjoint import constant, utils 
 from dolfin_adjoint.adjglobals import adjointer, adj_reset_cache
 from reduced_functional import ReducedFunctional
@@ -9,12 +9,12 @@ class ReducedFunctionalNumPy(ReducedFunctional):
         of the reduced functional is to consider the problem as a pure function of the parameter value which 
         implicitly solves the recorded PDE. '''
 
-    def __init__(self, rf, map_to_euclidian_space=False):
+    def __init__(self, rf, in_euclidian_space=False):
         ''' Creates a reduced functional object, that evaluates the functional value for a given parameter value.
             This "NumPy version" of the reduced functional is created from an existing ReducedFunctional object:
               rf_np = ReducedFunctionalNumPy(rf = rf)
 
-            If the optional parameter map_to_euclidian_space norm is True, the ReducedFunctionalNumPy will 
+            If the optional parameter in_euclidian_space norm is True, the ReducedFunctionalNumPy will 
             perform a transformation from the L2-inner product given by the discrete Functionspace to Euclidian space.
             That is, the squared norm of the gradient can then for example be computed with:
 
@@ -32,9 +32,9 @@ class ReducedFunctionalNumPy(ReducedFunctional):
                                                      replay_cb = rf.replay_cb, hessian_cb = rf.hessian_cb, 
                                                      ignore = rf.ignore, cache = rf.cache)
         self.current_func_value = rf.current_func_value
-        self.map_to_euclidian_space = map_to_euclidian_space
+        self.in_euclidian_space = in_euclidian_space
 
-        if self.map_to_euclidian_space:
+        if self.in_euclidian_space:
             from numpy.linalg import cholesky
 
             # Build up the Cholesky factorisation
@@ -62,13 +62,14 @@ class ReducedFunctionalNumPy(ReducedFunctional):
 
         # Now its time to update the parameter values using the given array  
         m = [p.data() for p in self.parameter]
-        set_local(m, m_array, self.map_to_euclidian_space, self.LT)
+        set_local(m, m_array, self.in_euclidian_space, self.LT)
 
         return super(ReducedFunctionalNumPy, self).__call__(m)
 
-    def derivative(self, m_array, taylor_test=False, seed=0.001, forget=True, project=False):
+    def derivative(self, m_array=None, taylor_test=False, seed=0.001, forget=True, project=False):
         ''' An implementation of the reduced functional derivative evaluation 
-            that accepts the parameter as an array of scalars  
+            that accepts the parameter as an array of scalars. If no parameter values are given,
+            the result is derivative at the last forward run.
             If taylor_test = True, the derivative is automatically verified 
             by the Taylor remainder convergence test. The perturbation direction 
             is random and the perturbation size can be controlled with the seed argument.
@@ -78,15 +79,16 @@ class ReducedFunctionalNumPy(ReducedFunctional):
         # we first need to rerun the forward model with the new parameters to have the 
         # correct forward solutions
         m = [p.data() for p in self.parameter]
-        if (m_array != get_global(m, self.map_to_euclidian_space, self.LT)).any():
+        if m_array is not None and (m_array != get_global(m, self.in_euclidian_space, self.LT)).any():
+            info_red("Rerunning forward model before computing derivative")
             self(m_array) 
 
         dJdm = super(ReducedFunctionalNumPy, self).derivative(forget=forget, project=project) 
         if project:
-            dJdm_global = get_global(dJdm, self.map_to_euclidian_space, self.LT)
+            dJdm_global = get_global(dJdm, self.in_euclidian_space, self.LT)
         else:
             dJdm_global = get_global(dJdm, False)
-            if self.map_to_euclidian_space:
+            if self.in_euclidian_space:
                 dJdm_global = np.linalg.solve(self.L, dJdm_global)
 
         # Perform the gradient test
@@ -103,32 +105,37 @@ class ReducedFunctionalNumPy(ReducedFunctional):
 
     def hessian(self, m_array, m_dot_array):
         ''' An implementation of the reduced functional hessian action evaluation 
-            that accepts the parameter as an array of scalars. ''' 
+            that accepts the parameter as an array of scalars. If m_array is None,
+            the Hessian action at the latest forward run is returned. ''' 
 
-        # In the case that the parameter values have changed since the last forward run, 
-        # we first need to rerun the forward model with the new parameters to have the 
-        # correct forward solutions
         m = [p.data() for p in self.parameter]
-        if (m_array != get_global(m, self.map_to_euclidian_space, self.LT)).any():
-            self(m_array) 
+        if m_array is not None:
+            # In case the parameter values have changed since the last forward run, 
+            # we first need to rerun the forward model with the new parameters to have the 
+            # correct forward solutions
+            if (m_array != get_global(m, self.in_euclidian_space, self.LT)).any():
+                self(m_array) 
 
-            # Clear the adjoint solution as we need to recompute them 
-            for i in range(adjointer.equation_count):
-                adjointer.forget_adjoint_values(i)
+                # Clear the adjoint solution as we need to recompute them 
+                for i in range(adjointer.equation_count):
+                    adjointer.forget_adjoint_values(i)
 
-        set_local(m, m_array, self.map_to_euclidian_space, self.LT)
+            set_local(m, m_array, self.in_euclidian_space, self.LT)
         self.H.update(m)
 
         m_dot = [copy_data(p.data()) for p in self.parameter] 
-        set_local(m_dot, m_dot_array, self.map_to_euclidian_space, self.LT)
+        set_local(m_dot, m_dot_array, self.in_euclidian_space, self.LT)
 
         hess = super(ReducedFunctionalNumPy, self).hessian(m_dot) 
         hess_array = get_global(hess, False)
 
-        if self.map_to_euclidian_space:
+        if self.in_euclidian_space:
             hess_array = np.linalg.solve(self.L, hess_array)
 
         return hess_array
+    
+    def obj_to_array(self, obj):
+        return get_global(obj, self.in_euclidian_space, self.LT)
 
 def copy_data(m):
     ''' Returns a deep copy of the given Function/Constant. '''
@@ -139,7 +146,7 @@ def copy_data(m):
     else:
         raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
 
-def get_global(m_list, map_to_euclidian_space=False, LT=None):
+def get_global(m_list, in_euclidian_space=False, LT=None):
     ''' Takes a list of distributed objects and returns one np array containing their (serialised) values '''
     if not isinstance(m_list, (list, tuple)):
         m_list = [m_list]
@@ -168,7 +175,7 @@ def get_global(m_list, map_to_euclidian_space=False, LT=None):
                 m_a = m_v.gather(np.arange(m_v.size(), dtype='intc'))
 
             # Map the result to Euclidian space
-            if map_to_euclidian_space:
+            if in_euclidian_space:
                 #info("Mapping to Euclidian space")
                 m_a = np.dot(LT, m_a)
 
@@ -186,7 +193,7 @@ def get_global(m_list, map_to_euclidian_space=False, LT=None):
 
     return np.array(m_global, dtype='d')
 
-def set_local(m_list, m_global_array, map_to_euclidian_space=False, LT=None):
+def set_local(m_list, m_global_array, in_euclidian_space=False, LT=None):
     ''' Sets the local values of one or a list of distributed object(s) to the values contained in the global array m_global_array '''
 
     if not isinstance(m_list, (list, tuple)):
@@ -197,7 +204,7 @@ def set_local(m_list, m_global_array, map_to_euclidian_space=False, LT=None):
         # Function parameters of type dolfin.Function 
         if hasattr(m, "vector"): 
 
-            if map_to_euclidian_space:
+            if in_euclidian_space:
                 #info("Mapping from Euclidian space")
                 m_global_array = np.linalg.solve(LT, m_global_array)
 
