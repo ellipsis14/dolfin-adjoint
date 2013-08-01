@@ -3,14 +3,14 @@ from dolfin import MPI
 from dolfin_adjoint import constant 
 from ..reduced_functional_numpy import ReducedFunctionalNumPy, get_global, set_local
 from ..reduced_functional import ReducedFunctional
-import numpy
+import numpy as np
 import sys
 
-def serialise_bounds(bounds, m):
+def serialise_bounds(rf_np, bounds):
     ''' Converts bounds to an array of (min, max) tuples and serialises it in a parallel environment. ''' 
 
-    if len(numpy.array(bounds).shape) == 1:
-        bounds = numpy.array([[b] for b in bounds])
+    if len(np.array(bounds).shape) == 1:
+        bounds = np.array([[b] for b in bounds])
 
     if len(bounds) != 2:
         raise ValueError, "The 'bounds' parameter must be of the form [lower_bound, upper_bound] for one parameter or [ [lower_bound1, lower_bound2, ...], [upper_bound1, upper_bound2, ...] ] for multiple parameters."
@@ -19,16 +19,22 @@ def serialise_bounds(bounds, m):
     for i in range(2):
         for j in range(len(bounds[i])):
             bound = bounds[i][j]
-            if type(bound) in [int,  float, numpy.int32, numpy.int64, numpy.float32, numpy.float64]:
-                bound_len = len(get_global(m[j]))
-                bounds_arr[i] += (bound*numpy.ones(bound_len)).tolist()
+            if type(bound) in [int,  float, np.int32, np.int64, np.float32, np.float64]:
+                bound_len = len(get_global(rf_np.parameter[j].data()))
+                const_bound = bound*np.ones(bound_len)
+
+                if rf_np.in_euclidian_space:
+                   # Convert the bounds into Euclidian space if necessary
+                   const_bound = np.dot(rf_np.LT, const_bound)
+
+                bounds_arr[i] += const_bound.tolist()
             else:
-                bounds_arr[i] += get_global(bound).tolist()
+                bounds_arr[i] += rf_np.obj_to_array(bound).tolist()
 
     # Transpose and return the array to get the form [ [lower_bound1, upper_bound1], [lower_bound2, upper_bound2], ... ] 
-    return numpy.array(bounds_arr).T
+    return np.array(bounds_arr).T
 
-def minimize_scipy_generic(J, dJ, m, method, bounds = None, H = None, **kwargs):
+def minimize_scipy_generic(rf_np, method, bounds = None, **kwargs):
     ''' Interface to the generic minimize method in scipy '''
 
     try:
@@ -38,7 +44,18 @@ def minimize_scipy_generic(J, dJ, m, method, bounds = None, H = None, **kwargs):
         print "You have an old version of scipy (<0.11). This version is not supported by dolfin-adjoint."
         raise ImportError
 
-    m_global = get_global(m)
+    if method in ["Newton-CG"]:
+        forget = None
+    else:
+        forget = False
+
+    m = [p.data() for p in rf_np.parameter]
+    m_global = rf_np.obj_to_array(m)
+    J = rf_np.__call__
+    dJ = lambda m: rf_np.derivative(m, taylor_test=dolfin.parameters["optimization"]["test_gradient"], 
+                                       seed=dolfin.parameters["optimization"]["test_gradient_seed"],
+                                       forget=forget)
+    H = rf_np.hessian
 
     if not "options" in kwargs:
         kwargs["options"] = {}
@@ -76,20 +93,20 @@ def minimize_scipy_generic(J, dJ, m, method, bounds = None, H = None, **kwargs):
 
         if "bounds" in kwargs["minimizer_kwargs"]:
           kwargs["minimizer_kwargs"]["bounds"] = \
-              serialise_bounds(kwargs["minimizer_kwargs"]["bounds"], m)
+              serialise_bounds(rf_np, kwargs["minimizer_kwargs"]["bounds"])
 
         res = basinhopping(J, m_global, **kwargs)
 
     elif bounds != None:
-        bounds = serialise_bounds(bounds, m)
-        res = scipy_minimize(J, m_global, method = method, bounds = bounds, **kwargs)
+        bounds = serialise_bounds(rf_np, bounds)
+        res = scipy_minimize(J, m_global, method=method, bounds=bounds, **kwargs)
     else:
-        res = scipy_minimize(J, m_global, method = method, **kwargs)
+        res = scipy_minimize(J, m_global, method=method, **kwargs)
 
-    set_local(m, numpy.array(res["x"]))
+    rf_np.set_parameters(np.array(res["x"]))
     return m
 
-def minimize_custom(J, dJ, m, bounds = None, H = None, **kwargs):
+def minimize_custom(rf_np, bounds=None, **kwargs):
     ''' Interface to the user-provided minimisation method '''
 
     try:
@@ -98,15 +115,21 @@ def minimize_custom(J, dJ, m, bounds = None, H = None, **kwargs):
     except KeyError:
         raise KeyError, 'When using a "Custom" optimisation method, you must pass the optimisation function as the "algorithm" parameter. Make sure that this function accepts the same arguments as scipy.optimize.minimize.' 
 
-    m_global = get_global(m)
+    m = [p.data() for p in rf_np.parameter]
+    m_global = rf_np.obj_to_array(m)
+    J = rf_np.__call__
+    dJ = lambda m: rf_np.derivative(m, taylor_test=dolfin.parameters["optimization"]["test_gradient"], 
+                                       seed=dolfin.parameters["optimization"]["test_gradient_seed"],
+                                       forget=None)
+    H = rf_np.hessian
 
     if bounds != None:
-        bounds = serialise_bounds(bounds, m)
+        bounds = serialise_bounds(rf_np, bounds)
 
     res = algo(J, m_global, dJ, H, bounds, **kwargs)
 
     try:
-        set_local(m, numpy.array(res))
+        rf_np.set_parameters(np.array(res))
     except Exception as e:
         raise e, "Failed to updated the optimised parameter value. Are you sure your custom optimisation algorithm returns an array containing the optimised values?" 
     return m
@@ -132,7 +155,7 @@ def print_optimization_methods():
     for function_name, (description, func) in optimization_algorithms_dict.iteritems():
         print function_name, ': ', description
 
-def minimize(rf, method = 'L-BFGS-B', scale = 1.0, **kwargs):
+def minimize(rf, method='L-BFGS-B', scale=1.0, in_euclidian_space=False, **kwargs):
     ''' Solves the minimisation problem with PDE constraint:
 
            min_m func(u, m) 
@@ -149,16 +172,18 @@ def minimize(rf, method = 'L-BFGS-B', scale = 1.0, **kwargs):
         * 'method' specifies the optimization method to be used to solve the problem. The available methods can be listed with the print_optimization_methods function.
         * 'scale' is a factor to scale to problem (default: 1.0). 
         * 'bounds' is an optional keyword parameter to support control constraints: bounds = (lb, ub). lb and ub must be of the same type than the parameters m. 
+        * 'in_euclidian_space' specifies if problem should be internally transformed to the Euclidian inner product. Since most optimisation implementations assume 
+          the Euclidian inner product, this is usually a good choice.
         
         Additional arguments specific for the optimization algorithms can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimization algorithm. For detailed information about which arguments are supported for each optimization algorithm, please refer to the documentaton of the optimization algorithm.
         '''
 
     if isinstance(rf, ReducedFunctional):
-        rf_numpy = ReducedFunctionalNumPy(rf)
+        rf_np = ReducedFunctionalNumPy(rf, in_euclidian_space)
     else:
-        rf_numpy = rf # Assume the user know what he is doing - he might for example written his own reduced functional class (as in OpenTidalFarm)
+        rf_np = rf # Assume the user knows what he is doing - he might for example written his own reduced functional class (as in OpenTidalFarm)
 
-    rf_numpy.scale = scale
+    rf_np.scale = scale
 
     try:
         algorithm = optimization_algorithms_dict[method][1]
@@ -169,21 +194,14 @@ def minimize(rf, method = 'L-BFGS-B', scale = 1.0, **kwargs):
         # For scipy's generic inteface we need to pass the optimisation method as a parameter. 
         kwargs["method"] = method 
 
-    if method in ["Newton-CG", "Custom"]:
-        dj = lambda m: rf_numpy.derivative(m, taylor_test = dolfin.parameters["optimization"]["test_gradient"], 
-                                           seed = dolfin.parameters["optimization"]["test_gradient_seed"],
-                                           forget = None)
-    else:
-        dj = lambda m: rf_numpy.derivative(m, taylor_test = dolfin.parameters["optimization"]["test_gradient"], 
-                                           seed = dolfin.parameters["optimization"]["test_gradient_seed"])
+    opt = algorithm(rf_np, **kwargs)
 
-    opt = algorithm(rf_numpy.__call__, dj, [p.data() for p in rf_numpy.parameter], H = rf_numpy.hessian, **kwargs)
     if len(opt) == 1:
         return opt[0]
     else:
         return opt
 
-def maximize(rf, method = 'L-BFGS-B', scale = 1.0, **kwargs):
+def maximize(rf, method='L-BFGS-B', scale=1.0, in_euclidian_space=False, **kwargs):
     ''' Solves the maximisation problem with PDE constraint:
 
            max_m func(u, m) 
@@ -203,7 +221,7 @@ def maximize(rf, method = 'L-BFGS-B', scale = 1.0, **kwargs):
         
         Additional arguments specific for the optimization methods can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimization method. For detailed information about which arguments are supported for each optimization method, please refer to the documentaton of the optimization algorithm.
         '''
-    return minimize(rf, method, scale = -scale, **kwargs)
+    return minimize(rf, method, scale=-scale, in_euclidian_space=in_euclidian_space, **kwargs)
 
 minimise = minimize
 maximise = maximize

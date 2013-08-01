@@ -137,6 +137,14 @@ class ReducedFunctionalNumPy(ReducedFunctional):
     def obj_to_array(self, obj):
         return get_global(obj, self.in_euclidian_space, self.LT)
 
+    def get_parameters(self):
+        m = [p.data() for p in self.parameter]
+        return self.obj_to_array(m)
+
+    def set_parameters(self, array):
+        m = [p.data() for p in self.parameter]
+        return set_local(m, array, self.in_euclidian_space, self.LT)  
+
 def copy_data(m):
     ''' Returns a deep copy of the given Function/Constant. '''
     if hasattr(m, "vector"): 
