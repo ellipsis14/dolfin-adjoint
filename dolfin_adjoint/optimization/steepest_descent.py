@@ -76,6 +76,11 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
         s = CoefficientList(dJ(forget=None, project=True)) # The search direction is the Riesz representation of the gradient
         s.scale(-1)
 
+        if disp:
+            n = normL2(s)
+            if MPI.process_number()==0: 
+                print "Iteration %i\tJ = %s\t|dJ| = %s" % (it, j, n)
+
         # Check for convergence                                                              # Reason:
         if not ((gtol    == None or s == None or normL2(s) > gtol) and                       # ||\nabla j|| < gtol
                 (tol     == None or j == None or j_prev == None or abs(j-j_prev)) > tol and  # \Delta j < tol
@@ -112,10 +117,6 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
         j = j_new
         it += 1
 
-        if disp:
-            n = normL2(s)
-            if MPI.process_number()==0: 
-                print "Iteration %i\tJ = %s\t|dJ| = %s" % (it, j, n)
         if "callback" in options:
             options["callback"](j, s, m)
 
@@ -126,9 +127,9 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
             if maxiter != None and iter <= maxiter:
                 print "\nMaximum number of iterations reached.\n"
             elif gtol != None and n <= gtol: 
-                print "\nTolerance reached: |dJ| < gtol.\n"
+                print "\nTolerance reached: |dJ| < gtol in %i iterations.\n" % it
             elif tol != None and j_prev != None and abs(j-j_prev) <= tol:
-                print "\nTolerance reached: |delta j| < tol.\n"
+                print "\nTolerance reached: |delta j| < tol in %i interations.\n" % it
 
     return m, {"Number of iterations": it}
 

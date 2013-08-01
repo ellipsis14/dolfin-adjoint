@@ -3,8 +3,8 @@ Solves the linear-quadratic optimisation problem:
 
     j(m) = 0.5*m**2,
     
-with steepest descent. Starting with m0 = 5.0, 
-the optimisation should finish in exactly one iteration. 
+with steepest descent. Starting with x_0 = 5, we expect 
+the optimisation to finish in exactly one iteration. 
 """
 import sys
 from dolfin import *
@@ -22,8 +22,8 @@ n = 10
 mesh = Mesh("mesh.xml")
 V = FunctionSpace(mesh, "CG", 1)
 
-m = project(Constant(5), V, name='Control')
-u = Function(V, name='State')
+m = project(Constant(5), V, name='State')
+u = Function(V, name='Control')
 
 J = Functional(0.5*u*u*dx)
 
@@ -33,6 +33,7 @@ solve_pde(u, V, m)
 # Run the optimisation 
 p = InitialConditionParameter(m, value=m) 
 rf = ReducedFunctional(J, p)
-m, r = minimize_steepest_descent(rf, options={"gtol": 1e-13, "line_search": "fixed"})
-
-assert r["Number of iterations"] == 1 
+j = rf(m)
+dj = rf.derivative()[0]
+plot(dj, interactive=True)
+m = minimize(rf)
