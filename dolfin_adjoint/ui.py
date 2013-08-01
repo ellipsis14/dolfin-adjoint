@@ -19,6 +19,7 @@ from constant import Constant
 from unimplemented import *
 from timeforms import dt, TimeMeasure, START_TIME, FINISH_TIME
 from reduced_functional import ReducedFunctional
+from reduced_functional_numpy import ReducedFunctionalNumPy
 from optimization.optimization import minimize, maximize, print_optimization_methods, minimise, maximise
 from optimization.steepest_descent import minimize_steepest_descent
 from optimization.multistage_optimization import minimize_multistage
