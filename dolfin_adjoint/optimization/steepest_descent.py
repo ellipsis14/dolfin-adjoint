@@ -33,21 +33,6 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
     line_search = options.get("line_search", "armijo")
     line_search_options = options.get("line_search_options", {})
 
-    # Define the norm and the inner product in the relevant function spaces
-    def normL2(x):
-        n = 0
-        for c in x:
-            # c is Function
-            if hasattr(c, "vector"):
-                n += assemble(inner(c, c)*dx)**0.5
-            else:
-            # c is Constant
-                n += abs(float(c))
-        return n
-
-    def innerL2(x, y):
-        return assemble(inner(x, y)*dx)
-
     if disp and MPI.process_number()==0:
         print "Optimising using steepest descent with a " + line_search + " line search." 
         print "Maximum optimisation iterations: %i" % maxiter 
@@ -77,12 +62,11 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
         s.scale(-1)
 
         if disp:
-            n = normL2(s)
             if MPI.process_number()==0: 
-                print "Iteration %i\tJ = %s\t|dJ| = %s" % (it, j, n)
+                print "Iteration %i\tJ = %s\t|dJ| = %s" % (it, j, s.normL2())
 
         # Check for convergence                                                              # Reason:
-        if not ((gtol    == None or s == None or normL2(s) > gtol) and                       # ||\nabla j|| < gtol
+        if not ((gtol    == None or s == None or s.normL2() > gtol) and                      # ||\nabla j|| < gtol
                 (tol     == None or j == None or j_prev == None or abs(j-j_prev)) > tol and  # \Delta j < tol
                 (maxiter == None or it < maxiter)):                                          # maximum iteration reached
             break
@@ -122,7 +106,7 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
 
     # Print the reason for convergence
     if disp:
-        n = normL2(s)
+        n = s.normL2()
         if MPI.process_number()==0:
             if maxiter != None and iter <= maxiter:
                 print "\nMaximum number of iterations reached.\n"

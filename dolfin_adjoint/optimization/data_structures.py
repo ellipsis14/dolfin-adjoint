@@ -33,6 +33,10 @@ class CoefficientList(list):
 
         return r
 
+    def normL2(self):
+        ''' Computes the L2 norm. '''
+        return self.inner(self)**0.5
+
     def deep_copy(self):
         ll = []
         for c in self:

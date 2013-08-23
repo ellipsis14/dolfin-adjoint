@@ -125,7 +125,7 @@ class StrongWolfeLineSearch(LineSearch):
             return ls_fort.stp 
 
         except ImportError:
-            info_red("The line search could not be verified. Did you compile the pyswolfe Fotran module?")
+            info_red("The line search could not be verified. Did you compile the pyswolfe Fortran module?")
 
     def __csrch__(self, f, g, stp, task, isave, dsave):
         stp, task, isave, dsave = dcsrch(stp, f, g, self.ftol, self.gtol, self.xtol, task, self.stpmin, self.stpmax, isave, dsave)

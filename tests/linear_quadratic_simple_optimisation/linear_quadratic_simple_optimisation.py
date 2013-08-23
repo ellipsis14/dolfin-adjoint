@@ -33,6 +33,6 @@ solve_pde(u, V, m)
 # Run the optimisation 
 p = InitialConditionParameter(m, value=m) 
 rf = ReducedFunctional(J, p)
-m, r = minimize_steepest_descent(rf, options={"gtol": 1e-13, "line_search": "fixed"})
+m, r = minimize_steepest_descent(rf, options={"gtol": 5e-13, "line_search": "fixed"})
 
 assert r["Number of iterations"] == 1 
