@@ -1,5 +1,5 @@
 from dolfin import MPI, inner, assemble, dx, Function
-from data_structures import CoefficientList
+from data_structures import CoefficientList, OptFunctional
 from line_search import FixedLineSearch, ArmijoLineSearch, StrongWolfeLineSearch 
 import numpy
 
@@ -39,10 +39,12 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
 
     ls = get_line_search(line_search, line_search_options)
 
-    m = CoefficientList([p.data() for p in rf.parameter]) 
+    of = OptFunctional(rf)
+    m = of.m()
     m_prev = m.deep_copy()
-    J =  rf
-    dJ = rf.derivative
+    
+    J =  of.j
+    dJ = of.dj
 
     j = None 
     j_prev = None
@@ -56,9 +58,9 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
         # Evaluate the functional at the current iterate
         if j == None:
             j = J(m)
-        dj = CoefficientList(dJ(forget=None))
+        dj = dJ()
         # TODO: Instead of reevaluating the gradient, we should just project dj 
-        s = CoefficientList(dJ(forget=None, project=True)) # The search direction is the Riesz representation of the gradient
+        s = dJ(project=True) # The search direction is the Riesz representation of the gradient
         s.scale(-1)
 
         if disp:
@@ -86,7 +88,7 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
 
         def phi_dphi(alpha):
             p = phi(alpha) 
-            dj = CoefficientList(dJ(forget=None))
+            dj = dJ()
             djs = dj.inner(s) 
             return p, djs
 

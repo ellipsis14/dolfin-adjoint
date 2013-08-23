@@ -1,5 +1,22 @@
 import dolfin
 
+class OptFunctional(object):
+    ''' This class implements a functional that operates on CoefficientLists. '''
+    def __init__(self, rf):
+        self.rf = rf
+
+    def __call__(self, coefs):
+        return self.rf(coefs)
+
+    def j(self, coefs):
+        return self(coefs)
+
+    def dj(self, project=False):
+        return CoefficientList(self.rf.derivative(forget=None, project=project))
+
+    def m(self):
+        return CoefficientList([p.data() for p in self.rf.parameter])
+
 class CoefficientList(list):
     ''' This class enables easy manipulation and operations of multiple 
         dolfin.Coefficient that are common for optimisation algorithms.
