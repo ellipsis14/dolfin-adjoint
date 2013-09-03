@@ -26,7 +26,7 @@ ub = 0.5
 lb = interpolate(Constant(-1), V) # Test 2 different ways of imposing bounds
 
 m_opt = minimize(rf, method="L-BFGS-B", in_euclidian_space=True,
-                                  tol=2e-08, bounds=(lb, ub), options={"disp": True, "maxiter": 1})
+                                  tol=2e-08, bounds=(lb, ub), options={"disp": True, "maxiter": 5})
 
 assert min(m_opt.vector().array()) > lb((0, 0)) - 0.05 
 assert max(m_opt.vector().array()) < ub + 0.05 

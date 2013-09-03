@@ -34,6 +34,10 @@ class ReducedFunctionalNumPy(ReducedFunctional):
         self.current_func_value = rf.current_func_value
         self.in_euclidian_space = in_euclidian_space
 
+        self.__base_call__ = rf.__call__
+        self.__base_derivative__ = rf.derivative
+        self.__base_hessian__ = rf.hessian
+
         if self.in_euclidian_space:
             from numpy.linalg import cholesky
 
@@ -64,7 +68,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
         m = [p.data() for p in self.parameter]
         set_local(m, m_array, self.in_euclidian_space, self.LT)
 
-        return super(ReducedFunctionalNumPy, self).__call__(m)
+        return self.__base_call__(m)
 
     def derivative(self, m_array=None, taylor_test=False, seed=0.001, forget=True, project=False):
         ''' An implementation of the reduced functional derivative evaluation 
@@ -83,7 +87,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
             info_red("Rerunning forward model before computing derivative")
             self(m_array) 
 
-        dJdm = super(ReducedFunctionalNumPy, self).derivative(forget=forget, project=project) 
+        dJdm = self.__base_derivative__(forget=forget, project=project) 
         if project:
             dJdm_global = get_global(dJdm, self.in_euclidian_space, self.LT)
         else:
@@ -126,7 +130,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
         m_dot = [copy_data(p.data()) for p in self.parameter] 
         set_local(m_dot, m_dot_array, self.in_euclidian_space, self.LT)
 
-        hess = super(ReducedFunctionalNumPy, self).hessian(m_dot) 
+        hess = self.__base_hessian__(m_dot) 
         hess_array = get_global(hess, False)
 
         if self.in_euclidian_space:
