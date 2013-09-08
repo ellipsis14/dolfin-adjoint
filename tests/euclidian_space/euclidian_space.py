@@ -54,7 +54,7 @@ s_eucl = rf_np_euc.obj_to_array(s)
 djs = assemble(inner(dj, s)*dx)
 djs_eucl = np.dot(dj_eucl, s_eucl)
 
-assert djs - djs_eucl < 1e-12
+assert abs(djs - djs_eucl) < 1e-12
 
 # Test equivalence of gradients with project = False
 dj = rf.derivative(project=False, forget=False)[0]
@@ -63,7 +63,7 @@ dj_eucl = rf_np_euc.derivative(project=False, forget=False)
 djs = dj.vector().inner(s.vector())
 djs_eucl = np.dot(dj_eucl, s_eucl)
 
-assert djs - djs_eucl < 1e-12
+assert abs(djs - djs_eucl) < 1e-12
 
 # Test the equivalence of Hessians
 m_dot = project(Expression("exp(x[0])"), V, annotate=False)
@@ -75,6 +75,6 @@ H_eucl = rf_np_euc.hessian(None, m_dot_eucl)
 Hs = H.vector().inner(s.vector())
 Hs_eucl = np.dot(H_eucl, s_eucl)
 
-assert Hs - Hs_eucl < 1e-12
+assert abs(Hs - Hs_eucl) < 1e-12
 
 info_green("Test passed")
