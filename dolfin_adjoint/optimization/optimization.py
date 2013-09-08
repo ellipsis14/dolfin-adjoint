@@ -25,7 +25,11 @@ def serialise_bounds(rf_np, bounds):
 
                 if rf_np.in_euclidian_space:
                    # Convert the bounds into Euclidian space if necessary
-                   const_bound = np.dot(rf_np.LT, const_bound)
+                   if rf_np.has_cholmod:
+                       const_bound = rf_np.sqD*rf_np.factor.L_D()[0].transpose()*rf_np.factor.apply_P(const_bound)
+                   else:
+                       const_bound = np.dot(rf_np.LT, const_bound)
+
 
                 bounds_arr[i] += const_bound.tolist()
             else:
