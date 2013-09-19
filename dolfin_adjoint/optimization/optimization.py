@@ -108,6 +108,7 @@ def minimize_scipy_generic(rf_np, method, bounds = None, **kwargs):
         res = scipy_minimize(J, m_global, method=method, **kwargs)
 
     rf_np.set_parameters(np.array(res["x"]))
+    m = [p.data() for p in rf_np.parameter]
     return m
 
 def minimize_custom(rf_np, bounds=None, **kwargs):
@@ -136,6 +137,7 @@ def minimize_custom(rf_np, bounds=None, **kwargs):
         rf_np.set_parameters(np.array(res))
     except Exception as e:
         raise e, "Failed to updated the optimised parameter value. Are you sure your custom optimisation algorithm returns an array containing the optimised values?" 
+    m = [p.data() for p in rf_np.parameter]
     return m
 
 optimization_algorithms_dict = {'L-BFGS-B': ('The L-BFGS-B implementation in scipy.', minimize_scipy_generic),
