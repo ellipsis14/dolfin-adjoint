@@ -47,59 +47,59 @@ if __name__ == "__main__":
   J = Functional(inner(u,u)*dx*dt[0:1])
   dJdic = compute_gradient(J, InitialConditionParameter(u), forget=False)
   # Work out the solution by hand -- it's 3
-  assert dJdic.vector().array()[0] == 3.0
+  assert (dJdic.vector().array()[0] - 3.0) < 1e-15
 
   # Integral over a certain time window
   J = Functional(inner(u,u)*dx*dt[0.5:1.0])
   dJdic = compute_gradient(J, InitialConditionParameter(u), forget=False)
   # Work out the solution by hand -- it's 7/4
-  assert dJdic.vector().array()[0] == 7.0/4.0
+  assert (dJdic.vector().array()[0] - 7.0/4.0) < 1e-15
 
   # Pointwise evaluation (in the middle of a timestep)
   J = Functional(inner(u,u)*dx*dt[0.25])
   dJdic = compute_gradient(J, InitialConditionParameter(u), forget=False)
   # Work out the solution by hand -- it's 5/2
-  assert dJdic.vector().array()[0] == 2.5
+  assert (dJdic.vector().array()[0] - 2.5) < 1e-15
 
   # Pointwise evaluation (at a timelevel)
   J = Functional(inner(u,u)*dx*dt[0.5])
   dJdic = compute_gradient(J, InitialConditionParameter(u), forget=False)
   # Work out the solution by hand -- it's 3
-  assert dJdic.vector().array()[0] == 3.0
+  assert (dJdic.vector().array()[0] - 3.0) < 1e-15
 
   # Pointwise evaluation (at the end of time)
   J = Functional(inner(u,u)*dx*dt[1.0])
   dJdic = compute_gradient(J, InitialConditionParameter(u), forget=False)
   # Work out the solution by hand -- it's 4
-  assert dJdic.vector().array()[0] == 4.0
+  assert (dJdic.vector().array()[0] - 4.0) < 1e-15
 
   # Pointwise evaluation (at the end of time, symbolically)
   J = Functional(inner(u,u)*dx*dt[FINISH_TIME])
   dJdic = compute_gradient(J, InitialConditionParameter(u), forget=False)
   # Work out the solution by hand -- it's 4
-  assert dJdic.vector().array()[0] == 4.0
+  assert (dJdic.vector().array()[0] - 4.0) < 1e-15
 
   # Pointwise evaluation (at the start of time)
   J = Functional(inner(u,u)*dx*dt[0.0])
   dJdic = compute_gradient(J, InitialConditionParameter(u), forget=False)
   # Work out the solution by hand -- it's 2
-  assert dJdic.vector().array()[0] == 2.0
+  assert (dJdic.vector().array()[0] - 2.0) < 1e-15
 
   # Pointwise evaluation (at the start of time, symbolically)
   J = Functional(inner(u,u)*dx*dt[START_TIME])
   dJdic = compute_gradient(J, InitialConditionParameter(u), forget=False)
   # Work out the solution by hand -- it's 2
-  assert dJdic.vector().array()[0] == 2.0
+  assert (dJdic.vector().array()[0] - 2.0) < 1e-15
 
   # Let's do a sum
   J = Functional(inner(u,u)*dx*dt[0.5] + inner(u,u)*dx*dt[0.5:1.0])
   dJdic = compute_gradient(J, InitialConditionParameter(u), forget=False)
   # Work out the solution by hand -- it's 3 + 7/4
-  assert dJdic.vector().array()[0] == 3.0 + 7.0/4.0
+  assert (dJdic.vector().array()[0] - 3.0 - 7.0/4.0) < 1e-15
 
   # Integral over all time, forgetting this time
   J = Functional(inner(u,u)*dx*dt[0:1])
   dJdic = compute_gradient(J, InitialConditionParameter(u), forget=True)
   # Work out the solution by hand -- it's 3
-  assert dJdic.vector().array()[0] == 3.0
+  assert (dJdic.vector().array()[0] - 3.0) < 1e-15
 
