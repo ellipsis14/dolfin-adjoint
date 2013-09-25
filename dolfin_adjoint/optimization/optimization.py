@@ -53,12 +53,15 @@ def minimize_scipy_generic(rf_np, method, bounds = None, **kwargs):
     else:
         forget = False
 
+    project = kwargs.pop("project", False) 
+
     m = [p.data() for p in rf_np.parameter]
     m_global = rf_np.obj_to_array(m)
     J = rf_np.__call__
     dJ = lambda m: rf_np.derivative(m, taylor_test=dolfin.parameters["optimization"]["test_gradient"], 
                                        seed=dolfin.parameters["optimization"]["test_gradient_seed"],
-                                       forget=forget)
+                                       forget=forget,
+                                       project=project)
     H = rf_np.hessian
 
     if not "options" in kwargs:
