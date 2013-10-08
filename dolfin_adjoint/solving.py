@@ -3,8 +3,9 @@ import ufl.classes
 import ufl.algorithms
 import ufl.operators
 
-import firedrake.solving
 import dolfin
+import firedrake.solving
+import firedrake
 
 import libadjoint
 import libadjoint.exceptions
@@ -53,7 +54,7 @@ def annotate(*args, **kwargs):
     # Unpack the arguments, using the same routine as the real Dolfin solve call
     eq = args[0]
     u  = args[1]
-    bcs = None 
+    bcs = () 
     J = None
     solver_parameters = {} 
 
@@ -178,14 +179,14 @@ def annotate(*args, **kwargs):
     value_coeffs=[v.data for v in values]
     expressions.update_expressions(frozen_expressions)
     constant.update_constants(frozen_constants)
-    eq_l = dolfin.replace(eq_lhs, dict(zip(diag_coeffs, value_coeffs)))
+    eq_l = firedrake.replace(eq_lhs, dict(zip(diag_coeffs, value_coeffs)))
 
     kwargs = {"cache": eq_l in caching.assembled_fwd_forms} # should we cache our matrices on the way backwards?
 
     if hermitian:
       # Homogenise the adjoint boundary conditions. This creates the adjoint
       # solution associated with the lifted discrete system that is actually solved.
-      adjoint_bcs = [dolfin.homogenize(bc) for bc in eq_bcs if isinstance(bc, dolfin.DirichletBC)] + [bc for bc in eq_bcs if not isinstance(bc, dolfin.DirichletBC)]
+      adjoint_bcs = [firedrake.homogenize(bc) for bc in eq_bcs if isinstance(bc, firedrake.DirichletBC)] + [bc for bc in eq_bcs if not isinstance(bc, firedrake.DirichletBC)]
       if len(adjoint_bcs) == 0: 
         adjoint_bcs = None
       else:
@@ -201,7 +202,7 @@ def annotate(*args, **kwargs):
       if replace_map:
         kwargs['replace_map'] = dict(zip(diag_coeffs, value_coeffs))
 
-      return (matrix_class(dolfin.adjoint(eq_l, reordered_arguments=ufl.algorithms.extract_arguments(eq_l)), **kwargs), adjlinalg.Vector(None, fn_space=u.function_space()))
+      return (matrix_class(firedrake.adjoint(eq_l, reordered_arguments=ufl.algorithms.extract_arguments(eq_l)), **kwargs), adjlinalg.Vector(None, fn_space=u.function_space()))
     else:
 
       kwargs['bcs'] = misc.uniq(eq_bcs)
@@ -221,12 +222,12 @@ def annotate(*args, **kwargs):
     value_coeffs = [v.data for v in values]
     expressions.update_expressions(frozen_expressions)
     constant.update_constants(frozen_constants)
-    eq_l = dolfin.replace(eq_lhs, dict(zip(diag_coeffs, value_coeffs)))
+    eq_l = firedrake.replace(eq_lhs, dict(zip(diag_coeffs, value_coeffs)))
 
     if hermitian:
-      eq_l = dolfin.adjoint(eq_l)
+      eq_l = firedrake.adjoint(eq_l)
 
-    output = coefficient * dolfin.action(eq_l, input.data)
+    output = coefficient * firedrake.action(eq_l, input.data)
 
     return adjlinalg.Vector(output)
 
@@ -243,11 +244,11 @@ def annotate(*args, **kwargs):
       expressions.update_expressions(frozen_expressions)
       constant.update_constants(frozen_constants)
 
-      current_form = dolfin.replace(eq_lhs, dict(zip(diag_coeffs, dolfin_values)))
+      current_form = firedrake.replace(eq_lhs, dict(zip(diag_coeffs, dolfin_values)))
 
-      deriv = dolfin.derivative(current_form, dolfin_variable)
+      deriv = firedrake.derivative(current_form, dolfin_variable)
       args = ufl.algorithms.extract_arguments(deriv)
-      deriv = dolfin.replace(deriv, {args[1]: contraction_vector.data}) # contract over the middle index
+      deriv = firedrake.replace(deriv, {args[1]: contraction_vector.data}) # contract over the middle index
 
       # Assemble the G-matrix now, so that we can apply the Dirichlet BCs to it
       if len(ufl.algorithms.extract_arguments(ufl.algorithms.expand_derivatives(coefficient*deriv))) == 0:
@@ -256,9 +257,9 @@ def annotate(*args, **kwargs):
       G = coefficient * deriv
 
       if hermitian:
-        output = dolfin.action(dolfin.adjoint(G), input.data)
+        output = firedrake.action(firedrake.adjoint(G), input.data)
       else:
-        output = dolfin.action(G, input.data)
+        output = firedrake.action(G, input.data)
 
       return adjlinalg.Vector(output)
     diag_block.derivative_action = derivative_action
@@ -269,11 +270,11 @@ def annotate(*args, **kwargs):
       expressions.update_expressions(frozen_expressions)
       constant.update_constants(frozen_constants)
 
-      current_form = dolfin.replace(eq_lhs, dict(zip(diag_coeffs, dolfin_values)))
+      current_form = firedrake.replace(eq_lhs, dict(zip(diag_coeffs, dolfin_values)))
 
-      deriv = dolfin.derivative(current_form, dolfin_variable)
+      deriv = firedrake.derivative(current_form, dolfin_variable)
       args = ufl.algorithms.extract_arguments(deriv)
-      deriv = dolfin.replace(deriv, {args[2]: contraction_vector.data}) # contract over the outer index
+      deriv = firedrake.replace(deriv, {args[2]: contraction_vector.data}) # contract over the outer index
 
       # Assemble the G-matrix now, so that we can apply the Dirichlet BCs to it
       if len(ufl.algorithms.extract_arguments(ufl.algorithms.expand_derivatives(coefficient*deriv))) == 0:
@@ -282,9 +283,9 @@ def annotate(*args, **kwargs):
       G = coefficient * deriv
 
       if hermitian:
-        output = dolfin.action(dolfin.adjoint(G), input.data)
+        output = firedrake.action(firedrake.adjoint(G), input.data)
       else:
-        output = dolfin.action(G, input.data)
+        output = firedrake.action(G, input.data)
 
       return adjlinalg.Vector(output)
     diag_block.derivative_outer_action = derivative_outer_action
@@ -296,15 +297,15 @@ def annotate(*args, **kwargs):
       expressions.update_expressions(frozen_expressions)
       constant.update_constants(frozen_constants)
 
-      current_form = dolfin.replace(eq_lhs, dict(zip(diag_coeffs, dolfin_values)))
+      current_form = firedrake.replace(eq_lhs, dict(zip(diag_coeffs, dolfin_values)))
 
-      deriv = dolfin.derivative(current_form, dolfin_inner_variable)
+      deriv = firedrake.derivative(current_form, dolfin_inner_variable)
       args = ufl.algorithms.extract_arguments(deriv)
-      deriv = dolfin.replace(deriv, {args[1]: inner_contraction_vector.data}) # contract over the middle index
+      deriv = firedrake.replace(deriv, {args[1]: inner_contraction_vector.data}) # contract over the middle index
 
-      deriv = dolfin.derivative(deriv, dolfin_outer_variable)
+      deriv = firedrake.derivative(deriv, dolfin_outer_variable)
       args = ufl.algorithms.extract_arguments(deriv)
-      deriv = dolfin.replace(deriv, {args[1]: outer_contraction_vector.data}) # contract over the middle index
+      deriv = firedrake.replace(deriv, {args[1]: outer_contraction_vector.data}) # contract over the middle index
 
       # Assemble the G-matrix now, so that we can apply the Dirichlet BCs to it
       if len(ufl.algorithms.extract_arguments(ufl.algorithms.expand_derivatives(coefficient*deriv))) == 0:
@@ -313,9 +314,9 @@ def annotate(*args, **kwargs):
       G = coefficient * deriv
 
       if hermitian:
-        output = dolfin.action(dolfin.adjoint(G), input.data)
+        output = firedrake.action(firedrake.adjoint(G), input.data)
       else:
-        output = dolfin.action(G, input.data)
+        output = firedrake.action(G, input.data)
 
       return adjlinalg.Vector(output)
     diag_block.second_derivative_action = second_derivative_action
@@ -367,12 +368,12 @@ def define_nonlinear_equation(F, u):
   # as we need to have something on the diagonal in our big time system
 
   fn_space = u.function_space()
-  test = dolfin.TestFunction(fn_space)
-  trial = dolfin.TrialFunction(fn_space)
+  test = firedrake.TestFunction(fn_space)
+  trial = firedrake.TrialFunction(fn_space)
 
-  mass = dolfin.inner(test, trial)*dolfin.dx
+  mass = firedrake.inner(test, trial)*firedrake.dx
 
-  return (mass, dolfin.action(mass, u) - F)
+  return (mass, firedrake.action(mass, u) - F)
 
 def adj_checkpointing(strategy, steps, snaps_on_disk, snaps_in_ram, verbose=False, replay = False, replay_comparison_tolerance = 1e-10):
   dolfin.parameters["adjoint"]["record_all"] = replay
@@ -467,7 +468,7 @@ def get_identity(fn_space):
 
   def identity_assembly_cb(variables, dependencies, hermitian, coefficient, context):
     assert coefficient == 1
-    return (adjlinalg.Matrix(adjlinalg.IdentityMatrix()), adjlinalg.Vector(dolfin.Function(fn_space)))
+    return (adjlinalg.Matrix(adjlinalg.IdentityMatrix()), adjlinalg.Vector(firedrake.Function(fn_space)))
 
   identity_block.assemble = identity_assembly_cb
 

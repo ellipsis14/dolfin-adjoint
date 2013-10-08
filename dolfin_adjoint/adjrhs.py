@@ -1,5 +1,5 @@
 import libadjoint
-import dolfin
+import firedrake
 import ufl
 import ufl.algorithms
 import adjglobals
@@ -43,7 +43,7 @@ class RHS(libadjoint.RHS):
 
       dolfin_values=[val.data for val in values]
 
-      return adjlinalg.Vector(dolfin.replace(self.form, dict(zip(dolfin_dependencies, dolfin_values))))
+      return adjlinalg.Vector(firedrake.replace(self.form, dict(zip(dolfin_dependencies, dolfin_values))))
 
     else:
       # RHS is a adjlinalg.Vector.

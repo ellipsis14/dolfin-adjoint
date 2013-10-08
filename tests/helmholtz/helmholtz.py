@@ -40,6 +40,10 @@ def model(n, degree=2):
     return sqrt(assemble(dot(x - f, x - f) * dx)), x, f
 
 if __name__ == '__main__':
+    print "Running forward model"
     model(5, degree=1)
 
+  
     adj_html("forward.html", "forward")
+    print "Replaying forward model"
+    print replay_dolfin(tol=0.0, stop=True)
