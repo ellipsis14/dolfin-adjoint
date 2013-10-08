@@ -14,20 +14,19 @@ and the analytical solution
 # Begin demo
 from firedrake import *
 from dolfin_adjoint import *
+from dolfin import parameters
+# Create mesh and define function space
+n = 5
+mesh = UnitSquareMesh(2 ** n, 2 ** n)
+V = FunctionSpace(mesh, "CG", 1)
 
-def model(n, degree=2):
-    # Create mesh and define function space
-    mesh = UnitSquareMesh(2 ** n, 2 ** n)
-    V = FunctionSpace(mesh, "CG", degree)
-
+def model(s):
     # Define variational problem
     lmbda = 1
     u = TrialFunction(V)
     v = TestFunction(V)
-    f = Function(V)
-    f.interpolate(Expression("(1+8*pi*pi)*cos(x[0]*pi*2)*cos(x[1]*pi*2)"))
     a = (dot(grad(v), grad(u)) + lmbda * v * u) * dx
-    L = f * v * dx
+    L = s * v * dx
 
     # Compute solution
     assemble(a)
@@ -36,21 +35,31 @@ def model(n, degree=2):
     solve(a == L, x)
 
     # Analytical solution
+    f = Function(V)
     f.interpolate(Expression("cos(x[0]*pi*2)*cos(x[1]*pi*2)"))
-    return sqrt(assemble(dot(x - f, x - f) * dx)), x, f
+    return assemble(dot(x - f, x - f) * dx), x, f
 
 if __name__ == '__main__':
+
+    s = Function(V)
+    s.interpolate(Expression("(1+8*pi*pi)*cos(x[0]*pi*2)*cos(x[1]*pi*2)"))
+
     print "Running forward model"
-    j, x, f = model(5, degree=1)
+    j, x, f = model(s)
 
   
     adj_html("forward.html", "forward")
     print "Replaying forward model"
     print replay_dolfin(tol=0.0, stop=True)
 
-    J = Functional(inner(x, x)*dx*dt[FINISH_TIME]) 
-    m = InitialConditionParameter(x)
+    J = Functional(inner(x-f, x-f)*dx*dt[FINISH_TIME]) 
+    m = InitialConditionParameter(s)
 
     print "Running adjoint model"
-    compute_gradient(J, m)
+    dJdm = compute_gradient(J, m, forget=None)
 
+    parameters["adjoint"]["stop_annotating"] = True
+
+    Jhat = lambda s: model(s)[0]
+    conv_rate = taylor_test(Jhat, m, j, dJdm)
+    print conv_rate
