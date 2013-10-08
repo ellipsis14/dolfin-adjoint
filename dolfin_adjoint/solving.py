@@ -3,7 +3,7 @@ import ufl.classes
 import ufl.algorithms
 import ufl.operators
 
-import dolfin.fem.solving
+import firedrake.solving
 import dolfin
 
 import libadjoint
@@ -23,7 +23,6 @@ import adjrhs
 import adjglobals
 import adjlinalg
 import misc
-import lusolver
 import utils
 import caching
 

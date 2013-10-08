@@ -1,9 +1,9 @@
-import dolfin
+import firedrake
 import copy
 import utils
 import caching
 
-dolfin_assemble = dolfin.assemble
+dolfin_assemble = firedrake.assemble
 def assemble(*args, **kwargs):
   """When a form is assembled, the information about its nonlinear dependencies is lost,
   and it is no longer easy to manipulate. Therefore, dolfin_adjoint overloads the :py:func:`dolfin.assemble`
@@ -26,31 +26,12 @@ def assemble(*args, **kwargs):
 
   return output
 
-if hasattr(dolfin, 'PeriodicBC'):
-  periodic_bc_apply = dolfin.PeriodicBC.apply
-  def adjoint_periodic_bc_apply(self, *args, **kwargs):
-    for arg in args:
-      if not hasattr(arg, 'bcs'):
-        arg.bcs = []
-      arg.bcs.append(self)
-    return periodic_bc_apply(self, *args, **kwargs)
-  dolfin.PeriodicBC.apply = adjoint_periodic_bc_apply
-
-dirichlet_bc_apply = dolfin.DirichletBC.apply
-def adjoint_dirichlet_bc_apply(self, *args, **kwargs):
-  for arg in args:
-    if not hasattr(arg, 'bcs'):
-      arg.bcs = []
-    arg.bcs.append(self)
-  return dirichlet_bc_apply(self, *args, **kwargs)
-dolfin.DirichletBC.apply = adjoint_dirichlet_bc_apply
-
-function_vector = dolfin.Function.vector
-def adjoint_function_vector(self):
-  vec = function_vector(self)
-  vec.function = self
-  return vec
-dolfin.Function.vector = adjoint_function_vector
+#function_vector = firedrake.Function.vector
+#def adjoint_function_vector(self):
+#  vec = function_vector(self)
+#  vec.function = self
+#  return vec
+#firedrake.Function.vector = adjoint_function_vector
 
 def assemble_system(*args, **kwargs):
   """When a form is assembled, the information about its nonlinear dependencies is lost,
@@ -75,7 +56,7 @@ def assemble_system(*args, **kwargs):
   if not isinstance(bcs, list):
     bcs = [bcs]
 
-  (lhs_out, rhs_out) = dolfin.assemble_system(*args, **kwargs)
+  (lhs_out, rhs_out) = firedrake.assemble_system(*args, **kwargs)
 
   to_annotate = utils.to_annotate(kwargs.pop("annotate", None))
   if to_annotate:

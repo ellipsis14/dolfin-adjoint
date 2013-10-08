@@ -1,11 +1,11 @@
-import dolfin
+import firedrake
 import copy
 
 constant_values = {}
 constant_objects = {}
 scalar_parameters = []
 
-class Constant(dolfin.Constant):
+class Constant(firedrake.Constant):
   '''The Constant class is overloaded so that you can give :py:class:`Constants` *names*. For example,
 
     .. code-block:: python
@@ -18,7 +18,7 @@ class Constant(dolfin.Constant):
     For more details, see :doc:`the dolfin-adjoint documentation </documentation/misc>`.'''
 
   def __init__(self, value, cell=None, name=None):
-    dolfin.Constant.__init__(self, value, cell)
+    firedrake.Constant.__init__(self, value, cell)
     if name is None:
       name = hash(self)
 
@@ -31,7 +31,7 @@ class Constant(dolfin.Constant):
     constant_objects[name] = self
 
   def assign(self, value):
-    dolfin.Constant.assign(self, value)
+    firedrake.Constant.assign(self, value)
     constant_values[self.adj_name] = value
 
 def get_constant(a):
@@ -51,4 +51,4 @@ def update_constants(d):
   for constant in d:
     name = constant.adj_name
     if name not in scalar_parameters:
-      dolfin.Constant.assign(constant_objects[name], dolfin.Constant(d[constant]))
+      firedrake.Constant.assign(constant_objects[name], firedrake.Constant(d[constant]))

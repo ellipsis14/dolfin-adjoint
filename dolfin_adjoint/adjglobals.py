@@ -3,7 +3,6 @@ import expressions
 import caching
 import libadjoint
 import dolfin
-import lusolver
 
 # Create the adjointer, the central object that records the forward solve
 # as it happens.
@@ -83,8 +82,6 @@ def adj_reset():
   expressions.expression_attrs.clear()
   adj_variables.__init__()
   function_names.__init__()
-  lusolver.lu_solvers = {}
-  lusolver.adj_lu_solvers = {}
   adj_reset_cache()
 
 # Map from FunctionSpace to LUSolver that has factorised the fsp mass matrix

@@ -1,4 +1,4 @@
-import dolfin
+import firedrake
 import ufl
 from solving import solve, annotate as solving_annotate
 import libadjoint
@@ -7,10 +7,9 @@ import adjlinalg
 import adjglobals
 import utils
 
-dolfin_assign = dolfin.Function.assign
-dolfin_split  = dolfin.Function.split
-dolfin_str    = dolfin.Function.__str__
-dolfin_interpolate = dolfin.Function.interpolate
+dolfin_assign = firedrake.Function.assign
+dolfin_str    = firedrake.Function.__str__
+dolfin_interpolate = firedrake.Function.interpolate
 
 def dolfin_adjoint_assign(self, other, annotate=None):
   '''We also need to monkeypatch the Function.assign method, as it is often used inside 
@@ -21,8 +20,8 @@ def dolfin_adjoint_assign(self, other, annotate=None):
   if self is other:
     return
 
-  # ignore anything not a dolfin.Function, unless the user insists
-  if not isinstance(other, dolfin.Function) and (annotate is not True):
+  # ignore anything not a firedrake.Function, unless the user insists
+  if not isinstance(other, firedrake.Function) and (annotate is not True):
     return dolfin_assign(self, other)
 
   # ignore anything that is an interpolation, rather than a straight assignment
@@ -43,13 +42,6 @@ def dolfin_adjoint_assign(self, other, annotate=None):
   if not adjglobals.adjointer.variable_known(other_var) and not adjglobals.adjointer.variable_known(self_var):
     adjglobals.adj_variables.forget(other)
     adjglobals.adj_variables.forget(self)
-    if hasattr(other, "split"):
-      if other.split is True:
-        errmsg = '''Cannot use Function.split() (yet). To adjoint this, we need functionality
-        not yet present in DOLFIN. See https://bugs.launchpad.net/dolfin/+bug/891127 .
-
-        Your model may work if you use split(func) instead of func.split().'''
-        raise libadjoint.exceptions.LibadjointErrorNotImplemented(errmsg)
 
     return dolfin_assign(self, other)
 
@@ -81,12 +73,12 @@ def dolfin_adjoint_str(self):
 def dolfin_adjoint_interpolate(self, other, annotate=None):
     out = dolfin_interpolate(self, other)
     if annotate is True:
-      assign.register_assign(self, other, op=dolfin.interpolate)
+      assign.register_assign(self, other, op=firedrake.interpolate)
       adjglobals.adjointer.record_variable(adjglobals.adj_variables[self], libadjoint.MemoryStorage(adjlinalg.Vector(self)))
 
     return out
 
-class Function(dolfin.Function):
+class Function(firedrake.Function):
   '''The Function class is overloaded so that you can give :py:class:`Functions` *names*. For example,
 
     .. code-block:: python
@@ -110,14 +102,14 @@ class Function(dolfin.Function):
       adjglobals.function_names.add(self.adj_name)
       del kwargs["name"]
 
-    dolfin.Function.__init__(self, *args, **kwargs)
+    firedrake.Function.__init__(self, *args, **kwargs)
 
     if hasattr(self, 'adj_name'):
       self.rename(self.adj_name, "a Function from dolfin-adjoint")
 
     if to_annotate:
-      if not isinstance(args[0], dolfin.cpp.FunctionSpace):
-        if isinstance(args[0], dolfin.Function):
+      if not isinstance(args[0], firedrake.cpp.FunctionSpace):
+        if isinstance(args[0], firedrake.Function):
           known = adjglobals.adjointer.variable_known(adjglobals.adj_variables[args[0]])
         else:
           known = True
@@ -143,8 +135,8 @@ class Function(dolfin.Function):
 
     return dolfin_adjoint_interpolate(self, other, annotate)
 
-dolfin.Function.assign = dolfin_adjoint_assign # so that Functions produced inside Expression etc. get it too
-dolfin.Function.split  = dolfin_adjoint_split
-dolfin.Function.__str__ = dolfin_adjoint_str
-dolfin.Function.interpolate = dolfin_adjoint_interpolate
+firedrake.Function.assign = dolfin_adjoint_assign # so that Functions produced inside Expression etc. get it too
+firedrake.Function.split  = dolfin_adjoint_split
+firedrake.Function.__str__ = dolfin_adjoint_str
+firedrake.Function.interpolate = dolfin_adjoint_interpolate
 

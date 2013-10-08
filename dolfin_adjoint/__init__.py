@@ -29,12 +29,6 @@ import assign
 #import matrix_free
 import functional
 import split_annotation
-import lusolver
 import gst
 import function
-import genericmatrix
-import genericvector
-import optimization
-import reduced_functional 
-from optimization import optimization
 from ui import *
