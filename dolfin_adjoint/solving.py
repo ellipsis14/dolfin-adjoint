@@ -51,12 +51,11 @@ def annotate(*args, **kwargs):
     # annotate !
 
     # Unpack the arguments, using the same routine as the real Dolfin solve call
-    unpacked_args = dolfin.fem.solving._extract_args(*args, **kwargs)
-    eq = unpacked_args[0]
-    u  = unpacked_args[1]
-    bcs = unpacked_args[2]
-    J = unpacked_args[3]
-    solver_parameters = copy.deepcopy(unpacked_args[7])
+    eq = args[0]
+    u  = args[1]
+    bcs = None 
+    J = None
+    solver_parameters = {} 
 
     if isinstance(eq.lhs, ufl.Form) and isinstance(eq.rhs, ufl.Form):
       eq_lhs = eq.lhs
@@ -343,7 +342,7 @@ def solve(*args, **kwargs):
   if to_annotate:
     linear = annotate(*args, **kwargs)
 
-  ret = dolfin.fem.solving.solve(*args, **kwargs)
+  ret = firedrake.solve(*args, **kwargs)
 
   if to_annotate:
     # Finally, if we want to record all of the solutions of the real forward model
@@ -351,8 +350,7 @@ def solve(*args, **kwargs):
     # then we should record the value of the variable we just solved for.
     if dolfin.parameters["adjoint"]["record_all"]:
       if isinstance(args[0], ufl.classes.Equation):
-        unpacked_args = dolfin.fem.solving._extract_args(*args, **kwargs)
-        u  = unpacked_args[1]
+        u  = args[1]
         adjglobals.adjointer.record_variable(adjglobals.adj_variables[u], libadjoint.MemoryStorage(adjlinalg.Vector(u)))
       elif isinstance(args[0], (dolfin.cpp.Matrix, dolfin.GenericMatrix)):
         u = args[1].function

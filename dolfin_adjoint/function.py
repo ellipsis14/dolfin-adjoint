@@ -108,7 +108,7 @@ class Function(firedrake.Function):
       self.rename(self.adj_name, "a Function from dolfin-adjoint")
 
     if to_annotate:
-      if not isinstance(args[0], firedrake.cpp.FunctionSpace):
+      if not isinstance(args[0], firedrake.FunctionSpace):
         if isinstance(args[0], firedrake.Function):
           known = adjglobals.adjointer.variable_known(adjglobals.adj_variables[args[0]])
         else:
