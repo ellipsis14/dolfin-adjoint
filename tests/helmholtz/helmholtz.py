@@ -51,3 +51,6 @@ if __name__ == '__main__':
     J = Functional(inner(x, x)*dx*dt[FINISH_TIME]) 
     m = InitialConditionParameter(x)
 
+    print "Running adjoint model"
+    compute_gradient(J, m)
+

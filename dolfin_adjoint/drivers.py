@@ -3,6 +3,7 @@ from parameter import *
 from dolfin import info_red, info_blue, info
 import adjglobals
 import dolfin
+import firedrake
 import constant
 import adjresidual
 import ufl.algorithms
@@ -33,7 +34,7 @@ def compute_adjoint(functional, forget=True, ignore=[]):
 
   ignorelist = []
   for fn in ignore:
-    if isinstance(fn, dolfin.Function):
+    if isinstance(fn, firedrake.Function):
       ignorelist.append(adjglobals.adj_variables[fn])
     elif isinstance(fn, str):
       ignorelist.append(libadjoint.Variable(fn, 0, 0))
@@ -108,7 +109,7 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
 
   ignorelist = []
   for fn in ignore:
-    if isinstance(fn, dolfin.Function):
+    if isinstance(fn, firedrake.Function):
       ignorelist.append(adjglobals.adj_variables[fn])
     elif isinstance(fn, str):
       ignorelist.append(libadjoint.Variable(fn, 0, 0))
@@ -157,17 +158,17 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
 def rename(J, dJdparam, param):
   if isinstance(dJdparam, list):
     [rename(J, dJdm, m) for (dJdm, m) in zip(dJdparam, param.parameters)]
-  elif isinstance(dJdparam, dolfin.Function):
-    dJdparam.rename("d(%s)/d(%s)" % (str(J), str(param)), "a Function from dolfin-adjoint")
+  elif isinstance(dJdparam, firedrake.Function):
+    dJdparam.name = "d(%s)/d(%s)" % (str(J), str(param))
 
 def project_test(func):
-  if isinstance(func, dolfin.Function):
+  if isinstance(func, firedrake.Function):
     V = func.function_space()
-    u = dolfin.TrialFunction(V)
-    v = dolfin.TestFunction(V)
-    M = dolfin.assemble(dolfin.inner(u, v)*dolfin.dx)
-    proj = dolfin.Function(V)
-    dolfin.solve(M, proj.vector(), func.vector())
+    u = firedrake.TrialFunction(V)
+    v = firedrake.TestFunction(V)
+    M = firedrake.assemble(firedrake.inner(u, v)*firedrake.dx)
+    proj = firedrake.Function(V)
+    firedrake.solve(M, proj.vector(), func.vector())
     return proj
   else:
     return func
@@ -180,7 +181,7 @@ def postprocess(dJdparam, project):
       dJdparam = project_test(dJdparam)
 
     if isinstance(dJdparam, float):
-      dJdparam = dolfin.Constant(dJdparam)
+      dJdparam = firedrake.Constant(dJdparam)
 
   return dJdparam
 
@@ -215,7 +216,7 @@ class BasicHessian(libadjoint.Matrix):
     last_timestep = adjglobals.adjointer.timestep_count
 
     if hasattr(m_dot, 'function_space'):
-      Hm = dolfin.Function(m_dot.function_space())
+      Hm = firedrake.Function(m_dot.function_space())
     elif isinstance(m_dot, float):
       Hm = 0.0
     else:
@@ -253,14 +254,14 @@ class BasicHessian(libadjoint.Matrix):
       # now implement the Hessian action formula.
       out = self.m.equation_partial_derivative(adjglobals.adjointer, soa, i, soa_var.to_forward())
       if out is not None:
-        if isinstance(Hm, dolfin.Function):
+        if isinstance(Hm, firedrake.Function):
           Hm.vector().axpy(1.0, out.vector())
         elif isinstance(Hm, float):
           Hm += out
 
       out = self.m.equation_partial_second_derivative(adjglobals.adjointer, adj, i, soa_var.to_forward(), m_dot)
       if out is not None:
-        if isinstance(Hm, dolfin.Function):
+        if isinstance(Hm, firedrake.Function):
           Hm.vector().axpy(1.0, out.vector())
         elif isinstance(Hm, float):
           Hm += out
@@ -270,7 +271,7 @@ class BasicHessian(libadjoint.Matrix):
         last_timestep = adj_var.timestep
         out = self.m.functional_partial_second_derivative(adjglobals.adjointer, self.J, adj_var.timestep, m_dot)
         if out is not None:
-          if isinstance(Hm, dolfin.Function):
+          if isinstance(Hm, firedrake.Function):
             Hm.vector().axpy(1.0, out.vector())
           elif isinstance(Hm, float):
             Hm += out
@@ -281,14 +282,14 @@ class BasicHessian(libadjoint.Matrix):
       storage.set_overwrite(True)
       adjglobals.adjointer.record_variable(soa_var, storage)
 
-    if isinstance(Hm, dolfin.Function):
+    if isinstance(Hm, firedrake.Function):
       Hm.rename("d^2(%s)/d(%s)^2" % (str(self.J), str(self.m)), "a Function from dolfin-adjoint")
 
     return Hm
 
   def action(self, x, y):
-    assert isinstance(x.data, dolfin.Function)
-    assert isinstance(y.data, dolfin.Function)
+    assert isinstance(x.data, firedrake.Function)
+    assert isinstance(y.data, firedrake.Function)
 
     Hm = self.__call__(x.data)
     y.data.assign(Hm)
@@ -379,9 +380,9 @@ class compute_gradient_tlm(object):
     '''Compute the action of the gradient on the vector vec.'''
     def make_mdot(vec):
       if isinstance(self.m, InitialConditionParameter):
-        mdot = self.m.set_perturbation(dolfin.Function(self.m.data().function_space(), vec))
+        mdot = self.m.set_perturbation(firedrake.Function(self.m.data().function_space(), vec))
       elif isinstance(self.m, ScalarParameter):
-        mdot = self.m.set_perturbation(dolfin.Constant(vec))
+        mdot = self.m.set_perturbation(firedrake.Constant(vec))
 
       return mdot
 
@@ -395,7 +396,7 @@ class compute_gradient_tlm(object):
       fwd_var = tlm_var.to_forward()
       dJdu = adjglobals.adjointer.evaluate_functional_derivative(self.J, fwd_var)
       if dJdu is not None and tlm is not None:
-        dJdu_vec = dolfin.assemble(dJdu.data)
+        dJdu_vec = firedrake.assemble(dJdu.data)
         grad = _add(grad, dJdu_vec.inner(tlm.vector()))
 
       if last_timestep < tlm_var.timestep:
