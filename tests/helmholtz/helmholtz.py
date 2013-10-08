@@ -32,7 +32,7 @@ def model(n, degree=2):
     # Compute solution
     assemble(a)
     assemble(L)
-    x = Function(V)
+    x = Function(V, name="State")
     solve(a == L, x)
 
     # Analytical solution
@@ -41,9 +41,13 @@ def model(n, degree=2):
 
 if __name__ == '__main__':
     print "Running forward model"
-    model(5, degree=1)
+    j, x, f = model(5, degree=1)
 
   
     adj_html("forward.html", "forward")
     print "Replaying forward model"
     print replay_dolfin(tol=0.0, stop=True)
+
+    J = Functional(inner(x, x)*dx*dt[FINISH_TIME]) 
+    m = InitialConditionParameter(x)
+

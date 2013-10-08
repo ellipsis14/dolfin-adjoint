@@ -105,7 +105,7 @@ class Function(firedrake.Function):
     firedrake.Function.__init__(self, *args, **kwargs)
 
     if hasattr(self, 'adj_name'):
-      self.rename(self.adj_name, "a Function from dolfin-adjoint")
+      self.adj_name = "a Function from dolfin-adjoint"
 
     if to_annotate:
       if not isinstance(args[0], firedrake.FunctionSpace):
