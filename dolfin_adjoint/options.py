@@ -1,4 +1,4 @@
-from dolfin import parameters, Parameters
+from firedrake import parameters, Parameters
 
 adj_params = Parameters("adjoint")
 adj_params.add("record_all", True)

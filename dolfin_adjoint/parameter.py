@@ -1,7 +1,7 @@
 import libadjoint
 import ufl
-import firedrake
-from dolfin import info, info_blue, info_red
+import backend
+from backend import info, info_blue, info_red
 import numpy
 import adjlinalg
 import adjglobals
@@ -71,8 +71,8 @@ class InitialConditionParameter(DolfinAdjointParameter):
     '''coeff: the variable whose initial condition you wish to perturb.
        perturbation: the perturbation direction in which you wish to compute the gradient. Must be a Function.'''
 
-    if not (isinstance(coeff, firedrake.Function) or isinstance(coeff, str)):
-      raise TypeError, "The coefficient must be a firedrake.Function or a String"
+    if not (isinstance(coeff, backend.Function) or isinstance(coeff, str)):
+      raise TypeError, "The coefficient must be a backend.Function or a String"
     self.coeff = coeff
     self.value = value
     self.var = None 
@@ -122,8 +122,8 @@ class ScalarParameter(DolfinAdjointParameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
   when one wishes to compute dJ/da, where a is a single scalar parameter.'''
   def __init__(self, a, coeff=1):
-    if not (isinstance(a, firedrake.Constant) or isinstance(a, str)):
-      raise TypeError, "The coefficient must be a firedrake.Constant or a String"
+    if not (isinstance(a, backend.Constant) or isinstance(a, str)):
+      raise TypeError, "The coefficient must be a backend.Constant or a String"
     self.a = a
     self.coeff = coeff
 
@@ -140,10 +140,10 @@ class ScalarParameter(DolfinAdjointParameter):
       form = -form
 
       fn_space = ufl.algorithms.extract_arguments(form)[0].function_space()
-      dparam = firedrake.Function(firedrake.FunctionSpace(fn_space.mesh(), "R", 0))
+      dparam = backend.Function(backend.FunctionSpace(fn_space.mesh(), "R", 0))
       dparam.vector()[:] = 1.0 * float(self.coeff)
 
-      diff_form = ufl.algorithms.expand_derivatives(firedrake.derivative(form, get_constant(self.a), dparam))
+      diff_form = ufl.algorithms.expand_derivatives(backend.derivative(form, get_constant(self.a), dparam))
 
       if diff_form is None:
         return None
@@ -161,19 +161,19 @@ class ScalarParameter(DolfinAdjointParameter):
       form = -form
 
       mesh = ufl.algorithms.extract_arguments(form)[0].function_space().mesh()
-      fn_space = firedrake.FunctionSpace(mesh, "R", 0)
-      dparam = firedrake.Function(fn_space)
+      fn_space = backend.FunctionSpace(mesh, "R", 0)
+      dparam = backend.Function(fn_space)
       dparam.vector()[:] = 1.0 * float(self.coeff)
 
-      diff_form = ufl.algorithms.expand_derivatives(firedrake.derivative(form, get_constant(self.a), dparam))
+      diff_form = ufl.algorithms.expand_derivatives(backend.derivative(form, get_constant(self.a), dparam))
 
       if diff_form is None:
         return None
 
       # Let's see if the form actually depends on the parameter m
       if diff_form.integrals() != ():
-        dFdm = firedrake.assemble(diff_form) # actually - dF/dm
-        assert isinstance(dFdm, firedrake.GenericVector)
+        dFdm = backend.assemble(diff_form) # actually - dF/dm
+        assert isinstance(dFdm, backend.GenericVector)
 
         out = dFdm.inner(adjoint.vector())
         return out
@@ -186,24 +186,24 @@ class ScalarParameter(DolfinAdjointParameter):
       form = -form
 
       mesh = ufl.algorithms.extract_arguments(form)[0].function_space().mesh()
-      fn_space = firedrake.FunctionSpace(mesh, "R", 0)
-      dparam = firedrake.Function(fn_space)
+      fn_space = backend.FunctionSpace(mesh, "R", 0)
+      dparam = backend.Function(fn_space)
       dparam.vector()[:] = 1.0 * float(self.coeff)
-      d2param = firedrake.Function(fn_space)
+      d2param = backend.Function(fn_space)
       d2param.vector()[:] = 1.0 * float(self.coeff) * m_dot
 
-      diff_form = ufl.algorithms.expand_derivatives(firedrake.derivative(form, get_constant(self.a), dparam))
+      diff_form = ufl.algorithms.expand_derivatives(backend.derivative(form, get_constant(self.a), dparam))
       if diff_form is None:
         return None
 
-      diff_form  = ufl.algorithms.expand_derivatives(firedrake.derivative(diff_form, get_constant(self.a), d2param))
+      diff_form  = ufl.algorithms.expand_derivatives(backend.derivative(diff_form, get_constant(self.a), d2param))
       if diff_form is None:
         return None
 
       # Let's see if the form actually depends on the parameter m
       if diff_form.integrals() != ():
-        dFdm = firedrake.assemble(diff_form) # actually - dF/dm
-        assert isinstance(dFdm, firedrake.GenericVector)
+        dFdm = backend.assemble(diff_form) # actually - dF/dm
+        assert isinstance(dFdm, backend.GenericVector)
 
         out = dFdm.inner(adjoint.vector())
         return out
@@ -221,18 +221,18 @@ class ScalarParameter(DolfinAdjointParameter):
     for coeff in ufl.algorithms.extract_coefficients(form):
       try:
         mesh = coeff.function_space().mesh()
-        fn_space = firedrake.FunctionSpace(mesh, "R", 0)
+        fn_space = backend.FunctionSpace(mesh, "R", 0)
         break
       except:
         pass
 
-    dparam = firedrake.Function(fn_space)
+    dparam = backend.Function(fn_space)
     dparam.vector()[:] = 1.0 * float(self.coeff)
 
-    d = firedrake.derivative(form, get_constant(self.a), dparam)
+    d = backend.derivative(form, get_constant(self.a), dparam)
     d = ufl.algorithms.expand_derivatives(d)
     if d.integrals() != ():
-      return firedrake.assemble(d)
+      return backend.assemble(d)
     else:
       return None
 
@@ -245,25 +245,25 @@ class ScalarParameter(DolfinAdjointParameter):
     for coeff in ufl.algorithms.extract_coefficients(form):
       try:
         mesh = coeff.function_space().mesh()
-        fn_space = firedrake.FunctionSpace(mesh, "R", 0)
+        fn_space = backend.FunctionSpace(mesh, "R", 0)
         break
       except:
         pass
 
-    dparam = firedrake.Function(fn_space)
+    dparam = backend.Function(fn_space)
     dparam.vector()[:] = 1.0 * float(self.coeff)
 
-    d = firedrake.derivative(form, get_constant(self.a), dparam)
+    d = backend.derivative(form, get_constant(self.a), dparam)
     d = ufl.algorithms.expand_derivatives(d)
 
-    d2param = firedrake.Function(fn_space)
+    d2param = backend.Function(fn_space)
     d2param.vector()[:] = 1.0 * float(self.coeff) * m_dot
 
-    d = firedrake.derivative(d, get_constant(self.a), d2param)
+    d = backend.derivative(d, get_constant(self.a), d2param)
     d = ufl.algorithms.expand_derivatives(d)
 
     if d.integrals() != ():
-      return firedrake.assemble(d)
+      return backend.assemble(d)
     else:
       return None
 
@@ -295,11 +295,11 @@ class ScalarParameters(DolfinAdjointParameter):
       form = -form
 
     fn_space = ufl.algorithms.extract_arguments(form)[0].function_space()
-    dparam = firedrake.Function(firedrake.FunctionSpace(fn_space.mesh(), "R", 0))
+    dparam = backend.Function(backend.FunctionSpace(fn_space.mesh(), "R", 0))
     dparam.vector()[:] = 1.0
 
     for (a, da) in zip(self.v, self.dv):
-      out_form = da * firedrake.derivative(form, a, dparam)
+      out_form = da * backend.derivative(form, a, dparam)
       if diff_form is None:
         diff_form = out_form
       else:
@@ -319,15 +319,15 @@ class ScalarParameters(DolfinAdjointParameter):
       form = -form
 
     fn_space = ufl.algorithms.extract_arguments(form)[0].function_space()
-    dparam = firedrake.Function(firedrake.FunctionSpace(fn_space.mesh(), "R", 0))
+    dparam = backend.Function(backend.FunctionSpace(fn_space.mesh(), "R", 0))
     dparam.vector()[:] = 1.0
 
     dJdv = numpy.zeros(len(self.v))
     for (i, a) in enumerate(self.v):
-      diff_form = ufl.algorithms.expand_derivatives(firedrake.derivative(form, a, dparam))
+      diff_form = ufl.algorithms.expand_derivatives(backend.derivative(form, a, dparam))
 
-      dFdm = firedrake.assemble(diff_form) # actually - dF/dm
-      assert isinstance(dFdm, firedrake.GenericVector)
+      dFdm = backend.assemble(diff_form) # actually - dF/dm
+      assert isinstance(dFdm, backend.GenericVector)
 
       out = dFdm.inner(adjoint.vector())
       dJdv[i] = out

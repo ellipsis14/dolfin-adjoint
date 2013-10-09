@@ -1,4 +1,4 @@
-import dolfin
+import backend
 import ufl 
 import libadjoint
 

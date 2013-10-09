@@ -1,8 +1,7 @@
 import libadjoint
-from dolfin import info_red, info_blue, info, warning
+from backend import info_red, info_blue, info, warning
 import adjglobals
-import dolfin
-import firedrake
+import backend
 import numpy
 import constant
 import adjresidual
@@ -21,7 +20,7 @@ def convergence_order(errors, base = 2):
   return orders
 
 def test_initial_condition_adjoint(J, ic, final_adjoint, seed=0.01, perturbation_direction=None):
-  '''forward must be a function that takes in the initial condition (ic) as a firedrake.Function
+  '''forward must be a function that takes in the initial condition (ic) as a backend.Function
      and returns the functional value by running the forward run:
 
        func = J(ic)
@@ -39,12 +38,12 @@ def test_initial_condition_adjoint(J, ic, final_adjoint, seed=0.01, perturbation
   import random
 
   # First run the problem unperturbed
-  ic_copy = firedrake.Function(ic)
+  ic_copy = backend.Function(ic)
   f_direct = J(ic_copy)
 
   # Randomise the perturbation direction:
   if perturbation_direction is None:
-    perturbation_direction = firedrake.Function(ic.function_space())
+    perturbation_direction = backend.Function(ic.function_space())
     vec = perturbation_direction.vector()
     for i in range(len(vec)):
       vec[i] = random.random()
@@ -54,12 +53,12 @@ def test_initial_condition_adjoint(J, ic, final_adjoint, seed=0.01, perturbation
   perturbations = []
   perturbation_sizes = [seed/(2**i) for i in range(5)]
   for perturbation_size in perturbation_sizes:
-    perturbation = firedrake.Function(perturbation_direction)
+    perturbation = backend.Function(perturbation_direction)
     vec = perturbation.vector()
     vec *= perturbation_size
     perturbations.append(perturbation)
 
-    perturbed_ic = firedrake.Function(ic)
+    perturbed_ic = backend.Function(ic)
     vec = perturbed_ic.vector()
     vec += perturbation.vector()
 
@@ -107,7 +106,7 @@ def tlm_dolfin(parameter, forget=False):
   return output
 
 def test_initial_condition_tlm(J, dJ, ic, seed=0.01, perturbation_direction=None):
-  '''forward must be a function that takes in the initial condition (ic) as a firedrake.Function
+  '''forward must be a function that takes in the initial condition (ic) as a backend.Function
      and returns the functional value by running the forward run:
 
        func = J(ic)
@@ -116,7 +115,7 @@ def test_initial_condition_tlm(J, dJ, ic, seed=0.01, perturbation_direction=None
      (usually the last TLM equation solved).
 
      dJ must be the derivative of the functional with respect to its argument, evaluated and assembled at
-     the unperturbed solution (a firedrake Vector).
+     the unperturbed solution (a backend Vector).
 
      This function returns the order of convergence of the Taylor
      series remainder, which should be 2 if the TLM is working
@@ -134,12 +133,12 @@ def test_initial_condition_tlm(J, dJ, ic, seed=0.01, perturbation_direction=None
     raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your initial condition must be the /exact same Function/ as the initial condition used in the forward model.")
 
   # First run the problem unperturbed
-  ic_copy = firedrake.Function(ic)
+  ic_copy = backend.Function(ic)
   f_direct = J(ic_copy)
 
   # Randomise the perturbation direction:
   if perturbation_direction is None:
-    perturbation_direction = firedrake.Function(ic.function_space())
+    perturbation_direction = backend.Function(ic.function_space())
     vec = perturbation_direction.vector()
     for i in range(len(vec)):
       vec[i] = random.random()
@@ -148,12 +147,12 @@ def test_initial_condition_tlm(J, dJ, ic, seed=0.01, perturbation_direction=None
   functional_values = []
   perturbations = []
   for perturbation_size in [seed/(2**i) for i in range(5)]:
-    perturbation = firedrake.Function(perturbation_direction)
+    perturbation = backend.Function(perturbation_direction)
     vec = perturbation.vector()
     vec *= perturbation_size
     perturbations.append(perturbation)
 
-    perturbed_ic = firedrake.Function(ic)
+    perturbed_ic = backend.Function(ic)
     vec = perturbed_ic.vector()
     vec += perturbation.vector()
 
@@ -196,12 +195,12 @@ def test_initial_condition_adjoint_cdiff(J, ic, final_adjoint, seed=0.01, pertur
   import random
 
   # First run the problem unperturbed
-  ic_copy = firedrake.Function(ic)
+  ic_copy = backend.Function(ic)
   f_direct = J(ic_copy)
 
   # Randomise the perturbation direction:
   if perturbation_direction is None:
-    perturbation_direction = firedrake.Function(ic.function_space())
+    perturbation_direction = backend.Function(ic.function_space())
     vec = perturbation_direction.vector()
     for i in range(len(vec)):
       vec[i] = random.random()
@@ -212,21 +211,21 @@ def test_initial_condition_adjoint_cdiff(J, ic, final_adjoint, seed=0.01, pertur
   perturbations = []
   perturbation_sizes = [seed/(2**i) for i in range(4)]
   for perturbation_size in perturbation_sizes:
-    perturbation = firedrake.Function(perturbation_direction)
+    perturbation = backend.Function(perturbation_direction)
     vec = perturbation.vector()
     vec *= perturbation_size
     perturbations.append(perturbation)
 
-    perturbation = firedrake.Function(perturbation_direction)
+    perturbation = backend.Function(perturbation_direction)
     vec = perturbation.vector()
     vec *= perturbation_size/2.0
 
-    perturbed_ic = firedrake.Function(ic)
+    perturbed_ic = backend.Function(ic)
     vec = perturbed_ic.vector()
     vec += perturbation.vector()
     functional_values_plus.append(J(perturbed_ic))
 
-    perturbed_ic = firedrake.Function(ic)
+    perturbed_ic = backend.Function(ic)
     vec = perturbed_ic.vector()
     vec -= perturbation.vector()
     functional_values_minus.append(J(perturbed_ic))
@@ -268,7 +267,7 @@ def test_scalar_parameter_adjoint(J, a, dJda, seed=None):
 
   perturbations = [seed / (2**i) for i in range(5)]
 
-  for da in (firedrake.Constant(float(a) + x) for x in perturbations):
+  for da in (backend.Constant(float(a) + x) for x in perturbations):
     functional_values.append(J(da))
 
   # First-order Taylor remainders (not using adjoint)
@@ -306,7 +305,7 @@ def test_scalar_parameters_adjoint(J, a, dJda, seed=0.1):
   perturbation_sizes = [seed / (2**i) for i in range(5)]
   perturbations = [a * i for i in perturbation_sizes]
   for x in perturbations:
-    da = [firedrake.Constant(a[i] + x[i]) for i in range(len(a))]
+    da = [backend.Constant(a[i] + x[i]) for i in range(len(a))]
     functional_values.append(J(da))
 
   # First-order Taylor remainders (not using adjoint)
@@ -457,7 +456,7 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
       perturbation_direction = numpy.array([get_const(x)/5.0 for x in m.v])
     elif isinstance(m, parameter.InitialConditionParameter):
       ic = get_value(m, value)
-      perturbation_direction = firedrake.Function(ic)
+      perturbation_direction = backend.Function(ic)
       vec = perturbation_direction.dat.vec
       for i in range(vec.size):
         vec[i] = random.random()
@@ -468,30 +467,30 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
       ic = get_value(m, value)
 
   # So now compute the perturbations:
-  if not isinstance(perturbation_direction, firedrake.Function):
+  if not isinstance(perturbation_direction, backend.Function):
     perturbations = [x*perturbation_direction for x in perturbation_sizes]
   else:
     perturbations = []
     for x in perturbation_sizes:
-      perturbation = firedrake.Function(perturbation_direction)
+      perturbation = backend.Function(perturbation_direction)
       vec = perturbation.dat.vec
       vec *= x
       perturbations.append(perturbation)
 
   # And now the perturbed inputs:
   if isinstance(m, parameter.ScalarParameter):
-    pinputs = [firedrake.Constant(get_const(m.a) + x) for x in perturbations]
+    pinputs = [backend.Constant(get_const(m.a) + x) for x in perturbations]
   elif isinstance(m, parameter.ScalarParameters):
     a = numpy.array([get_const(x) for x in m.v])
 
     def make_const(arr):
-      return [firedrake.Constant(x) for x in arr]
+      return [backend.Constant(x) for x in arr]
 
     pinputs = [make_const(a + x) for x in perturbations]
   elif isinstance(m, parameter.InitialConditionParameter):
     pinputs = []
     for x in perturbations:
-      pinput = firedrake.Function(x)
+      pinput = backend.Function(x)
       pinput += ic
       pinputs.append(pinput)
 
@@ -551,10 +550,10 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
 def to_annotate(flag):
   '''Should dolfin-adjoint annotate this statement or not?'''
   if flag is None:
-    return not dolfin.parameters["adjoint"]["stop_annotating"]
+    return not backend.parameters["adjoint"]["stop_annotating"]
 
   if flag is True:
-    if dolfin.parameters["adjoint"]["stop_annotating"]:
+    if backend.parameters["adjoint"]["stop_annotating"]:
       raise AssertionError("The user insisted on annotation, but stop_annotating is True.")
 
   return flag

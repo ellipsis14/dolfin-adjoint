@@ -13,8 +13,7 @@ and the analytical solution
 
 # Begin demo
 from firedrake import *
-from dolfin_adjoint import *
-from dolfin import parameters
+from firedrake_adjoint import *
 # Create mesh and define function space
 n = 5
 mesh = UnitSquareMesh(2 ** n, 2 ** n)
@@ -63,4 +62,4 @@ if __name__ == '__main__':
 
     Jhat = lambda s: model(s)[0]
     conv_rate = taylor_test(Jhat, m, j, dJdm)
-    print conv_rate
+    assert conv_rate > 1.9

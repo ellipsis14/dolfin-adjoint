@@ -1,15 +1,14 @@
 import libadjoint
 from parameter import *
-from dolfin import info_red, info_blue, info
+from backend import info_red, info_blue, info
 import adjglobals
-import dolfin
-import firedrake
+import backend
 import constant
 import adjresidual
 import ufl.algorithms
 
 def replay_dolfin(forget=False, tol=0.0, stop=False):
-  if not dolfin.parameters["adjoint"]["record_all"]:
+  if not backend.parameters["adjoint"]["record_all"]:
     info_red("Warning: your replay test will be much more effective with dolfin.parameters['adjoint']['record_all'] = True.")
 
   success = True
@@ -34,7 +33,7 @@ def compute_adjoint(functional, forget=True, ignore=[]):
 
   ignorelist = []
   for fn in ignore:
-    if isinstance(fn, firedrake.Function):
+    if isinstance(fn, backend.Function):
       ignorelist.append(adjglobals.adj_variables[fn])
     elif isinstance(fn, str):
       ignorelist.append(libadjoint.Variable(fn, 0, 0))
@@ -98,7 +97,7 @@ def compute_tlm(parameter, forget=False):
 
 
 def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, output: None, project=False):
-  dolfin.parameters["adjoint"]["stop_annotating"] = True
+  backend.parameters["adjoint"]["stop_annotating"] = True
 
   if isinstance(param, (list, tuple)):
     param = ListParameter(param)
@@ -109,7 +108,7 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
 
   ignorelist = []
   for fn in ignore:
-    if isinstance(fn, firedrake.Function):
+    if isinstance(fn, backend.Function):
       ignorelist.append(adjglobals.adj_variables[fn])
     elif isinstance(fn, str):
       ignorelist.append(libadjoint.Variable(fn, 0, 0))
@@ -158,17 +157,17 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
 def rename(J, dJdparam, param):
   if isinstance(dJdparam, list):
     [rename(J, dJdm, m) for (dJdm, m) in zip(dJdparam, param.parameters)]
-  elif isinstance(dJdparam, firedrake.Function):
+  elif isinstance(dJdparam, backend.Function):
     dJdparam.name = "d(%s)/d(%s)" % (str(J), str(param))
 
 def project_test(func):
-  if isinstance(func, firedrake.Function):
+  if isinstance(func, backend.Function):
     V = func.function_space()
-    u = firedrake.TrialFunction(V)
-    v = firedrake.TestFunction(V)
-    M = firedrake.assemble(firedrake.inner(u, v)*firedrake.dx)
-    proj = firedrake.Function(V)
-    firedrake.solve(M, proj.vector(), func.vector())
+    u = backend.TrialFunction(V)
+    v = backend.TestFunction(V)
+    M = backend.assemble(backend.inner(u, v)*backend.dx)
+    proj = backend.Function(V)
+    backend.solve(M, proj.vector(), func.vector())
     return proj
   else:
     return func
@@ -181,13 +180,13 @@ def postprocess(dJdparam, project):
       dJdparam = project_test(dJdparam)
 
     if isinstance(dJdparam, float):
-      dJdparam = firedrake.Constant(dJdparam)
+      dJdparam = backend.Constant(dJdparam)
 
   return dJdparam
 
 def hessian(J, m, warn=True):
   '''Choose which Hessian the user wants.'''
-  dolfin.parameters["adjoint"]["stop_annotating"] = True
+  backend.parameters["adjoint"]["stop_annotating"] = True
   return BasicHessian(J, m, warn=warn)
 
 class BasicHessian(libadjoint.Matrix):
@@ -198,7 +197,7 @@ class BasicHessian(libadjoint.Matrix):
     self.m = m
 
     if warn:
-      dolfin.info_red("Warning: Hessian computation is still experimental and is known to not work for some problems. Please Taylor test thoroughly.")
+      backend.info_red("Warning: Hessian computation is still experimental and is known to not work for some problems. Please Taylor test thoroughly.")
 
     if not isinstance(m, (InitialConditionParameter, ScalarParameter)):
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Sorry, Hessian computation only works for InitialConditionParameter|SteadyParameter|TimeConstantParameter|ScalarParameter so far.")
@@ -210,19 +209,19 @@ class BasicHessian(libadjoint.Matrix):
 
   def __call__(self, m_dot):
 
-    hess_action_timer = dolfin.Timer("Hessian action")
+    hess_action_timer = backend.Timer("Hessian action")
 
     m_p = self.m.set_perturbation(m_dot)
     last_timestep = adjglobals.adjointer.timestep_count
 
     if hasattr(m_dot, 'function_space'):
-      Hm = firedrake.Function(m_dot.function_space())
+      Hm = backend.Function(m_dot.function_space())
     elif isinstance(m_dot, float):
       Hm = 0.0
     else:
       raise NotImplementedError("Sorry, don't know how to handle this")
 
-    tlm_timer = dolfin.Timer("Hessian action (TLM)")
+    tlm_timer = backend.Timer("Hessian action (TLM)")
     # run the tangent linear model
     for (tlm, tlm_var) in compute_tlm(m_p, forget=None):
       pass
@@ -236,7 +235,7 @@ class BasicHessian(libadjoint.Matrix):
       try:
         adj = adjglobals.adjointer.get_variable_value(adj_var)
       except (libadjoint.exceptions.LibadjointErrorHashFailed, libadjoint.exceptions.LibadjointErrorNeedValue):
-        adj_timer = dolfin.Timer("Hessian action (ADM)")
+        adj_timer = backend.Timer("Hessian action (ADM)")
         adj = adjglobals.adjointer.get_adjoint_solution(i, self.J)[1]
         adj_timer.stop()
 
@@ -245,23 +244,23 @@ class BasicHessian(libadjoint.Matrix):
 
       adj = adj.data
       
-      soa_timer = dolfin.Timer("Hessian action (SOA)")
+      soa_timer = backend.Timer("Hessian action (SOA)")
       (soa_var, soa_vec) = adjglobals.adjointer.get_soa_solution(i, self.J, m_p)
       soa_timer.stop()
       soa = soa_vec.data
 
-      func_timer = dolfin.Timer("Hessian action (derivative formula)")
+      func_timer = backend.Timer("Hessian action (derivative formula)")
       # now implement the Hessian action formula.
       out = self.m.equation_partial_derivative(adjglobals.adjointer, soa, i, soa_var.to_forward())
       if out is not None:
-        if isinstance(Hm, firedrake.Function):
+        if isinstance(Hm, backend.Function):
           Hm.vector().axpy(1.0, out.vector())
         elif isinstance(Hm, float):
           Hm += out
 
       out = self.m.equation_partial_second_derivative(adjglobals.adjointer, adj, i, soa_var.to_forward(), m_dot)
       if out is not None:
-        if isinstance(Hm, firedrake.Function):
+        if isinstance(Hm, backend.Function):
           Hm.vector().axpy(1.0, out.vector())
         elif isinstance(Hm, float):
           Hm += out
@@ -271,7 +270,7 @@ class BasicHessian(libadjoint.Matrix):
         last_timestep = adj_var.timestep
         out = self.m.functional_partial_second_derivative(adjglobals.adjointer, self.J, adj_var.timestep, m_dot)
         if out is not None:
-          if isinstance(Hm, firedrake.Function):
+          if isinstance(Hm, backend.Function):
             Hm.vector().axpy(1.0, out.vector())
           elif isinstance(Hm, float):
             Hm += out
@@ -282,14 +281,14 @@ class BasicHessian(libadjoint.Matrix):
       storage.set_overwrite(True)
       adjglobals.adjointer.record_variable(soa_var, storage)
 
-    if isinstance(Hm, firedrake.Function):
+    if isinstance(Hm, backend.Function):
       Hm.rename("d^2(%s)/d(%s)^2" % (str(self.J), str(self.m)), "a Function from dolfin-adjoint")
 
     return Hm
 
   def action(self, x, y):
-    assert isinstance(x.data, firedrake.Function)
-    assert isinstance(y.data, firedrake.Function)
+    assert isinstance(x.data, backend.Function)
+    assert isinstance(y.data, backend.Function)
 
     Hm = self.__call__(x.data)
     y.data.assign(Hm)
@@ -380,9 +379,9 @@ class compute_gradient_tlm(object):
     '''Compute the action of the gradient on the vector vec.'''
     def make_mdot(vec):
       if isinstance(self.m, InitialConditionParameter):
-        mdot = self.m.set_perturbation(firedrake.Function(self.m.data().function_space(), vec))
+        mdot = self.m.set_perturbation(backend.Function(self.m.data().function_space(), vec))
       elif isinstance(self.m, ScalarParameter):
-        mdot = self.m.set_perturbation(firedrake.Constant(vec))
+        mdot = self.m.set_perturbation(backend.Constant(vec))
 
       return mdot
 
@@ -396,7 +395,7 @@ class compute_gradient_tlm(object):
       fwd_var = tlm_var.to_forward()
       dJdu = adjglobals.adjointer.evaluate_functional_derivative(self.J, fwd_var)
       if dJdu is not None and tlm is not None:
-        dJdu_vec = firedrake.assemble(dJdu.data)
+        dJdu_vec = backend.assemble(dJdu.data)
         grad = _add(grad, dJdu_vec.inner(tlm.vector()))
 
       if last_timestep < tlm_var.timestep:

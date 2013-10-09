@@ -2,7 +2,7 @@ import coeffstore
 import expressions
 import caching
 import libadjoint
-import dolfin
+import backend
 
 # Create the adjointer, the central object that records the forward solve
 # as it happens.
