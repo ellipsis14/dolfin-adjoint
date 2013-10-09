@@ -37,7 +37,9 @@ def model(s):
     # Analytical solution
     f = Function(V)
     f.interpolate(Expression("cos(x[0]*pi*2)*cos(x[1]*pi*2)"))
-    return assemble(dot(x - f, x - f) * dx), x, f
+    
+    j = assemble(dot(x - f, x - f) * dx)
+    return j, x, f
 
 if __name__ == '__main__':
 
@@ -46,7 +48,6 @@ if __name__ == '__main__':
 
     print "Running forward model"
     j, x, f = model(s)
-
   
     adj_html("forward.html", "forward")
     print "Replaying forward model"
