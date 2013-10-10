@@ -20,6 +20,8 @@ __license__ = 'LGPL-3'
 __maintainer__ = 'Patrick Farrell'
 __email__ = 'patrick.farrell@imperial.ac.uk'
 
+
+print "Running dolfin_adjoint init!!!!!!!"
 import options
 import solving 
 import assembly

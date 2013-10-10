@@ -20,6 +20,6 @@ __license__ = 'LGPL-3'
 __maintainer__ = 'Simon Funke'
 __email__ = 's.funke09@imperial.ac.uk'
 
-import firedrake
-firedrake.parameters.add("adjoint_backend", "firedrake")
+import backend_selector
+backend_selector.backend = "firedrake"
 from dolfin_adjoint import *
