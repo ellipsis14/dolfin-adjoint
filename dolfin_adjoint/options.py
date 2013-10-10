@@ -1,4 +1,4 @@
-from firedrake import parameters, Parameters
+from backend import parameters, Parameters
 
 adj_params = Parameters("adjoint")
 adj_params.add("record_all", True)

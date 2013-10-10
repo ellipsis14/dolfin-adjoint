@@ -1,4 +1,4 @@
-import firedrake
+import backend
 import ufl
 from solving import solve, annotate as solving_annotate
 import libadjoint
@@ -7,9 +7,9 @@ import adjlinalg
 import adjglobals
 import utils
 
-dolfin_assign = firedrake.Function.assign
-dolfin_str    = firedrake.Function.__str__
-dolfin_interpolate = firedrake.Function.interpolate
+dolfin_assign = backend.Function.assign
+dolfin_str    = backend.Function.__str__
+dolfin_interpolate = backend.Function.interpolate
 
 def dolfin_adjoint_assign(self, other, annotate=None):
   '''We also need to monkeypatch the Function.assign method, as it is often used inside 
@@ -20,8 +20,8 @@ def dolfin_adjoint_assign(self, other, annotate=None):
   if self is other:
     return
 
-  # ignore anything not a firedrake.Function, unless the user insists
-  if not isinstance(other, firedrake.Function) and (annotate is not True):
+  # ignore anything not a backend.Function, unless the user insists
+  if not isinstance(other, backend.Function) and (annotate is not True):
     return dolfin_assign(self, other)
 
   # ignore anything that is an interpolation, rather than a straight assignment
@@ -73,12 +73,12 @@ def dolfin_adjoint_str(self):
 def dolfin_adjoint_interpolate(self, other, annotate=None):
     out = dolfin_interpolate(self, other)
     if annotate is True:
-      assign.register_assign(self, other, op=firedrake.interpolate)
+      assign.register_assign(self, other, op=backend.interpolate)
       adjglobals.adjointer.record_variable(adjglobals.adj_variables[self], libadjoint.MemoryStorage(adjlinalg.Vector(self)))
 
     return out
 
-class Function(firedrake.Function):
+class Function(backend.Function):
   '''The Function class is overloaded so that you can give :py:class:`Functions` *names*. For example,
 
     .. code-block:: python
@@ -102,14 +102,14 @@ class Function(firedrake.Function):
       adjglobals.function_names.add(self.adj_name)
       del kwargs["name"]
 
-    firedrake.Function.__init__(self, *args, **kwargs)
+    backend.Function.__init__(self, *args, **kwargs)
 
     if hasattr(self, 'adj_name'):
       self.adj_name = "a Function from dolfin-adjoint"
 
     if to_annotate:
-      if not isinstance(args[0], firedrake.FunctionSpace):
-        if isinstance(args[0], firedrake.Function):
+      if not isinstance(args[0], backend.FunctionSpace):
+        if isinstance(args[0], backend.Function):
           known = adjglobals.adjointer.variable_known(adjglobals.adj_variables[args[0]])
         else:
           known = True
@@ -135,8 +135,8 @@ class Function(firedrake.Function):
 
     return dolfin_adjoint_interpolate(self, other, annotate)
 
-firedrake.Function.assign = dolfin_adjoint_assign # so that Functions produced inside Expression etc. get it too
-firedrake.Function.split  = dolfin_adjoint_split
-firedrake.Function.__str__ = dolfin_adjoint_str
-firedrake.Function.interpolate = dolfin_adjoint_interpolate
+backend.Function.assign = dolfin_adjoint_assign # so that Functions produced inside Expression etc. get it too
+backend.Function.split  = dolfin_adjoint_split
+backend.Function.__str__ = dolfin_adjoint_str
+backend.Function.interpolate = dolfin_adjoint_interpolate
 

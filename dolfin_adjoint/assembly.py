@@ -1,9 +1,9 @@
-import firedrake
+import backend
 import copy
 import utils
 import caching
 
-dolfin_assemble = firedrake.assemble
+dolfin_assemble = backend.assemble
 def assemble(*args, **kwargs):
   """When a form is assembled, the information about its nonlinear dependencies is lost,
   and it is no longer easy to manipulate. Therefore, dolfin_adjoint overloads the :py:func:`dolfin.assemble`
@@ -26,12 +26,12 @@ def assemble(*args, **kwargs):
 
   return output
 
-#function_vector = firedrake.Function.vector
+#function_vector = backend.Function.vector
 #def adjoint_function_vector(self):
 #  vec = function_vector(self)
 #  vec.function = self
 #  return vec
-#firedrake.Function.vector = adjoint_function_vector
+#backend.Function.vector = adjoint_function_vector
 
 def assemble_system(*args, **kwargs):
   """When a form is assembled, the information about its nonlinear dependencies is lost,
@@ -56,7 +56,7 @@ def assemble_system(*args, **kwargs):
   if not isinstance(bcs, list):
     bcs = [bcs]
 
-  (lhs_out, rhs_out) = firedrake.assemble_system(*args, **kwargs)
+  (lhs_out, rhs_out) = backend.assemble_system(*args, **kwargs)
 
   to_annotate = utils.to_annotate(kwargs.pop("annotate", None))
   if to_annotate:
