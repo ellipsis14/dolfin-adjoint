@@ -20,7 +20,7 @@ __license__ = 'LGPL-3'
 __maintainer__ = 'Patrick Farrell'
 __email__ = 'patrick.farrell@imperial.ac.uk'
 
-import backend
+import backend_selector
 import options
 import solving 
 import assembly
@@ -30,14 +30,14 @@ import assign
 #import matrix_free
 import functional
 import split_annotation
-if backend.backend = "dolfin":
+if backend_selector.backend == "dolfin":
     import lusolver
 import gst
 import function
-if backend.backend = "dolfin":
+if backend_selector.backend == "dolfin":
     import genericmatrix
     import genericvector
     import optimization
-import reduced_functional 
-from optimization import optimization
+    import reduced_functional 
+    from optimization import optimization
 from ui import *

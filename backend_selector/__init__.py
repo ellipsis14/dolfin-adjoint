@@ -1,2 +1,1 @@
-global backend 
 backend = "dolfin" 

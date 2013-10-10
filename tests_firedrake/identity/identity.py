@@ -44,3 +44,4 @@ if __name__ == '__main__':
     Jhat = lambda s: model(s)[0]
     conv_rate = taylor_test(Jhat, m, j, dJdm)
     assert conv_rate > 1.9
+    info_green("Test passed")
