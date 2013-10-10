@@ -152,7 +152,10 @@ class ReducedFunctional(object):
                 scaled_dfunc_value.append(self.scale * df)
 
         if self.derivative_cb:
-            self.derivative_cb(self.scale * self.current_func_value, unlist(scaled_dfunc_value), unlist([p.data() for p in self.parameter]))
+            if self.current_func_value is not None:
+              self.derivative_cb(self.scale * self.current_func_value, unlist(scaled_dfunc_value), unlist([p.data() for p in self.parameter]))
+            else:
+              info_red("Gradient evaluated without functional evaluation, not calling derivative callback function")
 
         if self.cache is not None:
             info_red("Got a derivative cache miss")
