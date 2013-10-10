@@ -1,9 +1,8 @@
 ''' 
-   Imports the dolfin or firedrake module, depending on parameters["adjoint_backend"] 
+   Imports the dolfin or firedrake module, depending on the backend chosen. 
 '''
 
 import backend_selector
-print backend_selector.backend
 if backend_selector.backend == "dolfin":
     from dolfin import *
 elif backend_selector.backend == "firedrake":
