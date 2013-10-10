@@ -20,8 +20,7 @@ __license__ = 'LGPL-3'
 __maintainer__ = 'Patrick Farrell'
 __email__ = 'patrick.farrell@imperial.ac.uk'
 
-
-print "Running dolfin_adjoint init!!!!!!!"
+import backend
 import options
 import solving 
 import assembly
@@ -31,6 +30,14 @@ import assign
 #import matrix_free
 import functional
 import split_annotation
+if backend.backend = "dolfin":
+    import lusolver
 import gst
 import function
+if backend.backend = "dolfin":
+    import genericmatrix
+    import genericvector
+    import optimization
+import reduced_functional 
+from optimization import optimization
 from ui import *
