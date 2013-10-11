@@ -20,25 +20,34 @@ __license__ = 'LGPL-3'
 __maintainer__ = 'Patrick Farrell'
 __email__ = 'patrick.farrell@imperial.ac.uk'
 
-import backend
+import sys
+if not 'backend' in sys.modules:
+    import dolfin
+    sys.modules['backend'] = dolfin
+backend = sys.modules['backend']
+def dolfin():
+    return backend.__name__ == "dolfin"
+def firedrake():
+    return backend.__name__ == "firedrake"
+
 import options
-import solving 
+import solving
 import assembly
 import expressions
 import utils
 import assign
-if backend.dolfin():
+if dolfin():
   import matrix_free
 import functional
 import split_annotation
-if backend.dolfin():
+if dolfin():
   import lusolver
 import gst
 import function
-if backend.dolfin():
+if dolfin():
   import genericmatrix
   import genericvector
   import optimization
-  import reduced_functional 
+  import reduced_functional
   from optimization import optimization
 from ui import *
