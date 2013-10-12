@@ -22,6 +22,8 @@ import adjrhs
 import adjglobals
 import adjlinalg
 import misc
+if backend.__name__ == "dolfin":
+  import lusolver
 import utils
 import caching
 
@@ -50,11 +52,19 @@ def annotate(*args, **kwargs):
     # annotate !
 
     # Unpack the arguments, using the same routine as the real Dolfin solve call
-    eq = args[0]
-    u  = args[1]
-    bcs = () 
-    J = None
-    solver_parameters = {} 
+    if backend.__name__ == "dolfin":
+      unpacked_args = dolfin.fem.solving._extract_args(*args, **kwargs)
+      eq = unpacked_args[0]
+      u  = unpacked_args[1]
+      bcs = unpacked_args[2]
+      J = unpacked_args[3]
+      solver_parameters = copy.deepcopy(unpacked_args[7])
+    else:
+      eq = args[0]
+      u  = args[1]
+      bcs = () 
+      J = None
+      solver_parameters = {} 
 
     if isinstance(eq.lhs, ufl.Form) and isinstance(eq.rhs, ufl.Form):
       eq_lhs = eq.lhs

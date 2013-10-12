@@ -105,10 +105,17 @@ class Function(backend.Function):
     backend.Function.__init__(self, *args, **kwargs)
 
     if hasattr(self, 'adj_name'):
-      self.adj_name = "a Function from dolfin-adjoint"
+      if backend.__name__ == "dolfin":
+        self.rename(self.adj_name, "a Function from dolfin-adjoint")
+      else:
+        self.name = self.adj_name
 
     if to_annotate:
-      if not isinstance(args[0], backend.FunctionSpace):
+      if backend.__name__ == "dolfin":
+        function_space_class = backend.cpp.FunctionSpace
+      else:
+        function_space_class = backend.FunctionSpace
+      if not isinstance(args[0], function_space_class):
         if isinstance(args[0], backend.Function):
           known = adjglobals.adjointer.variable_known(adjglobals.adj_variables[args[0]])
         else:

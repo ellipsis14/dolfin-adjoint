@@ -32,8 +32,7 @@ import assembly
 import expressions
 import utils
 import assign
-if backend.__name__ == "dolfin":
-  import matrix_free
+#import matrix_free
 import functional
 import split_annotation
 if backend.__name__ == "dolfin":

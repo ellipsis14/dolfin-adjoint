@@ -73,12 +73,13 @@ class Vector(libadjoint.Vector):
       pass
     elif isinstance(self.data, backend.Coefficient):
       if isinstance(x.data, backend.Coefficient):
-        self.data.dat.vec.axpy(alpha, x.data.dat.vec)
+        self.data.vector().axpy(alpha, x.data.vector())
       else:
         # This occurs when adding a RHS derivative to an adjoint equation
         # corresponding to the initial conditions.
         #print "axpy assembling FuncForm. self.data is a %s; x.data is a %s" % (self.data.__class__, x.data.__class__)
-        self.data.dat.vec.axpy(alpha, backend.assemble(x.data).dat.vec)
+        #import IPython; IPython.embed()
+        self.data.vector().axpy(alpha, backend.assemble(x.data))
     elif isinstance(x.data, ufl.form.Form) and isinstance(self.data, ufl.form.Form):
 
       # Let's do a bit of argument shuffling, shall we?
@@ -402,8 +403,31 @@ def wrap_solve(A, x, b, solver_parameters):
 
    # Comment. Why does list_lu_solver_methods() not return, a, uhm, list?
    lu_solvers = ["lu", "mumps", "umfpack", "spooles", "superlu", "superlu_dist", "pastix", "petsc"]
+   
+   if backend.__name__ == "dolfin":
+     method = solver_parameters.get("linear_solver", "default")
+     if method in lu_solvers or method == "default":
+       if method == "lu": method = "default"
+       solver = dolfin.LUSolver(method)
 
-   backend.solve(A, x, b)
+       if "lu_solver" in solver_parameters:
+         solver.parameters.update(solver_parameters["lu_solver"])
+
+       solver.solve(A, x, b)
+       return
+     else:
+       dangerous_parameters = ["preconditioner"]
+       pc = solver_parameters.get("preconditioner", "default")
+       solver = dolfin.KrylovSolver(method, pc)
+
+       if "krylov_solver" in solver_parameters:
+         solver.parameters.update(solver_parameters["krylov_solver"])
+
+       solver.solve(A, x, b)
+       return
+   else:
+     backend.solve(A, x, b)
+     return
 
 def wrap_assemble(form, test):
   '''If you do

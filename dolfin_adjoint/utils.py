@@ -439,7 +439,7 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
       if seed == 0.0: seed = 0.1
     elif isinstance(m, parameter.InitialConditionParameter):
       ic = get_value(m, value)
-      if ic.dat.vec.size == 1: # our parameter is in R
+      if len(ic.vector()) == 1: # our parameter is in R
         seed = float(ic) / 5.0
       else:
         seed = seed_default
@@ -457,8 +457,8 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
     elif isinstance(m, parameter.InitialConditionParameter):
       ic = get_value(m, value)
       perturbation_direction = backend.Function(ic)
-      vec = perturbation_direction.dat.vec
-      for i in range(vec.size):
+      vec = perturbation_direction.vector()
+      for i in range(len(vec)):
         vec[i] = random.random()
     else:
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to compute a perturbation direction")
@@ -473,7 +473,11 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
     perturbations = []
     for x in perturbation_sizes:
       perturbation = backend.Function(perturbation_direction)
-      vec = perturbation.dat.vec
+      if backend.__name__  == "dolfin":
+        vec = perturbation.vector()
+      else:
+        vec = perturbation.dat.vec
+
       vec *= x
       perturbations.append(perturbation)
 
@@ -491,7 +495,11 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
     pinputs = []
     for x in perturbations:
       pinput = backend.Function(x)
-      pinput += ic
+      if backend.__name__  == "dolfin":
+        pinput.vector()[:] += ic.vector()
+      else:
+        pinput += ic
+
       pinputs.append(pinput)
 
   # At last: the common bit!
@@ -517,7 +525,10 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
       with_gradient.append(remainder)
   elif isinstance(m, parameter.InitialConditionParameter):
     for i in range(len(perturbations)):
-      remainder = abs(functional_values[i] - Jm - dJdm.dat.vec.dot(perturbations[i].dat.vec))
+      if backend.__name__  == "dolfin":
+        remainder = abs(functional_values[i] - Jm - dJdm.vector().inner(perturbations[i].vector()))
+      else:
+        remainder = abs(functional_values[i] - Jm - dJdm.dat.vec.dot(perturbations[i].dat.vec))
       with_gradient.append(remainder)
 
   if min(with_gradient + no_gradient) < 1e-16:

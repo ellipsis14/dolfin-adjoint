@@ -1,4 +1,3 @@
-import backend
 import ufl 
 import libadjoint
 

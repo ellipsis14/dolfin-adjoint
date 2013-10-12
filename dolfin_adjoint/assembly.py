@@ -26,12 +26,32 @@ def assemble(*args, **kwargs):
 
   return output
 
-#function_vector = backend.Function.vector
-#def adjoint_function_vector(self):
-#  vec = function_vector(self)
-#  vec.function = self
-#  return vec
-#backend.Function.vector = adjoint_function_vector
+if hasattr(backend, 'PeriodicBC'):
+  periodic_bc_apply = backend.PeriodicBC.apply
+  def adjoint_periodic_bc_apply(self, *args, **kwargs):
+    for arg in args:
+      if not hasattr(arg, 'bcs'):
+        arg.bcs = []
+      arg.bcs.append(self)
+    return periodic_bc_apply(self, *args, **kwargs)
+  backend.PeriodicBC.apply = adjoint_periodic_bc_apply
+
+if hasattr(backend, 'DirichletBC'):
+  dirichlet_bc_apply = backend.DirichletBC.apply
+  def adjoint_dirichlet_bc_apply(self, *args, **kwargs):
+    for arg in args:
+      if not hasattr(arg, 'bcs'):
+        arg.bcs = []
+      arg.bcs.append(self)
+    return dirichlet_bc_apply(self, *args, **kwargs)
+  backend.DirichletBC.apply = adjoint_dirichlet_bc_apply
+
+function_vector = backend.Function.vector
+def adjoint_function_vector(self):
+  vec = function_vector(self)
+  vec.function = self
+  return vec
+backend.Function.vector = adjoint_function_vector
 
 def assemble_system(*args, **kwargs):
   """When a form is assembled, the information about its nonlinear dependencies is lost,

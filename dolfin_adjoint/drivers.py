@@ -55,7 +55,7 @@ def compute_adjoint(functional, forget=True, ignore=[]):
         if backend.__name__ == "dolfin":
           output.data.rename(str(adj_var) , "a Function from dolfin-adjoint")
         else:
-          output.data.name = str(adj_var) #, "a Function from dolfin-adjoint")
+          output.data.name = str(adj_var) 
 
       storage = libadjoint.MemoryStorage(output)
       storage.set_overwrite(True)
@@ -162,7 +162,10 @@ def rename(J, dJdparam, param):
   if isinstance(dJdparam, list):
     [rename(J, dJdm, m) for (dJdm, m) in zip(dJdparam, param.parameters)]
   elif isinstance(dJdparam, backend.Function):
-    dJdparam.name = "d(%s)/d(%s)" % (str(J), str(param))
+    if backend.__name__ == "dolfin":
+      dJdparam.rename("d(%s)/d(%s)" % (str(J), str(param)), "a Function from dolfin-adjoint")
+    else:
+      dJdparam.name = "d(%s)/d(%s)" % (str(J), str(param))
 
 def project_test(func):
   if isinstance(func, backend.Function):
