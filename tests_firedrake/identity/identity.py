@@ -36,7 +36,11 @@ if __name__ == '__main__':
     J = Functional(x**2*dx*dt[FINISH_TIME]) 
     m = InitialConditionParameter(s)
 
-    print "Running adjoint model"
+    print "Running the adjoint model"
+    for i in compute_adjoint(J, forget=None):
+        pass
+
+    print "Computing the gradient with the adjoint model"
     dJdm = compute_gradient(J, m, forget=None)
 
     parameters["adjoint"]["stop_annotating"] = True
