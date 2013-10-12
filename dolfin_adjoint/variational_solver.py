@@ -72,7 +72,7 @@ class LinearVariationalSolver(backend.LinearVariationalSolver):
 
     out = backend.LinearVariationalSolver.solve(self)
 
-    if annotate and dolfin.parameters["adjoint"]["record_all"]:
+    if annotate and backend.parameters["adjoint"]["record_all"]:
       adjglobals.adjointer.record_variable(adjglobals.adj_variables[self.problem.u], libadjoint.MemoryStorage(adjlinalg.Vector(self.problem.u)))
 
     return out

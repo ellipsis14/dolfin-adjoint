@@ -8,6 +8,8 @@ import adjglobals
 import utils
 
 dolfin_assign = backend.Function.assign
+if backend.__name__ == "dolfin":
+  dolfin_split  = backend.Function.split
 dolfin_str    = backend.Function.__str__
 dolfin_interpolate = backend.Function.interpolate
 
@@ -42,6 +44,13 @@ def dolfin_adjoint_assign(self, other, annotate=None):
   if not adjglobals.adjointer.variable_known(other_var) and not adjglobals.adjointer.variable_known(self_var):
     adjglobals.adj_variables.forget(other)
     adjglobals.adj_variables.forget(self)
+    if hasattr(other, "split"):
+      if other.split is True:
+        errmsg = '''Cannot use Function.split() (yet). To adjoint this, we need functionality
+        not yet present in DOLFIN. See https://bugs.launchpad.net/dolfin/+bug/891127 .
+
+        Your model may work if you use split(func) instead of func.split().'''
+        raise libadjoint.exceptions.LibadjointErrorNotImplemented(errmsg)
 
     return dolfin_assign(self, other)
 
@@ -98,7 +107,7 @@ class Function(backend.Function):
     if "name" in kwargs:
       self.adj_name = kwargs["name"]
       if self.adj_name in adjglobals.function_names and to_annotate:
-        dolfin.info_red("Warning: got duplicate function name %s" % self.adj_name)
+        backend.info_red("Warning: got duplicate function name %s" % self.adj_name)
       adjglobals.function_names.add(self.adj_name)
       del kwargs["name"]
 
@@ -137,13 +146,14 @@ class Function(backend.Function):
     return dolfin_adjoint_str(self)
 
   def interpolate(self, other, annotate=None):
-    if annotate is True and dolfin.parameters["adjoint"]["stop_annotating"]:
+    if annotate is True and backend.parameters["adjoint"]["stop_annotating"]:
       raise AssertionError("The user insisted on annotation, but stop_annotating is True.")
 
     return dolfin_adjoint_interpolate(self, other, annotate)
 
 backend.Function.assign = dolfin_adjoint_assign # so that Functions produced inside Expression etc. get it too
-backend.Function.split  = dolfin_adjoint_split
+if backend.__name__ == "dolfin":
+  backend.Function.split  = dolfin_adjoint_split
 backend.Function.__str__ = dolfin_adjoint_str
 backend.Function.interpolate = dolfin_adjoint_interpolate
 

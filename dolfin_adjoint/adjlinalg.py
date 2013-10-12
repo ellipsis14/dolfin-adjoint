@@ -286,7 +286,7 @@ class Matrix(libadjoint.Matrix):
         assembled_rhs = backend.Function(b.data).vector()
         [bc.apply(assembled_rhs) for bc in bcs]
 
-        wrap_solve(assembled_lhs, x.data, assembled_rhs, self.solver_parameters)
+        wrap_solve(assembled_lhs, x.data.vector(), assembled_rhs, self.solver_parameters)
       else:
         if hasattr(b, 'nonlinear_form'): # was a nonlinear solve
           x.data.vector()[:] = b.nonlinear_u.vector()
@@ -299,7 +299,10 @@ class Matrix(libadjoint.Matrix):
           assembled_rhs = wrap_assemble(b.data, test)
           [bc.apply(assembled_rhs) for bc in bcs]
 
-          wrap_solve(assembled_lhs, x.data, assembled_rhs.dat, self.solver_parameters)
+          if backend.__name__ == "dolfin":
+            wrap_solve(assembled_lhs, x.data.vector(), assembled_rhs, self.solver_parameters)
+          else:
+            wrap_solve(assembled_lhs, x.data, assembled_rhs.dat, self.solver_parameters)
 
     return x
 
@@ -408,7 +411,7 @@ def wrap_solve(A, x, b, solver_parameters):
      method = solver_parameters.get("linear_solver", "default")
      if method in lu_solvers or method == "default":
        if method == "lu": method = "default"
-       solver = dolfin.LUSolver(method)
+       solver = backend.LUSolver(method)
 
        if "lu_solver" in solver_parameters:
          solver.parameters.update(solver_parameters["lu_solver"])
@@ -418,7 +421,7 @@ def wrap_solve(A, x, b, solver_parameters):
      else:
        dangerous_parameters = ["preconditioner"]
        pc = solver_parameters.get("preconditioner", "default")
-       solver = dolfin.KrylovSolver(method, pc)
+       solver = backend.KrylovSolver(method, pc)
 
        if "krylov_solver" in solver_parameters:
          solver.parameters.update(solver_parameters["krylov_solver"])

@@ -151,7 +151,7 @@ class NonlinearRHS(RHS):
     var = adjglobals.adj_variables[self.u]
     self.ic_var = None
 
-    if dolfin.parameters["adjoint"]["fussy_replay"]:
+    if backend.parameters["adjoint"]["fussy_replay"]:
       can_depend = True
       try:
         prev_var = find_previous_variable(var)

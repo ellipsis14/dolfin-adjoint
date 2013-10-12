@@ -53,7 +53,7 @@ def annotate(*args, **kwargs):
 
     # Unpack the arguments, using the same routine as the real Dolfin solve call
     if backend.__name__ == "dolfin":
-      unpacked_args = dolfin.fem.solving._extract_args(*args, **kwargs)
+      unpacked_args = backend.fem.solving._extract_args(*args, **kwargs)
       eq = unpacked_args[0]
       u  = unpacked_args[1]
       bcs = unpacked_args[2]

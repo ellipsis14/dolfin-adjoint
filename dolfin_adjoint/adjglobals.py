@@ -23,7 +23,7 @@ def adj_start_timestep(time=0.0):
   See also: :py:func:`dolfin_adjoint.adj_inc_timestep`
   '''
 
-  if not dolfin.parameters["adjoint"]["stop_annotating"]:
+  if not backend.parameters["adjoint"]["stop_annotating"]:
     adjointer.time.start(time)
 
 def adj_inc_timestep(time=None, finished=False):
@@ -43,7 +43,7 @@ def adj_inc_timestep(time=None, finished=False):
   See also: :py:func:`dolfin_adjoint.adj_start_timestep`
   '''
 
-  if not dolfin.parameters["adjoint"]["stop_annotating"]:
+  if not backend.parameters["adjoint"]["stop_annotating"]:
     adj_variables.increment_timestep()
     if time is not None:
       adjointer.time.next(time)
@@ -60,10 +60,10 @@ def adj_check_checkpoints():
   adjointer.check_checkpoints()
 
 def adj_reset_cache():
-  if dolfin.parameters["adjoint"]["debug_cache"]:
-    dolfin.info_blue("Resetting solver cache")
+  if backend.parameters["adjoint"]["debug_cache"]:
+    backend.info_blue("Resetting solver cache")
 
-  dolfin.parameters["adjoint"]["stop_annotating"] = False
+  backend.parameters["adjoint"]["stop_annotating"] = False
 
   caching.assembled_fwd_forms.clear()
   caching.assembled_adj_forms.clear()

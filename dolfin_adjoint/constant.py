@@ -25,7 +25,7 @@ class Constant(backend.Constant):
     self.adj_name = name
 
     if name in constant_values:
-      dolfin.info_red("Warning: redefing constant with name %s" % name)
+      backend.info_red("Warning: redefing constant with name %s" % name)
 
     constant_values[name] = value
     constant_objects[name] = self
