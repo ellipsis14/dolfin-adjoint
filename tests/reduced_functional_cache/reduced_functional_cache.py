@@ -80,7 +80,7 @@ if __name__ == "__main__":
 
     assert max(abs(a[0].vector().array() - b[0].vector().array())) == 0
     assert float(a[1]) == float(b[1]) 
-    assert time_a/time_b > 200 # Check that speed-up is significant
+    assert time_a/time_b > 100 # Check that speed-up is significant
 
     # Finally, let's check caching of the Hessian 
     # TODO
