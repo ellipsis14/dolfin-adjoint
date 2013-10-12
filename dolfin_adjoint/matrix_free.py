@@ -1,5 +1,5 @@
 import ufl
-import dolfin
+import backend
 
 import libadjoint
 
@@ -19,7 +19,7 @@ def down_cast(*args, **kwargs):
   function to *attach the form to the returned object*. This lets the automatic annotation work,
   even when the user calls the lower-level :py:data:`solve(A, x, b)`.
   """
-  dc = dolfin.down_cast(*args, **kwargs)
+  dc = backend.down_cast(*args, **kwargs)
 
   if hasattr(args[0], 'form'):
     dc.form = args[0].form
@@ -46,31 +46,31 @@ class MatrixFree(adjlinalg.Matrix):
     adjlinalg.Matrix.__init__(self, *args, **kwargs)
 
   def solve(self, var, b):
-    timer = dolfin.Timer("Matrix-free solver")
-    solver = dolfin.PETScKrylovSolver(*self.solver_parameters)
+    timer = backend.Timer("Matrix-free solver")
+    solver = backend.PETScKrylovSolver(*self.solver_parameters)
     solver.parameters.update(self.parameters)
 
-    x = dolfin.Function(self.fn_space)
+    x = backend.Function(self.fn_space)
     if b.data is None:
-      dolfin.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
+      backend.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
       return adjlinalg.Vector(x)
 
-    if isinstance(b.data, dolfin.Function):
+    if isinstance(b.data, backend.Function):
       rhs = b.data.vector().copy()
     else:
-      rhs = dolfin.assemble(b.data)
+      rhs = backend.assemble(b.data)
 
     if var.type in ['ADJ_TLM', 'ADJ_ADJOINT']:
-      self.bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.cpp.DirichletBC)] + [bc for bc in self.bcs if not isinstance(bc, dolfin.DirichletBC)]
+      self.bcs = [backend.homogenize(bc) for bc in self.bcs if isinstance(bc, backend.cpp.DirichletBC)] + [bc for bc in self.bcs if not isinstance(bc, backend.DirichletBC)]
 
     for bc in self.bcs:
       bc.apply(rhs)
 
     if self.operators[1] is not None: # we have a user-supplied preconditioner
       solver.set_operators(self.data, self.operators[1])
-      solver.solve(dolfin.down_cast(x.vector()), dolfin.down_cast(rhs))
+      solver.solve(backend.down_cast(x.vector()), backend.down_cast(rhs))
     else:
-      solver.solve(self.data, dolfin.down_cast(x.vector()), dolfin.down_cast(rhs))
+      solver.solve(self.data, backend.down_cast(x.vector()), backend.down_cast(rhs))
 
     timer.stop()
     return adjlinalg.Vector(x)
@@ -78,24 +78,24 @@ class MatrixFree(adjlinalg.Matrix):
   def axpy(self, alpha, x):
     raise libadjoint.exceptions.LibadjointErrorNotImplemented("Can't add to a matrix-free matrix .. ")
 
-class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
+class AdjointPETScKrylovSolver(backend.PETScKrylovSolver):
   def __init__(self, *args):
-    dolfin.PETScKrylovSolver.__init__(self, *args)
+    backend.PETScKrylovSolver.__init__(self, *args)
     self.solver_parameters = args
 
     self.operators = (None, None)
 
   def set_operators(self, A, P):
-    dolfin.PETScKrylovSolver.set_operators(self, A, P)
+    backend.PETScKrylovSolver.set_operators(self, A, P)
     self.operators = (A, P)
 
   def set_operator(self, A):
-    dolfin.PETScKrylovSolver.set_operator(self, A)
+    backend.PETScKrylovSolver.set_operator(self, A)
     self.operators = (A, self.operators[1])
 
   def solve(self, *args, **kwargs):
 
-    timer = dolfin.Timer("Matrix-free solver")
+    timer = backend.Timer("Matrix-free solver")
 
     annotate = True
     if "annotate" in kwargs:
@@ -116,16 +116,16 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
         try:
           A = AdjointKrylovMatrix(A.form)
         except AttributeError:
-          raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your A has to either be an AdjointKrylovMatrix or have been assembled after dolfin_adjoint was imported.")
+          raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your A has to either be an AdjointKrylovMatrix or have been assembled after backend_adjoint was imported.")
 
       if not hasattr(x, 'function'):
         raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your x has to come from code like down_cast(my_function.vector()).")
 
       if not hasattr(b, 'form'):
-        raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your b has to have the .form attribute: was it assembled with from dolfin_adjoint import *?")
+        raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your b has to have the .form attribute: was it assembled with from backend_adjoint import *?")
 
       if not hasattr(A, 'dependencies'):
-        dolfin.info_red("A has no .dependencies method; assuming no nonlinear dependencies of the matrix-free operator.")
+        backend.info_red("A has no .dependencies method; assuming no nonlinear dependencies of the matrix-free operator.")
         coeffs = []
         dependencies = []
       else:
@@ -138,7 +138,7 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
       rhs = adjrhs.RHS(b.form)
 
       diag_name = hashlib.md5(str(hash(A)) + str(random.random())).hexdigest()
-      diag_block = libadjoint.Block(diag_name, dependencies=dependencies, test_hermitian=dolfin.parameters["adjoint"]["test_hermitian"], test_derivative=dolfin.parameters["adjoint"]["test_derivative"])
+      diag_block = libadjoint.Block(diag_name, dependencies=dependencies, test_hermitian=backend.parameters["adjoint"]["test_hermitian"], test_derivative=backend.parameters["adjoint"]["test_derivative"])
 
       solving.register_initial_conditions(zip(rhs.coefficients(),rhs.dependencies()) + zip(coeffs, dependencies), linear=False, var=None)
 
@@ -161,13 +161,13 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
 
         if hermitian:
           A_transpose = A.hermitian()
-          return (MatrixFree(A_transpose, fn_space=x.function.function_space(), bcs=A_transpose.bcs, 
-                             solver_parameters=self.solver_parameters, 
+          return (MatrixFree(A_transpose, fn_space=x.function.function_space(), bcs=A_transpose.bcs,
+                             solver_parameters=self.solver_parameters,
                              operators=transpose_operators(self.operators),
                              parameters=frozen_parameters), adjlinalg.Vector(None, fn_space=x.function.function_space()))
         else:
-          return (MatrixFree(A, fn_space=x.function.function_space(), bcs=b.bcs, 
-                             solver_parameters=self.solver_parameters, 
+          return (MatrixFree(A, fn_space=x.function.function_space(), bcs=b.bcs,
+                             solver_parameters=self.solver_parameters,
                              operators=self.operators,
                              parameters=frozen_parameters), adjlinalg.Vector(None, fn_space=x.function.function_space()))
       diag_block.assemble = diag_assembly_cb
@@ -181,7 +181,7 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
         else:
           acting_mat = A
 
-        output_fn = dolfin.Function(input.data.function_space())
+        output_fn = backend.Function(input.data.function_space())
         acting_mat.mult(input.data.vector(), output_fn.vector())
         vec = output_fn.vector()
         for i in range(len(vec)):
@@ -203,20 +203,20 @@ class AdjointPETScKrylovSolver(dolfin.PETScKrylovSolver):
       cs = adjglobals.adjointer.register_equation(eqn)
       solving.do_checkpoint(cs, var, rhs)
 
-    out = dolfin.PETScKrylovSolver.solve(self, *args)
+    out = backend.PETScKrylovSolver.solve(self, *args)
 
     if annotate:
-      if dolfin.parameters["adjoint"]["record_all"]:
+      if backend.parameters["adjoint"]["record_all"]:
         adjglobals.adjointer.record_variable(var, libadjoint.MemoryStorage(adjlinalg.Vector(x.function)))
 
     timer.stop()
 
     return out
 
-class AdjointKrylovMatrix(dolfin.PETScKrylovMatrix):
+class AdjointKrylovMatrix(backend.PETScKrylovMatrix):
   def __init__(self, a, bcs=None):
     shapes = self.shape(a)
-    dolfin.PETScKrylovMatrix.__init__(self, shapes[0], shapes[1])
+    backend.PETScKrylovMatrix.__init__(self, shapes[0], shapes[1])
     self.original_form = a
     self.current_form = a
 
@@ -235,15 +235,15 @@ class AdjointKrylovMatrix(dolfin.PETScKrylovMatrix):
 
   def mult(self, *args):
     shapes = self.shape(self.current_form)
-    y = dolfin.PETScVector(shapes[0])
+    y = backend.PETScVector(shapes[0])
 
-    action_fn = dolfin.Function(ufl.algorithms.extract_arguments(self.current_form)[-1].function_space())
+    action_fn = backend.Function(ufl.algorithms.extract_arguments(self.current_form)[-1].function_space())
     action_vec = action_fn.vector()
     for i in range(len(args[0])):
       action_vec[i] = args[0][i]
 
-    action_form = dolfin.action(self.current_form, action_fn)
-    dolfin.assemble(action_form, tensor=y)
+    action_form = backend.action(self.current_form, action_fn)
+    backend.assemble(action_form, tensor=y)
 
     for bc in self.bcs:
       bcvals = bc.get_boundary_values()
@@ -257,21 +257,21 @@ class AdjointKrylovMatrix(dolfin.PETScKrylovMatrix):
 
   def set_dependencies(self, dependencies, values):
     replace_dict = dict(zip(self.dependencies(), values))
-    self.current_form = dolfin.replace(self.original_form, replace_dict)
+    self.current_form = backend.replace(self.original_form, replace_dict)
 
   def hermitian(self):
-    adjoint_bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.cpp.DirichletBC)] + [bc for bc in self.bcs if not isinstance(bc, dolfin.DirichletBC)]
-    return AdjointKrylovMatrix(dolfin.adjoint(self.original_form), bcs=adjoint_bcs)
+    adjoint_bcs = [backend.homogenize(bc) for bc in self.bcs if isinstance(bc, backend.cpp.DirichletBC)] + [bc for bc in self.bcs if not isinstance(bc, backend.DirichletBC)]
+    return AdjointKrylovMatrix(backend.adjoint(self.original_form), bcs=adjoint_bcs)
 
   def derivative_action(self, variable, contraction_vector, hermitian, input, coefficient):
-    deriv = dolfin.derivative(self.current_form, variable)
+    deriv = backend.derivative(self.current_form, variable)
     args = ufl.algorithms.extract_arguments(deriv)
-    deriv = dolfin.replace(deriv, {args[1]: contraction_vector})
+    deriv = backend.replace(deriv, {args[1]: contraction_vector})
 
     if hermitian:
-      deriv = dolfin.adjoint(deriv)
+      deriv = backend.adjoint(deriv)
 
-    action = coefficient * dolfin.action(deriv, input)
+    action = coefficient * backend.action(deriv, input)
 
     return action
 
@@ -281,21 +281,21 @@ def transpose_operators(operators):
   for i in range(2):
     op = operators[i]
 
-    if op is None: 
+    if op is None:
       out[i] = None
-    elif isinstance(op, dolfin.cpp.GenericMatrix):
+    elif isinstance(op, backend.cpp.GenericMatrix):
       out[i] = op.__class__()
-      dolfin.assemble(dolfin.adjoint(op.form), tensor=out[i])
+      backend.assemble(backend.adjoint(op.form), tensor=out[i])
 
       if hasattr(op, 'bcs'):
-        adjoint_bcs = [dolfin.homogenize(bc) for bc in op.bcs if isinstance(bc, dolfin.cpp.DirichletBC)] + [bc for bc in op.bcs if not isinstance(bc, dolfin.DirichletBC)]
+        adjoint_bcs = [backend.homogenize(bc) for bc in op.bcs if isinstance(bc, backend.cpp.DirichletBC)] + [bc for bc in op.bcs if not isinstance(bc, backend.DirichletBC)]
         [bc.apply(out[i]) for bc in adjoint_bcs]
 
-    elif isinstance(op, dolfin.Form) or isinstance(op, ufl.form.Form):
-      out[i] = dolfin.adjoint(op)
+    elif isinstance(op, backend.Form) or isinstance(op, ufl.form.Form):
+      out[i] = backend.adjoint(op)
 
       if hasattr(op, 'bcs'):
-        out[i].bcs = [dolfin.homogenize(bc) for bc in op.bcs if isinstance(bc, dolfin.cpp.DirichletBC)] + [bc for bc in op.bcs if not isinstance(bc, dolfin.DirichletBC)]
+        out[i].bcs = [backend.homogenize(bc) for bc in op.bcs if isinstance(bc, backend.cpp.DirichletBC)] + [bc for bc in op.bcs if not isinstance(bc, backend.DirichletBC)]
 
     elif isinstance(op, AdjointKrylovMatrix):
       pass

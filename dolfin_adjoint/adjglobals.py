@@ -2,8 +2,8 @@ import coeffstore
 import expressions
 import caching
 import libadjoint
-import backend
-if backend.dolfin():
+from dolfin_adjoint import dolfin
+if dolfin():
   import lusolver
 
 # Create the adjointer, the central object that records the forward solve
@@ -19,7 +19,7 @@ def adj_start_timestep(time=0.0):
   '''Dolfin does not supply us with information about timesteps, and so more information
   is required from the user for certain features. This function should be called at the
   start of the time loop with the initial time (defaults to 0).
-  
+
   See also: :py:func:`dolfin_adjoint.adj_inc_timestep`
   '''
 
@@ -84,7 +84,7 @@ def adj_reset():
   expressions.expression_attrs.clear()
   adj_variables.__init__()
   function_names.__init__()
-  if backend.dolfin():
+  if dolfin():
     lusolver.lu_solvers = {}
     lusolver.adj_lu_solvers = {}
   adj_reset_cache()
