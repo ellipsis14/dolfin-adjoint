@@ -1,6 +1,7 @@
 import libadjoint
 from parameter import *
-from backend import info_red, info_blue, info, dolfin
+from backend import info_red, info_blue, info
+import backend
 import adjglobals
 import backend
 import constant
@@ -51,7 +52,7 @@ def compute_adjoint(functional, forget=True, ignore=[]):
 
       (adj_var, output) = adjglobals.adjointer.get_adjoint_solution(i, functional)
       if output.data:
-        if backend.dolfin():
+        if backend.__name__ == "dolfin":
           output.data.rename(str(adj_var) , "a Function from dolfin-adjoint")
         else:
           output.data.name = str(adj_var) #, "a Function from dolfin-adjoint")

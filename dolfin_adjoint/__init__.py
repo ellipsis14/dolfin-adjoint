@@ -25,10 +25,6 @@ if not 'backend' in sys.modules:
     import dolfin
     sys.modules['backend'] = dolfin
 backend = sys.modules['backend']
-def dolfin():
-    return backend.__name__ == "dolfin"
-def firedrake():
-    return backend.__name__ == "firedrake"
 
 import options
 import solving
@@ -36,15 +32,15 @@ import assembly
 import expressions
 import utils
 import assign
-if dolfin():
+if backend.__name__ == "dolfin":
   import matrix_free
 import functional
 import split_annotation
-if dolfin():
+if backend.__name__ == "dolfin":
   import lusolver
 import gst
 import function
-if dolfin():
+if backend.__name__ == "dolfin": 
   import genericmatrix
   import genericvector
   import optimization

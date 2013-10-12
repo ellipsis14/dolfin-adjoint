@@ -2,8 +2,8 @@ import coeffstore
 import expressions
 import caching
 import libadjoint
-from dolfin_adjoint import dolfin
-if dolfin():
+from dolfin_adjoint import backend
+if backend.__name__ == "dolfin":
   import lusolver
 
 # Create the adjointer, the central object that records the forward solve
@@ -84,7 +84,7 @@ def adj_reset():
   expressions.expression_attrs.clear()
   adj_variables.__init__()
   function_names.__init__()
-  if dolfin():
+  if backend.__name__ == "dolfin":
     lusolver.lu_solvers = {}
     lusolver.adj_lu_solvers = {}
   adj_reset_cache()
