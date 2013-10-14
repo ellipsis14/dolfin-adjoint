@@ -1,5 +1,5 @@
 import libadjoint
-import dolfin
+import backend
 import ufl
 import ufl.algorithms
 import adjglobals
@@ -43,7 +43,7 @@ class RHS(libadjoint.RHS):
 
       dolfin_values=[val.data for val in values]
 
-      return adjlinalg.Vector(dolfin.replace(self.form, dict(zip(dolfin_dependencies, dolfin_values))))
+      return adjlinalg.Vector(backend.replace(self.form, dict(zip(dolfin_dependencies, dolfin_values))))
 
     else:
       # RHS is a adjlinalg.Vector.
@@ -64,15 +64,15 @@ class RHS(libadjoint.RHS):
 
       dolfin_values = [val.data for val in values]
 
-      current_form = dolfin.replace(self.form, dict(zip(dolfin_dependencies, dolfin_values)))
-      trial = dolfin.TrialFunction(dolfin_variable.function_space())
+      current_form = backend.replace(self.form, dict(zip(dolfin_dependencies, dolfin_values)))
+      trial = backend.TrialFunction(dolfin_variable.function_space())
 
-      d_rhs = dolfin.derivative(current_form, dolfin_variable, trial)
+      d_rhs = backend.derivative(current_form, dolfin_variable, trial)
 
       if hermitian:
-        action = dolfin.action(dolfin.adjoint(d_rhs), contraction_vector.data)
+        action = backend.action(backend.adjoint(d_rhs), contraction_vector.data)
       else:
-        action = dolfin.action(d_rhs, contraction_vector.data)
+        action = backend.action(d_rhs, contraction_vector.data)
 
       return adjlinalg.Vector(action)
     else:
@@ -90,24 +90,24 @@ class RHS(libadjoint.RHS):
 
       dolfin_values = [val.data for val in values]
 
-      current_form = dolfin.replace(self.form, dict(zip(dolfin_dependencies, dolfin_values)))
-      trial = dolfin.TrialFunction(dolfin_outer_variable.function_space())
+      current_form = backend.replace(self.form, dict(zip(dolfin_dependencies, dolfin_values)))
+      trial = backend.TrialFunction(dolfin_outer_variable.function_space())
 
-      d_rhs = dolfin.derivative(current_form, dolfin_inner_variable, inner_contraction_vector.data)
+      d_rhs = backend.derivative(current_form, dolfin_inner_variable, inner_contraction_vector.data)
       d_rhs = ufl.algorithms.expand_derivatives(d_rhs)
       if d_rhs.integrals() == ():
         return None
 
-      d_rhs = dolfin.derivative(d_rhs, dolfin_outer_variable, trial)
+      d_rhs = backend.derivative(d_rhs, dolfin_outer_variable, trial)
       d_rhs = ufl.algorithms.expand_derivatives(d_rhs)
 
       if d_rhs.integrals() == ():
         return None
 
       if hermitian:
-        action = dolfin.action(dolfin.adjoint(d_rhs), action_vector.data)
+        action = backend.action(backend.adjoint(d_rhs), action_vector.data)
       else:
-        action = dolfin.action(d_rhs, action_vector.data)
+        action = backend.action(d_rhs, action_vector.data)
 
       return adjlinalg.Vector(action)
     else:
@@ -143,7 +143,7 @@ class NonlinearRHS(RHS):
     self.bcs = bcs
     self.mass = mass
     self.solver_parameters = solver_parameters
-    self.J = J or dolfin.derivative(F, u)
+    self.J = J or backend.derivative(F, u)
 
     # We want to mark that the RHS term /also/ depends on
     # the previous value of u, as that's what we need to initialise
@@ -151,7 +151,7 @@ class NonlinearRHS(RHS):
     var = adjglobals.adj_variables[self.u]
     self.ic_var = None
 
-    if dolfin.parameters["adjoint"]["fussy_replay"]:
+    if backend.parameters["adjoint"]["fussy_replay"]:
       can_depend = True
       try:
         prev_var = find_previous_variable(var)
@@ -162,7 +162,7 @@ class NonlinearRHS(RHS):
         self.deps.append(prev_var)
         self.ic_var = prev_var
       else:
-        self.ic_copy = dolfin.Function(u)
+        self.ic_copy = backend.Function(u)
         self.ic_var = None
 
   def __call__(self, dependencies, values):
@@ -183,11 +183,11 @@ class NonlinearRHS(RHS):
         else:
           replace_map[self.coeffs[i]] = values[j].data
 
-    current_F    = dolfin.replace(self.F, replace_map)
-    current_J    = dolfin.replace(self.J, replace_map)
-    u = dolfin.Function(ic)
-    current_F    = dolfin.replace(current_F, {self.u: u})
-    current_J    = dolfin.replace(current_J, {self.u: u})
+    current_F    = backend.replace(self.F, replace_map)
+    current_J    = backend.replace(self.J, replace_map)
+    u = backend.Function(ic)
+    current_F    = backend.replace(current_F, {self.u: u})
+    current_J    = backend.replace(current_J, {self.u: u})
 
     vec = adjlinalg.Vector(None)
     vec.nonlinear_form = current_F
@@ -233,12 +233,12 @@ class NonlinearRHS(RHS):
 
     diff_var = values[dependencies.index(variable)].data
 
-    current_form = dolfin.replace(self.form, replace_map)
-    deriv = dolfin.derivative(current_form, diff_var)
+    current_form = backend.replace(self.form, replace_map)
+    deriv = backend.derivative(current_form, diff_var)
 
     if hermitian:
-      deriv = dolfin.adjoint(deriv)
-      bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.DirichletBC)] + [bc for bc in self.bcs if not isinstance(bc, dolfin.DirichletBC)]
+      deriv = backend.adjoint(deriv)
+      bcs = [backend.homogenize(bc) for bc in self.bcs if isinstance(bc, backend.DirichletBC)] + [bc for bc in self.bcs if not isinstance(bc, backend.DirichletBC)]
     else:
       bcs = self.bcs
 

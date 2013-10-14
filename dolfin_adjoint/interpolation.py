@@ -1,5 +1,5 @@
 import solving
-import dolfin
+import backend
 import libadjoint
 import ufl
 import adjglobals
@@ -15,13 +15,13 @@ def interpolate(v, V, annotate=None, name=None):
   computation (such as interpolating fields to other function spaces for the purposes of
   visualisation).'''
 
-  out = dolfin.interpolate(v, V)
+  out = backend.interpolate(v, V)
   if name is not None:
     out.adj_name = name
 
   to_annotate = utils.to_annotate(annotate)
 
-  if isinstance(v, dolfin.Function) and to_annotate:
+  if isinstance(v, backend.Function) and to_annotate:
     rhsdep = adjglobals.adj_variables[v]
     if adjglobals.adjointer.variable_known(rhsdep):
       block_name = "Identity: %s" % str(V)
@@ -31,7 +31,7 @@ def interpolate(v, V, annotate=None, name=None):
 
       def identity_assembly_cb(variables, dependencies, hermitian, coefficient, context):
         assert coefficient == 1
-        return (adjlinalg.Matrix(adjlinalg.IdentityMatrix()), adjlinalg.Vector(dolfin.Function(V)))
+        return (adjlinalg.Matrix(adjlinalg.IdentityMatrix()), adjlinalg.Vector(backend.Function(V)))
 
       identity_block.assemble = identity_assembly_cb
 
@@ -41,7 +41,7 @@ def interpolate(v, V, annotate=None, name=None):
 
       dep = adjglobals.adj_variables.next(out)
 
-      if dolfin.parameters["adjoint"]["record_all"]:
+      if backend.parameters["adjoint"]["record_all"]:
         adjglobals.adjointer.record_variable(dep, libadjoint.MemoryStorage(adjlinalg.Vector(out)))
 
       initial_eq = libadjoint.Equation(dep, blocks=[identity_block], targets=[dep], rhs=rhs)
@@ -58,11 +58,11 @@ class InterpolateRHS(libadjoint.RHS):
     self.dep = adjglobals.adj_variables[v]
 
   def __call__(self, dependencies, values):
-    return adjlinalg.Vector(dolfin.interpolate(values[0].data, self.V))
+    return adjlinalg.Vector(backend.interpolate(values[0].data, self.V))
 
   def derivative_action(self, dependencies, values, variable, contraction_vector, hermitian):
     if not hermitian:
-      return adjlinalg.Vector(dolfin.interpolate(contraction_vector.data, self.V))
+      return adjlinalg.Vector(backend.interpolate(contraction_vector.data, self.V))
     else:
 #      For future reference, the transpose action of the interpolation operator
 #      is (in pseudocode!):

@@ -1,4 +1,3 @@
-import dolfin
 import ufl 
 import libadjoint
 
