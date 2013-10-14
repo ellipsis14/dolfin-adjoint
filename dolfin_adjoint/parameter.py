@@ -72,7 +72,7 @@ class InitialConditionParameter(DolfinAdjointParameter):
        perturbation: the perturbation direction in which you wish to compute the gradient. Must be a Function.'''
 
     if not (isinstance(coeff, backend.Function) or isinstance(coeff, str)):
-      raise TypeError, "The coefficient must be a backend.Function or a String"
+      raise TypeError, "The coefficient must be a Function or a String"
     self.coeff = coeff
     self.value = value
     self.var = None 
@@ -123,7 +123,7 @@ class ScalarParameter(DolfinAdjointParameter):
   when one wishes to compute dJ/da, where a is a single scalar parameter.'''
   def __init__(self, a, coeff=1):
     if not (isinstance(a, backend.Constant) or isinstance(a, str)):
-      raise TypeError, "The coefficient must be a backend.Constant or a String"
+      raise TypeError, "The coefficient must be a Constant or a String"
     self.a = a
     self.coeff = coeff
 

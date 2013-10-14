@@ -359,7 +359,8 @@ def solve(*args, **kwargs):
     # then we should record the value of the variable we just solved for.
     if backend.parameters["adjoint"]["record_all"]:
       if isinstance(args[0], ufl.classes.Equation):
-        u  = args[1]
+        unpacked_args = backend.fem.solving._extract_args(*args, **kwargs)
+        u  = unpacked_args[1]
         adjglobals.adjointer.record_variable(adjglobals.adj_variables[u], libadjoint.MemoryStorage(adjlinalg.Vector(u)))
       elif isinstance(args[0], (backend.cpp.Matrix, backend.GenericMatrix)):
         u = args[1].function
