@@ -77,7 +77,7 @@ def annotate(*args, **kwargs):
       eq_bcs = []
       linear = False
 
-  elif isinstance(args[0], (backend.cpp.Matrix, backend.GenericMatrix)):
+  elif backend.__name__ == "dolfin" and isinstance(args[0], (backend.cpp.Matrix, backend.GenericMatrix)):
     linear = True
     try:
       eq_lhs = args[0].form
@@ -359,8 +359,11 @@ def solve(*args, **kwargs):
     # then we should record the value of the variable we just solved for.
     if backend.parameters["adjoint"]["record_all"]:
       if isinstance(args[0], ufl.classes.Equation):
-        unpacked_args = backend.fem.solving._extract_args(*args, **kwargs)
-        u  = unpacked_args[1]
+        if backend.__name__ == "dolfin":
+          unpacked_args = backend.fem.solving._extract_args(*args, **kwargs)
+          u  = unpacked_args[1]
+        else:
+          u  = args[1]
         adjglobals.adjointer.record_variable(adjglobals.adj_variables[u], libadjoint.MemoryStorage(adjlinalg.Vector(u)))
       elif isinstance(args[0], (backend.cpp.Matrix, backend.GenericMatrix)):
         u = args[1].function
