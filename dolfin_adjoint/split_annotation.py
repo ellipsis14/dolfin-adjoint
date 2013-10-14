@@ -1,5 +1,5 @@
 
-import dolfin
+import backend
 import libadjoint
 
 import solving
@@ -12,14 +12,14 @@ import random
 
 def annotate_split(bigfn, idx, smallfn, bcs):
   fn_space = smallfn.function_space().collapse()
-  test = dolfin.TestFunction(fn_space)
-  trial = dolfin.TrialFunction(fn_space)
-  eq_lhs = dolfin.inner(test, trial)*dolfin.dx
+  test = backend.TestFunction(fn_space)
+  trial = backend.TrialFunction(fn_space)
+  eq_lhs = backend.inner(test, trial)*backend.dx
 
   diag_name = "Split:%s:" % idx + hashlib.md5(str(eq_lhs) + "split" + str(smallfn) + str(bigfn) + str(idx) + str(random.random())).hexdigest()
 
   diag_deps = []
-  diag_block = libadjoint.Block(diag_name, dependencies=diag_deps, test_hermitian=dolfin.parameters["adjoint"]["test_hermitian"], test_derivative=dolfin.parameters["adjoint"]["test_derivative"])
+  diag_block = libadjoint.Block(diag_name, dependencies=diag_deps, test_hermitian=backend.parameters["adjoint"]["test_hermitian"], test_derivative=backend.parameters["adjoint"]["test_derivative"])
 
   solving.register_initial_conditions([(bigfn, adjglobals.adj_variables[bigfn])], linear=True, var=None)
 
@@ -38,9 +38,9 @@ def annotate_split(bigfn, idx, smallfn, bcs):
     eq_l = eq_lhs
 
     if hermitian:
-      adjoint_bcs = [dolfin.homogenize(bc) for bc in bcs if isinstance(bc, dolfin.DirichletBC)] + [bc for bc in bcs if not isinstance(bc, dolfin.DirichletBC)]
+      adjoint_bcs = [backend.homogenize(bc) for bc in bcs if isinstance(bc, backend.DirichletBC)] + [bc for bc in bcs if not isinstance(bc, backend.DirichletBC)]
       if len(adjoint_bcs) == 0: adjoint_bcs = None
-      return (adjlinalg.Matrix(dolfin.adjoint(eq_l), bcs=adjoint_bcs), adjlinalg.Vector(None, fn_space=fn_space))
+      return (adjlinalg.Matrix(backend.adjoint(eq_l), bcs=adjoint_bcs), adjlinalg.Vector(None, fn_space=fn_space))
     else:
       return (adjlinalg.Matrix(eq_l, bcs=bcs), adjlinalg.Vector(None, fn_space=fn_space))
   diag_block.assemble = diag_assembly_cb
@@ -52,15 +52,15 @@ def annotate_split(bigfn, idx, smallfn, bcs):
   cs = adjglobals.adjointer.register_equation(eqn)
   solving.do_checkpoint(cs, var, rhs)
 
-  if dolfin.parameters["adjoint"]["fussy_replay"]:
+  if backend.parameters["adjoint"]["fussy_replay"]:
     mass = eq_lhs
-    smallfn_massed = dolfin.Function(fn_space)
-    dolfin.solve(mass == dolfin.action(mass, smallfn), smallfn_massed)
+    smallfn_massed = backend.Function(fn_space)
+    backend.solve(mass == backend.action(mass, smallfn), smallfn_massed)
     assert False, "No idea how to assign to a subfunction yet .. "
     #assign.dolfin_assign(bigfn, smallfn_massed)
 
-  if dolfin.parameters["adjoint"]["record_all"]:
-    smallfn_record = dolfin.Function(fn_space)
+  if backend.parameters["adjoint"]["record_all"]:
+    smallfn_record = backend.Function(fn_space)
     assign.dolfin_assign(smallfn_record, smallfn)
     adjglobals.adjointer.record_variable(var, libadjoint.MemoryStorage(adjlinalg.Vector(smallfn_record)))
 
@@ -74,15 +74,15 @@ class SplitRHS(adjrhs.RHS):
 
   def __call__(self, dependencies, values):
     fn = Function_split(values[0].data, deepcopy=True)[self.idx]
-    return adjlinalg.Vector(dolfin.inner(self.test, fn)*dolfin.dx)
+    return adjlinalg.Vector(backend.inner(self.test, fn)*backend.dx)
 
   def derivative_action(self, dependencies, values, variable, contraction_vector, hermitian):
     if not hermitian:
       fn = Function_split(contraction_vector)[self.idx]
-      action = dolfin.inner(self.test, fn)
+      action = backend.inner(self.test, fn)
     else:
-      bigtest = dolfin.TestFunction(self.function.function_space())
-      outfn   = dolfin.Function(self.function.function_space())
+      bigtest = backend.TestFunction(self.function.function_space())
+      outfn   = backend.Function(self.function.function_space())
 
       # DOLFIN is a bit annoying when it comes to splits. Actually, it is very annoying.
       # You can't do anything like
@@ -93,7 +93,7 @@ class SplitRHS(adjrhs.RHS):
       assert False, "No idea how to assign to a subfunction yet .. "
       assign.dolfin_assign(outfn, contraction_vector.data)
 
-      action = dolfin.inner(bigtest, outfn)*dolfin.dx
+      action = backend.inner(bigtest, outfn)*backend.dx
 
     return adjlinalg.Vector(action)
 

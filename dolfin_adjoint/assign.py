@@ -1,4 +1,4 @@
-import dolfin
+import backend
 import ufl
 from solving import solve, annotate as solving_annotate, do_checkpoint, register_initial_conditions
 import libadjoint
@@ -7,7 +7,7 @@ import adjglobals
 
 def register_assign(new, old, op=None):
 
-  if not isinstance(old, dolfin.Function):
+  if not isinstance(old, backend.Function):
     assert op is not None
 
   fn_space = new.function_space()
@@ -23,7 +23,7 @@ def register_assign(new, old, op=None):
   identity_block.assemble = identity_assembly_cb
   dep = adjglobals.adj_variables.next(new)
 
-  if dolfin.parameters["adjoint"]["record_all"] and isinstance(old, dolfin.Function):
+  if backend.parameters["adjoint"]["record_all"] and isinstance(old, backend.Function):
     adjglobals.adjointer.record_variable(dep, libadjoint.MemoryStorage(adjlinalg.Vector(old)))
 
   rhs = IdentityRHS(old, fn_space, op)
@@ -38,7 +38,7 @@ class IdentityRHS(libadjoint.RHS):
     self.var = var
     self.fn_space = fn_space
     self.op = op
-    if isinstance(var, dolfin.Function):
+    if isinstance(var, backend.Function):
       self.dep = adjglobals.adj_variables[var]
 
   def __call__(self, dependencies, values):
@@ -59,27 +59,27 @@ class IdentityRHS(libadjoint.RHS):
     # we get the contraction_vector.data back.
     # This involves inverting a mass matrix.
 
-    if dolfin.parameters["adjoint"]["symmetric_bcs"] and dolfin.__version__ <= '1.2.0':
-      dolfin.info_red("Warning: symmetric BC application requested but unavailable in dolfin <= 1.2.0.")
+    if backend.parameters["adjoint"]["symmetric_bcs"] and backend.__version__ <= '1.2.0':
+      backend.info_red("Warning: symmetric BC application requested but unavailable in dolfin <= 1.2.0.")
 
-    if dolfin.parameters["adjoint"]["symmetric_bcs"] and dolfin.__version__ > '1.2.0':
+    if backend.parameters["adjoint"]["symmetric_bcs"] and backend.__version__ > '1.2.0':
 
       V = contraction_vector.data.function_space()
-      v = dolfin.TestFunction(V)
+      v = backend.TestFunction(V)
 
       if str(V) not in adjglobals.fsp_lu:
-        u = dolfin.TrialFunction(V)
-        A = dolfin.assemble(dolfin.inner(u, v)*dolfin.dx)
-        lusolver = dolfin.LUSolver(A, "mumps")
+        u = backend.TrialFunction(V)
+        A = backend.assemble(backend.inner(u, v)*backend.dx)
+        lusolver = backend.LUSolver(A, "mumps")
         lusolver.parameters["symmetric"] = True
         lusolver.parameters["reuse_factorization"] = True
         adjglobals.fsp_lu[str(V)] = lusolver
       else:
         lusolver = adjglobals.fsp_lu[str(V)]
 
-      riesz = dolfin.Function(V)
+      riesz = backend.Function(V)
       lusolver.solve(riesz.vector(), contraction_vector.data.vector())
-      return adjlinalg.Vector(dolfin.inner(riesz, v)*dolfin.dx)
+      return adjlinalg.Vector(backend.inner(riesz, v)*backend.dx)
     else:
       return adjlinalg.Vector(contraction_vector.data)
 
@@ -87,13 +87,13 @@ class IdentityRHS(libadjoint.RHS):
     return None
 
   def dependencies(self):
-    if isinstance(self.var, dolfin.Function):
+    if isinstance(self.var, backend.Function):
       return [self.dep]
     else:
       return []
 
   def coefficients(self):
-    if isinstance(self.var, dolfin.Function):
+    if isinstance(self.var, backend.Function):
       return [self.var]
     else:
       return []

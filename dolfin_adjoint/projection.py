@@ -1,6 +1,7 @@
 import solving
-import dolfin
-import dolfin.fem.projection
+import backend
+if backend.__name__ == "dolfin":
+  import backend.fem.projection
 import libadjoint
 import adjglobals
 import adjlinalg
@@ -17,13 +18,16 @@ def project(v, V=None, bcs=None, mesh=None, solver_type="cg", preconditioner_typ
 
   to_annotate = utils.to_annotate(annotate)
 
-  if isinstance(v, dolfin.Expression) and (annotate is not True):
+  if isinstance(v, backend.Expression) and (annotate is not True):
     to_annotate = False
 
-  if isinstance(v, dolfin.Constant) and (annotate is not True):
+  if isinstance(v, backend.Constant) and (annotate is not True):
     to_annotate = False
 
-  out = dolfin.project(v, V, bcs, mesh, solver_type, preconditioner_type, form_compiler_parameters)
+  if backend.__name__ == "dolfin":
+    out = backend.project(v, V, bcs, mesh, solver_type, preconditioner_type, form_compiler_parameters)
+  else:
+    out = backend.project(v, V)
 
   if name is not None:
     out.adj_name = name
@@ -33,17 +37,17 @@ def project(v, V=None, bcs=None, mesh=None, solver_type="cg", preconditioner_typ
     # reproduce the logic from project. This probably isn't future-safe, but anyway
 
     if V is None:
-      V = dolfin.fem.projection._extract_function_space(v, mesh)
+      V = backend.fem.projection._extract_function_space(v, mesh)
 
     # Define variational problem for projection
-    w = dolfin.TestFunction(V)
-    Pv = dolfin.TrialFunction(V)
-    a = dolfin.inner(w, Pv)*dolfin.dx
-    L = dolfin.inner(w, v)*dolfin.dx
+    w = backend.TestFunction(V)
+    Pv = backend.TrialFunction(V)
+    a = backend.inner(w, Pv)*backend.dx
+    L = backend.inner(w, v)*backend.dx
 
     solving.annotate(a == L, out, bcs, solver_parameters={"linear_solver": solver_type, "preconditioner": preconditioner_type, "symmetric": True})
 
-    if dolfin.parameters["adjoint"]["record_all"]:
+    if backend.parameters["adjoint"]["record_all"]:
       adjglobals.adjointer.record_variable(adjglobals.adj_variables[out], libadjoint.MemoryStorage(adjlinalg.Vector(out)))
 
   return out

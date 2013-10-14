@@ -1,7 +1,7 @@
 import libadjoint
 import ufl
 import ufl.algorithms
-import dolfin
+import backend
 import hashlib
 
 import solving
@@ -70,7 +70,7 @@ class Functional(libadjoint.Functional):
 
     if isinstance(timeform, ufl.form.Form):
       if adjglobals.adjointer.adjointer.ntimesteps != 1:
-        dolfin.info_red("You are using a steady-state functional (without the *dt term) in a time-dependent simulation.\ndolfin-adjoint will assume that you want to evaluate the functional at the end of time.")
+        backend.info_red("You are using a steady-state functional (without the *dt term) in a time-dependent simulation.\ndolfin-adjoint will assume that you want to evaluate the functional at the end of time.")
       timeform = timeform*dt[FINISH_TIME]
 
     self.timeform = timeform
@@ -84,10 +84,10 @@ class Functional(libadjoint.Functional):
     if functional_value is not None:
       args = ufl.algorithms.extract_arguments(functional_value)
       if len(args) > 0:
-        dolfin.info_red("The form passed into Functional must be rank-0 (a scalar)! You have passed in a rank-%s form." % len(args))
+        backend.info_red("The form passed into Functional must be rank-0 (a scalar)! You have passed in a rank-%s form." % len(args))
         raise libadjoint.exceptions.LibadjointErrorInvalidInputs
 
-      return dolfin.assemble(functional_value)
+      return backend.assemble(functional_value)
     else:
       return 0.0
 
@@ -98,7 +98,7 @@ class Functional(libadjoint.Functional):
       functional_value = _add(functional_value,
                               self._substitute_form(adjointer, timestep, dependencies, values))
 
-    d = dolfin.derivative(functional_value, values[dependencies.index(variable)].data)
+    d = backend.derivative(functional_value, values[dependencies.index(variable)].data)
     d = ufl.algorithms.expand_derivatives(d)
     if d.integrals() == ():
       raise SystemExit, "This isn't supposed to happen -- your functional is supposed to depend on %s" % variable
@@ -114,9 +114,9 @@ class Functional(libadjoint.Functional):
       functional_value = _add(functional_value,
                               self._substitute_form(adjointer, timestep, dependencies, values))
 
-    d = dolfin.derivative(functional_value, values[dependencies.index(variable)].data)
+    d = backend.derivative(functional_value, values[dependencies.index(variable)].data)
     d = ufl.algorithms.expand_derivatives(d)
-    d = dolfin.derivative(d, values[dependencies.index(variable)].data, contraction.data)
+    d = backend.derivative(d, values[dependencies.index(variable)].data, contraction.data)
     if d.integrals() == ():
       raise SystemExit, "This isn't supposed to happen -- your functional is supposed to depend on %s" % variable
     return adjlinalg.Vector(d)
@@ -178,7 +178,7 @@ class Functional(libadjoint.Functional):
             # Trapezoidal rule over given interval.
             quad_weight = 0.5*(this_interval.stop-this_interval.start)
             
-            return dolfin.replace(quad_weight*term.form, replace)
+            return backend.replace(quad_weight*term.form, replace)
 
         # Calculate the integral contribution from the previous time level.
         functional_value = _add(functional_value, trapezoidal(integral_interval, 0))
@@ -204,7 +204,7 @@ class Functional(libadjoint.Functional):
             theta = 1.0 - (term.time - point_interval.start)/(point_interval.stop - point_interval.start)
             replace[term_dep] = theta*deps[str(start)] + (1-theta)*deps[str(end)]
 
-          functional_value = _add(functional_value, dolfin.replace(term.form, replace))
+          functional_value = _add(functional_value, backend.replace(term.form, replace))
 
         # Special case for evaluation at the end of time: we can't pass over to the
         # right-hand timestep, so have to do it here.
@@ -218,7 +218,7 @@ class Functional(libadjoint.Functional):
             end = self.get_vars(adjointer, timestep, term_var)[1]
             replace[term_dep] = deps[str(end)]
 
-          functional_value = _add(functional_value, dolfin.replace(term.form, replace))
+          functional_value = _add(functional_value, backend.replace(term.form, replace))
 
         # Another special case for the start of a timestep.
         elif (isinstance(term.time, StartTimeConstant) and timestep == 0) or point_interval.start == term.time:
@@ -231,7 +231,7 @@ class Functional(libadjoint.Functional):
             end = self.get_vars(adjointer, timestep, term_var)[0]
             replace[term_dep] = deps[str(end)]
 
-          functional_value = _add(functional_value, dolfin.replace(term.form, replace))
+          functional_value = _add(functional_value, backend.replace(term.form, replace))
     
     return functional_value
 

@@ -1,11 +1,11 @@
-import dolfin
+import backend
 import copy
 
 constant_values = {}
 constant_objects = {}
 scalar_parameters = []
 
-class Constant(dolfin.Constant):
+class Constant(backend.Constant):
   '''The Constant class is overloaded so that you can give :py:class:`Constants` *names*. For example,
 
     .. code-block:: python
@@ -18,20 +18,20 @@ class Constant(dolfin.Constant):
     For more details, see :doc:`the dolfin-adjoint documentation </documentation/misc>`.'''
 
   def __init__(self, value, cell=None, name=None):
-    dolfin.Constant.__init__(self, value, cell)
+    backend.Constant.__init__(self, value, cell)
     if name is None:
       name = hash(self)
 
     self.adj_name = name
 
     if name in constant_values:
-      dolfin.info_red("Warning: redefing constant with name %s" % name)
+      backend.info_red("Warning: redefing constant with name %s" % name)
 
     constant_values[name] = value
     constant_objects[name] = self
 
   def assign(self, value):
-    dolfin.Constant.assign(self, value)
+    backend.Constant.assign(self, value)
     constant_values[self.adj_name] = value
 
 def get_constant(a):
@@ -51,4 +51,4 @@ def update_constants(d):
   for constant in d:
     name = constant.adj_name
     if name not in scalar_parameters:
-      dolfin.Constant.assign(constant_objects[name], dolfin.Constant(d[constant]))
+      backend.Constant.assign(constant_objects[name], backend.Constant(d[constant]))

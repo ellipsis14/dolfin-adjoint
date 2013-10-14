@@ -1,25 +1,25 @@
-import dolfin
+import backend
 import solving
 import libadjoint
 import adjglobals
 import adjlinalg
 import utils
 
-class NonlinearVariationalProblem(dolfin.NonlinearVariationalProblem):
+class NonlinearVariationalProblem(backend.NonlinearVariationalProblem):
   '''This object is overloaded so that solves using this class are automatically annotated,
   so that libadjoint can automatically derive the adjoint and tangent linear models.'''
   def __init__(self, F, u, bcs=None, J=None, *args, **kwargs):
-    dolfin.NonlinearVariationalProblem.__init__(self, F, u, bcs, J, *args, **kwargs)
+    backend.NonlinearVariationalProblem.__init__(self, F, u, bcs, J, *args, **kwargs)
     self.F = F
     self.u = u
     self.bcs = bcs
     self.J = J
 
-class NonlinearVariationalSolver(dolfin.NonlinearVariationalSolver):
+class NonlinearVariationalSolver(backend.NonlinearVariationalSolver):
   '''This object is overloaded so that solves using this class are automatically annotated,
   so that libadjoint can automatically derive the adjoint and tangent linear models.'''
   def __init__(self, problem):
-    dolfin.NonlinearVariationalSolver.__init__(self, problem)
+    backend.NonlinearVariationalSolver.__init__(self, problem)
     self.problem = problem
 
   def solve(self, annotate=None):
@@ -34,28 +34,28 @@ class NonlinearVariationalSolver(dolfin.NonlinearVariationalSolver):
       problem = self.problem
       solving.annotate(problem.F == 0, problem.u, problem.bcs, J=problem.J, solver_parameters=self.parameters.to_dict())
 
-    out = dolfin.NonlinearVariationalSolver.solve(self)
+    out = backend.NonlinearVariationalSolver.solve(self)
 
-    if annotate and dolfin.parameters["adjoint"]["record_all"]:
+    if annotate and backend.parameters["adjoint"]["record_all"]:
       adjglobals.adjointer.record_variable(adjglobals.adj_variables[self.problem.u], libadjoint.MemoryStorage(adjlinalg.Vector(self.problem.u)))
 
     return out
 
-class LinearVariationalProblem(dolfin.LinearVariationalProblem):
+class LinearVariationalProblem(backend.LinearVariationalProblem):
   '''This object is overloaded so that solves using this class are automatically annotated,
   so that libadjoint can automatically derive the adjoint and tangent linear models.'''
   def __init__(self, a, L, u, bcs=None, *args, **kwargs):
-    dolfin.LinearVariationalProblem.__init__(self, a, L, u, bcs, *args, **kwargs)
+    backend.LinearVariationalProblem.__init__(self, a, L, u, bcs, *args, **kwargs)
     self.a = a
     self.L = L
     self.u = u
     self.bcs = bcs
 
-class LinearVariationalSolver(dolfin.LinearVariationalSolver):
+class LinearVariationalSolver(backend.LinearVariationalSolver):
   '''This object is overloaded so that solves using this class are automatically annotated,
   so that libadjoint can automatically derive the adjoint and tangent linear models.'''
   def __init__(self, problem):
-    dolfin.LinearVariationalSolver.__init__(self, problem)
+    backend.LinearVariationalSolver.__init__(self, problem)
     self.problem = problem
 
   def solve(self, annotate=None):
@@ -70,9 +70,9 @@ class LinearVariationalSolver(dolfin.LinearVariationalSolver):
       problem = self.problem
       solving.annotate(problem.a == problem.L, problem.u, problem.bcs, solver_parameters=self.parameters.to_dict())
 
-    out = dolfin.LinearVariationalSolver.solve(self)
+    out = backend.LinearVariationalSolver.solve(self)
 
-    if annotate and dolfin.parameters["adjoint"]["record_all"]:
+    if annotate and backend.parameters["adjoint"]["record_all"]:
       adjglobals.adjointer.record_variable(adjglobals.adj_variables[self.problem.u], libadjoint.MemoryStorage(adjlinalg.Vector(self.problem.u)))
 
     return out

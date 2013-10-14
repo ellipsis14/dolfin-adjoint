@@ -1,7 +1,7 @@
 import adjglobals
 import adjlinalg
 import libadjoint
-import dolfin
+import backend
 import parameter as parameter_module
 import math
 
@@ -36,9 +36,9 @@ def compute_gst(ic, final, nsv, ic_norm="mass", final_norm="mass"):
   if final_norm == "mass":
     final_value = adjglobals.adjointer.get_variable_value(final_var).data
     final_fnsp  = final_value.function_space()
-    u = dolfin.TrialFunction(final_fnsp)
-    v = dolfin.TestFunction(final_fnsp)
-    final_mass = dolfin.inner(u, v)*dolfin.dx
+    u = backend.TrialFunction(final_fnsp)
+    v = backend.TestFunction(final_fnsp)
+    final_mass = backend.inner(u, v)*backend.dx
     final_norm = adjlinalg.Matrix(final_mass)
   elif final_norm is not None:
     final_norm = adjlinalg.Matrix(final_norm)
@@ -46,9 +46,9 @@ def compute_gst(ic, final, nsv, ic_norm="mass", final_norm="mass"):
   if ic_norm == "mass":
     ic_value = adjglobals.adjointer.get_variable_value(ic_var).data
     ic_fnsp  = ic_value.function_space()
-    u = dolfin.TrialFunction(ic_fnsp)
-    v = dolfin.TestFunction(ic_fnsp)
-    ic_mass = dolfin.inner(u, v)*dolfin.dx
+    u = backend.TrialFunction(ic_fnsp)
+    v = backend.TestFunction(ic_fnsp)
+    ic_mass = backend.inner(u, v)*backend.dx
     ic_norm = adjlinalg.Matrix(ic_mass)
   elif ic_norm is not None:
     ic_norm = adjlinalg.Matrix(ic_norm)
@@ -57,7 +57,7 @@ def compute_gst(ic, final, nsv, ic_norm="mass", final_norm="mass"):
 
 orig_get_gst = libadjoint.GSTHandle.get_gst
 def new_get_gst(self, *args, **kwargs):
-  '''Process the output of get_gst to return dolfin.Function's instead of adjlinalg.Vector's.'''
+  '''Process the output of get_gst to return backend.Function's instead of adjlinalg.Vector's.'''
   retvals = orig_get_gst(self, *args, **kwargs)
   new_retvals = []
   try:
@@ -116,22 +116,22 @@ def perturbed_replay(parameter, perturbation, perturbation_scale, observation, p
   :py:data:`callback` -- a function f(var, perturbed, unperturbed) that the user can supply (e.g. to dump out variables during the perturbed replay)
   """
 
-  if not dolfin.parameters["adjoint"]["record_all"]:
-    info_red("Warning: your replay test will be much more effective with dolfin.parameters['adjoint']['record_all'] = True.")
+  if not backend.parameters["adjoint"]["record_all"]:
+    info_red("Warning: your replay test will be much more effective with backend.parameters['adjoint']['record_all'] = True.")
 
   assert isinstance(parameter, parameter_module.InitialConditionParameter)
 
   if perturbation_norm == "mass":
     p_fnsp = perturbation.function_space()
-    u = dolfin.TrialFunction(p_fnsp)
-    v = dolfin.TestFunction(p_fnsp)
-    p_mass = dolfin.inner(u, v)*dolfin.dx
+    u = backend.TrialFunction(p_fnsp)
+    v = backend.TestFunction(p_fnsp)
+    p_mass = backend.inner(u, v)*backend.dx
     perturbation_norm = p_mass
 
-  if not isinstance(perturbation_norm, dolfin.GenericMatrix):
-    perturbation_norm = dolfin.assemble(perturbation_norm)
-  if not isinstance(observation_norm, dolfin.GenericMatrix) and observation_norm != "mass":
-    observation_norm = dolfin.assemble(observation_norm)
+  if not isinstance(perturbation_norm, backend.GenericMatrix):
+    perturbation_norm = backend.assemble(perturbation_norm)
+  if not isinstance(observation_norm, backend.GenericMatrix) and observation_norm != "mass":
+    observation_norm = backend.assemble(observation_norm)
 
   def compute_norm(perturbation, norm):
     # Need to compute <x, Ax> and then take its sqrt
@@ -162,10 +162,10 @@ def perturbed_replay(parameter, perturbation, perturbation_scale, observation, p
 
         if observation_norm == "mass": # we can't do this earlier, because we don't have the observation function space yet
           o_fnsp = output.data.function_space()
-          u = dolfin.TrialFunction(o_fnsp)
-          v = dolfin.TestFunction(o_fnsp)
-          o_mass = dolfin.inner(u, v)*dolfin.dx
-          observation_norm = dolfin.assemble(o_mass)
+          u = backend.TrialFunction(o_fnsp)
+          v = backend.TestFunction(o_fnsp)
+          o_mass = backend.inner(u, v)*backend.dx
+          observation_norm = backend.assemble(o_mass)
 
         diff = output.data.vector() - unperturbed.vector()
         growths.append(compute_norm(diff, observation_norm)/perturbation_scale) # <--- the action line

@@ -3,8 +3,7 @@ import ufl.classes
 import ufl.algorithms
 import ufl.operators
 
-import dolfin.fem.solving
-import dolfin
+import backend
 
 import libadjoint
 import libadjoint.exceptions
@@ -23,7 +22,8 @@ import adjrhs
 import adjglobals
 import adjlinalg
 import misc
-import lusolver
+if backend.__name__ == "dolfin":
+  import lusolver
 import utils
 import caching
 
@@ -52,12 +52,19 @@ def annotate(*args, **kwargs):
     # annotate !
 
     # Unpack the arguments, using the same routine as the real Dolfin solve call
-    unpacked_args = dolfin.fem.solving._extract_args(*args, **kwargs)
-    eq = unpacked_args[0]
-    u  = unpacked_args[1]
-    bcs = unpacked_args[2]
-    J = unpacked_args[3]
-    solver_parameters = copy.deepcopy(unpacked_args[7])
+    if backend.__name__ == "dolfin":
+      unpacked_args = backend.fem.solving._extract_args(*args, **kwargs)
+      eq = unpacked_args[0]
+      u  = unpacked_args[1]
+      bcs = unpacked_args[2]
+      J = unpacked_args[3]
+      solver_parameters = copy.deepcopy(unpacked_args[7])
+    else:
+      eq = args[0]
+      u  = args[1]
+      bcs = () 
+      J = None
+      solver_parameters = {} 
 
     if isinstance(eq.lhs, ufl.Form) and isinstance(eq.rhs, ufl.Form):
       eq_lhs = eq.lhs
@@ -70,7 +77,7 @@ def annotate(*args, **kwargs):
       eq_bcs = []
       linear = False
 
-  elif isinstance(args[0], (dolfin.cpp.Matrix, dolfin.GenericMatrix)):
+  elif backend.__name__ == "dolfin" and isinstance(args[0], (backend.cpp.Matrix, backend.GenericMatrix)):
     linear = True
     try:
       eq_lhs = args[0].form
@@ -136,7 +143,7 @@ def annotate(*args, **kwargs):
     diag_deps.append(initial_guess_var)
     diag_coeffs.append(u)
 
-  diag_block = libadjoint.Block(diag_name, dependencies=diag_deps, test_hermitian=dolfin.parameters["adjoint"]["test_hermitian"], test_derivative=dolfin.parameters["adjoint"]["test_derivative"])
+  diag_block = libadjoint.Block(diag_name, dependencies=diag_deps, test_hermitian=backend.parameters["adjoint"]["test_hermitian"], test_derivative=backend.parameters["adjoint"]["test_derivative"])
 
   # Similarly, create the object associated with the right-hand side data.
   if linear:
@@ -180,14 +187,14 @@ def annotate(*args, **kwargs):
     value_coeffs=[v.data for v in values]
     expressions.update_expressions(frozen_expressions)
     constant.update_constants(frozen_constants)
-    eq_l = dolfin.replace(eq_lhs, dict(zip(diag_coeffs, value_coeffs)))
+    eq_l = backend.replace(eq_lhs, dict(zip(diag_coeffs, value_coeffs)))
 
     kwargs = {"cache": eq_l in caching.assembled_fwd_forms} # should we cache our matrices on the way backwards?
 
     if hermitian:
       # Homogenise the adjoint boundary conditions. This creates the adjoint
       # solution associated with the lifted discrete system that is actually solved.
-      adjoint_bcs = [dolfin.homogenize(bc) for bc in eq_bcs if isinstance(bc, dolfin.DirichletBC)] + [bc for bc in eq_bcs if not isinstance(bc, dolfin.DirichletBC)]
+      adjoint_bcs = [backend.homogenize(bc) for bc in eq_bcs if isinstance(bc, backend.DirichletBC)] + [bc for bc in eq_bcs if not isinstance(bc, backend.DirichletBC)]
       if len(adjoint_bcs) == 0: 
         adjoint_bcs = None
       else:
@@ -203,7 +210,7 @@ def annotate(*args, **kwargs):
       if replace_map:
         kwargs['replace_map'] = dict(zip(diag_coeffs, value_coeffs))
 
-      return (matrix_class(dolfin.adjoint(eq_l, reordered_arguments=ufl.algorithms.extract_arguments(eq_l)), **kwargs), adjlinalg.Vector(None, fn_space=u.function_space()))
+      return (matrix_class(backend.adjoint(eq_l, reordered_arguments=ufl.algorithms.extract_arguments(eq_l)), **kwargs), adjlinalg.Vector(None, fn_space=u.function_space()))
     else:
 
       kwargs['bcs'] = misc.uniq(eq_bcs)
@@ -223,12 +230,12 @@ def annotate(*args, **kwargs):
     value_coeffs = [v.data for v in values]
     expressions.update_expressions(frozen_expressions)
     constant.update_constants(frozen_constants)
-    eq_l = dolfin.replace(eq_lhs, dict(zip(diag_coeffs, value_coeffs)))
+    eq_l = backend.replace(eq_lhs, dict(zip(diag_coeffs, value_coeffs)))
 
     if hermitian:
-      eq_l = dolfin.adjoint(eq_l)
+      eq_l = backend.adjoint(eq_l)
 
-    output = coefficient * dolfin.action(eq_l, input.data)
+    output = coefficient * backend.action(eq_l, input.data)
 
     return adjlinalg.Vector(output)
 
@@ -245,11 +252,11 @@ def annotate(*args, **kwargs):
       expressions.update_expressions(frozen_expressions)
       constant.update_constants(frozen_constants)
 
-      current_form = dolfin.replace(eq_lhs, dict(zip(diag_coeffs, dolfin_values)))
+      current_form = backend.replace(eq_lhs, dict(zip(diag_coeffs, dolfin_values)))
 
-      deriv = dolfin.derivative(current_form, dolfin_variable)
+      deriv = backend.derivative(current_form, dolfin_variable)
       args = ufl.algorithms.extract_arguments(deriv)
-      deriv = dolfin.replace(deriv, {args[1]: contraction_vector.data}) # contract over the middle index
+      deriv = backend.replace(deriv, {args[1]: contraction_vector.data}) # contract over the middle index
 
       # Assemble the G-matrix now, so that we can apply the Dirichlet BCs to it
       if len(ufl.algorithms.extract_arguments(ufl.algorithms.expand_derivatives(coefficient*deriv))) == 0:
@@ -258,9 +265,9 @@ def annotate(*args, **kwargs):
       G = coefficient * deriv
 
       if hermitian:
-        output = dolfin.action(dolfin.adjoint(G), input.data)
+        output = backend.action(backend.adjoint(G), input.data)
       else:
-        output = dolfin.action(G, input.data)
+        output = backend.action(G, input.data)
 
       return adjlinalg.Vector(output)
     diag_block.derivative_action = derivative_action
@@ -271,11 +278,11 @@ def annotate(*args, **kwargs):
       expressions.update_expressions(frozen_expressions)
       constant.update_constants(frozen_constants)
 
-      current_form = dolfin.replace(eq_lhs, dict(zip(diag_coeffs, dolfin_values)))
+      current_form = backend.replace(eq_lhs, dict(zip(diag_coeffs, dolfin_values)))
 
-      deriv = dolfin.derivative(current_form, dolfin_variable)
+      deriv = backend.derivative(current_form, dolfin_variable)
       args = ufl.algorithms.extract_arguments(deriv)
-      deriv = dolfin.replace(deriv, {args[2]: contraction_vector.data}) # contract over the outer index
+      deriv = backend.replace(deriv, {args[2]: contraction_vector.data}) # contract over the outer index
 
       # Assemble the G-matrix now, so that we can apply the Dirichlet BCs to it
       if len(ufl.algorithms.extract_arguments(ufl.algorithms.expand_derivatives(coefficient*deriv))) == 0:
@@ -284,9 +291,9 @@ def annotate(*args, **kwargs):
       G = coefficient * deriv
 
       if hermitian:
-        output = dolfin.action(dolfin.adjoint(G), input.data)
+        output = backend.action(backend.adjoint(G), input.data)
       else:
-        output = dolfin.action(G, input.data)
+        output = backend.action(G, input.data)
 
       return adjlinalg.Vector(output)
     diag_block.derivative_outer_action = derivative_outer_action
@@ -298,15 +305,15 @@ def annotate(*args, **kwargs):
       expressions.update_expressions(frozen_expressions)
       constant.update_constants(frozen_constants)
 
-      current_form = dolfin.replace(eq_lhs, dict(zip(diag_coeffs, dolfin_values)))
+      current_form = backend.replace(eq_lhs, dict(zip(diag_coeffs, dolfin_values)))
 
-      deriv = dolfin.derivative(current_form, dolfin_inner_variable)
+      deriv = backend.derivative(current_form, dolfin_inner_variable)
       args = ufl.algorithms.extract_arguments(deriv)
-      deriv = dolfin.replace(deriv, {args[1]: inner_contraction_vector.data}) # contract over the middle index
+      deriv = backend.replace(deriv, {args[1]: inner_contraction_vector.data}) # contract over the middle index
 
-      deriv = dolfin.derivative(deriv, dolfin_outer_variable)
+      deriv = backend.derivative(deriv, dolfin_outer_variable)
       args = ufl.algorithms.extract_arguments(deriv)
-      deriv = dolfin.replace(deriv, {args[1]: outer_contraction_vector.data}) # contract over the middle index
+      deriv = backend.replace(deriv, {args[1]: outer_contraction_vector.data}) # contract over the middle index
 
       # Assemble the G-matrix now, so that we can apply the Dirichlet BCs to it
       if len(ufl.algorithms.extract_arguments(ufl.algorithms.expand_derivatives(coefficient*deriv))) == 0:
@@ -315,9 +322,9 @@ def annotate(*args, **kwargs):
       G = coefficient * deriv
 
       if hermitian:
-        output = dolfin.action(dolfin.adjoint(G), input.data)
+        output = backend.action(backend.adjoint(G), input.data)
       else:
-        output = dolfin.action(G, input.data)
+        output = backend.action(G, input.data)
 
       return adjlinalg.Vector(output)
     diag_block.second_derivative_action = second_derivative_action
@@ -344,18 +351,21 @@ def solve(*args, **kwargs):
   if to_annotate:
     linear = annotate(*args, **kwargs)
 
-  ret = dolfin.fem.solving.solve(*args, **kwargs)
+  ret = backend.solve(*args, **kwargs)
 
   if to_annotate:
     # Finally, if we want to record all of the solutions of the real forward model
     # (for comparison with a libadjoint replay later),
     # then we should record the value of the variable we just solved for.
-    if dolfin.parameters["adjoint"]["record_all"]:
+    if backend.parameters["adjoint"]["record_all"]:
       if isinstance(args[0], ufl.classes.Equation):
-        unpacked_args = dolfin.fem.solving._extract_args(*args, **kwargs)
-        u  = unpacked_args[1]
+        if backend.__name__ == "dolfin":
+          unpacked_args = backend.fem.solving._extract_args(*args, **kwargs)
+          u  = unpacked_args[1]
+        else:
+          u  = args[1]
         adjglobals.adjointer.record_variable(adjglobals.adj_variables[u], libadjoint.MemoryStorage(adjlinalg.Vector(u)))
-      elif isinstance(args[0], (dolfin.cpp.Matrix, dolfin.GenericMatrix)):
+      elif isinstance(args[0], (backend.cpp.Matrix, backend.GenericMatrix)):
         u = args[1].function
         adjglobals.adjointer.record_variable(adjglobals.adj_variables[u], libadjoint.MemoryStorage(adjlinalg.Vector(u)))
       else:
@@ -370,15 +380,15 @@ def define_nonlinear_equation(F, u):
   # as we need to have something on the diagonal in our big time system
 
   fn_space = u.function_space()
-  test = dolfin.TestFunction(fn_space)
-  trial = dolfin.TrialFunction(fn_space)
+  test = backend.TestFunction(fn_space)
+  trial = backend.TrialFunction(fn_space)
 
-  mass = dolfin.inner(test, trial)*dolfin.dx
+  mass = backend.inner(test, trial)*backend.dx
 
-  return (mass, dolfin.action(mass, u) - F)
+  return (mass, backend.action(mass, u) - F)
 
 def adj_checkpointing(strategy, steps, snaps_on_disk, snaps_in_ram, verbose=False, replay = False, replay_comparison_tolerance = 1e-10):
-  dolfin.parameters["adjoint"]["record_all"] = replay
+  backend.parameters["adjoint"]["record_all"] = replay
   adjglobals.adjointer.set_checkpoint_strategy(strategy)
   adjglobals.adjointer.set_revolve_options(steps, snaps_on_disk, snaps_in_ram, verbose)
   adjglobals.adjointer.set_revolve_debug_options(replay, replay_comparison_tolerance)
@@ -406,7 +416,7 @@ def register_initial_condition(coeff, dep):
   fn_space = coeff.function_space()
   identity_block = get_identity(fn_space)
 
-  if dolfin.parameters["adjoint"]["record_all"]:
+  if backend.parameters["adjoint"]["record_all"]:
     adjglobals.adjointer.record_variable(dep, libadjoint.MemoryStorage(adjlinalg.Vector(coeff)))
 
   init_rhs=adjlinalg.Vector(coeff).duplicate()
@@ -470,7 +480,7 @@ def get_identity(fn_space):
 
   def identity_assembly_cb(variables, dependencies, hermitian, coefficient, context):
     assert coefficient == 1
-    return (adjlinalg.Matrix(adjlinalg.IdentityMatrix()), adjlinalg.Vector(dolfin.Function(fn_space)))
+    return (adjlinalg.Matrix(adjlinalg.IdentityMatrix()), adjlinalg.Vector(backend.Function(fn_space)))
 
   identity_block.assemble = identity_assembly_cb
 
