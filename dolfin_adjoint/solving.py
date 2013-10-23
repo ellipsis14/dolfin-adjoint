@@ -4,6 +4,7 @@ import ufl.algorithms
 import ufl.operators
 
 import backend
+import compatibility
 
 import libadjoint
 import libadjoint.exceptions
@@ -52,19 +53,12 @@ def annotate(*args, **kwargs):
     # annotate !
 
     # Unpack the arguments, using the same routine as the real Dolfin solve call
-    if backend.__name__ == "dolfin":
-      unpacked_args = backend.fem.solving._extract_args(*args, **kwargs)
-      eq = unpacked_args[0]
-      u  = unpacked_args[1]
-      bcs = unpacked_args[2]
-      J = unpacked_args[3]
-      solver_parameters = copy.deepcopy(unpacked_args[7])
-    else:
-      eq = args[0]
-      u  = args[1]
-      bcs = () 
-      J = None
-      solver_parameters = {} 
+    unpacked_args = compatibility._extract_args(*args, **kwargs)
+    eq = unpacked_args[0]
+    u  = unpacked_args[1]
+    bcs = unpacked_args[2]
+    J = unpacked_args[3]
+    solver_parameters = copy.deepcopy(unpacked_args[7])
 
     if isinstance(eq.lhs, ufl.Form) and isinstance(eq.rhs, ufl.Form):
       eq_lhs = eq.lhs
@@ -359,11 +353,8 @@ def solve(*args, **kwargs):
     # then we should record the value of the variable we just solved for.
     if backend.parameters["adjoint"]["record_all"]:
       if isinstance(args[0], ufl.classes.Equation):
-        if backend.__name__ == "dolfin":
-          unpacked_args = backend.fem.solving._extract_args(*args, **kwargs)
-          u  = unpacked_args[1]
-        else:
-          u  = args[1]
+        unpacked_args = compatibility._extract_args(*args, **kwargs)
+        u  = unpacked_args[1]
         adjglobals.adjointer.record_variable(adjglobals.adj_variables[u], libadjoint.MemoryStorage(adjlinalg.Vector(u)))
       elif isinstance(args[0], (backend.cpp.Matrix, backend.GenericMatrix)):
         u = args[1].function
