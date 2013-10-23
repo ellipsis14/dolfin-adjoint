@@ -71,16 +71,16 @@ def annotate(*args, **kwargs):
       eq_bcs = []
       linear = False
 
-  elif backend.__name__ == "dolfin" and isinstance(args[0], (backend.cpp.Matrix, backend.GenericMatrix)):
+  elif isinstance(args[0], compatibility.matrix_types()):
     linear = True
     try:
       eq_lhs = args[0].form
-    except KeyError:
+    except (KeyError, AttributeError) as e:
       raise libadjoint.exceptions.LibadjointErrorInvalidInputs("dolfin_adjoint did not assemble your form, and so does not recognise your matrix. Did you from dolfin_adjoint import *?")
 
     try:
       eq_rhs = args[2].form
-    except KeyError:
+    except (KeyError, AttributeError) as e:
       raise libadjoint.exceptions.LibadjointErrorInvalidInputs("dolfin_adjoint did not assemble your form, and so does not recognise your right-hand side. Did you from dolfin_adjoint import *?")
 
     u = args[1]
@@ -356,7 +356,7 @@ def solve(*args, **kwargs):
         unpacked_args = compatibility._extract_args(*args, **kwargs)
         u  = unpacked_args[1]
         adjglobals.adjointer.record_variable(adjglobals.adj_variables[u], libadjoint.MemoryStorage(adjlinalg.Vector(u)))
-      elif isinstance(args[0], (backend.cpp.Matrix, backend.GenericMatrix)):
+      elif isinstance(args[0], compatibility.matrix_types()):
         u = args[1].function
         adjglobals.adjointer.record_variable(adjglobals.adj_variables[u], libadjoint.MemoryStorage(adjlinalg.Vector(u)))
       else:
