@@ -13,8 +13,8 @@ if backend.__name__ == "dolfin":
 dolfin_str    = backend.Function.__str__
 dolfin_interpolate = backend.Function.interpolate
 
-def dolfin_adjoint_assign(self, other, annotate=None):
-  '''We also need to monkeypatch the Function.assign method, as it is often used inside 
+def dolfin_adjoint_assign(self, other, annotate=None, *args, **kwargs):
+  '''We also need to monkeypatch the Function.assign method, as it is often used inside
   the main time loop, and not annotating it means you get the adjoint wrong for totally
   nonobvious reasons. If anyone objects to me monkeypatching your objects, my apologies
   in advance.'''
@@ -24,17 +24,17 @@ def dolfin_adjoint_assign(self, other, annotate=None):
 
   # ignore anything not a backend.Function, unless the user insists
   if not isinstance(other, backend.Function) and (annotate is not True):
-    return dolfin_assign(self, other)
+    return dolfin_assign(self, other, *args, **kwargs)
 
   # ignore anything that is an interpolation, rather than a straight assignment
   if hasattr(self, "function_space") and hasattr(other, "function_space"):
     if str(self.function_space()) != str(other.function_space()):
-      return dolfin_assign(self, other)
+      return dolfin_assign(self, other, *args, **kwargs)
 
   to_annotate = utils.to_annotate(annotate)
   # if we shouldn't annotate, just assign
   if not to_annotate:
-    return dolfin_assign(self, other)
+    return dolfin_assign(self, other, *args, **kwargs)
 
   other_var = adjglobals.adj_variables[other]
   self_var = adjglobals.adj_variables[self]
@@ -52,13 +52,13 @@ def dolfin_adjoint_assign(self, other, annotate=None):
         Your model may work if you use split(func) instead of func.split().'''
         raise libadjoint.exceptions.LibadjointErrorNotImplemented(errmsg)
 
-    return dolfin_assign(self, other)
+    return dolfin_assign(self, other, *args, **kwargs)
 
   # OK, so we have a variable we've seen before. Beautiful.
   if not adjglobals.adjointer.variable_known(self_var):
     adjglobals.adj_variables.forget(self)
 
-  out = dolfin_assign(self, other)
+  out = dolfin_assign(self, other, *args, **kwargs)
   assign.register_assign(self, other)
   return out
 
@@ -133,11 +133,11 @@ class Function(backend.Function):
         if known or (annotate is True):
           assign.register_assign(self, args[0])
 
-  def assign(self, other, annotate=None):
+  def assign(self, other, annotate=None, *args, **kwargs):
     '''To disable the annotation, just pass :py:data:`annotate=False` to this routine, and it acts exactly like the
     Dolfin assign call.'''
 
-    return dolfin_adjoint_assign(self, other, annotate=annotate)
+    return dolfin_adjoint_assign(self, other, annotate=annotate, *args, **kwargs)
 
   def split(self, *args, **kwargs):
     return dolfin_adjoint_split(self, *args, **kwargs)

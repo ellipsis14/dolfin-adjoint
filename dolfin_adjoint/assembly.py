@@ -3,7 +3,7 @@ import copy
 import utils
 import caching
 
-dolfin_assemble = backend.assemble
+backend_assemble = backend.assemble
 def assemble(*args, **kwargs):
   """When a form is assembled, the information about its nonlinear dependencies is lost,
   and it is no longer easy to manipulate. Therefore, dolfin_adjoint overloads the :py:func:`dolfin.assemble`
@@ -16,7 +16,7 @@ def assemble(*args, **kwargs):
 
   to_annotate = utils.to_annotate(kwargs.pop("annotate", None))
 
-  output = dolfin_assemble(*args, **kwargs)
+  output = backend_assemble(*args, **kwargs)
   if not isinstance(output, float) and to_annotate:
     output.form = form
     output.assemble_system = False
