@@ -19,7 +19,7 @@ if __name__ == "__main__":
   soln = main(ic, annotate=True)
 
   adj_html("projection_forward.html", "forward")
-  replay_dolfin()
+  assert replay_dolfin(tol=0.0, stop=True)
 
   J = Functional(soln*soln*dx*dt[FINISH_TIME])
   Jic = assemble(soln*soln*dx)

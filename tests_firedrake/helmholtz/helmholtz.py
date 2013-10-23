@@ -36,7 +36,7 @@ def model(s):
     # Analytical solution
     f = Function(V)
     f.interpolate(Expression("cos(x[0]*pi*2)*cos(x[1]*pi*2)"))
-    
+
     j = assemble(dot(x - f, x - f) * dx)
     return j, x, f
 
@@ -47,10 +47,10 @@ if __name__ == '__main__':
 
     print "Running forward model"
     j, x, f = model(s)
-  
+
     adj_html("forward.html", "forward")
     print "Replaying forward model"
-    print replay_dolfin(tol=0.0, stop=True)
+    assert replay_dolfin(tol=0.0, stop=True)
 
     J = Functional(inner(x-f, x-f)*dx*dt[FINISH_TIME]) 
     m = InitialConditionParameter(s)

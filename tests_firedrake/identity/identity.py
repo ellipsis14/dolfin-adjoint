@@ -29,11 +29,11 @@ if __name__ == '__main__':
 
     print "Running forward model"
     j, x = model(s)
-  
-    print "Replaying forward model"
-    print replay_dolfin(tol=0.0, stop=True)
 
-    J = Functional(x**2*dx*dt[FINISH_TIME]) 
+    print "Replaying forward model"
+    assert replay_dolfin(tol=0.0, stop=True)
+
+    J = Functional(x**2*dx*dt[FINISH_TIME])
     m = InitialConditionParameter(s)
 
     print "Running the adjoint model"
