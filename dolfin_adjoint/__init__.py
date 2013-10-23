@@ -39,7 +39,7 @@ if backend.__name__ == "dolfin":
   import lusolver
 import gst
 import function
-if backend.__name__ == "dolfin": 
+if backend.__name__ == "dolfin":
   import genericmatrix
   import genericvector
   import optimization

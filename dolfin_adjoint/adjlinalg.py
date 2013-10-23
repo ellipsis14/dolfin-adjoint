@@ -6,6 +6,7 @@ import os
 import os.path
 import misc
 import caching
+import compatibility
 
 class Vector(libadjoint.Vector):
   '''This class implements the libadjoint.Vector abstract base class for the Dolfin adjoint.
@@ -173,7 +174,7 @@ class Vector(libadjoint.Vector):
       self.zero = False
     else:
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to set values.")
-  
+
   def get_values(self, array):
     if isinstance(self.data, backend.Function):
       vec = self.data.vector()
@@ -184,7 +185,7 @@ class Vector(libadjoint.Vector):
 
     else:
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to get values.")
-  
+
   def write(self, var):
     filename = str(var)
     suffix = "xml"
@@ -292,7 +293,7 @@ class Matrix(libadjoint.Matrix):
           x.data.vector()[:] = b.nonlinear_u.vector()
           F = backend.replace(b.nonlinear_form, {b.nonlinear_u: x.data})
           J = backend.replace(b.nonlinear_J, {b.nonlinear_u: x.data})
-          backend.fem.solving.solve(F == 0, x.data, b.nonlinear_bcs, J=J, solver_parameters=self.solver_parameters)
+          compatibility.solve(F == 0, x.data, b.nonlinear_bcs, J=J, solver_parameters=self.solver_parameters)
         else:
           assembled_lhs = self.assemble_data()
           [bc.apply(assembled_lhs) for bc in bcs]
