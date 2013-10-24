@@ -45,8 +45,15 @@ def minimize_scipy_generic(rf_np, method, bounds = None, **kwargs):
         from scipy.optimize import minimize as scipy_minimize
     except ImportError:
         print "**************** Deprecated warning *****************"
-        print "You have an old version of scipy (<0.11). This version is not supported by dolfin-adjoint."
-        raise ImportError
+        print "You have an unusable installation of scipy. This version is not supported by dolfin-adjoint."
+
+        try:
+          import scipy
+          print "Version: %s\tFile: %s" % (scipy.__version__, scipy.__file__)
+        except:
+          pass
+
+        raise
 
     if method in ["Newton-CG"]:
         forget = None
