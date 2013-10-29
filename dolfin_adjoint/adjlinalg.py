@@ -309,6 +309,9 @@ class Matrix(libadjoint.Matrix):
         output.axpy(1.0, b)
         if isinstance(output.data, ufl.Form):
           output = Vector(dolfin.Function(output.fn_space, dolfin.assemble(output.data)))
+    elif b.data is None:
+        dolfin.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
+        output = Vector(dolfin.Function(self.test_function().function_space()))
     else:
         dirichlet_bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.DirichletBC)]
         other_bcs  = [bc for bc in self.bcs if not isinstance(bc, dolfin.DirichletBC)]
