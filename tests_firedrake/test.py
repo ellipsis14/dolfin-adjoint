@@ -9,6 +9,8 @@ from optparse import OptionParser
 
 test_cmds = {}
 
+exclude_list = ["identity_assemble"]
+
 parser = OptionParser()
 parser.add_option("-n", type="int", dest="num_procs", default = 1, help = "To run on N cores, use -n N; to use all processors available, run test.py -n 0.")
 parser.add_option("-t", type="string", dest="test_name", help = "To run one specific test, use -t TESTNAME. By default all test are run.")
@@ -57,6 +59,7 @@ def f(subdir):
     else:
       return None
 
+subdirs = list(set(subdirs) - set(exclude_list))
 tests = sorted(subdirs)
 if not options.short_only:
   tests = long_tests + tests
