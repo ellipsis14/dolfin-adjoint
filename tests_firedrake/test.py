@@ -9,7 +9,7 @@ from optparse import OptionParser
 
 test_cmds = {}
 
-exclude_list = ["identity_assemble"]
+exclude_list = ["identity_assemble", "poisson_bc"]
 
 parser = OptionParser()
 parser.add_option("-n", type="int", dest="num_procs", default = 1, help = "To run on N cores, use -n N; to use all processors available, run test.py -n 0.")
