@@ -84,7 +84,7 @@ def annotate(*args, **kwargs):
       raise libadjoint.exceptions.LibadjointErrorInvalidInputs("dolfin_adjoint did not assemble your form, and so does not recognise your right-hand side. Did you from dolfin_adjoint import *?")
 
     u = args[1]
-    u = u.function
+    #u = u.function
 
     solver_parameters = {}
 
@@ -333,7 +333,7 @@ def annotate(*args, **kwargs):
 def solve(*args, **kwargs):
   '''This solve routine wraps the real Dolfin solve call. Its purpose is to annotate the model,
   recording what solves occur and what forms are involved, so that the adjoint and tangent linear models may be
-  constructed automatically by libadjoint. 
+  constructed automatically by libadjoint.
 
   To disable the annotation, just pass :py:data:`annotate=False` to this routine, and it acts exactly like the
   Dolfin solve call. This is useful in cases where the solve is known to be irrelevant or diagnostic
@@ -440,7 +440,7 @@ def do_checkpoint(cs, var, rhs):
               dep = rdep
               break
 
-      adjglobals.mem_checkpoints.add(str(dep)) 
+      adjglobals.mem_checkpoints.add(str(dep))
       adjglobals.adjointer.record_variable(dep, libadjoint.MemoryStorage(adjlinalg.Vector(coeff), cs=True))
 
   elif cs == int(libadjoint.constants.adj_constants["ADJ_CHECKPOINT_STORAGE_DISK"]):

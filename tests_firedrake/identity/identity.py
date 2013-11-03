@@ -14,10 +14,8 @@ def model(s):
     L = s * v * dx
 
     # Compute solution
-    aa = assemble(a)
-    LL = assemble(L)
     x = Function(V, name="State")
-    solve(aa, x.vector(), LL)
+    solve(a == L, x)
 
     j = assemble(x**2 * dx)
     return j, x
