@@ -345,9 +345,9 @@ def solve(*args, **kwargs):
   if to_annotate:
     linear = annotate(*args, **kwargs)
 
-  misc.pause_annotation()
+  flag = misc.pause_annotation()
   ret = backend.solve(*args, **kwargs)
-  misc.continue_annotation()
+  misc.continue_annotation(flag)
 
   if to_annotate:
     # Finally, if we want to record all of the solutions of the real forward model
