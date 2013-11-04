@@ -150,6 +150,7 @@ def annotate(*args, **kwargs):
   # These equations are necessary so that libadjoint can assemble the
   # relevant adjoint equations for the adjoint variables associated with
   # the initial conditions.
+  assert len(rhs.coefficients()) == len(rhs.dependencies())
   register_initial_conditions(zip(rhs.coefficients(),rhs.dependencies()) + zip(diag_coeffs, diag_deps), linear=linear, var=var)
 
   # c.f. the discussion above. In the linear case, we want to bump the

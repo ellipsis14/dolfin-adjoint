@@ -159,7 +159,6 @@ class NonlinearRHS(RHS):
         can_depend = False
       
       if can_depend:
-        self.deps.append(prev_var)
         self.ic_var = prev_var
       else:
         self.ic_copy = dolfin.Function(u)
