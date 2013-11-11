@@ -473,10 +473,7 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
     perturbations = []
     for x in perturbation_sizes:
       perturbation = backend.Function(perturbation_direction)
-      if backend.__name__  == "dolfin":
-        vec = perturbation.vector()
-      else:
-        vec = perturbation.dat.vec
+      vec = perturbation.vector()
 
       vec *= x
       perturbations.append(perturbation)
