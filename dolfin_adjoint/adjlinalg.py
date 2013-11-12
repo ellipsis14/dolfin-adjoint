@@ -303,7 +303,7 @@ class Matrix(libadjoint.Matrix):
           if backend.__name__ == "dolfin":
             wrap_solve(assembled_lhs, x.data.vector(), assembled_rhs, self.solver_parameters)
           else:
-            wrap_solve(assembled_lhs, x, assembled_rhs, self.solver_parameters)
+            wrap_solve(assembled_lhs, x.data, assembled_rhs, self.solver_parameters)
 
     return x
 
