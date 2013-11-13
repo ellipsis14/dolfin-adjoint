@@ -209,6 +209,54 @@ class ReducedFunctionalNumPy(ReducedFunctional):
         m = [p.data() for p in self.parameter]
         return self.set_local(m, array)
 
+    def pyipopt_problem(self, constraints=None, bounds=None):
+      '''Return a pyipopt problem class that can be used with the pyipopt Python bindings,
+      https://github.com/xuy/pyipopt
+      '''
+
+      assert constraints is None, "Cannot yet handle constraints (no fundamental reason, just not coded)"
+
+      import pyipopt
+
+      m = self.get_parameters()
+      n = len(m)
+
+      if bounds is not None:
+        lb, ub = np.array(bounds[0]), np.array(bounds[1])
+      else:
+        mx = np.finfo(np.double).max
+        ub = np.array([mx for i in range(n)])
+
+        mn = np.finfo(np.double).min
+        lb = np.array([mn for i in range(n)])
+
+      empty = np.array([], dtype=float)
+
+      def empty_g(x, user_data=None):
+        return empty
+      def empty_jac_g(x, flag, user_data=None):
+        if flag:
+          rows = np.array([], dtype=int)
+          cols = np.array([], dtype=int)
+          return (rows, cols)
+        else:
+          return empty
+
+      nlp = pyipopt.create(n,    # length of parameter vector
+                           lb,   # lower bounds on parameter vector
+                           ub,   # upper bounds on parameter vector
+                           0,    # number of constraints (zero for now),
+                           empty, # lower bounds on constraints,
+                           empty, # upper bounds on constraints,
+                           0,    # number of nonzeros in the constraint Jacobian
+                           0,    # number of nonzeros in the Hessian
+                           self.__call__,   # to evaluate the functional
+                           self.derivative, # to evaluate the gradient
+                           empty_g,            # to evaluate the constraints
+                           empty_jac_g)            # to evaluate the constraint Jacobian
+
+      return nlp
+
 def copy_data(m):
     ''' Returns a deep copy of the given Function/Constant. '''
     if hasattr(m, "vector"): 
