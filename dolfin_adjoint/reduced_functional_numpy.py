@@ -276,7 +276,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
                   fail = True
 
           if constraints is not None:
-              g = constraints(x)
+              g = [c(x) for c in constraints]
           else:
               g = [0]  # SNOPT fails if no constraints are given, hence add a dummy constraint
 
@@ -297,10 +297,11 @@ class ReducedFunctionalNumPy(ReducedFunctional):
                   fail = True
 
           if constraints is not None:
-              gJac = constraints(x, gradient=True)
+              gJac = [c(x, jacobian=True) for c in constraints]
           else:
               gJac = np.zeros(len(x))  # SNOPT fails if no constraints are given, hence add a dummy constraint
 
+          print "j = %f\t\t|dJ| = %f" % (f[0], np.linalg.norm(dj))
           return np.array([dj]), gJac, fail
 
 
@@ -322,6 +323,11 @@ class ReducedFunctionalNumPy(ReducedFunctional):
 
       # Add parameters
       opt_prob.addVarGroup(self.parameter[0].var.name, n, type='c', value=m, lower=lb, upper=ub)
+
+      # Add constraints
+      if constraints is not None:
+          for i, c in enumerate(constraints):
+              opt_prob.addCon(str(i) + 'th constraint', type='i') #, lower=-inf, upper=inf, equal=0.0)
 
       print "Don't forget to pass the gradient function to the solver with 'sense_type=rfnp.gradient'!"
       return opt_prob, grad

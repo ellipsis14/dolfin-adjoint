@@ -45,6 +45,7 @@ def solve_optimal_control(n):
                            "Major print level": 1,
                            "Minor print level": 1})
     res = snopt(nlp, sens_type=grad)
+    print snopt.getInform(res[-1]["value"])
     m.vector()[:] = res[1]
 
     plot(m, interactive=True)
