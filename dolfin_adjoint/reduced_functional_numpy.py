@@ -257,6 +257,75 @@ class ReducedFunctionalNumPy(ReducedFunctional):
 
       return nlp
 
+    def pyopt_problem(self, constraints=None, bounds=None, name="Problem", ignore_model_errors=False):
+      '''Return a pyopt problem class that can be used with the PyOpt package,
+      http://www.pyopt.org/
+      '''
+      import pyOpt
+
+      def obj(x):
+          ''' Evaluates the functional for the parameter choice x. '''
+
+          fail = False
+          if not ignore_model_errors:
+              j = self(x)
+          else:
+              try:
+                  j = self(x)
+              except:
+                  fail = True
+
+          if constraints is not None:
+              g = constraints(x)
+          else:
+              g = [0]  # SNOPT fails if no constraints are given, hence add a dummy constraint
+
+          return j, g, fail
+
+      def grad(x, f, g):
+          ''' Evaluates the gradient for the parameter choice x.
+          f is the associated functional value and g are the values 
+          of the constraints. '''
+
+          fail = False
+          if not ignore_model_errors:
+              dj = self.derivative(x)
+          else:
+              try:
+                  dj = self.derivative(x)
+              except:
+                  fail = True
+
+          if constraints is not None:
+              gJac = constraints(x, gradient=True)
+          else:
+              gJac = np.zeros(len(x))  # SNOPT fails if no constraints are given, hence add a dummy constraint
+
+          return np.array([dj]), gJac, fail
+
+
+      # Instantiate the optimization problem
+      opt_prob = pyOpt.Optimization(name, obj)
+      opt_prob.addObj('J')
+
+      # Compute bounds
+      m = self.get_parameters() 
+      n = len(m)
+      if bounds is not None:
+        lb, ub = np.array(bounds[0]), np.array(bounds[1])
+      else:
+        mx = np.finfo(np.double).max
+        ub = mx * np.ones(n)
+
+        mn = np.finfo(np.double).min
+        lb = mn * np.ones(n)
+
+      # Add parameters
+      opt_prob.addVarGroup(self.parameter[0].var.name, n, type='c', value=m, lower=lb, upper=ub)
+
+      print "Don't forget to pass the gradient function to the solver with 'sense_type=rfnp.gradient'!"
+      return opt_prob, grad
+
 def copy_data(m):
     ''' Returns a deep copy of the given Function/Constant. '''
     if hasattr(m, "vector"): 
