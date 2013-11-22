@@ -289,10 +289,10 @@ class ReducedFunctionalNumPy(ReducedFunctional):
 
           fail = False
           if not ignore_model_errors:
-              dj = self.derivative(x)
+              dj = self.derivative(x, forget=False)
           else:
               try:
-                  dj = self.derivative(x)
+                  dj = self.derivative(x, forget=False)
               except:
                   fail = True
 
