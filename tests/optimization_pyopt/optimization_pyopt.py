@@ -1,10 +1,8 @@
 """ Solves a MMS problem with smooth control """
 from dolfin import *
 from dolfin_adjoint import *
-from pyOpt.pySNOPT import SNOPT
-
 try:
-  import pyOpt
+  from pyOpt.pySNOPT import SNOPT
 except ImportError:
   import sys
   info_blue("pyopt bindings unavailable, skipping test")
