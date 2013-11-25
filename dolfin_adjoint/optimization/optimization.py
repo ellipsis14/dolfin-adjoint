@@ -194,7 +194,9 @@ def minimize(rf, method='L-BFGS-B', scale=1.0, in_euclidian_space=False, **kwarg
         Additional arguments specific for the optimization algorithms can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimization algorithm. For detailed information about which arguments are supported for each optimization algorithm, please refer to the documentaton of the optimization algorithm.
         '''
 
-    if isinstance(rf, ReducedFunctional):
+    if isinstance(rf, ReducedFunctionalNumPy):
+        rf_np = rf 
+    elif isinstance(rf, ReducedFunctional):
         rf_np = ReducedFunctionalNumPy(rf, in_euclidian_space)
     else:
         rf_np = rf # Assume the user knows what he is doing - he might for example written his own reduced functional class (as in OpenTidalFarm)

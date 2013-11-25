@@ -312,8 +312,16 @@ class ReducedFunctionalNumPy(ReducedFunctional):
       # Compute bounds
       m = self.get_parameters() 
       n = len(m)
+
       if bounds is not None:
-        lb, ub = np.array(bounds[0]), np.array(bounds[1])
+        bounds_arr = [None, None]  
+        for i in range(2):
+            if isinstance(bounds[i], float) or isinstance(bounds[i], int):
+                bounds_arr[i] = np.ones(n) * bounds[i]
+            else:
+                bounds_arr[i] = np.array(bounds[i])
+        lb, ub = bounds_arr 
+
       else:
         mx = np.finfo(np.double).max
         ub = mx * np.ones(n)
