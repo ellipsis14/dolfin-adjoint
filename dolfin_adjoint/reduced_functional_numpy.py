@@ -301,6 +301,8 @@ class ReducedFunctionalNumPy(ReducedFunctional):
           else:
               gJac = np.zeros(len(x))  # SNOPT fails if no constraints are given, hence add a dummy constraint
 
+          gJac = [gather(x) for x in gJac]
+
           print "j = %f\t\t|dJ| = %f" % (f[0], np.linalg.norm(dj))
           return np.array([dj]), gJac, fail
 
@@ -349,6 +351,19 @@ def copy_data(m):
     else:
         raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
 
+def gather(vec):
+    if isinstance(vec, cpp.GenericVector):
+        try:
+            arr = cpp.DoubleArray(vec.size())
+            vec.gather(arr, np.arange(vec.size(), dtype='I'))
+            arr = arr.array().tolist()
+        except TypeError:
+            arr = vec.gather(np.arange(vec.size(), dtype='intc'))
+    else:
+        arr = vec # Assume it's a gathered numpy array already
+
+    return arr
+
 def get_global(m_list, in_euclidian_space=False, has_cholmod=False, LT=None, factor=None, sqD=None):
     ''' Takes a list of distributed objects and returns one np array containing their (serialised) values '''
     if not isinstance(m_list, (list, tuple)):
@@ -370,12 +385,7 @@ def get_global(m_list, in_euclidian_space=False, has_cholmod=False, LT=None, fac
                 m_v = m.vector()
             else:
                 m_v = m
-            m_a = cpp.DoubleArray(m_v.size())
-            try:
-                m_v.gather(m_a, np.arange(m_v.size(), dtype='I'))
-                m_a = m_a.array().tolist()
-            except TypeError:
-                m_a = m_v.gather(np.arange(m_v.size(), dtype='intc'))
+            m_a = gather(m_v)
 
             # Map the result to Euclidian space
             if in_euclidian_space:
