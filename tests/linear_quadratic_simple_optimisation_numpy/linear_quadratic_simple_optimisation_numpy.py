@@ -34,12 +34,12 @@ rf_np = ReducedFunctionalNumPy(rf, in_euclidian_space=True)
 
 m_np = rf_np.obj_to_array(rf.parameter[0].data())
 j = rf_np(m_np)
-assert abs(j-12.5) < 1e-12
+assert abs(j-12.5) < 1e-10
 
 # Perform a steepest descent step 
 dj_np = rf_np.derivative()
 m_new = m_np - dj_np
 j = rf_np(m_new)
-assert abs(j) < 1e-12
+assert abs(j) < 1e-10
 
 info_green("Test passed")
