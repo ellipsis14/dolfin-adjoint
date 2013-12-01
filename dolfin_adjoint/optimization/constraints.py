@@ -1,6 +1,9 @@
 """This module offers a standard interface for control constraints,
 that can be used with different optimisation algorithms."""
 
+from ..utils import gather
+from numpy import append
+
 class Constraint(object):
   def function(self, m):
     """Return a vector-like object (numpy array or dolfin Vector), which must be zero for the point to be feasible."""
@@ -41,10 +44,10 @@ class MergedConstrants(Constraint):
     self.constraints = constraints
 
   def function(self, m):
-    return sum([list(c.function(m)) for c in self.constraints], [])
+    return reduce(append, [gather(c.function(m)) for c in self.constraints], [])
 
   def jacobian(self, m):
-    return sum([list(c.jacobian(m)) for c in self.constraints], [])
+    return reduce(append, [gather(c.jacobian(m)) for c in self.constraints], [])
 
   def __iter__(self):
     return iter(self.constraints)

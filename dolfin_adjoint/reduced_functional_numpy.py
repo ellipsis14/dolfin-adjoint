@@ -325,11 +325,9 @@ class ReducedFunctionalNumPy(ReducedFunctional):
                   fail = True
 
           if constraints is not None:
-              gJac = constraints.jacobian(x)
+              gJac = np.concatenate([gather(c.jacobian(x)) for c in constraints])
           else:
               gJac = np.zeros(len(x))  # SNOPT fails if no constraints are given, hence add a dummy constraint
-
-          gJac = [gather(x) for x in gJac]
 
           print "j = %f\t\t|dJ| = %f" % (f[0], np.linalg.norm(dj))
           return np.array([dj]), gJac, fail
@@ -366,9 +364,9 @@ class ReducedFunctionalNumPy(ReducedFunctional):
       if constraints is not None:
           for i, c in enumerate(constraints):
               if isinstance(c, optimization.constraints.EqualityConstraint):
-                opt_prob.addCon(str(i) + 'th constraint', type='e', equal=0.0)
+                opt_prob.addConGroup(str(i) + 'th constraint', len(c), type='e', equal=0.0)
               elif isinstance(c, optimization.constraints.InequalityConstraint):
-                opt_prob.addCon(str(i) + 'th constraint', type='i', lower=0.0, upper=np.inf)
+                opt_prob.addConGroup(str(i) + 'th constraint', len(c), type='i', lower=0.0, upper=np.inf)
 
       return opt_prob, grad
 

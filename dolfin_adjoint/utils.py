@@ -19,6 +19,8 @@ def gather(vec):
           arr = arr.array().tolist()
       except TypeError:
           arr = vec.gather(numpy.arange(vec.size(), dtype='intc'))
+  elif isinstance(vec, list):
+    return map(gather, vec)
   else:
       arr = vec # Assume it's a gathered numpy array already
 
