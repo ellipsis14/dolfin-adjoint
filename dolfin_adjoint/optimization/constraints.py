@@ -41,10 +41,10 @@ class MergedConstrants(Constraint):
     self.constraints = constraints
 
   def function(self, m):
-    return sum(c.function(m) for c in self.constraints, [])
+    return sum([c.function(m) for c in self.constraints], [])
 
   def jacobian(self, m):
-    return sum(c.jacobian(m) for c in self.constraints, [])
+    return sum([c.jacobian(m) for c in self.constraints], [])
 
   def __iter__(self):
     return iter(self.constraints)

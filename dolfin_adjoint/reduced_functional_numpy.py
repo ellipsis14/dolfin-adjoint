@@ -257,7 +257,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
               rows += [i] * n
             cols = range(n) * len(constraints)
           else:
-            return sum(gather(x) for x in constraints.jacobian(x), [])
+            return sum([gather(x) for x in constraints.jacobian(x)], [])
 
         clb = [0] * len(constraints)
         def ub(c):
@@ -265,7 +265,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
             return [0] * len(c)
           elif isinstance(c, InequalityConstraint):
             return [np.inf] * len(c)
-        cub = sum(ub(c) for c in constraints, [])
+        cub = sum([ub(c) for c in constraints], [])
 
       nlp = pyipopt.create(n,    # length of parameter vector
                            lb,   # lower bounds on parameter vector
