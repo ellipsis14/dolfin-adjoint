@@ -1,11 +1,28 @@
 import libadjoint
-from dolfin import info_red, info_blue, info, warning
+from dolfin import info_red, info_blue, info, warning, cpp
 import adjglobals
 import dolfin
 import numpy
 import constant
 import adjresidual
 import ufl.algorithms
+
+def gather(vec):
+  """Parallel gather of distributed data (for optimisation algorithms, usually)"""
+  if isinstance(vec, cpp.Function):
+    vec = vec.vector()
+
+  if isinstance(vec, cpp.GenericVector):
+      try:
+          arr = cpp.DoubleArray(vec.size())
+          vec.gather(arr, numpy.arange(vec.size(), dtype='I'))
+          arr = arr.array().tolist()
+      except TypeError:
+          arr = vec.gather(numpy.arange(vec.size(), dtype='intc'))
+  else:
+      arr = vec # Assume it's a gathered numpy array already
+
+  return arr
 
 def convergence_order(errors, base = 2):
   import math

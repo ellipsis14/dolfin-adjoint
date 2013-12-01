@@ -3,6 +3,7 @@ from dolfin import cpp, info, info_red, Constant, Function, TestFunction, TrialF
 from dolfin_adjoint import constant, utils 
 from dolfin_adjoint.adjglobals import adjointer, adj_reset_cache
 from reduced_functional import ReducedFunctional
+from utils import gather
 
 class ReducedFunctionalNumPy(ReducedFunctional):
     ''' This class implements the reduced functional for a given functional/parameter combination. The core idea 
@@ -214,7 +215,8 @@ class ReducedFunctionalNumPy(ReducedFunctional):
       https://github.com/xuy/pyipopt
       '''
 
-      assert constraints is None, "Cannot yet handle constraints (no fundamental reason, just not coded)"
+      from optimization.constraints import canonicalise, InequalityConstraint, EqualityConstraint
+      constraints = canonicalise(constraints)
 
       import pyipopt
 
@@ -230,30 +232,53 @@ class ReducedFunctionalNumPy(ReducedFunctional):
         mn = np.finfo(np.double).min
         lb = np.array([mn for i in range(n)])
 
-      empty = np.array([], dtype=float)
+      if constraints is None:
+        empty = np.array([], dtype=float)
+        clb = empty
+        cub = empty
 
-      def empty_g(x, user_data=None):
-        return empty
-      def empty_jac_g(x, flag, user_data=None):
-        if flag:
-          rows = np.array([], dtype=int)
-          cols = np.array([], dtype=int)
-          return (rows, cols)
-        else:
+        def fun_g(x, user_data=None):
           return empty
+        def jac_g(x, flag, user_data=None):
+          if flag:
+            rows = np.array([], dtype=int)
+            cols = np.array([], dtype=int)
+            return (rows, cols)
+          else:
+            return empty
+      else:
+        def fun_g(x, user_data=None):
+          return constraints.function(x)
+        def jac_g(x, flag, user_data=None):
+          if flag:
+            # Don't have any sparsity information on constraints, pass in a dense matrix (it usually is anyway).
+            rows = []
+            for i in range(len(constraints)):
+              rows += [i] * n
+            cols = range(n) * len(constraints)
+          else:
+            return sum(gather(x) for x in constraints.jacobian(x), [])
+
+        clb = [0] * len(constraints)
+        def ub(c):
+          if isinstance(c, EqualityConstraint):
+            return [0] * len(c)
+          elif isinstance(c, InequalityConstraint):
+            return [np.inf] * len(c)
+        cub = sum(ub(c) for c in constraints, [])
 
       nlp = pyipopt.create(n,    # length of parameter vector
                            lb,   # lower bounds on parameter vector
                            ub,   # upper bounds on parameter vector
                            0,    # number of constraints (zero for now),
-                           empty, # lower bounds on constraints,
-                           empty, # upper bounds on constraints,
+                           clb,  # lower bounds on constraints,
+                           cub,  # upper bounds on constraints,
                            0,    # number of nonzeros in the constraint Jacobian
                            0,    # number of nonzeros in the Hessian
                            self.__call__,   # to evaluate the functional
                            self.derivative, # to evaluate the gradient
-                           empty_g,            # to evaluate the constraints
-                           empty_jac_g)            # to evaluate the constraint Jacobian
+                           fun_g,            # to evaluate the constraints
+                           jac_g)            # to evaluate the constraint Jacobian
 
       return nlp
 
@@ -262,6 +287,9 @@ class ReducedFunctionalNumPy(ReducedFunctional):
       http://www.pyopt.org/
       '''
       import pyOpt
+      import optimization.constraints
+
+      constraints = optimization.constraints.canonicalise(constraints)
 
       def obj(x):
           ''' Evaluates the functional for the parameter choice x. '''
@@ -276,7 +304,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
                   fail = True
 
           if constraints is not None:
-              g = [c(x) for c in constraints]
+              g = constraints.function(x)
           else:
               g = [0]  # SNOPT fails if no constraints are given, hence add a dummy constraint
 
@@ -297,7 +325,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
                   fail = True
 
           if constraints is not None:
-              gJac = [c(x, jacobian=True) for c in constraints]
+              gJac = constraints.jacobian(x)
           else:
               gJac = np.zeros(len(x))  # SNOPT fails if no constraints are given, hence add a dummy constraint
 
@@ -337,9 +365,11 @@ class ReducedFunctionalNumPy(ReducedFunctional):
       # Add constraints
       if constraints is not None:
           for i, c in enumerate(constraints):
-              opt_prob.addCon(str(i) + 'th constraint', type='i') #, lower=-inf, upper=inf, equal=0.0)
+              if isinstance(c, optimization.constraints.EqualityConstraint):
+                opt_prob.addCon(str(i) + 'th constraint', type='e', equal=0.0)
+              elif isinstance(c, optimization.constraints.InequalityConstraint):
+                opt_prob.addCon(str(i) + 'th constraint', type='i', lower=0.0, upper=np.inf)
 
-      print "Don't forget to pass the gradient function to the solver with 'sense_type=rfnp.gradient'!"
       return opt_prob, grad
 
 def copy_data(m):
@@ -350,19 +380,6 @@ def copy_data(m):
         return Constant(m(()))
     else:
         raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
-
-def gather(vec):
-    if isinstance(vec, cpp.GenericVector):
-        try:
-            arr = cpp.DoubleArray(vec.size())
-            vec.gather(arr, np.arange(vec.size(), dtype='I'))
-            arr = arr.array().tolist()
-        except TypeError:
-            arr = vec.gather(np.arange(vec.size(), dtype='intc'))
-    else:
-        arr = vec # Assume it's a gathered numpy array already
-
-    return arr
 
 def get_global(m_list, in_euclidian_space=False, has_cholmod=False, LT=None, factor=None, sqD=None):
     ''' Takes a list of distributed objects and returns one np array containing their (serialised) values '''
