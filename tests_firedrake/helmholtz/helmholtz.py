@@ -50,7 +50,7 @@ if __name__ == '__main__':
 
     adj_html("forward.html", "forward")
     print "Replaying forward model"
-    assert replay_dolfin(tol=0.0, stop=True)
+    assert replay_dolfin(tol=1e-13, stop=True)
 
     J = Functional(inner(x-f, x-f)*dx*dt[FINISH_TIME]) 
     m = InitialConditionParameter(s)

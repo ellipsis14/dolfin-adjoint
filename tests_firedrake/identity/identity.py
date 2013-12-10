@@ -29,7 +29,7 @@ if __name__ == '__main__':
     j, x = model(s)
 
     print "Replaying forward model"
-    assert replay_dolfin(tol=0.0, stop=True)
+    assert replay_dolfin(tol=1e-12, stop=True)
 
     J = Functional(x**2*dx*dt[FINISH_TIME])
     m = InitialConditionParameter(s)
