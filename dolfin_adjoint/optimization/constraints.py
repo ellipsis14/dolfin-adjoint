@@ -8,17 +8,19 @@ class Constraint(object):
   def function(self, m):
     """Return a vector-like object (numpy array or dolfin Vector), which must be zero for the point to be feasible."""
 
-    raise Exception, "Constraint.function must be supplied"
+    raise NotImplementedError, "Constraint.function must be supplied"
 
   def jacobian(self, m):
     """Return a list of vector-like objects representing the gradient of the constraint function with respect to the parameter m.
 
        The objects returned must be of the same type as m's data."""
 
-    raise Exception, "Constraint.jacobian must be supplied"
+    raise NotImplementedError, "Constraint.jacobian must be supplied"
 
   def length(self):
     """Return the number of constraints (len(function(m)))."""
+
+    raise NotImplementedError, "Constraint.length must be supplied"
 
   def __len__(self):
     return self.length()
@@ -39,7 +41,7 @@ class InequalityConstraint(Constraint):
   for 0 <= i < n, where m is the parameter.
   """
 
-class MergedConstrants(Constraint):
+class MergedConstraints(Constraint):
   def __init__(self, constraints):
     self.constraints = constraints
 
@@ -59,11 +61,11 @@ def canonicalise(constraints):
   if constraints is None:
     return None
 
-  if isinstance(constraints, MergedConstrants):
+  if isinstance(constraints, MergedConstraints):
     return constraints
 
   if not isinstance(constraints, list):
-    return MergedConstrants([constraints])
+    return MergedConstraints([constraints])
 
   else:
-    return MergedConstrants(constraints)
+    return MergedConstraints(constraints)
