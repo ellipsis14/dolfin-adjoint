@@ -77,6 +77,32 @@ class Functional(libadjoint.Functional):
     self.verbose = verbose
     self.name = name
 
+  def __add__(self, other):
+    timeform = self.timeform + other.timeform
+    verbose = self.verbose or other.verbose
+
+    if self.name is None and other.name is None:
+      name = None
+    elif self.name is not None and other.name is None:
+        name = self.name
+    elif self.name is None and other.name is not None:
+        name = other.name
+    else:
+        name = ' '.join([other.name, other.name])
+
+    return Functional(timeform, verbose, name)
+
+  def __mul__(self, factor):
+    return Functional(factor * self.timeform, self.verbose, self.name)
+
+  __rmul__ = __mul__
+
+  def __div__(self, factor):
+    return Functional(self.timeform / factor, self.verbose, self.name)
+
+  def __neg__(self):
+    return Functional(- self.timeform, self.verbose, self.name)
+
   def __call__(self, adjointer, timestep, dependencies, values):
     
     functional_value = self._substitute_form(adjointer, timestep, dependencies, values)

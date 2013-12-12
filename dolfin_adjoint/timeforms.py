@@ -74,6 +74,14 @@ class TimeTerm(object):
         self.form = form
         self.time = time
 
+    def __mul__(self, factor):
+        return TimeTerm(factor * self.form, self.time)
+    
+    __rmul__ = __mul__
+
+    def __div__(self, factor):
+        return TimeTerm(1. / factor * self.form, self.time)
+
     def __repr__(self):
         return "TimeTerm("+self.form.__repr__()+",time = "+\
             repr(self.time)+")"    
@@ -122,8 +130,16 @@ class TimeForm(object):
     def __neg__(self):
         # Unary negation occurs by negating the terms.
 
-        neg = TimeForm([-term for term in other.terms])
+        neg = TimeForm([-term for term in self.terms])
         return neg
+
+    def __mul__(self, factor):
+        return TimeForm([factor * term for term in self.terms])
+    
+    __rmul__ = __mul__
+
+    def __div__(self, factor):
+        return TimeForm([term / factor for term in self.terms])
 
     def __repr__(self):
         return "TimeForm("+repr(self.terms)+")"
