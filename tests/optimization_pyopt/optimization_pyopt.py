@@ -48,7 +48,7 @@ def solve_optimal_control(n):
     print snopt.getInform(res[-1]["value"])
     m.vector()[:] = res[1]
 
-    plot(m, interactive=True)
+    #plot(m, interactive=True)
 
     solve_pde(u, V, m)
 
