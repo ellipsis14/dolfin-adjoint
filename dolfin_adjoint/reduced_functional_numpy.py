@@ -271,7 +271,6 @@ class ReducedFunctionalNumPy(ReducedFunctional):
             for i in range(len(constraints)):
               rows += [i] * n
             cols = range(n) * len(constraints)
-
             return (np.array(rows), np.array(cols))
           else:
             return np.array(constraints.jacobian(x))
@@ -290,7 +289,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
                            nconstraints,    # number of constraints (zero for now),
                            clb,  # lower bounds on constraints,
                            cub,  # upper bounds on constraints,
-                           nconstraints,    # number of nonzeros in the constraint Jacobian
+                           nconstraints*n,    # number of nonzeros in the constraint Jacobian
                            0,    # number of nonzeros in the Hessian
                            self.__call__,   # to evaluate the functional
                            partial(self.derivative, forget=False), # to evaluate the gradient
