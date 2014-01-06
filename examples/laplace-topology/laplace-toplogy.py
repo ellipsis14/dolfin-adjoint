@@ -4,7 +4,7 @@
 from dolfin import *
 from dolfin_adjoint import *
 
-from pyOpt import SNOPT
+from pyOpt import *
 import numpy
 
 V = Constant(0.4)
@@ -80,11 +80,7 @@ if __name__ == "__main__":
 
   # Solve the optimisation problem
   nlp, grad = rfn.pyopt_problem(bounds=(lb, ub), constraints=VolumeConstraint(V))
-  snopt = SNOPT(options={"Major feasibility tolerance": 1e-16,
-                         "Major optimality tolerance": 1e-16,
-                         "Minor feasibility tolerance": 1e-16,
-                         "Major iterations limit": 70,
-                         "Summary file": "SNOPT_rank_%d_summary.out" % MPI.process_number(),
-                         "Print file":   "SNOPT_rank_%d_print.out"   % MPI.process_number()})
-  res = snopt(nlp, sens_type=grad)
+  opt = IPOPT(options={"max_iter": 100})
+  res = opt(nlp, sens_type=grad)
   File("ex1_reduced/a_soln.xml.gz") << a
+  #print nlp.solution(0)
