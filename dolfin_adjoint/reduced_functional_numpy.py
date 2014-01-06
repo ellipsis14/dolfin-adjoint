@@ -4,6 +4,7 @@ from dolfin_adjoint import constant, utils
 from dolfin_adjoint.adjglobals import adjointer, adj_reset_cache
 from reduced_functional import ReducedFunctional
 from utils import gather
+from functools import partial
 
 class ReducedFunctionalNumPy(ReducedFunctional):
     ''' This class implements the reduced functional for a given functional/parameter combination. The core idea 
@@ -292,7 +293,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
                            nconstraints,    # number of nonzeros in the constraint Jacobian
                            0,    # number of nonzeros in the Hessian
                            self.__call__,   # to evaluate the functional
-                           self.derivative, # to evaluate the gradient
+                           partial(self.derivative, forget=False), # to evaluate the gradient
                            fun_g,            # to evaluate the constraints
                            jac_g)            # to evaluate the constraint Jacobian
 
