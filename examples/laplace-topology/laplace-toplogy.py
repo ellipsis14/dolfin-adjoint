@@ -4,8 +4,8 @@
 from dolfin import *
 from dolfin_adjoint import *
 
-from pyOpt import *
 import numpy
+import pyipopt
 
 V = Constant(0.4)
 p = Constant(5)
@@ -60,7 +60,7 @@ if __name__ == "__main__":
   # Volume constraints
   class VolumeConstraint(InequalityConstraint):
     def __init__(self, V):
-      self.V  = V
+      self.V  = float(V)
       self.smass  = assemble(TestFunction(A) * Constant(1) * dx)
       self.tmpvec = Function(A)
 
@@ -79,8 +79,8 @@ if __name__ == "__main__":
       return 1
 
   # Solve the optimisation problem
-  nlp, grad = rfn.pyopt_problem(bounds=(lb, ub), constraints=VolumeConstraint(V))
-  opt = IPOPT(options={"max_iter": 100})
-  res = opt(nlp, sens_type=grad)
+  nlp = rfn.pyipopt_problem(bounds=(lb, ub), constraints=VolumeConstraint(V))
+  a0 = rfn.get_parameters()
+  results = nlp.solve(a0)
+
   File("ex1_reduced/a_soln.xml.gz") << a
-  #print nlp.solution(0)
