@@ -224,7 +224,17 @@ class ReducedFunctionalNumPy(ReducedFunctional):
       n = len(m)
 
       if bounds is not None:
-        lb, ub = np.array(bounds[0]), np.array(bounds[1])
+        ulb, uub = bounds
+        if isinstance(ulb, float):
+          lb = np.array([ulb for i in range(n)])
+        else:
+          lb = np.array(ulb)
+
+        if isinstance(uub, float):
+          ub = np.array([uub for i in range(n)])
+        else:
+          ub = np.array(uub)
+
       else:
         mx = np.finfo(np.double).max
         ub = np.array([mx for i in range(n)])
@@ -233,6 +243,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
         lb = np.array([mn for i in range(n)])
 
       if constraints is None:
+        nconstraints = 0
         empty = np.array([], dtype=float)
         clb = empty
         cub = empty
@@ -247,8 +258,11 @@ class ReducedFunctionalNumPy(ReducedFunctional):
           else:
             return empty
       else:
+
+        nconstraints = len(constraints)
+
         def fun_g(x, user_data=None):
-          return constraints.function(x)
+          return np.array(constraints.function(x))
         def jac_g(x, flag, user_data=None):
           if flag:
             # Don't have any sparsity information on constraints, pass in a dense matrix (it usually is anyway).
@@ -257,23 +271,23 @@ class ReducedFunctionalNumPy(ReducedFunctional):
               rows += [i] * n
             cols = range(n) * len(constraints)
           else:
-            return sum([gather(x) for x in constraints.jacobian(x)], [])
+            return np.array(constraints.jacobian(x))
 
-        clb = [0] * len(constraints)
-        def ub(c):
+        clb = np.array([0] * len(constraints))
+        def constraint_ub(c):
           if isinstance(c, EqualityConstraint):
             return [0] * len(c)
           elif isinstance(c, InequalityConstraint):
             return [np.inf] * len(c)
-        cub = sum([ub(c) for c in constraints], [])
+        cub = np.array(sum([constraint_ub(c) for c in constraints], []))
 
       nlp = pyipopt.create(n,    # length of parameter vector
                            lb,   # lower bounds on parameter vector
                            ub,   # upper bounds on parameter vector
-                           0,    # number of constraints (zero for now),
+                           nconstraints,    # number of constraints (zero for now),
                            clb,  # lower bounds on constraints,
                            cub,  # upper bounds on constraints,
-                           0,    # number of nonzeros in the constraint Jacobian
+                           nconstraints,    # number of nonzeros in the constraint Jacobian
                            0,    # number of nonzeros in the Hessian
                            self.__call__,   # to evaluate the functional
                            self.derivative, # to evaluate the gradient
