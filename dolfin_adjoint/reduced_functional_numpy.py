@@ -270,6 +270,8 @@ class ReducedFunctionalNumPy(ReducedFunctional):
             for i in range(len(constraints)):
               rows += [i] * n
             cols = range(n) * len(constraints)
+
+            return (np.array(rows), np.array(cols))
           else:
             return np.array(constraints.jacobian(x))
 
