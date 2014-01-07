@@ -473,3 +473,5 @@ def set_local(m_list, m_global_array, in_euclidian_space=False, has_cholmod=Fals
         else:
             raise TypeError, 'Unknown parameter type %s' % m.__class__
 
+
+ReducedFunctionalNumpy = ReducedFunctionalNumPy
