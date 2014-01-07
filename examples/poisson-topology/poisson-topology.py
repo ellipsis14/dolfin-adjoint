@@ -121,7 +121,7 @@ if __name__ == "__main__":
 
   # Volume constraints
   class VolumeConstraint(InequalityConstraint):
-    """A class that enforces the volume constraint g(a) = a*dx - V <= 0."""
+    """A class that enforces the volume constraint g(a) = V - a*dx >= 0."""
     def __init__(self, V):
       self.V  = float(V)
 
