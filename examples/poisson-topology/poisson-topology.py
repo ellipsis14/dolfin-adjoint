@@ -30,7 +30,7 @@ and to the control constraints
         \int_\Omega a <= V
 
 where T is the temperature, a is the control (a(x) == 1 means material, a(x) == 0 means no material),
-f is a prescribed source term (here the constant 10^-2), k(a) = \eps + (1 - \eps) * a^p with \eps
+f is a prescribed source term (here the constant 10^-2), k(a) = \epsilon + (1 - \epsilon) * a^p with \epsilon
 and p prescribed constants, \alpha is a regularisation term, and V is the volume bound on the control.
 
 Physically, this corresponds to finding the material distribution a(x) that produces the
