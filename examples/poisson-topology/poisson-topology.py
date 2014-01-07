@@ -55,6 +55,7 @@ parameters["std_out_all_processes"] = False # turn off redundant output in paral
 V = Constant(0.4)      # volume bound on the control
 p = Constant(5)        # power used in the solid isotropic material with penalisation (SIMP) rule, to encourage the control solution to attain either 0 or 1
 eps = Constant(1.0e-3) # epsilon used in the solid isotropic material with penalisation (SIMP) rule, used to encourage the control solution to attain either 0 or 1
+alpha = Constant(1.0e-8) # regularisation term in functional
 
 def k(a):
   """Solid isotropic material with penalisation (SIMP) conductivity rule, equation (11)."""
@@ -101,7 +102,7 @@ if __name__ == "__main__":
     controls << a_viz
 
   # Define the reduced functional, compliance with a weak regularisation term on the gradient of the material
-  J = Functional(f*T*dx + Constant(1.0e-8) * inner(grad(a), grad(a))*dx)
+  J = Functional(f*T*dx + alpha * inner(grad(a), grad(a))*dx)
   m = SteadyParameter(a)
   # This ReducedFunctional object solves the forward PDE using dolfin-adjoint's tape each time the functional is to be evaluated,
   # and derives and solves the adjoint equation each time the functional gradient is to be evaluated.
