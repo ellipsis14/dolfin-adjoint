@@ -1,13 +1,13 @@
 import libadjoint
 from backend import info_red, info_blue, info, warning
-if backend.__name__  == "dolfin":
-  from backend import cpp
 import adjglobals
 import backend
 import numpy
 import constant
 import adjresidual
 import ufl.algorithms
+if backend.__name__  == "dolfin":
+  from backend import cpp
 
 def gather(vec):
   """Parallel gather of distributed data (for optimisation algorithms, usually)"""
