@@ -1,5 +1,7 @@
 import libadjoint
-from backend import info_red, info_blue, info, warning, cpp
+from backend import info_red, info_blue, info, warning
+if backend.__name__  == "dolfin":
+  from backend import cpp
 import adjglobals
 import backend
 import numpy
