@@ -86,8 +86,8 @@ def forward(a):
   return T
 
 if __name__ == "__main__":
-  a = interpolate(Constant(float(V)), A, name="Control") # initial guess for the control; by interpolating V, the initial guess is feasible
-  T = forward(a)                                         # solve the forward problem once, to build the dolfin-adjoint tape of the forward problem
+  a = interpolate(V, A, name="Control") # initial guess for the control; by interpolating V, the initial guess is feasible
+  T = forward(a)                        # solve the forward problem once, to build the dolfin-adjoint tape of the forward problem
 
   # This block shows how to implement a callback that gets executed every time the functional is evaluated
   # (i.e. the forward PDE is solved. This callback outputs each evaluation to VTK format, for visualisation in paraview.
