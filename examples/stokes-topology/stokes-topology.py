@@ -38,13 +38,25 @@ of the control
 q}{\rho + q}
 
 with \bar{\alpha}, \underline{\alpha} and q prescribed constants, and V
-is the volume bound on the control.
+is the volume bound on the control. q is a key penalty parameter which
+penalises deviations from the values 0 or 1; the higher q, the closer the
+solution will be to having two discrete values.
 
 Physically, this corresponds to finding the fluid-solid distribution \rho(x) that
 minimises the dissipated power in the fluid.
 
-Like the poisson-topology example, this example will use general control
-constraints and IPOPT to solve the optimisation problem.
+The problem is parameterised by the aspect ratio \delta (the mesh is 1 unit high
+and \delta units wide); in this example, we will solve the harder problem
+of \delta = 1.5.
+
+As Borrvall and Petersson comment, solving this problem directly with q=0.1
+(this value of q is necessary to ensure the solution attains either the values 0
+or 1) leads to a local minimum configuration of two straight pipes across the
+domain (like the top half of figure 11).  Therefore, we follow their suggestion
+to first solve the optimisation problem with a smaller penalty parameter of
+q=0.01; this optimisation problem does not yield bang-bang solutions but is
+easier to solve, and gives an initial guess from which the q=0.1 case converges
+to the better minimum.
 """
 
 from dolfin import *
