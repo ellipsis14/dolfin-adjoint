@@ -200,7 +200,7 @@ class ReducedFunctional(object):
 def replace_tape_ic_value(parameter, new_value):
     ''' Replaces the initial condition value of the given parameter by registering a new equation of the rhs. '''
 
-    # Case 1: The parameter value and new_vale are Functions
+    # Case 1: The parameter value and new_value are Functions
     if hasattr(new_value, 'vector'):
         # ... since these are duplicated and then occur as rhs in the annotation. 
         # Therefore, we need to update the right hand side callbacks for
@@ -214,7 +214,7 @@ def replace_tape_ic_value(parameter, new_value):
         class DummyEquation(object):
             pass
 
-        eqn = DummyEquation() 
+        eqn = DummyEquation()
         variable = parameter.var
         eqn_nb = variable.equation_nb(adjointer)
         eqn.equation = adjointer.adjointer.equations[eqn_nb]

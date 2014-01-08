@@ -296,6 +296,8 @@ class ReducedFunctionalNumPy(ReducedFunctional):
                            fun_g,            # to evaluate the constraints
                            jac_g)            # to evaluate the constraint Jacobian
 
+      pyipopt.set_loglevel(1) # turn off annoying pyipopt logging
+
       return nlp
 
     def pyopt_problem(self, constraints=None, bounds=None, name="Problem", ignore_model_errors=False):
