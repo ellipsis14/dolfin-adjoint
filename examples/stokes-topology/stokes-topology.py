@@ -171,9 +171,7 @@ if __name__ == "__main__":
   # Solve the optimisation problem with q = 0.01
   nlp = rfn.pyipopt_problem(bounds=(lb, ub), constraints=VolumeConstraint(V))
   nlp.int_option('max_iter', 30)
-
-  rho0 = rfn.get_parameters()
-  rho_opt = nlp.solve(rho0)
+  rho_opt = nlp.solve()
   File("output/control_solution_guess.xml.gz") << rho_opt
 
   # Now let's reset the tape, and start another optimisation problem with q=0.1,
@@ -201,8 +199,6 @@ if __name__ == "__main__":
   # Solve the optimisation problem with q = 0.1
   nlp = rfn.pyipopt_problem(bounds=(lb, ub), constraints=VolumeConstraint(V))
   nlp.int_option('max_iter', 100)
-
-  rho0 = rfn.get_parameters()
-  results = nlp.solve(rho0)
-  File("output/control_solution_final.xml.gz") << rho
+  rho_opt = nlp.solve()
+  File("output/control_solution_final.xml.gz") << rho_opt
 

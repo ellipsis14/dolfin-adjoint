@@ -148,7 +148,6 @@ if __name__ == "__main__":
 
   # Solve the optimisation problem
   nlp = rfn.pyipopt_problem(bounds=(lb, ub), constraints=VolumeConstraint(V))
-  a0 = rfn.get_parameters()
-  a_opt = nlp.solve(a0, full=False)
+  a_opt = nlp.solve(full=False)
 
   File("output/control_solution.xml.gz") << a_opt

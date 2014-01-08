@@ -311,7 +311,9 @@ class ReducedFunctionalNumPy(ReducedFunctional):
         def __init__(self, nlp):
           self.nlp = nlp
 
-        def solve(newself, guess, full=False):
+        def solve(newself, full=False):
+          # self refers to the ReducedFunctionalNumPy instance, newself to the IPOPTProblem instance
+          guess = self.get_parameters()
           results = newself.nlp.solve(guess)
           new_params = [copy_data(p.data()) for p in self.parameter]
           self.set_local(new_params, results[0])
