@@ -34,7 +34,7 @@ means fluid present, \rho(x) == 0 means no fluid present), f is a prescribed
 source term (here 0), \alpha(\rho) models the inverse permeability as a function
 of the control
 
-\alpha(\rho) = \bar{\alpha} + (\underline{\alpha} - \bar{\alpha} \rho \frac{1 +
+\alpha(\rho) = \bar{\alpha} + (\underline{\alpha} - \bar{\alpha}) \rho \frac{1 +
 q}{\rho + q}
 
 with \bar{\alpha}, \underline{\alpha} and q prescribed constants, and V
@@ -70,10 +70,10 @@ except ImportError:
 
 parameters["std_out_all_processes"] = False # turn off redundant output in parallel
 
-mu = Constant(1.0)
-alphaunderbar = 2.5 * mu / (100**2)
-alphabar = 2.5 * mu / (0.01**2)
-q = Constant(0.01)
+mu = Constant(1.0)                   # viscosity
+alphaunderbar = 2.5 * mu / (100**2)  # parameter for \alpha
+alphabar = 2.5 * mu / (0.01**2)      # parameter for \alpha
+q = Constant(0.01)                   # q value that controls difficulty/discrete-valuedness of solution
 
 def alpha(rho):
   """Inverse permeability as a function of rho, equation (40)"""
@@ -82,7 +82,7 @@ def alpha(rho):
 # Define the discrete function spaces
 n = 100
 delta = 1.5 # The aspect ratio of the domain, 1 high and \delta wide
-V = Constant(1.0/3) * delta
+V = Constant(1.0/3) * delta # want the fluid to occupy 1/3 of the domain
 
 mesh = RectangleMesh(0.0, 0.0, delta, 1.0, n, n)
 A = FunctionSpace(mesh, "DG", 0)       # control function space
