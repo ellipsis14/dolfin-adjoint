@@ -70,8 +70,7 @@ if __name__ == "__main__":
     nlp = rfn.pyipopt_problem(bounds=(lb.vector(), ub.vector()))
 
     x0 = rfn.get_parameters()
-    results = nlp.solve(x0)
+    m = nlp.solve(x0)
 
-    m = results[0]
-    Jm = rfn(m)
+    Jm = rf(m)
     assert Jm < 1.0e-10

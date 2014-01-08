@@ -135,7 +135,8 @@ if __name__ == "__main__":
 
       # Compute the integral of the control over the domain
       integral = self.smass.inner(self.tmpvec.vector())
-      print "Current control: ", integral
+      if MPI.process_number() == 0:
+        print "Current control integral: ", integral
       return [self.V - integral]
 
     def jacobian(self, m):
@@ -147,10 +148,7 @@ if __name__ == "__main__":
 
   # Solve the optimisation problem
   nlp = rfn.pyipopt_problem(bounds=(lb, ub), constraints=VolumeConstraint(V))
-  if MPI.process_number() > 0:
-    nlp.int_option('print_level', 0) # disable redundant IPOPT output in parallel
-
   a0 = rfn.get_parameters()
-  results = nlp.solve(a0)
+  a_opt = nlp.solve(a0, full=False)
 
-  File("output/control_solution.xml.gz") << a
+  File("output/control_solution.xml.gz") << a_opt
