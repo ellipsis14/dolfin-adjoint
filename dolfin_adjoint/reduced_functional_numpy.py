@@ -325,7 +325,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
             return [new_params] + results[1:]
 
         def __getattr__(self, x):
-          return self.nlp.__getattr__(x)
+          return getattr(self.nlp, x)
 
       return IPOPTProblem(nlp)
 

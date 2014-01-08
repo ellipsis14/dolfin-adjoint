@@ -59,10 +59,9 @@ except ImportError:
 parameters["std_out_all_processes"] = False # turn off redundant output in parallel
 
 mu = Constant(1.0)
-V = Constant(1.0/3)
 alphaunderbar = 2.5 * mu / (100**2)
 alphabar = 2.5 * mu / (0.01**2)
-q = Constant(0.1)
+q = Constant(0.01)
 
 def alpha(rho):
   """Inverse permeability as a function of rho, equation (40)"""
@@ -70,7 +69,10 @@ def alpha(rho):
 
 # Define the discrete function spaces
 n = 100
-mesh = UnitSquareMesh(n, n)
+delta = 1.5 # The aspect ratio of the domain, 1 high and \delta wide
+V = Constant(1.0/3) * delta
+
+mesh = RectangleMesh(0.0, 0.0, delta, 1.0, n, n)
 A = FunctionSpace(mesh, "DG", 0)       # control function space
 U = VectorFunctionSpace(mesh, "CG", 2) # velocity function space
 P = FunctionSpace(mesh, "CG", 1)       # pressure function space
@@ -82,7 +84,6 @@ class InflowOutflow(Expression):
     values[1] = 0.0
     values[0] = 0.0
     l = 1.0/6.0
-    delta = 1
     gbar = 1.0
 
     if x[0] == 0.0 or x[0] == delta:
@@ -110,12 +111,12 @@ def forward(rho):
   return w
 
 if __name__ == "__main__":
-  rho = interpolate(V, A, name="Control")
+  rho = interpolate(Constant(float(V)/delta), A, name="Control")
   w   = forward(rho)
   (u, p) = split(w)
 
   # Define the reduced functionals
-  controls = File("output/control_iterations.pvd")
+  controls = File("output/control_iterations_guess.pvd")
   rho_viz = Function(A, name="ControlVisualisation")
   def eval_cb(j, rho):
     rho_viz.assign(rho)
@@ -155,11 +156,41 @@ if __name__ == "__main__":
       """Return the number of components in the constraint vector (here, one)."""
       return 1
 
-  # Solve the optimisation problem
+  # Solve the optimisation problem with q = 0.01
   nlp = rfn.pyipopt_problem(bounds=(lb, ub), constraints=VolumeConstraint(V))
   nlp.int_option('max_iter', 30)
 
   rho0 = rfn.get_parameters()
-  results = nlp.solve(rho0)
+  rho_opt = nlp.solve(rho0)
+  File("output/control_solution_guess.xml.gz") << rho_opt
 
-  File("output/control_solution.xml.gz") << rho
+  # Now let's reset the tape, and start another optimisation problem with q=0.1,
+  # using the solution of the previous optimisation problem as our guess.
+
+  q.assign(0.1)
+  rho.assign(rho_opt)
+  adj_reset()
+
+  w = forward(rho)
+  (u, p) = split(w)
+
+  # Define the reduced functionals
+  controls = File("output/control_iterations_final.pvd")
+  rho_viz = Function(A, name="ControlVisualisation")
+  def eval_cb(j, rho):
+    rho_viz.assign(rho)
+    controls << rho_viz
+
+  J = Functional(0.5 * inner(alpha(rho) * u, u) * dx + mu * inner(grad(u), grad(u)) * dx)
+  m = SteadyParameter(rho)
+  Jhat = ReducedFunctional(J, m, eval_cb=eval_cb)
+  rfn = ReducedFunctionalNumPy(Jhat)
+
+  # Solve the optimisation problem with q = 0.1
+  nlp = rfn.pyipopt_problem(bounds=(lb, ub), constraints=VolumeConstraint(V))
+  nlp.int_option('max_iter', 100)
+
+  rho0 = rfn.get_parameters()
+  results = nlp.solve(rho0)
+  File("output/control_solution_final.xml.gz") << rho
+
