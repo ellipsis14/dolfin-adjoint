@@ -45,9 +45,9 @@ solution will be to having two discrete values.
 Physically, this corresponds to finding the fluid-solid distribution \rho(x) that
 minimises the dissipated power in the fluid.
 
-The problem is parameterised by the aspect ratio \delta (the mesh is 1 unit high
-and \delta units wide); in this example, we will solve the harder problem
-of \delta = 1.5.
+The problem domain \Omega is parameterised by the aspect ratio \delta (the
+domain is 1 unit high and \delta units wide); in this example, we will solve the
+harder problem of \delta = 1.5.
 
 As Borrvall and Petersson comment, solving this problem directly with q=0.1
 (this value of q is necessary to ensure the solution attains either the values 0
