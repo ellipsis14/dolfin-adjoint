@@ -3,6 +3,8 @@ from dolfin import cpp, info, info_red, Constant, Function, TestFunction, TrialF
 from dolfin_adjoint import constant, utils 
 from dolfin_adjoint.adjglobals import adjointer, adj_reset_cache
 from reduced_functional import ReducedFunctional
+from utils import gather
+from functools import partial
 
 class ReducedFunctionalNumPy(ReducedFunctional):
     ''' This class implements the reduced functional for a given functional/parameter combination. The core idea 
@@ -209,6 +211,181 @@ class ReducedFunctionalNumPy(ReducedFunctional):
         m = [p.data() for p in self.parameter]
         return self.set_local(m, array)
 
+    def pyipopt_problem(self, constraints=None, bounds=None):
+      '''Return a pyipopt problem class that can be used with the pyipopt Python bindings,
+      https://github.com/xuy/pyipopt
+      '''
+
+      from optimization.constraints import canonicalise, InequalityConstraint, EqualityConstraint
+      constraints = canonicalise(constraints)
+
+      import pyipopt
+
+      m = self.get_parameters()
+      n = len(m)
+
+      if bounds is not None:
+        ulb, uub = bounds
+        if isinstance(ulb, float):
+          lb = np.array([ulb for i in range(n)])
+        else:
+          lb = np.array(ulb)
+
+        if isinstance(uub, float):
+          ub = np.array([uub for i in range(n)])
+        else:
+          ub = np.array(uub)
+
+      else:
+        mx = np.finfo(np.double).max
+        ub = np.array([mx for i in range(n)])
+
+        mn = np.finfo(np.double).min
+        lb = np.array([mn for i in range(n)])
+
+      if constraints is None:
+        nconstraints = 0
+        empty = np.array([], dtype=float)
+        clb = empty
+        cub = empty
+
+        def fun_g(x, user_data=None):
+          return empty
+        def jac_g(x, flag, user_data=None):
+          if flag:
+            rows = np.array([], dtype=int)
+            cols = np.array([], dtype=int)
+            return (rows, cols)
+          else:
+            return empty
+      else:
+
+        nconstraints = len(constraints)
+
+        def fun_g(x, user_data=None):
+          return np.array(constraints.function(x))
+        def jac_g(x, flag, user_data=None):
+          if flag:
+            # Don't have any sparsity information on constraints, pass in a dense matrix (it usually is anyway).
+            rows = []
+            for i in range(len(constraints)):
+              rows += [i] * n
+            cols = range(n) * len(constraints)
+            return (np.array(rows), np.array(cols))
+          else:
+            return np.array(constraints.jacobian(x))
+
+        clb = np.array([0] * len(constraints))
+        def constraint_ub(c):
+          if isinstance(c, EqualityConstraint):
+            return [0] * len(c)
+          elif isinstance(c, InequalityConstraint):
+            return [np.inf] * len(c)
+        cub = np.array(sum([constraint_ub(c) for c in constraints], []))
+
+      nlp = pyipopt.create(n,    # length of parameter vector
+                           lb,   # lower bounds on parameter vector
+                           ub,   # upper bounds on parameter vector
+                           nconstraints,    # number of constraints (zero for now),
+                           clb,  # lower bounds on constraints,
+                           cub,  # upper bounds on constraints,
+                           nconstraints*n,    # number of nonzeros in the constraint Jacobian
+                           0,    # number of nonzeros in the Hessian
+                           self.__call__,   # to evaluate the functional
+                           partial(self.derivative, forget=False), # to evaluate the gradient
+                           fun_g,            # to evaluate the constraints
+                           jac_g)            # to evaluate the constraint Jacobian
+
+      return nlp
+
+    def pyopt_problem(self, constraints=None, bounds=None, name="Problem", ignore_model_errors=False):
+      '''Return a pyopt problem class that can be used with the PyOpt package,
+      http://www.pyopt.org/
+      '''
+      import pyOpt
+      import optimization.constraints
+
+      constraints = optimization.constraints.canonicalise(constraints)
+
+      def obj(x):
+          ''' Evaluates the functional for the parameter choice x. '''
+
+          fail = False
+          if not ignore_model_errors:
+              j = self(x)
+          else:
+              try:
+                  j = self(x)
+              except:
+                  fail = True
+
+          if constraints is not None:
+              g = constraints.function(x)
+          else:
+              g = [0]  # SNOPT fails if no constraints are given, hence add a dummy constraint
+
+          return j, g, fail
+
+      def grad(x, f, g):
+          ''' Evaluates the gradient for the parameter choice x.
+          f is the associated functional value and g are the values 
+          of the constraints. '''
+
+          fail = False
+          if not ignore_model_errors:
+              dj = self.derivative(x, forget=False)
+          else:
+              try:
+                  dj = self.derivative(x, forget=False)
+              except:
+                  fail = True
+
+          if constraints is not None:
+              gJac = np.concatenate([gather(c.jacobian(x)) for c in constraints])
+          else:
+              gJac = np.zeros(len(x))  # SNOPT fails if no constraints are given, hence add a dummy constraint
+
+          print "j = %f\t\t|dJ| = %f" % (f[0], np.linalg.norm(dj))
+          return np.array([dj]), gJac, fail
+
+
+      # Instantiate the optimization problem
+      opt_prob = pyOpt.Optimization(name, obj)
+      opt_prob.addObj('J')
+
+      # Compute bounds
+      m = self.get_parameters() 
+      n = len(m)
+
+      if bounds is not None:
+        bounds_arr = [None, None]  
+        for i in range(2):
+            if isinstance(bounds[i], float) or isinstance(bounds[i], int):
+                bounds_arr[i] = np.ones(n) * bounds[i]
+            else:
+                bounds_arr[i] = np.array(bounds[i])
+        lb, ub = bounds_arr 
+
+      else:
+        mx = np.finfo(np.double).max
+        ub = mx * np.ones(n)
+
+        mn = np.finfo(np.double).min
+        lb = mn * np.ones(n)
+
+      # Add parameters
+      opt_prob.addVarGroup(self.parameter[0].var.name, n, type='c', value=m, lower=lb, upper=ub)
+
+      # Add constraints
+      if constraints is not None:
+          for i, c in enumerate(constraints):
+              if isinstance(c, optimization.constraints.EqualityConstraint):
+                opt_prob.addConGroup(str(i) + 'th constraint', len(c), type='e', equal=0.0)
+              elif isinstance(c, optimization.constraints.InequalityConstraint):
+                opt_prob.addConGroup(str(i) + 'th constraint', len(c), type='i', lower=0.0, upper=np.inf)
+
+      return opt_prob, grad
+
 def copy_data(m):
     ''' Returns a deep copy of the given Function/Constant. '''
     if hasattr(m, "vector"): 
@@ -239,12 +416,7 @@ def get_global(m_list, in_euclidian_space=False, has_cholmod=False, LT=None, fac
                 m_v = m.vector()
             else:
                 m_v = m
-            m_a = cpp.DoubleArray(m_v.size())
-            try:
-                m_v.gather(m_a, np.arange(m_v.size(), dtype='I'))
-                m_a = m_a.array().tolist()
-            except TypeError:
-                m_a = m_v.gather(np.arange(m_v.size(), dtype='intc'))
+            m_a = gather(m_v)
 
             # Map the result to Euclidian space
             if in_euclidian_space:
@@ -301,3 +473,5 @@ def set_local(m_list, m_global_array, in_euclidian_space=False, has_cholmod=Fals
         else:
             raise TypeError, 'Unknown parameter type %s' % m.__class__
 
+
+ReducedFunctionalNumpy = ReducedFunctionalNumPy

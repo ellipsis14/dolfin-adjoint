@@ -3,6 +3,7 @@ from dolfin import MPI
 from dolfin_adjoint import constant 
 from ..reduced_functional_numpy import ReducedFunctionalNumPy, get_global, set_local
 from ..reduced_functional import ReducedFunctional
+from ..utils import gather
 import numpy as np
 import sys
 
@@ -45,8 +46,15 @@ def minimize_scipy_generic(rf_np, method, bounds = None, **kwargs):
         from scipy.optimize import minimize as scipy_minimize
     except ImportError:
         print "**************** Deprecated warning *****************"
-        print "You have an old version of scipy (<0.11). This version is not supported by dolfin-adjoint."
-        raise ImportError
+        print "You have an unusable installation of scipy. This version is not supported by dolfin-adjoint."
+
+        try:
+          import scipy
+          print "Version: %s\tFile: %s" % (scipy.__version__, scipy.__file__)
+        except:
+          pass
+
+        raise
 
     if method in ["Newton-CG"]:
         forget = None
@@ -85,6 +93,25 @@ def minimize_scipy_generic(rf_np, method, bounds = None, **kwargs):
     # For Hessian-based methods add the Hessian action function to the argument list
     if method in ["Newton-CG"]:
         kwargs["hessp"] = H
+
+    if "constraints" in kwargs:
+      from constraints import canonicalise, InequalityConstraint, EqualityConstraint
+      constraints = canonicalise(kwargs["constraints"])
+      scipy_c = []
+      for c in constraints:
+        if isinstance(c, InequalityConstraint):
+          typestr = "ineq"
+        elif isinstance(c, EqualityConstraint):
+          typestr = "eq"
+        else:
+          raise Exception, "Unknown constraint class"
+
+        def jac(x):
+          out = c.jacobian(x)
+          return [gather(y) for y in out]
+
+        scipy_c.append(dict(type=typestr, fun=c.function, jac=jac))
+      kwargs["constraints"] = scipy_c
 
     if method=="basinhopping":
         try:
@@ -187,7 +214,9 @@ def minimize(rf, method='L-BFGS-B', scale=1.0, in_euclidian_space=False, **kwarg
         Additional arguments specific for the optimization algorithms can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimization algorithm. For detailed information about which arguments are supported for each optimization algorithm, please refer to the documentaton of the optimization algorithm.
         '''
 
-    if isinstance(rf, ReducedFunctional):
+    if isinstance(rf, ReducedFunctionalNumPy):
+        rf_np = rf 
+    elif isinstance(rf, ReducedFunctional):
         rf_np = ReducedFunctionalNumPy(rf, in_euclidian_space)
     else:
         rf_np = rf # Assume the user knows what he is doing - he might for example written his own reduced functional class (as in OpenTidalFarm)

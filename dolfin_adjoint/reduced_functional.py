@@ -195,7 +195,7 @@ class ReducedFunctional(object):
             info_red("Got a Hessian cache miss")
             self._cache["hessian_cache"][hash] = cache_store(val, self.cache)
 
-        return val        
+        return val
 
 def replace_tape_ic_value(parameter, new_value):
     ''' Replaces the initial condition value of the given parameter by registering a new equation of the rhs. '''
