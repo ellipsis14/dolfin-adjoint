@@ -214,7 +214,7 @@ def replace_tape_ic_value(parameter, new_value):
         class DummyEquation(object):
             pass
 
-        eqn = DummyEquation() 
+        eqn = DummyEquation()
         variable = parameter.var
         eqn_nb = variable.equation_nb(adjointer)
         eqn.equation = adjointer.adjointer.equations[eqn_nb]
