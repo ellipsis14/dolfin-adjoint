@@ -84,7 +84,7 @@ def annotate(*args, **kwargs):
       raise libadjoint.exceptions.LibadjointErrorInvalidInputs("dolfin_adjoint did not assemble your form, and so does not recognise your right-hand side. Did you from dolfin_adjoint import *?")
 
     u = args[1]
-    #u = u.function
+    u = u.function
 
     solver_parameters = {}
 
@@ -346,6 +346,7 @@ def solve(*args, **kwargs):
   if to_annotate:
     linear = annotate(*args, **kwargs)
 
+  # Avoid recursive annotation
   flag = misc.pause_annotation()
   ret = backend.solve(*args, **kwargs)
   misc.continue_annotation(flag)
