@@ -86,8 +86,8 @@ def forward(a):
   return T
 
 if __name__ == "__main__":
-  a = interpolate(Constant(float(V)), A, name="Control") # initial guess for the control; by interpolating V, the initial guess is feasible
-  T = forward(a)                                         # solve the forward problem once, to build the dolfin-adjoint tape of the forward problem
+  a = interpolate(V, A, name="Control") # initial guess for the control; by interpolating V, the initial guess is feasible
+  T = forward(a)                        # solve the forward problem once, to build the dolfin-adjoint tape of the forward problem
 
   # This block shows how to implement a callback that gets executed every time the functional is evaluated
   # (i.e. the forward PDE is solved. This callback outputs each evaluation to VTK format, for visualisation in paraview.
@@ -135,7 +135,8 @@ if __name__ == "__main__":
 
       # Compute the integral of the control over the domain
       integral = self.smass.inner(self.tmpvec.vector())
-      print "Current control: ", integral
+      if MPI.process_number() == 0:
+        print "Current control integral: ", integral
       return [self.V - integral]
 
     def jacobian(self, m):
@@ -147,10 +148,6 @@ if __name__ == "__main__":
 
   # Solve the optimisation problem
   nlp = rfn.pyipopt_problem(bounds=(lb, ub), constraints=VolumeConstraint(V))
-  if MPI.process_number() > 0:
-    nlp.int_option('print_level', 0) # disable redundant IPOPT output in parallel
+  a_opt = nlp.solve(full=False)
 
-  a0 = rfn.get_parameters()
-  results = nlp.solve(a0)
-
-  File("output/control_solution.xml.gz") << a
+  File("output/control_solution.xml.gz") << a_opt

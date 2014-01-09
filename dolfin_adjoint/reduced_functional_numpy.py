@@ -1,5 +1,5 @@
 import numpy as np
-from dolfin import cpp, info, info_red, Constant, Function, TestFunction, TrialFunction, assemble, inner, dx, as_backend_type, info_red
+from dolfin import cpp, info, info_red, Constant, Function, TestFunction, TrialFunction, assemble, inner, dx, as_backend_type, info_red, MPI
 from dolfin_adjoint import constant, utils 
 from dolfin_adjoint.adjglobals import adjointer, adj_reset_cache
 from reduced_functional import ReducedFunctional
@@ -296,7 +296,40 @@ class ReducedFunctionalNumPy(ReducedFunctional):
                            fun_g,            # to evaluate the constraints
                            jac_g)            # to evaluate the constraint Jacobian
 
-      return nlp
+      pyipopt.set_loglevel(1) # turn off annoying pyipopt logging
+      if MPI.process_number() > 0:
+        nlp.int_option('print_level', 0) # disable redundant IPOPT output in parallel
+      else:
+        nlp.int_option('print_level', 6) # very useful IPOPT output
+
+
+      # At the moment, nlp.solve returns a bunch of numpy arrays, and
+      # the values of the parameters aren't changed. I'd like nlp.solve
+      # to instead return the high-level dolfin objects,
+
+      class IPOPTProblem(object):
+        def __init__(self, nlp):
+          self.nlp = nlp
+
+        def solve(newself, full=False):
+          # self refers to the ReducedFunctionalNumPy instance, newself to the IPOPTProblem instance
+          guess = self.get_parameters()
+          results = newself.nlp.solve(guess)
+          new_params = [copy_data(p.data()) for p in self.parameter]
+          self.set_local(new_params, results[0])
+
+          if len(new_params) == 1:
+            new_params = new_params[0]
+
+          if not full:
+            return new_params
+          else:
+            return [new_params] + results[1:]
+
+        def __getattr__(self, x):
+          return getattr(self.nlp, x)
+
+      return IPOPTProblem(nlp)
 
     def pyopt_problem(self, constraints=None, bounds=None, name="Problem", ignore_model_errors=False):
       '''Return a pyopt problem class that can be used with the PyOpt package,
