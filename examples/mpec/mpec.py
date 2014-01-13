@@ -50,19 +50,17 @@ yd = Function(f)
 alpha = 1e-2
 J = Functional(0.5*inner(y - yd, y - yd)*dx + alpha/2*inner(u, u)*dx)
 
-rf = ReducedFunctional(J, TimeConstantParameter(u))
+m = SteadyParameter(u)
+Jhat = ReducedFunctional(J, m)
 
-y_hdr = adjglobals.adj_variables[y]
-y_ic  = adjglobals.adj_variables[y]; y_ic.iteration = 0
-
-ypvd = File("y_opt.pvd") 
-upvd = File("u_opt.pvd") 
+ypvd = File("output/y_opt.pvd") 
+upvd = File("output/u_opt.pvd") 
 for g in [1000*2**i for i in range(12)]:
   print "Set gamma = ", g
   gamma.assign(g)
-  u_opt = minimize(rf, bounds = (0.01, 0.03), options = {"disp": True, "gtol": 1e-12, "ftol": 1e-100})
-  rf(u_opt)
-  y_opt = adjglobals.adjointer.get_variable_value(y_hdr).data
+  u_opt = minimize(Jhat, bounds = (0.01, 0.03), options = {"disp": True, "gtol": 1e-12, "ftol": 1e-100})
+  Jhat(u_opt)
+  y_opt = DolfinAdjointVariable(y, iteration=-1).tape_value()
   ypvd << y_opt
   upvd << u_opt
 
@@ -71,4 +69,4 @@ for g in [1000*2**i for i in range(12)]:
   info_red("Norm of y: %s"% sqrt(assemble(inner(y_opt, y_opt)*dx)))
   info_red("Norm of u_opt: %s"% sqrt(assemble(inner(u_opt, u_opt)*dx)))
 
-  reduced_functional.replace_tape_ic_value(y_ic, y_opt)
+  reduced_functional.replace_tape_ic_value(m, y_opt)
