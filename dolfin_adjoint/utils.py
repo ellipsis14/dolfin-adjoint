@@ -576,3 +576,17 @@ def to_annotate(flag):
       raise AssertionError("The user insisted on annotation, but stop_annotating is True.")
 
   return flag
+
+class DolfinAdjointVariable(libadjoint.Variable):
+  ''' A wrapper class for Dolfin objects to store additional information such as 
+      a time step, a iteration counter and the type of the variable (adjoint, forward or tangent linear). '''
+
+  def __init__(self, coefficient):
+    ''' Creates a DolfinAdjointVariable associated with the provided coefficient. 
+    If the coefficient is not known to dolfin_adjoint (i.e. if no equation for it was 
+    annotated), an Exception is thrown. '''
+    super(DolfinAdjointVariable, self).__init__(var=adjglobals.adj_variables[coefficient])
+
+  def tape_value(self):
+    ''' Returns the tape value associated with the provided dolfin_adjoint Variable object. '''
+    return adjglobals.adjointer.get_variable_value(self.c_object).data
