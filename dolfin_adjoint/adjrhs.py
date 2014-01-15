@@ -157,9 +157,12 @@ class NonlinearRHS(RHS):
         prev_var = find_previous_variable(var)
       except:
         can_depend = False
-      
+
       if can_depend:
         self.ic_var = prev_var
+        self.deps += [self.ic_var]
+        self.coeffs += [u]
+
       else:
         self.ic_copy = dolfin.Function(u)
         self.ic_var = None
