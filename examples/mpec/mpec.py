@@ -40,7 +40,7 @@ and to solve the resulting sequence of PDE-constrained optimisation problems.
 
 from dolfin import *
 from dolfin_adjoint import *
-#set_log_level(ERROR)
+set_log_level(ERROR)
 
 # Define a smooth approximation of the (pointwise) maximum operator
 def smoothmax(r, eps=1e-4):
