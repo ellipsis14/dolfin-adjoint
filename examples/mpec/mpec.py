@@ -30,7 +30,7 @@ and bounds on the control functional
 
 a <= u <= b,
 
-where u is the control function, y is the solution of the variational inequality, y_d is solution to be matched, f is a prescribed source term, \nu is a regularisation parameter and a, b are functions defining the upper and lower bound for the control.
+where u is the control function, y is the solution of the variational inequality, y_d is data to be matched, f is a prescribed source term, \nu is a regularisation parameter and a, b are functions defining the upper and lower bound for the control.
 
 The solution approach taken here is to approximate the variational inequality by a sequence of partial differential equation with the penalisation technique, 
 and to solve the resulting sequence of PDE-constrained optimisation problems.
@@ -53,14 +53,14 @@ u = Function(V, name="Control")
 w = TestFunction(V)
 
 # Define the approximated variational inequality and solve the resulting PDE
-alpha = Constant(1e-3)  # The penalisation parameter
+alpha = Constant(1e-2)  # The penalisation parameter
 f = interpolate(Expression("-std::abs(x[0]*x[1] - 0.5) + 0.25"), V)  # The source term
 F = inner(grad(y), grad(w))*dx - 1 / alpha * inner(smoothmax(-y), w)*dx - inner(f + u, w)*dx  
 bc = DirichletBC(V, 0.0, "on_boundary")
 solve(F == 0, y, bcs=bc)
 
 # Define the functional of interest
-yd = Function(f)
+yd = Function(f, name="Data")
 nu = 0.01
 J = Functional(0.5*inner(y - yd, y - yd)*dx + nu/2*inner(u, u)*dx)
 
@@ -71,22 +71,19 @@ Jhat = ReducedFunctional(J, m)
 ypvd = File("output/y_opt.pvd") 
 upvd = File("output/u_opt.pvd") 
 
-Jalpha = ReducedFunctional(J, ScalarParameter(alpha))
-
 # Solve the MPECs as a sequence of PDE-constrained optimisation problems 
-for i in range(12):
+for i in range(4):
   # Update the penalisation value
   alpha.assign(float(alpha)/2)
   info_green("Set alpha to %f." % float(alpha))
-  Jalpha(alpha)
 
   # Solve the optimisation problem
-  u_opt = minimize(Jhat, bounds=(0.01, 0.03), options={"disp": True, "gtol": 1e-12, "ftol": 1e-100})
+  u_opt = minimize(Jhat, bounds=(0.01, 0.03), options={"gtol": 1e-12, "ftol": 1e-100})
   
   # Use the optimised state solution as an initial guess 
   # for the Newton solver in the next optimisation round
   y_opt = DolfinAdjointVariable(y).tape_value()
-  reduced_functional.replace_tape_ic_value(InitialConditionParameter(y), y_opt)
+  replace_parameter_value(InitialConditionParameter(y), y_opt)
 
   # Save the result and print some statistics
   ypvd << y_opt
