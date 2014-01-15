@@ -42,7 +42,7 @@ from dolfin import *
 from dolfin_adjoint import *
 set_log_level(ERROR)
 
-# Define a smooth approximation of the (pointwise) maximum operator
+# A smooth approximation of the (pointwise) maximum operator
 def smoothmax(r, eps=1e-4):
   return conditional(gt(r, eps), r - eps/2, conditional(lt(r, 0), 0, r**2 / (2*eps))) 
 
@@ -68,6 +68,7 @@ J = Functional(0.5*inner(y - yd, y - yd)*dx + nu/2*inner(u, u)*dx)
 m = SteadyParameter(u)
 Jhat = ReducedFunctional(J, m)
 
+# Create output files
 ypvd = File("output/y_opt.pvd") 
 upvd = File("output/u_opt.pvd") 
 
@@ -75,6 +76,7 @@ upvd = File("output/u_opt.pvd")
 for i in range(4):
   # Update the penalisation value
   alpha.assign(float(alpha)/2)
+  ReducedFunctional(J, ScalarParameter(alpha))(alpha)
   info_green("Set alpha to %f." % float(alpha))
 
   # Solve the optimisation problem
