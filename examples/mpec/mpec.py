@@ -73,10 +73,12 @@ ypvd = File("output/y_opt.pvd")
 upvd = File("output/u_opt.pvd") 
 
 # Solve the MPECs as a sequence of PDE-constrained optimisation problems 
+ScalarParameter(alpha)  # Mark alpha to be a parameter. This allows us to change the 
+                        # alpha value in the loop below and dolfin_adjoint will use the 
+                        # new value automatically.
 for i in range(4):
   # Update the penalisation value
   alpha.assign(float(alpha)/2)
-  ReducedFunctional(J, ScalarParameter(alpha))(alpha)
   info_green("Set alpha to %f." % float(alpha))
 
   # Solve the optimisation problem
