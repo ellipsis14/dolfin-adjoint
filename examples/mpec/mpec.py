@@ -82,7 +82,7 @@ for i in range(4):
   info_green("Set alpha to %f." % float(alpha))
 
   # Solve the optimisation problem
-  u_opt = minimize(Jhat, bounds=(0.01, 0.03), options={"gtol": 1e-12, "ftol": 1e-100})
+  u_opt = minimize(Jhat, method="L-BFGS-B", bounds=(0.01, 0.03), options={"gtol": 1e-12, "ftol": 1e-100})
   
   # Use the optimised state solution as an initial guess 
   # for the Newton solver in the next optimisation round
