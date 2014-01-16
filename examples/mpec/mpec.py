@@ -52,7 +52,7 @@ y = Function(V, name="Solution")
 u = Function(V, name="Control")
 w = TestFunction(V)
 
-# Define the approximated variational inequality and solve the resulting PDE
+# Define the PDE arising from the approximated variational inequality and solve it
 alpha = Constant(1e-2)  # The penalisation parameter
 f = interpolate(Expression("-std::abs(x[0]*x[1] - 0.5) + 0.25"), V)  # The source term
 F = inner(grad(y), grad(w))*dx - 1 / alpha * inner(smoothmax(-y), w)*dx - inner(f + u, w)*dx  

@@ -198,7 +198,7 @@ class ReducedFunctional(object):
         return val
 
 def replace_parameter_value(parameter, new_value):
-    ''' Replaces the value of the given parameter. '''
+    ''' Replaces the parameter value with new_value. '''
     if hasattr(parameter, 'var'):
         replace_tape_value(parameter.var, new_value)
 
