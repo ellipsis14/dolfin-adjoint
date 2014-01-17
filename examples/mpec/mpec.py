@@ -65,7 +65,9 @@ nu = 0.01
 J = Functional(0.5*inner(y - yd, y - yd)*dx + nu/2*inner(u, u)*dx)
 
 # Formulate the reduced problem
-m = SteadyParameter(u)
+m = SteadyParameter(u)  # Create a parameter from u, as it is the variable we want to optimise
+alpha_m = ScalarParameter(alpha)  # Also tell dolfin-adjoint that alpha is a parameter, 
+                                  # this will allow us to modify its value on the tape
 Jhat = ReducedFunctional(J, m)
 
 # Create output files
@@ -73,9 +75,6 @@ ypvd = File("output/y_opt.pvd")
 upvd = File("output/u_opt.pvd") 
 
 # Solve the MPECs as a sequence of PDE-constrained optimisation problems 
-ScalarParameter(alpha)  # Mark alpha to be a parameter. This allows us to change the 
-                        # alpha value in the loop below and dolfin_adjoint will use the 
-                        # new value automatically.
 for i in range(4):
   # Update the penalisation value
   alpha.assign(float(alpha)/2)
