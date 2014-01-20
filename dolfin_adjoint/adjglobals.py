@@ -2,8 +2,9 @@ import coeffstore
 import expressions
 import caching
 import libadjoint
-import dolfin
-import lusolver
+from dolfin_adjoint import backend
+if backend.__name__ == "dolfin":
+  import lusolver
 
 # Create the adjointer, the central object that records the forward solve
 # as it happens.
@@ -18,11 +19,11 @@ def adj_start_timestep(time=0.0):
   '''Dolfin does not supply us with information about timesteps, and so more information
   is required from the user for certain features. This function should be called at the
   start of the time loop with the initial time (defaults to 0).
-  
+
   See also: :py:func:`dolfin_adjoint.adj_inc_timestep`
   '''
 
-  if not dolfin.parameters["adjoint"]["stop_annotating"]:
+  if not backend.parameters["adjoint"]["stop_annotating"]:
     adjointer.time.start(time)
 
 def adj_inc_timestep(time=None, finished=False):
@@ -42,7 +43,7 @@ def adj_inc_timestep(time=None, finished=False):
   See also: :py:func:`dolfin_adjoint.adj_start_timestep`
   '''
 
-  if not dolfin.parameters["adjoint"]["stop_annotating"]:
+  if not backend.parameters["adjoint"]["stop_annotating"]:
     adj_variables.increment_timestep()
     if time is not None:
       adjointer.time.next(time)
@@ -59,10 +60,10 @@ def adj_check_checkpoints():
   adjointer.check_checkpoints()
 
 def adj_reset_cache():
-  if dolfin.parameters["adjoint"]["debug_cache"]:
-    dolfin.info_blue("Resetting solver cache")
+  if backend.parameters["adjoint"]["debug_cache"]:
+    backend.info_blue("Resetting solver cache")
 
-  dolfin.parameters["adjoint"]["stop_annotating"] = False
+  backend.parameters["adjoint"]["stop_annotating"] = False
 
   caching.assembled_fwd_forms.clear()
   caching.assembled_adj_forms.clear()
@@ -83,8 +84,9 @@ def adj_reset():
   expressions.expression_attrs.clear()
   adj_variables.__init__()
   function_names.__init__()
-  lusolver.lu_solvers = {}
-  lusolver.adj_lu_solvers = {}
+  if backend.__name__ == "dolfin":
+    lusolver.lu_solvers = {}
+    lusolver.adj_lu_solvers = {}
   adj_reset_cache()
 
 # Map from FunctionSpace to LUSolver that has factorised the fsp mass matrix

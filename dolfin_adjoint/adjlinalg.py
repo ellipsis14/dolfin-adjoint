@@ -1,11 +1,12 @@
 import libadjoint
-import dolfin
+import backend
 import ufl
 import adjglobals
 import os
 import os.path
 import misc
 import caching
+import compatibility
 
 class Vector(libadjoint.Vector):
   '''This class implements the libadjoint.Vector abstract base class for the Dolfin adjoint.
@@ -17,8 +18,8 @@ class Vector(libadjoint.Vector):
 
 
     self.data=data
-    if not (self.data is None or isinstance(self.data, dolfin.Function) or isinstance(self.data, ufl.Form)):
-      dolfin.info_red("Got " + str(self.data.__class__) + " as input to the Vector() class. Don't know how to handle that.")
+    if not (self.data is None or isinstance(self.data, backend.Function) or isinstance(self.data, ufl.Form)):
+      backend.info_red("Got " + str(self.data.__class__) + " as input to the Vector() class. Don't know how to handle that.")
       raise AssertionError
 
     # self.zero is true if we can prove that the vector is zero.
@@ -35,12 +36,12 @@ class Vector(libadjoint.Vector):
     if isinstance(self.data, ufl.form.Form):
       # The data type will be determined by the first addto.
       data = None
-    elif isinstance(self.data, dolfin.Function):
+    elif isinstance(self.data, backend.Function):
       try:
         fn_space = self.data.function_space().collapse()
       except:
         fn_space = self.data.function_space()
-      data = dolfin.Function(fn_space)
+      data = backend.Function(fn_space)
     else:
       data = None
 
@@ -63,23 +64,23 @@ class Vector(libadjoint.Vector):
 
     if (self.data is None):
       # self is an empty form.
-      if isinstance(x.data, dolfin.Function):
-        self.data = dolfin.Function(x.data)
+      if isinstance(x.data, backend.Function):
+        self.data = backend.Function(x.data)
         self.data.vector()._scale(alpha)
       else:
         self.data=alpha*x.data
 
     elif x.data is None:
       pass
-    elif isinstance(self.data, dolfin.Coefficient):
-      if isinstance(x.data, dolfin.Coefficient):
+    elif isinstance(self.data, backend.Coefficient):
+      if isinstance(x.data, backend.Coefficient):
         self.data.vector().axpy(alpha, x.data.vector())
       else:
         # This occurs when adding a RHS derivative to an adjoint equation
         # corresponding to the initial conditions.
         #print "axpy assembling FuncForm. self.data is a %s; x.data is a %s" % (self.data.__class__, x.data.__class__)
         #import IPython; IPython.embed()
-        self.data.vector().axpy(alpha, dolfin.assemble(x.data))
+        self.data.vector().axpy(alpha, backend.assemble(x.data))
     elif isinstance(x.data, ufl.form.Form) and isinstance(self.data, ufl.form.Form):
 
       # Let's do a bit of argument shuffling, shall we?
@@ -93,17 +94,17 @@ class Vector(libadjoint.Vector):
           assert xargs[i].function_space() == sargs[i].function_space()
 
         # Now that we are happy, let's replace the xargs with the sargs ones.
-        x_form = dolfin.replace(x.data, dict(zip(xargs, sargs)))
+        x_form = backend.replace(x.data, dict(zip(xargs, sargs)))
       else:
         x_form = x.data
 
       self.data+=alpha*x_form
-    elif isinstance(self.data, ufl.form.Form) and isinstance(x.data, dolfin.Function):
+    elif isinstance(self.data, ufl.form.Form) and isinstance(x.data, backend.Function):
       #print "axpy assembling FormFunc. self.data is a %s; x.data is a %s" % (self.data.__class__, x.data.__class__)
       x_vec = x.data.vector().copy()
-      self_vec = dolfin.assemble(self.data)
+      self_vec = backend.assemble(self.data)
       self_vec.axpy(alpha, x_vec)
-      new_fn = dolfin.Function(x.data.function_space())
+      new_fn = backend.Function(x.data.function_space())
       new_fn.vector()[:] = self_vec
       self.data = new_fn
       self.fn_space = self.data.function_space()
@@ -117,18 +118,18 @@ class Vector(libadjoint.Vector):
 
   def norm(self):
 
-    if isinstance(self.data, dolfin.Function):
-      return (abs(dolfin.assemble(dolfin.inner(self.data, self.data)*dolfin.dx)))**0.5
+    if isinstance(self.data, backend.Function):
+      return (abs(backend.assemble(backend.inner(self.data, self.data)*backend.dx)))**0.5
     elif isinstance(self.data, ufl.form.Form):
-      return dolfin.assemble(self.data).norm("l2")
+      return backend.assemble(self.data).norm("l2")
 
   def dot_product(self,y):
 
     if isinstance(self.data, ufl.form.Form):
-      return dolfin.assemble(dolfin.inner(self.data, y.data)*dolfin.dx)
-    elif isinstance(self.data, dolfin.Function):
+      return backend.assemble(backend.inner(self.data, y.data)*backend.dx)
+    elif isinstance(self.data, backend.Function):
       if isinstance(y.data, ufl.form.Form):
-        other = dolfin.assemble(y.data)
+        other = backend.assemble(y.data)
       else:
         other = y.data.vector()
       return self.data.vector().inner(other)
@@ -136,10 +137,10 @@ class Vector(libadjoint.Vector):
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to dot anything else.")
 
   def set_random(self):
-    assert isinstance(self.data, dolfin.Function) or hasattr(self, "fn_space")
+    assert isinstance(self.data, backend.Function) or hasattr(self, "fn_space")
 
     if self.data is None:
-      self.data = dolfin.Function(self.fn_space)
+      self.data = backend.Function(self.fn_space)
 
     vec = self.data.vector()
     for i in range(len(vec)):
@@ -149,33 +150,33 @@ class Vector(libadjoint.Vector):
 
   def size(self):
     if hasattr(self, "fn_space") and self.data is None:
-      self.data = dolfin.Function(self.fn_space)
+      self.data = backend.Function(self.fn_space)
 
-    if isinstance(self.data, dolfin.Function):
+    if isinstance(self.data, backend.Function):
       return self.data.vector().local_size()
 
     if isinstance(self.data, ufl.form.Form):
-      return dolfin.assemble(self.data).local_size()
+      return backend.assemble(self.data).local_size()
 
     raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to get the size.")
 
   def set_values(self, array):
-    if isinstance(self.data, dolfin.Function):
+    if isinstance(self.data, backend.Function):
       vec = self.data.vector()
       vec.set_local(array)
       vec.apply("insert")
 
       self.zero = False
     elif self.data is None and hasattr(self, 'fn_space'):
-      self.data = dolfin.Function(self.fn_space)
+      self.data = backend.Function(self.fn_space)
       vec = self.data.vector()
       vec.set_local(array)
       self.zero = False
     else:
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to set values.")
-  
+
   def get_values(self, array):
-    if isinstance(self.data, dolfin.Function):
+    if isinstance(self.data, backend.Function):
       vec = self.data.vector()
       try:
         vec.get_local(array)
@@ -184,13 +185,13 @@ class Vector(libadjoint.Vector):
 
     else:
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to get values.")
-  
+
   def write(self, var):
     filename = str(var)
     suffix = "xml"
     #if not os.path.isfile(filename+".%s" % suffix):
-    #  dolfin.info_red("Warning: Overwriting checkpoint file "+filename+"."+suffix)
-    file = dolfin.File(filename+".%s" % suffix)
+    #  backend.info_red("Warning: Overwriting checkpoint file "+filename+"."+suffix)
+    file = backend.File(filename+".%s" % suffix)
     file << self.data
 
     # Save the function space into adjglobals.checkpoint_fs. It will be needed when reading the variable back in.
@@ -203,7 +204,7 @@ class Vector(libadjoint.Vector):
     suffix = "xml"
 
     V = adjglobals.checkpoint_fs[filename]
-    v = dolfin.Function(V, filename+".%s" % suffix)
+    v = backend.Function(V, filename+".%s" % suffix)
     return Vector(v)
 
   @staticmethod
@@ -242,16 +243,16 @@ class Matrix(libadjoint.Matrix):
   def assemble_data(self):
     assert not isinstance(self.data, IdentityMatrix)
     if not self.cache:
-      return dolfin.assemble(self.data)
+      return backend.assemble(self.data)
     else:
       if self.data in caching.assembled_adj_forms:
-        if dolfin.parameters["adjoint"]["debug_cache"]:
-          dolfin.info_green("Got an assembly cache hit")
+        if backend.parameters["adjoint"]["debug_cache"]:
+          backend.info_green("Got an assembly cache hit")
         return caching.assembled_adj_forms[self.data]
       else:
-        if dolfin.parameters["adjoint"]["debug_cache"]:
-          dolfin.info_red("Got an assembly cache miss")
-        M = dolfin.assemble(self.data)
+        if backend.parameters["adjoint"]["debug_cache"]:
+          backend.info_red("Got an assembly cache miss")
+        M = backend.assemble(self.data)
         caching.assembled_adj_forms[self.data] = M
         return M
 
@@ -261,45 +262,48 @@ class Matrix(libadjoint.Matrix):
       x=b.duplicate()
       x.axpy(1.0, b)
       if isinstance(x.data, ufl.Form):
-        x = Vector(dolfin.Function(x.fn_space, dolfin.assemble(x.data)))
+        x = Vector(backend.Function(x.fn_space, backend.assemble(x.data)))
     else:
       if var.type in ['ADJ_TLM', 'ADJ_ADJOINT', 'ADJ_SOA']:
-        dirichlet_bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.DirichletBC)]
-        other_bcs  = [bc for bc in self.bcs if not isinstance(bc, dolfin.DirichletBC)]
+        dirichlet_bcs = [backend.homogenize(bc) for bc in self.bcs if isinstance(bc, backend.DirichletBC)]
+        other_bcs  = [bc for bc in self.bcs if not isinstance(bc, backend.DirichletBC)]
         bcs = dirichlet_bcs + other_bcs
       else:
         bcs = self.bcs
 
       test = self.test_function()
-      x = Vector(dolfin.Function(test.function_space()))
+      x = Vector(backend.Function(test.function_space()))
 
       #print "b.data is a %s in the solution of %s" % (b.data.__class__, var)
       if b.data is None and not hasattr(b, 'nonlinear_form'):
         # This means we didn't get any contribution on the RHS of the adjoint system. This could be that the
         # simulation ran further ahead than when the functional was evaluated, or it could be that the
         # functional is set up incorrectly.
-        dolfin.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
-      elif isinstance(b.data, dolfin.Function):
+        backend.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
+      elif isinstance(b.data, backend.Function):
 
         assembled_lhs = self.assemble_data()
         [bc.apply(assembled_lhs) for bc in bcs]
-        assembled_rhs = dolfin.Function(b.data).vector()
+        assembled_rhs = backend.Function(b.data).vector()
         [bc.apply(assembled_rhs) for bc in bcs]
 
         wrap_solve(assembled_lhs, x.data.vector(), assembled_rhs, self.solver_parameters)
       else:
         if hasattr(b, 'nonlinear_form'): # was a nonlinear solve
           x.data.vector()[:] = b.nonlinear_u.vector()
-          F = dolfin.replace(b.nonlinear_form, {b.nonlinear_u: x.data})
-          J = dolfin.replace(b.nonlinear_J, {b.nonlinear_u: x.data})
-          dolfin.fem.solving.solve(F == 0, x.data, b.nonlinear_bcs, J=J, solver_parameters=self.solver_parameters)
+          F = backend.replace(b.nonlinear_form, {b.nonlinear_u: x.data})
+          J = backend.replace(b.nonlinear_J, {b.nonlinear_u: x.data})
+          compatibility.solve(F == 0, x.data, b.nonlinear_bcs, J=J, solver_parameters=self.solver_parameters)
         else:
           assembled_lhs = self.assemble_data()
           [bc.apply(assembled_lhs) for bc in bcs]
           assembled_rhs = wrap_assemble(b.data, test)
           [bc.apply(assembled_rhs) for bc in bcs]
 
-          wrap_solve(assembled_lhs, x.data.vector(), assembled_rhs, self.solver_parameters)
+          if backend.__name__ == "dolfin":
+            wrap_solve(assembled_lhs, x.data.vector(), assembled_rhs, self.solver_parameters)
+          else:
+            wrap_solve(assembled_lhs, x.data, assembled_rhs, self.solver_parameters)
 
     return x
 
@@ -308,20 +312,20 @@ class Matrix(libadjoint.Matrix):
         output = b.duplicate()
         output.axpy(1.0, b)
         if isinstance(output.data, ufl.Form):
-          output = Vector(dolfin.Function(output.fn_space, dolfin.assemble(output.data)))
+          output = Vector(backend.Function(output.fn_space, backend.assemble(output.data)))
     elif b.data is None:
-        dolfin.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
-        output = Vector(dolfin.Function(self.test_function().function_space()))
+        backend.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
+        output = Vector(backedn.Function(self.test_function().function_space()))
     else:
-        dirichlet_bcs = [dolfin.homogenize(bc) for bc in self.bcs if isinstance(bc, dolfin.DirichletBC)]
-        other_bcs  = [bc for bc in self.bcs if not isinstance(bc, dolfin.DirichletBC)]
+        dirichlet_bcs = [backend.homogenize(bc) for bc in self.bcs if isinstance(bc, backend.DirichletBC)]
+        other_bcs  = [bc for bc in self.bcs if not isinstance(bc, backend.DirichletBC)]
         bcs = dirichlet_bcs + other_bcs
 
-        output = Vector(dolfin.Function(self.test_function().function_space()))
+        output = Vector(backend.Function(self.test_function().function_space()))
         #print "b.data is a %s in the solution of %s" % (b.data.__class__, var)
-        if dolfin.parameters["adjoint"]["symmetric_bcs"] and dolfin.__version__ > '1.2.0':
-            assembler = dolfin.SystemAssembler(self.data, b.data, bcs)
-            assembled_rhs = dolfin.Vector()
+        if backend.parameters["adjoint"]["symmetric_bcs"] and backend.__version__ > '1.2.0':
+            assembler = backend.SystemAssembler(self.data, b.data, bcs)
+            assembled_rhs = backend.Vector()
             assembler.assemble(assembled_rhs)
         elif isinstance(b.data, ufl.Form):
             assembled_rhs = wrap_assemble(b.data, self.test_function())
@@ -330,28 +334,28 @@ class Matrix(libadjoint.Matrix):
         [bc.apply(assembled_rhs) for bc in bcs]
 
         if not var in caching.lu_solvers:
-          if dolfin.parameters["adjoint"]["debug_cache"]:
-            dolfin.info_red("Got a cache miss for %s" % var)
+          if backend.parameters["adjoint"]["debug_cache"]:
+            backend.info_red("Got a cache miss for %s" % var)
 
-          if dolfin.parameters["adjoint"]["symmetric_bcs"] and dolfin.__version__ > '1.2.0':
-            assembled_lhs = dolfin.Matrix()
+          if backend.parameters["adjoint"]["symmetric_bcs"] and backend.__version__ > '1.2.0':
+            assembled_lhs = backend.Matrix()
             assembler.assemble(assembled_lhs)
           else:
             assembled_lhs = self.assemble_data()
             [bc.apply(assembled_lhs) for bc in bcs]
 
-          caching.lu_solvers[var] = dolfin.LUSolver(assembled_lhs, "mumps")
+          caching.lu_solvers[var] = backend.LUSolver(assembled_lhs, "mumps")
           caching.lu_solvers[var].parameters["reuse_factorization"] = True
         else:
-          if dolfin.parameters["adjoint"]["debug_cache"]:
-            dolfin.info_green("Got a cache hit for %s" % var)
+          if backend.parameters["adjoint"]["debug_cache"]:
+            backend.info_green("Got a cache hit for %s" % var)
 
         caching.lu_solvers[var].solve(output.data.vector(), assembled_rhs)
 
     return output
 
   def solve(self, var, b):
-    if dolfin.parameters["adjoint"]["cache_factorizations"] and var.type != "ADJ_FORWARD":
+    if backend.parameters["adjoint"]["cache_factorizations"] and var.type != "ADJ_FORWARD":
       x = self.caching_solve(var, b)
     else:
       x = self.basic_solve(var, b)
@@ -359,11 +363,11 @@ class Matrix(libadjoint.Matrix):
     return x
 
   def action(self, x, y):
-    assert isinstance(x.data, dolfin.Function)
-    assert isinstance(y.data, dolfin.Function)
+    assert isinstance(x.data, backend.Function)
+    assert isinstance(y.data, backend.Function)
 
-    action_form = dolfin.action(self.data, x.data)
-    action_vec  = dolfin.assemble(action_form)
+    action_form = backend.action(self.data, x.data)
+    action_vec  = backend.assemble(action_form)
     y.data.vector()[:] = action_vec
 
   def axpy(self, alpha, x):
@@ -381,7 +385,7 @@ class Matrix(libadjoint.Matrix):
         assert xargs[i].function_space() == sargs[i].function_space()
 
       # Now that we are happy, let's replace the xargs with the sargs ones.
-      x_form = dolfin.replace(x.data, dict(zip(xargs, sargs)))
+      x_form = backend.replace(x.data, dict(zip(xargs, sargs)))
     else:
       x_form = x.data
 
@@ -406,26 +410,30 @@ def wrap_solve(A, x, b, solver_parameters):
 
    # Comment. Why does list_lu_solver_methods() not return, a, uhm, list?
    lu_solvers = ["lu", "mumps", "umfpack", "spooles", "superlu", "superlu_dist", "pastix", "petsc"]
+   
+   if backend.__name__ == "dolfin":
+     method = solver_parameters.get("linear_solver", "default")
+     if method in lu_solvers or method == "default":
+       if method == "lu": method = "default"
+       solver = backend.LUSolver(method)
 
-   method = solver_parameters.get("linear_solver", "default")
-   if method in lu_solvers or method == "default":
-     if method == "lu": method = "default"
-     solver = dolfin.LUSolver(method)
+       if "lu_solver" in solver_parameters:
+         solver.parameters.update(solver_parameters["lu_solver"])
 
-     if "lu_solver" in solver_parameters:
-       solver.parameters.update(solver_parameters["lu_solver"])
+       solver.solve(A, x, b)
+       return
+     else:
+       dangerous_parameters = ["preconditioner"]
+       pc = solver_parameters.get("preconditioner", "default")
+       solver = backend.KrylovSolver(method, pc)
 
-     solver.solve(A, x, b)
-     return
+       if "krylov_solver" in solver_parameters:
+         solver.parameters.update(solver_parameters["krylov_solver"])
+
+       solver.solve(A, x, b)
+       return
    else:
-     dangerous_parameters = ["preconditioner"]
-     pc = solver_parameters.get("preconditioner", "default")
-     solver = dolfin.KrylovSolver(method, pc)
-
-     if "krylov_solver" in solver_parameters:
-       solver.parameters.update(solver_parameters["krylov_solver"])
-
-     solver.solve(A, x, b)
+     backend.solve(A, x, b)
      return
 
 def wrap_assemble(form, test):
@@ -441,9 +449,9 @@ def wrap_assemble(form, test):
   '''
 
   try:
-    b = dolfin.assemble(form)
+    b = backend.assemble(form)
   except RuntimeError:
     assert form.integrals() == ()
-    b = dolfin.Function(test.function_space()).vector()
+    b = backend.Function(test.function_space()).vector()
 
   return b
