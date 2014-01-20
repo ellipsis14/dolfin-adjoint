@@ -59,7 +59,7 @@ def main(f):
     J = derivative(nF, u)
     damping = 1.0
 
-  solve(nF == 0, u, J=J, bcs=bc, solver_parameters={"linear_solver": "lu", "newton_solver": {"maximum_iterations": 200, "relaxation_parameter": damping}})
+  solve(nF == 0, u, J=J, bcs=bc, solver_parameters={"newton_solver": {"maximum_iterations": 200, "relaxation_parameter": damping}})
 
   return u
 

@@ -41,7 +41,7 @@ def dolfin_adjoint_assign(self, other, annotate=None, *args, **kwargs):
   # ignore any functions we haven't seen before -- we DON'T want to
   # annotate the assignment of initial conditions here. That happens
   # in the main solve wrapper.
-  if not adjglobals.adjointer.variable_known(other_var) and not adjglobals.adjointer.variable_known(self_var):
+  if not adjglobals.adjointer.variable_known(other_var) and not adjglobals.adjointer.variable_known(self_var) and (annotate is not True):
     adjglobals.adj_variables.forget(other)
     adjglobals.adj_variables.forget(self)
     if hasattr(other, "split"):

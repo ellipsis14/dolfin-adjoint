@@ -69,7 +69,7 @@ class ReducedFunctional(object):
 
         # Update the parameter values
         for i in range(len(value)):
-            replace_tape_ic_value(self.parameter[i], value[i])
+            replace_parameter_value(self.parameter[i], value[i])
 
         if self.cache:
             hash = value_hash(value)
@@ -197,13 +197,18 @@ class ReducedFunctional(object):
 
         return val
 
-def replace_tape_ic_value(parameter, new_value):
-    ''' Replaces the initial condition value of the given parameter by registering a new equation of the rhs. '''
+def replace_parameter_value(parameter, new_value):
+    ''' Replaces the parameter value with new_value. '''
+    if hasattr(parameter, 'var'):
+        replace_tape_value(parameter.var, new_value)
+
+def replace_tape_value(variable, new_value):
+    ''' Replaces the tape value of the given DolfinAdjointVariable with new_value. '''
 
     # Case 1: The parameter value and new_value are Functions
     if hasattr(new_value, 'vector'):
-        # ... since these are duplicated and then occur as rhs in the annotation. 
-        # Therefore, we need to update the right hand side callbacks for
+        # Functions are copied in da and occur as rhs in the annotation. 
+        # Hence we need to update the right hand side callbacks for
         # the equation that targets the associated variable.
 
         # Create a RHS object with the new control values
@@ -215,16 +220,16 @@ def replace_tape_ic_value(parameter, new_value):
             pass
 
         eqn = DummyEquation()
-        variable = parameter.var
         eqn_nb = variable.equation_nb(adjointer)
         eqn.equation = adjointer.adjointer.equations[eqn_nb]
         rhs.register(eqn)
-        # Store the equation as a class variable in order to keep a python reference in the memory
-        global_eqn_list[variable.equation_nb] = eqn
+
+        # Keep a python reference of the equation in memory
+        global_eqn_list[eqn_nb] = eqn
 
     # Case 2: The parameter value and new_value are Constants
     elif hasattr(new_value, "value_size"): 
-        # Constants are not duplicated in the annotation. That is, changing a constant that occurs
+        # Constants are not copied in the annotation. That is, changing a constant that occurs
         # in the forward model will also change the forward replay with libadjoint.
         constant = parameter.data()
         constant.assign(new_value(()))

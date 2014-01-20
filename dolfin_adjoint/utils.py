@@ -590,3 +590,55 @@ def to_annotate(flag):
       raise AssertionError("The user insisted on annotation, but stop_annotating is True.")
 
   return flag
+
+class DolfinAdjointVariable(libadjoint.Variable):
+  ''' A wrapper class for Dolfin objects to store additional information such as 
+      a time step, a iteration counter and the type of the variable (adjoint, forward or tangent linear). '''
+
+  def __init__(self, coefficient, timestep=None, iteration=None):
+    ''' Create a DolfinAdjointVariable associated with the provided coefficient. 
+
+    If the coefficient is not known to dolfin_adjoint (i.e. if no equation for it was 
+    annotated), an Exception is thrown.
+
+    By default, the DolfinAdjointVariable references the latest timestep and iteration number,
+    but may be overwritten with the timestep and the iteration parameters. Negative values may 
+    be used to reference the backwards. '''
+
+    super(DolfinAdjointVariable, self).__init__(var=adjglobals.adj_variables[coefficient].var)
+
+    # First set the timestep, since the iteration_count call below depends on its value
+    if timestep is not None:
+      if timestep < 0:
+        self.timestep = adjglobals.adjointer.timestep_count + timestep
+      else:
+        self.timestep = timestep
+
+    if iteration is not None:
+      if iteration < 0:
+        self.iteration = self.iteration_count() + iteration
+      else:
+        self.iteration = iteration
+
+
+  def tape_value(self, timestep=None, iteration=None):
+    ''' Return the tape value associated with the variable (optionally for the given timestep and iteration). '''
+    timestep = timestep or self.timestep
+    iteration = iteration or self.iteration
+    var = libadjoint.Variable(self.name, timestep, iteration, self.var.auxiliary)
+
+    return adjglobals.adjointer.get_variable_value(var).data
+
+  def iteration_count(self):
+    ''' Return the annotated number of iterations at the variables timestep. '''
+    return super(DolfinAdjointVariable, self).iteration_count(adjglobals.adjointer)
+
+  def known_timesteps(self):
+    ''' Return a list of timesteps for which this variable is annotated on the tape. '''
+    ts = []
+    var = libadjoint.Variable(self.name, 0, 0, self.var.auxiliary)
+    for t in range(adjglobals.adjointer.timestep_count):
+      var.timestep = t
+      if adjglobals.adjointer.variable_known(var):
+        ts.append(t)
+    return ts

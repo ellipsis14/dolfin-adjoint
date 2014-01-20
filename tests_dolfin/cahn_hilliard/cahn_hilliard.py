@@ -73,7 +73,6 @@ def main(ic, annotate=False):
 
   # Create nonlinear problem and Newton solver
   parameters = {}
-  parameters["linear_solver"] = "lu"
   parameters["newton_solver"] = {}
   parameters["newton_solver"]["convergence_criterion"] = "incremental"
   parameters["newton_solver"]["relative_tolerance"] = 1e-6
