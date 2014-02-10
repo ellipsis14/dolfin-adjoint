@@ -36,7 +36,7 @@ def main(u, form, time, Scheme, dt):
   solver.parameters.reset_stage_solutions = True
   solver.parameters.newton_solver.reset_each_step = True
 
-  for i in range(int(0.2/dt)):
+  for i in range(int(0.1/dt)):
     solver.step(dt)
     xs.append(float(time))
     ys.append(u.vector().array())
@@ -83,7 +83,8 @@ if __name__ == "__main__":
   def Jhat(ic):
     time = Constant(0.0)
     form = model.rhs(ic, time, params)*dP
-    
+
+    print "Perturbed initial condition: ", ic.vector().array()
     (u, xs, ys) = main(ic, form, time, Scheme, dt=dt)
     print "Perturbed solution: ", u.vector().array()
     print "Perturbed functional value: ", assemble(inner(u, u)*dx)

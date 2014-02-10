@@ -50,7 +50,7 @@ def main(model, ics=None, annotate=False):
   vs_.assign(ics)
 
   dt = 0.1
-  T = 0.2
+  T = 0.1
   solutions = solver.solve((0.0, T), dt)
   for x in solutions:
     pass
@@ -84,9 +84,10 @@ if __name__ == "__main__":
   Jm = assemble(inner(u, u)*dx)
 
   def Jhat(ic):
+    print "Perturbed initial condition: ", ic.vector().array()
     u = main(model(), ics=ic)
-    print "Perturbed solution: ", u.vector().array()
     print "Perturbed functional value: ", assemble(inner(u, u)*dx)
+    print "Perturbed solution: ", u.vector().array()
     return assemble(inner(u, u)*dx)
 
   tlm = False
