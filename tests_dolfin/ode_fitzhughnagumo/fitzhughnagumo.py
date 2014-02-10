@@ -291,7 +291,11 @@ def rhs(states, time, parameters, dy=None):
     dy = ((-c_3*s + v - v_rest)*b)*_v[0]
 
     # Derivative for state v
-    dy += (-I)*_v[1]
+    dy += (I)*_v[1]
+
+    dya = dolfin.assemble(dy*dolfin.dx)
+    print "states: ", states.vector().array()
+    print "RHS: ", dya.array()
 
     # Return dy
     return dy
