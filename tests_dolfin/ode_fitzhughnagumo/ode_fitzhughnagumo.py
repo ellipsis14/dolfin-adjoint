@@ -46,9 +46,9 @@ def main(u, form, time, Scheme, dt):
 if __name__ == "__main__":
   Scheme = BackwardEuler
 
-  u = interpolate(state_init, V, name="Solution")
+  #u = interpolate(state_init, V, name="Solution")
   #u = Function(V, name="Solution")
-  #u = interpolate(Constant((0, -85, 0, -85)), V, name="Solution")
+  u = interpolate(Constant((0.1, -84.9)), V, name="Solution")
   print "Initial condition: ", u.vector().array()
   v = TestFunction(V)
   time = Constant(0.0)
@@ -62,6 +62,7 @@ if __name__ == "__main__":
   (u, xs, ys) = main(u, form, time, Scheme, dt=dt)
   print "Solution: ", ys[-1]
   print "Base functional value: ", assemble(inner(u, u)*dx)
+  import sys; sys.exit(1)
 
   ## Step 1. Check replay correctness
   

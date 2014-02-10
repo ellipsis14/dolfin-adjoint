@@ -42,7 +42,8 @@ def main(model, ics=None, annotate=False):
 
   if ics is None:
     global V
-    ics = project(model.initial_conditions(), solver.VS)
+    ics = interpolate(Constant((-84.9, 0.1)), solver.VS)
+    #ics = project(model.initial_conditions(), solver.VS)
     print "Initial conditions: ", ics.vector().array()
     V = solver.VS
 
@@ -65,6 +66,7 @@ if __name__ == "__main__":
 
   print "Solution: ", u.vector().array()
   print "Base functional value: ", assemble(inner(u, u)*dx)
+  import sys; sys.exit(1)
 
   ## Step 1. Check replay correctness
 
