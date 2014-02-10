@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
   ## Step 1. Check replay correctness
   
-  replay = True
+  replay = False
   if replay:
     info_blue("Checking replay correctness .. ")
     assert adjglobals.adjointer.equation_count > 0
@@ -78,11 +78,11 @@ if __name__ == "__main__":
 
   ## Step 2. Check TLM correctness
 
-  seed = 1e-4
+  seed = 1.5e-4
   dtm = TimeMeasure()
 
   for i in range(16):
-    #if i != 7: continue
+    #if i not in [8, 13, 14]: continue
     Jform = lambda u: inner(u[i], u[i])*dx
     J = Functional(Jform(u)*dtm[FINISH_TIME])
     m = InitialConditionParameter(u)
