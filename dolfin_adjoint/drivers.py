@@ -1,12 +1,13 @@
 import libadjoint
 from parameter import *
-from backend import info_red, info_blue, info
+from backend import info_red, info_blue, info, info_green
 import backend
 import adjglobals
 import backend
 import constant
 import adjresidual
 import ufl.algorithms
+from numpy import ndarray
 
 def replay_dolfin(forget=False, tol=0.0, stop=False):
   if not backend.parameters["adjoint"]["record_all"]:
@@ -372,6 +373,8 @@ class compute_gradient_tlm(object):
     self.cb = callback
     self.project = project
 
+    self.inner_cache = {}
+
   def vector(self):
     return self
 
@@ -383,6 +386,27 @@ class compute_gradient_tlm(object):
     return compute_gradient_tlm(self.J, self.m[i], self.forget, self.cb, self.project)
 
   def inner(self, vec):
+    # Check if we've seen a *multiple* of this vec before;
+    # this is the typical case in Taylor testing
+    for cachevec in self.inner_cache.keys():
+      try:
+        ratioarray = cachevec.array() / vec.array()
+      except AttributeError:
+        ratioarray = [cachevec / vec]
+
+      bools = ratioarray == ratioarray[0]
+      if not isinstance(bools, ndarray): bools = [bools] # agh, how ugly this is.
+
+      if all(bools):
+        ratio = ratioarray[0]
+        #info_green("compute_gradient_tlm cache hit")
+        return self.inner_cache[cachevec] / ratio
+
+    #info_red("compute_gradient_tlm cache miss")
+    self.inner_cache[vec] = self.real_inner(vec)
+    return self.inner_cache[vec]
+
+  def real_inner(self, vec):
     '''Compute the action of the gradient on the vector vec.'''
     def make_mdot(vec):
       if isinstance(self.m, InitialConditionParameter):
