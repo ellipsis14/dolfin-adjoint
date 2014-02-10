@@ -39,15 +39,17 @@ def main(u, form, time, Scheme, dt):
   for i in range(int(0.2/dt)):
     solver.step(dt)
     xs.append(float(time))
-    ys.append(u.vector().array()[0])
+    ys.append(u.vector().array())
 
   return (u, xs, ys)
 
 if __name__ == "__main__":
-  u0 = interpolate(state_init, V, name="InitialValue")
   Scheme = BackwardEuler
 
-  u = Function(V, name="Solution")
+  u = interpolate(state_init, V, name="Solution")
+  #u = Function(V, name="Solution")
+  #u = interpolate(Constant((0, -85, 0, -85)), V, name="Solution")
+  print "Initial condition: ", u.vector().array()
   v = TestFunction(V)
   time = Constant(0.0)
   form = model.rhs(u, time, params)*dP
@@ -59,6 +61,7 @@ if __name__ == "__main__":
   dt = 0.1
   (u, xs, ys) = main(u, form, time, Scheme, dt=dt)
   print "Solution: ", ys[-1]
+  print "Base functional value: ", assemble(inner(u, u)*dx)
 
   ## Step 1. Check replay correctness
   
@@ -75,7 +78,6 @@ if __name__ == "__main__":
   dtm = TimeMeasure()
   J = Functional(inner(u, u)*dx*dtm[FINISH_TIME])
   m = InitialConditionParameter(u)
-  assert m.data().vector()[0] == u0.vector()[0]
   Jm = assemble(inner(u, u)*dx)
 
   def Jhat(ic):
@@ -83,6 +85,7 @@ if __name__ == "__main__":
     form = model.rhs(ic, time, params)*dP
     
     (u, xs, ys) = main(ic, form, time, Scheme, dt=dt)
+    print "Perturbed solution: ", u.vector().array()
     print "Perturbed functional value: ", assemble(inner(u, u)*dx)
     return assemble(inner(u, u)*dx)
 

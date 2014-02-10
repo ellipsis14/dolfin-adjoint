@@ -1,7 +1,7 @@
 from dolfin import *
 
 try:
-  from beatadjoint import BasicSingleCellSolver
+  from beatadjoint import BasicCardiacODESolver
 except ImportError:
   info_red("Need beatadjoint to run")
   import sys; sys.exit(0)
@@ -23,20 +23,27 @@ if not hasattr(MultiStageScheme, "to_tlm"):
 # Import cell model (rhs, init_values, default_parameters)
 from beatadjoint.cellmodels.fitzhughnagumo import Fitzhughnagumo as model
 
+set_log_level(ERROR)
+
 domain = UnitIntervalMesh(1)
 num_states = len(model().initial_conditions()((0.0,)))
 V = None
 
 def main(model, ics=None, annotate=False):
 
-  params = BasicSingleCellSolver.default_parameters()
+  params = BasicCardiacODESolver.default_parameters()
   params["theta"] = 1.0
-  solver = BasicSingleCellSolver(model, None, params=params, domain=domain)
-  solver.parameters["enable_adjoint"] = annotate
+  params["V_polynomial_family"] = "CG"
+  params["S_polynomial_family"] = "CG"
+  params["V_polynomial_degree"] = 1
+  params["S_polynomial_degree"] = 1
+  params["enable_adjoint"] = annotate
+  solver = BasicCardiacODESolver(domain, None, model.num_states(), model.F, model.I, I_s=model.stimulus, params=params)
 
   if ics is None:
     global V
     ics = project(model.initial_conditions(), solver.VS)
+    print "Initial conditions: ", ics.vector().array()
     V = solver.VS
 
   (vs_, vs) = solver.solution_fields()
@@ -55,6 +62,9 @@ if __name__ == "__main__":
 
   u = main(model(), annotate=True)
   parameters["adjoint"]["stop_annotating"] = True
+
+  print "Solution: ", u.vector().array()
+  print "Base functional value: ", assemble(inner(u, u)*dx)
 
   ## Step 1. Check replay correctness
 
@@ -75,12 +85,14 @@ if __name__ == "__main__":
 
   def Jhat(ic):
     u = main(model(), ics=ic)
+    print "Perturbed solution: ", u.vector().array()
     print "Perturbed functional value: ", assemble(inner(u, u)*dx)
     return assemble(inner(u, u)*dx)
 
   tlm = False
   if tlm:
     dJdm = compute_gradient_tlm(J, m, forget=False)
+    set_log_level(INFO)
     minconv_tlm = taylor_test(Jhat, m, Jm, dJdm, \
                               perturbation_direction=interpolate(Constant((0.1,)*num_states), V), seed=1.0e-1)
     assert minconv_tlm > 1.8
@@ -89,6 +101,7 @@ if __name__ == "__main__":
 
   dJdm = compute_gradient(J, m, forget=False)
   assert dJdm is not None
+  set_log_level(INFO)
   minconv_adm = taylor_test(Jhat, m, Jm, dJdm, \
                             perturbation_direction=interpolate(Constant((0.1,)*num_states), V), seed=1.0e-1)
   assert minconv_adm > 1.8
