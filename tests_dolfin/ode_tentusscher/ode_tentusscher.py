@@ -16,6 +16,9 @@ if not hasattr(MultiStageScheme, "to_tlm"):
 # Import cell model (rhs, init_values, default_parameters)
 import tentusscher_2004_mcell as model
 
+import random
+random.seed(42)
+
 params = model.default_parameters()
 state_init = model.init_values()
 
@@ -79,7 +82,7 @@ if __name__ == "__main__":
   dtm = TimeMeasure()
 
   for i in range(16):
-    if i != 7: continue
+    #if i != 7: continue
     Jform = lambda u: inner(u[i], u[i])*dx
     J = Functional(Jform(u)*dtm[FINISH_TIME])
     m = InitialConditionParameter(u)
@@ -88,7 +91,7 @@ if __name__ == "__main__":
     def Jhat(ic):
       time = Constant(0.0)
       form = model.rhs(ic, time, params)*dP
-      
+
       (u, xs, ys) = main(ic, form, time, Scheme, dt=dt)
       return assemble(Jform(u))
 

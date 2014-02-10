@@ -106,8 +106,10 @@ class Function(backend.Function):
 
     if "name" in kwargs:
       self.adj_name = kwargs["name"]
-      if self.adj_name in adjglobals.function_names and to_annotate:
-        backend.info_red("Warning: got duplicate function name %s" % self.adj_name)
+
+      #if self.adj_name in adjglobals.function_names and to_annotate:
+      #  backend.info_red("Warning: got duplicate function name %s" % self.adj_name)
+
       adjglobals.function_names.add(self.adj_name)
       del kwargs["name"]
 
