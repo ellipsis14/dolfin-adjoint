@@ -66,7 +66,6 @@ if __name__ == "__main__":
 
   print "Solution: ", u.vector().array()
   print "Base functional value: ", assemble(inner(u, u)*dx)
-  import sys; sys.exit(1)
 
   ## Step 1. Check replay correctness
 

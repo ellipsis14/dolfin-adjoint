@@ -62,7 +62,6 @@ if __name__ == "__main__":
   (u, xs, ys) = main(u, form, time, Scheme, dt=dt)
   print "Solution: ", ys[-1]
   print "Base functional value: ", assemble(inner(u, u)*dx)
-  import sys; sys.exit(1)
 
   ## Step 1. Check replay correctness
   
