@@ -49,15 +49,16 @@ def main(model, ics=None, annotate=False):
     pass
 
   (vs_, vs) = solver.solution_fields()
-  return vs
+  return vs_
 
 if __name__ == "__main__":
 
   u = main(model(), annotate=True)
+  parameters["adjoint"]["stop_annotating"] = True
 
   ## Step 1. Check replay correctness
 
-  replay = True
+  replay = False
   if replay:
     info_blue("Checking replay correctness .. ")
     assert adjglobals.adjointer.equation_count > 0
@@ -68,8 +69,8 @@ if __name__ == "__main__":
   ## Step 2. Check TLM correctness
 
   dtm = TimeMeasure()
-  J = Functional(inner(u, u)*dx*dtm[FINISH_TIME])
-  m = InitialConditionParameter(u)
+  J = Functional(inner(u, u)*dx*dtm[FINISH_TIME], name="norm")
+  m = InitialConditionParameter("vs_")
   Jm = assemble(inner(u, u)*dx)
 
   def Jhat(ic):
@@ -77,14 +78,17 @@ if __name__ == "__main__":
     print "Perturbed functional value: ", assemble(inner(u, u)*dx)
     return assemble(inner(u, u)*dx)
 
-  dJdm = compute_gradient_tlm(J, m, forget=False)
-  minconv_tlm = taylor_test(Jhat, m, Jm, dJdm, \
-                            perturbation_direction=interpolate(Constant((0.1,)*num_states), V), seed=1.0e-1)
-  assert minconv_tlm > 1.8
+  tlm = False
+  if tlm:
+    dJdm = compute_gradient_tlm(J, m, forget=False)
+    minconv_tlm = taylor_test(Jhat, m, Jm, dJdm, \
+                              perturbation_direction=interpolate(Constant((0.1,)*num_states), V), seed=1.0e-1)
+    assert minconv_tlm > 1.8
 
   ## Step 3. Check ADM correctness
 
   dJdm = compute_gradient(J, m, forget=False)
+  assert dJdm is not None
   minconv_adm = taylor_test(Jhat, m, Jm, dJdm, \
                             perturbation_direction=interpolate(Constant((0.1,)*num_states), V), seed=1.0e-1)
   assert minconv_adm > 1.8
