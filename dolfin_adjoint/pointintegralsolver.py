@@ -68,25 +68,6 @@ if dolfin.__version__ > '1.2.0':
     def __str__(self):
       return hashlib.md5(str(self.form)).hexdigest()
 
-    def new_form(self, new_time, new_solution, dependencies, values):
-      new_form = dolfin.replace(self.form, dict(zip(self.coeffs, [val.data for val in values])))
-
-      if self.ic_var is not None:
-        ic_value = values[dependencies.index(self.ic_var)].data
-        new_solution.assign(ic_value, annotate=False)
-        new_form = dolfin.replace(new_form, {ic_value: new_solution})
-
-      new_form = dolfin.replace(new_form, {self.scheme.t(): new_time})
-      return new_form
-
-    def new_scheme(self, dependencies, values):
-      new_time = dolfin.Constant(self.time)
-      new_solution = dolfin.Function(self.fn_space)
-      new_form = self.new_form(new_time, new_solution, dependencies, values)
-
-      new_scheme = self.scheme.__class__(new_form, new_solution, new_time)
-      return new_scheme
-
     def __call__(self, dependencies, values):
       coeffs = [x for x in ufl.algorithms.extract_coefficients(self.scheme.rhs_form()) if hasattr(x, 'function_space')]
       for (coeff, value) in zip(coeffs, values):
@@ -98,7 +79,6 @@ if dolfin.__version__ > '1.2.0':
       return adjlinalg.Vector(self.scheme.solution())
 
     def derivative_action(self, dependencies, values, variable, contraction_vector, hermitian):
-      new_scheme = self.new_scheme(dependencies, values)
       if not hermitian:
         if self.solver not in caching.pis_fwd_to_tlm:
           dolfin.info_blue("No TLM solver, creating ... ")
@@ -108,7 +88,7 @@ if dolfin.__version__ > '1.2.0':
           tlm_solver.parameters.update(self.solver.parameters)
           caching.pis_fwd_to_tlm[self.solver] = tlm_solver
         else:
-          dolfin.info_green("Got an TLM solver, using ... ")
+          dolfin.info_green("Got a TLM solver, using ... ")
           tlm_solver = caching.pis_fwd_to_tlm[self.solver]
           tlm_scheme = tlm_solver.scheme()
           tlm_scheme.contraction.assign(contraction_vector.data)
