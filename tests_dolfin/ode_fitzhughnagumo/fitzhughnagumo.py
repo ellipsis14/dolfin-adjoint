@@ -294,8 +294,6 @@ def rhs(states, time, parameters, dy=None):
     dy += (I)*_v[1]
 
     dya = dolfin.assemble(dy*dolfin.dx)
-    print "states: ", states.vector().array()
-    print "RHS: ", dya.array()
 
     # Return dy
     return dy

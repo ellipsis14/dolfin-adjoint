@@ -19,7 +19,7 @@ import fitzhughnagumo as model
 params = model.default_parameters()
 state_init = model.init_values()
 
-mesh = UnitIntervalMesh(1)
+mesh = UnitIntervalMesh(1000)
 #R = FunctionSpace(mesh, "R", 0) # in my opinion, should work, but doesn't
 num_states = state_init.value_size()
 V = VectorFunctionSpace(mesh, "CG", 1, dim=num_states)
@@ -49,7 +49,6 @@ if __name__ == "__main__":
   #u = interpolate(state_init, V, name="Solution")
   #u = Function(V, name="Solution")
   u = interpolate(Constant((0.1, -84.9)), V, name="Solution")
-  print "Initial condition: ", u.vector().array()
   v = TestFunction(V)
   time = Constant(0.0)
   form = model.rhs(u, time, params)*dP
@@ -60,8 +59,6 @@ if __name__ == "__main__":
 
   dt = 0.1
   (u, xs, ys) = main(u, form, time, Scheme, dt=dt)
-  print "Solution: ", ys[-1]
-  print "Base functional value: ", assemble(inner(u, u)*dx)
 
   ## Step 1. Check replay correctness
   
@@ -84,10 +81,7 @@ if __name__ == "__main__":
     time = Constant(0.0)
     form = model.rhs(ic, time, params)*dP
 
-    print "Perturbed initial condition: ", ic.vector().array()
     (u, xs, ys) = main(ic, form, time, Scheme, dt=dt)
-    print "Perturbed solution: ", u.vector().array()
-    print "Perturbed functional value: ", assemble(inner(u, u)*dx)
     return assemble(inner(u, u)*dx)
 
   dJdm = compute_gradient_tlm(J, m, forget=False)
