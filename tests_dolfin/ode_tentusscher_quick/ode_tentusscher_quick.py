@@ -24,7 +24,7 @@ parameters["form_compiler"]["cpp_optimize_flags"] = "-O3 -ffast-math -march=nati
 params = model.default_parameters()
 state_init = model.init_values()
 
-mesh = UnitIntervalMesh(10000)
+mesh = UnitIntervalMesh(1)
 num_states = state_init.value_size()
 V = VectorFunctionSpace(mesh, "CG", 1, dim=num_states)
 
@@ -97,7 +97,6 @@ if __name__ == "__main__":
       (u, xs, ys) = main(ic, form, time, Scheme, dt=dt)
       return assemble(Jform(u))
 
-    info_red("Vertex: 5000 --- computing gradient")
     adj_timer = Timer("Gradient calculation")
     dJdm = compute_gradient(J, m, forget=False)
     adj_time = adj_timer.stop()
@@ -106,7 +105,6 @@ if __name__ == "__main__":
     minconv_adm = taylor_test(Jhat, m, Jm, dJdm, \
                               perturbation_direction=interpolate(Constant((0.1,)*num_states), V), seed=seed)
 
-    import sys; sys.exit(1)
     assert minconv_adm > 1.8
 
     dJdm_tlm = compute_gradient_tlm(J, m, forget=False)
