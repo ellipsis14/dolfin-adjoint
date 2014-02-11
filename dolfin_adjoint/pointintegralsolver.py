@@ -100,12 +100,28 @@ if dolfin.__version__ > '1.2.0':
     def derivative_action(self, dependencies, values, variable, contraction_vector, hermitian):
       new_scheme = self.new_scheme(dependencies, values)
       if not hermitian:
-        tlm_scheme = new_scheme.to_tlm(contraction_vector.data)
-        tlm_solver = dolfin.PointIntegralSolver(tlm_scheme)
-        tlm_solver.parameters.update(self.solver.parameters)
+        if self.solver not in caching.pis_fwd_to_tlm:
+          dolfin.info_blue("No TLM solver, creating ... ")
+          tlm_scheme = self.scheme.to_tlm(contraction_vector.data)
+
+          tlm_solver = dolfin.PointIntegralSolver(tlm_scheme)
+          tlm_solver.parameters.update(self.solver.parameters)
+          caching.pis_fwd_to_tlm[self.solver] = tlm_solver
+        else:
+          dolfin.info_green("Got an TLM solver, using ... ")
+          tlm_solver = caching.pis_fwd_to_tlm[self.solver]
+          tlm_scheme = tlm_solver.scheme()
+          tlm_scheme.contraction.assign(contraction_vector.data)
+
+        coeffs = [x for x in ufl.algorithms.extract_coefficients(tlm_scheme.rhs_form()) if hasattr(x, 'function_space')]
+        for (coeff, value) in zip(coeffs, values):
+          coeff.assign(value.data)
+        tlm_scheme.t().assign(self.time)
+
         tlm_solver.step(self.dt)
 
         return adjlinalg.Vector(tlm_scheme.solution())
+
       else:
         if self.solver not in caching.pis_fwd_to_adj:
           dolfin.info_blue("No ADM solver, creating ... ")
