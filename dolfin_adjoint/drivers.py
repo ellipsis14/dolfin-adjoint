@@ -385,7 +385,7 @@ class compute_gradient_tlm(object):
     assert isinstance(self.m, ListParameter)
     return compute_gradient_tlm(self.J, self.m[i], self.forget, self.cb, self.project)
 
-  def inner(self, vec):
+  def cached_inner(self, vec):
     # Check if we've seen a *multiple* of this vec before;
     # this is the typical case in Taylor testing
     for cachevec in self.inner_cache.keys():
@@ -406,7 +406,7 @@ class compute_gradient_tlm(object):
     self.inner_cache[vec] = self.real_inner(vec)
     return self.inner_cache[vec]
 
-  def real_inner(self, vec):
+  def inner(self, vec):
     '''Compute the action of the gradient on the vector vec.'''
     def make_mdot(vec):
       if isinstance(self.m, InitialConditionParameter):
