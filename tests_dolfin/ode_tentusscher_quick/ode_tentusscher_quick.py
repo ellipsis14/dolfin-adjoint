@@ -24,7 +24,7 @@ parameters["form_compiler"]["cpp_optimize_flags"] = "-O3 -ffast-math -march=nati
 params = model.default_parameters()
 state_init = model.init_values()
 
-mesh = UnitIntervalMesh(1000)
+mesh = UnitIntervalMesh(10000)
 num_states = state_init.value_size()
 V = VectorFunctionSpace(mesh, "CG", 1, dim=num_states)
 
@@ -38,11 +38,12 @@ def main(u, form, time, Scheme, dt):
 
   solver = PointIntegralSolver(scheme)
   solver.parameters.reset_stage_solutions = True
+  #solver.parameters.enable_debug_output = True
   solver.parameters.newton_solver.reset_each_step = True
   solver.parameters.newton_solver.absolute_tolerance = 1.0e-12
   solver.parameters.newton_solver.maximum_iterations = 50
 
-  for i in range(4):
+  for i in range(1):
     solver.step(dt)
     xs.append(float(time))
     ys.append(u.vector().array()[15])
@@ -70,7 +71,7 @@ if __name__ == "__main__":
   info_red("Forward time: %s" % fwd_time)
 
   
-  replay = True
+  replay = False
   if replay:
     replay_timer = Timer("Replay")
     info_blue("Checking replay correctness .. ")
@@ -83,7 +84,7 @@ if __name__ == "__main__":
   seed = 1.5e-4
   dtm = TimeMeasure()
 
-  for i in [0]:
+  for i in [1]:
     Jform = lambda u: inner(u[i], u[i])*dx
     J = Functional(Jform(u)*dtm[FINISH_TIME])
     m = InitialConditionParameter(u)
@@ -96,6 +97,7 @@ if __name__ == "__main__":
       (u, xs, ys) = main(ic, form, time, Scheme, dt=dt)
       return assemble(Jform(u))
 
+    info_red("Vertex: 5000 --- computing gradient")
     adj_timer = Timer("Gradient calculation")
     dJdm = compute_gradient(J, m, forget=False)
     adj_time = adj_timer.stop()
@@ -104,6 +106,7 @@ if __name__ == "__main__":
     minconv_adm = taylor_test(Jhat, m, Jm, dJdm, \
                               perturbation_direction=interpolate(Constant((0.1,)*num_states), V), seed=seed)
 
+    import sys; sys.exit(1)
     assert minconv_adm > 1.8
 
     dJdm_tlm = compute_gradient_tlm(J, m, forget=False)
