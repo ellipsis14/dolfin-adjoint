@@ -397,8 +397,8 @@ class compute_gradient_tlm(object):
       bools = ratioarray == ratioarray[0]
       if not isinstance(bools, ndarray): bools = [bools] # agh, how ugly this is.
 
-      if all(bools):
-        ratio = ratioarray[0]
+      ratio = ratioarray[0]
+      if all(bools) and ratio != 0:
         #info_green("compute_gradient_tlm cache hit")
         return self.inner_cache[cachevec] / ratio
 
