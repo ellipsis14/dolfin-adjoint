@@ -19,11 +19,12 @@ import tentusscher_2004_mcell as model
 import random
 random.seed(42)
 
+parameters["form_compiler"]["cpp_optimize_flags"] = "-O3 -ffast-math -march=native"
+
 params = model.default_parameters()
 state_init = model.init_values()
 
 mesh = UnitIntervalMesh(1)
-#R = FunctionSpace(mesh, "R", 0) # in my opinion, should work, but doesn't
 num_states = state_init.value_size()
 V = VectorFunctionSpace(mesh, "CG", 1, dim=num_states)
 
@@ -63,26 +64,26 @@ if __name__ == "__main__":
 
   dt = 0.01
   u.assign(u0)
+  fwd_timer = Timer("Forward run")
   (u, xs, ys) = main(u, form, time, Scheme, dt=dt)
-  print "Solution: ", ys[-1]
+  fwd_time = fwd_timer.stop()
+  info_red("Forward time: %s" % fwd_time)
 
-  ## Step 1. Check replay correctness
   
-  replay = False
+  replay = True
   if replay:
+    replay_timer = Timer("Replay")
     info_blue("Checking replay correctness .. ")
     assert adjglobals.adjointer.equation_count > 0
-    adj_html("forward.html", "forward")
     success = replay_dolfin(tol=1.0e-15, stop=True)
+    replay_time = replay_timer.stop()
+    info_red("Replay time: %s" % replay_time)
     assert success
-
-  ## Step 2. Check TLM correctness
 
   seed = 1.5e-4
   dtm = TimeMeasure()
 
   for i in range(16):
-    #if i not in [8, 13, 14]: continue
     Jform = lambda u: inner(u[i], u[i])*dx
     J = Functional(Jform(u)*dtm[FINISH_TIME])
     m = InitialConditionParameter(u)
@@ -95,17 +96,11 @@ if __name__ == "__main__":
       (u, xs, ys) = main(ic, form, time, Scheme, dt=dt)
       return assemble(Jform(u))
 
-    tlm = False
-    # FIXME: Takes for ever...
-    if tlm:
-      dJdm = compute_gradient_tlm(J, m, forget=False)
-      minconv_tlm = taylor_test(Jhat, m, Jm, dJdm, \
-                                perturbation_direction=interpolate(Constant((0.1,)*num_states), V), seed=seed)
-      assert minconv_tlm > 1.8
-
-    ## Step 3. Check ADM correctness
-
+    adj_timer = Timer("Gradient calculation")
     dJdm = compute_gradient(J, m, forget=False)
+    adj_time = adj_timer.stop()
+    info_red("Gradient time: %s" % adj_time)
+
     minconv_adm = taylor_test(Jhat, m, Jm, dJdm, \
                               perturbation_direction=interpolate(Constant((0.1,)*num_states), V), seed=seed)
     if minconv_adm > 1.8:
