@@ -1,6 +1,6 @@
 import libadjoint
 from parameter import *
-from backend import info_red, info_blue, info, info_green
+from backend import info_red, info_blue, info, info_green, parameters
 import backend
 import adjglobals
 import backend
@@ -10,6 +10,8 @@ import ufl.algorithms
 from numpy import ndarray
 
 def replay_dolfin(forget=False, tol=0.0, stop=False):
+
+  parameters["adjoint"]["stop_annotating"] = True
   if not backend.parameters["adjoint"]["record_all"]:
     info_red("Warning: your replay test will be much more effective with dolfin.parameters['adjoint']['record_all'] = True.")
 
