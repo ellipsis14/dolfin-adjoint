@@ -6,6 +6,7 @@ import adjlinalg
 import adjglobals
 import hashlib
 import utils
+import caching
 
 if dolfin.__version__ > '1.2.0':
   class PointIntegralSolver(dolfin.PointIntegralSolver):
@@ -87,12 +88,14 @@ if dolfin.__version__ > '1.2.0':
       return new_scheme
 
     def __call__(self, dependencies, values):
-      new_scheme = self.new_scheme(dependencies, values)
-      new_solver = dolfin.PointIntegralSolver(new_scheme)
-      new_solver.parameters.update(self.solver.parameters)
-      new_solver.step(self.dt)
+      coeffs = [x for x in ufl.algorithms.extract_coefficients(self.scheme.rhs_form()) if hasattr(x, 'function_space')]
+      for (coeff, value) in zip(coeffs, values):
+        coeff.assign(value.data)
 
-      return adjlinalg.Vector(new_scheme.solution())
+      self.scheme.t().assign(self.time)
+      self.solver.step(self.dt)
+
+      return adjlinalg.Vector(self.scheme.solution())
 
     def derivative_action(self, dependencies, values, variable, contraction_vector, hermitian):
       new_scheme = self.new_scheme(dependencies, values)
@@ -104,9 +107,24 @@ if dolfin.__version__ > '1.2.0':
 
         return adjlinalg.Vector(tlm_scheme.solution())
       else:
-        adm_scheme = new_scheme.to_adm(contraction_vector.data)
-        adm_solver = dolfin.PointIntegralSolver(adm_scheme)
-        adm_solver.parameters.update(self.solver.parameters)
+        if self.solver not in caching.pis_fwd_to_adj:
+          dolfin.info_blue("No ADM solver, creating ... ")
+          adm_scheme = self.scheme.to_adm(contraction_vector.data)
+
+          adm_solver = dolfin.PointIntegralSolver(adm_scheme)
+          adm_solver.parameters.update(self.solver.parameters)
+          caching.pis_fwd_to_adj[self.solver] = adm_solver
+        else:
+          dolfin.info_green("Got an ADM solver, using ... ")
+          adm_solver = caching.pis_fwd_to_adj[self.solver]
+          adm_scheme = adm_solver.scheme()
+          adm_scheme.contraction.assign(contraction_vector.data)
+
+        coeffs = [x for x in ufl.algorithms.extract_coefficients(adm_scheme.rhs_form()) if hasattr(x, 'function_space')]
+        for (coeff, value) in zip(coeffs, values):
+          coeff.assign(value.data)
+        adm_scheme.t().assign(self.time)
+
         adm_solver.step(self.dt)
 
         return adjlinalg.Vector(adm_scheme.solution())

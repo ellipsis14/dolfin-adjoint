@@ -50,3 +50,7 @@ def form_key(form):
 
 assembled_fwd_forms = set()
 assembled_adj_forms = KeyedDict(keyfunc=form_key)
+
+### Stuff for PointIntegralSolver caching
+pis_fwd_to_tlm = {}
+pis_fwd_to_adj = {}

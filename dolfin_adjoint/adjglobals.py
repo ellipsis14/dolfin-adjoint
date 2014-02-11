@@ -69,6 +69,9 @@ def adj_reset_cache():
   caching.assembled_adj_forms.clear()
   caching.lu_solvers.clear()
 
+  caching.pis_fwd_to_tlm.clear()
+  caching.pis_fwd_to_adj.clear()
+
 def adj_html(*args, **kwargs):
   '''This routine dumps the current state of the adjglobals.adjointer to a HTML visualisation.
   Use it like:
