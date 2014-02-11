@@ -83,7 +83,11 @@ if dolfin.__version__ > '1.2.0':
         if self.solver not in caching.pis_fwd_to_tlm:
           dolfin.info_blue("No TLM solver, creating ... ")
           creation_timer = dolfin.Timer("to_adm")
-          tlm_scheme = self.scheme.to_tlm(contraction_vector.data)
+          if contraction_vector.data is not None:
+            tlm_scheme = self.scheme.to_tlm(contraction_vector.data)
+          else:
+            tlm_scheme = self.scheme.to_tlm(dolfin.Function(self.fn_space))
+
           creation_time = creation_timer.stop()
           dolfin.info_red("TLM creation time: %s" % creation_time)
 
@@ -93,7 +97,10 @@ if dolfin.__version__ > '1.2.0':
         else:
           tlm_solver = caching.pis_fwd_to_tlm[self.solver]
           tlm_scheme = tlm_solver.scheme()
-          tlm_scheme.contraction.assign(contraction_vector.data)
+          if contraction_vector.data is not None:
+            tlm_scheme.contraction.assign(contraction_vector.data)
+          else:
+            tlm_scheme.contraction.vector().zero()
 
         coeffs = [x for x in ufl.algorithms.extract_coefficients(tlm_scheme.rhs_form()) if hasattr(x, 'function_space')]
         for (coeff, value) in zip(coeffs, values):
@@ -108,7 +115,10 @@ if dolfin.__version__ > '1.2.0':
         if self.solver not in caching.pis_fwd_to_adj:
           dolfin.info_blue("No ADM solver, creating ... ")
           creation_timer = dolfin.Timer("to_adm")
-          adm_scheme = self.scheme.to_adm(contraction_vector.data)
+          if contraction_vector.data is not None:
+            adm_scheme = self.scheme.to_adm(contraction_vector.data)
+          else:
+            adm_scheme = self.scheme.to_adm(dolfin.Function(self.fn_space))
           creation_time = creation_timer.stop()
           dolfin.info_red("ADM creation time: %s" % creation_time)
 
@@ -118,7 +128,10 @@ if dolfin.__version__ > '1.2.0':
         else:
           adm_solver = caching.pis_fwd_to_adj[self.solver]
           adm_scheme = adm_solver.scheme()
-          adm_scheme.contraction.assign(contraction_vector.data)
+          if contraction_vector.data is not None:
+            adm_scheme.contraction.assign(contraction_vector.data)
+          else:
+            adm_scheme.contraction.vector().zero()
 
         coeffs = [x for x in ufl.algorithms.extract_coefficients(adm_scheme.rhs_form()) if hasattr(x, 'function_space')]
         for (coeff, value) in zip(coeffs, values):
