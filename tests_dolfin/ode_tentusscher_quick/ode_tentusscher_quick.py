@@ -16,8 +16,6 @@ if not hasattr(MultiStageScheme, "to_tlm"):
 # Import cell model (rhs, init_values, default_parameters)
 import tentusscher_2004_mcell as model
 
-import numpy
-
 import random
 random.seed(42)
 
@@ -54,8 +52,6 @@ def main(u, form, time, Scheme, dt):
 if __name__ == "__main__":
   u0 = interpolate(state_init, V, name="InitialValue")
   Scheme = BackwardEuler
-  Scheme = ForwardEuler
-  Scheme = CrankNicolson
 
   u = Function(V, name="Solution")
   v = TestFunction(V)
