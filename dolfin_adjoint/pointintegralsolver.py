@@ -82,13 +82,15 @@ if dolfin.__version__ > '1.2.0':
       if not hermitian:
         if self.solver not in caching.pis_fwd_to_tlm:
           dolfin.info_blue("No TLM solver, creating ... ")
+          creation_timer = dolfin.Timer("to_adm")
           tlm_scheme = self.scheme.to_tlm(contraction_vector.data)
+          creation_time = creation_timer.stop()
+          dolfin.info_red("TLM creation time: %s" % creation_time)
 
           tlm_solver = dolfin.PointIntegralSolver(tlm_scheme)
           tlm_solver.parameters.update(self.solver.parameters)
           caching.pis_fwd_to_tlm[self.solver] = tlm_solver
         else:
-          dolfin.info_green("Got a TLM solver, using ... ")
           tlm_solver = caching.pis_fwd_to_tlm[self.solver]
           tlm_scheme = tlm_solver.scheme()
           tlm_scheme.contraction.assign(contraction_vector.data)
@@ -105,13 +107,15 @@ if dolfin.__version__ > '1.2.0':
       else:
         if self.solver not in caching.pis_fwd_to_adj:
           dolfin.info_blue("No ADM solver, creating ... ")
+          creation_timer = dolfin.Timer("to_adm")
           adm_scheme = self.scheme.to_adm(contraction_vector.data)
+          creation_time = creation_timer.stop()
+          dolfin.info_red("ADM creation time: %s" % creation_time)
 
           adm_solver = dolfin.PointIntegralSolver(adm_scheme)
           adm_solver.parameters.update(self.solver.parameters)
           caching.pis_fwd_to_adj[self.solver] = adm_solver
         else:
-          dolfin.info_green("Got an ADM solver, using ... ")
           adm_solver = caching.pis_fwd_to_adj[self.solver]
           adm_scheme = adm_solver.scheme()
           adm_scheme.contraction.assign(contraction_vector.data)
