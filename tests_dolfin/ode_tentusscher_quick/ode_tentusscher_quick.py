@@ -38,7 +38,7 @@ def main(u, form, time, Scheme, dt):
 
   solver = PointIntegralSolver(scheme)
   solver.parameters.reset_stage_solutions = True
-  solver.parameters.enable_debug_output = True
+  solver.parameters.enable_debug_output = False
   solver.parameters.newton_solver.reset_each_step = True
   solver.parameters.newton_solver.maximum_iterations = 50
 
@@ -62,7 +62,7 @@ if __name__ == "__main__":
   check = False
   plot = False
 
-  dt = 0.01
+  dt = 0.25
   u.assign(u0)
   fwd_timer = Timer("Forward run")
   (u, xs, ys) = main(u, form, time, Scheme, dt=dt)
