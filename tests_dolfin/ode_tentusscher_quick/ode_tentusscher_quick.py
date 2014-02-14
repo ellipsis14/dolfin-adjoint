@@ -24,7 +24,7 @@ parameters["form_compiler"]["cpp_optimize_flags"] = "-O3 -ffast-math -march=nati
 params = model.default_parameters()
 state_init = model.init_values()
 
-mesh = UnitIntervalMesh(1000)
+mesh = UnitIntervalMesh(1)
 num_states = state_init.value_size()
 V = VectorFunctionSpace(mesh, "CG", 1, dim=num_states)
 
