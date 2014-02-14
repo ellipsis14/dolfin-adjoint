@@ -24,7 +24,7 @@ parameters["form_compiler"]["cpp_optimize_flags"] = "-O3 -ffast-math -march=nati
 params = model.default_parameters()
 state_init = model.init_values()
 
-mesh = UnitIntervalMesh(1)
+mesh = UnitIntervalMesh(1000)
 num_states = state_init.value_size()
 V = VectorFunctionSpace(mesh, "CG", 1, dim=num_states)
 
@@ -40,10 +40,9 @@ def main(u, form, time, Scheme, dt):
   solver.parameters.reset_stage_solutions = True
   #solver.parameters.enable_debug_output = True
   solver.parameters.newton_solver.reset_each_step = True
-  solver.parameters.newton_solver.absolute_tolerance = 1.0e-12
   solver.parameters.newton_solver.maximum_iterations = 50
 
-  for i in range(1):
+  for i in range(5):
     solver.step(dt)
     xs.append(float(time))
     ys.append(u.vector().array()[15])
