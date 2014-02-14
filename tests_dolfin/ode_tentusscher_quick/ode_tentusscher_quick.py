@@ -62,7 +62,7 @@ if __name__ == "__main__":
   check = False
   plot = False
 
-  dt = 0.25
+  dt = 0.01
   u.assign(u0)
   fwd_timer = Timer("Forward run")
   (u, xs, ys) = main(u, form, time, Scheme, dt=dt)
