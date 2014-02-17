@@ -8,8 +8,7 @@ import adjglobals
 import utils
 
 dolfin_assign = backend.Function.assign
-if backend.__name__ == "dolfin":
-  dolfin_split  = backend.Function.split
+dolfin_split  = backend.Function.split
 dolfin_str    = backend.Function.__str__
 dolfin_interpolate = backend.Function.interpolate
 
