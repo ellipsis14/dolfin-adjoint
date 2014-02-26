@@ -88,8 +88,8 @@ def adj_reset():
   adj_variables.__init__()
   function_names.__init__()
   if backend.__name__ == "dolfin":
-    lusolver.lu_solvers = {}
-    lusolver.adj_lu_solvers = {}
+    lusolver.lu_solvers = []
+    lusolver.adj_lu_solvers = []
   adj_reset_cache()
 
 # Map from FunctionSpace to LUSolver that has factorised the fsp mass matrix

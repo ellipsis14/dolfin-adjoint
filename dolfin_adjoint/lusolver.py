@@ -7,10 +7,10 @@ import adjlinalg
 import misc
 import utils
 
-lu_solvers = {}
-adj_lu_solvers = {}
+lu_solvers = []
+adj_lu_solvers = []
 
-def make_LUSolverMatrix(form, reuse_factorization):
+def make_LUSolverMatrix(idx, reuse_factorization):
   class LUSolverMatrix(adjlinalg.Matrix):
     def solve(self, var, b):
 
@@ -23,14 +23,14 @@ def make_LUSolverMatrix(form, reuse_factorization):
         bcs = self.bcs
 
       if var.type in ['ADJ_FORWARD', 'ADJ_TLM']:
-        solver = lu_solvers[form]
+        solver = lu_solvers[idx]
       else:
-        if adj_lu_solvers[form] is None:
+        if adj_lu_solvers[idx] is None:
           A = assembly.assemble(self.data); [bc.apply(A) for bc in bcs]
-          adj_lu_solvers[form] = LUSolver(A)
-          adj_lu_solvers[form].parameters["reuse_factorization"] = True
+          adj_lu_solvers[idx] = LUSolver(A)
+          adj_lu_solvers[idx].parameters["reuse_factorization"] = True
 
-        solver = adj_lu_solvers[form]
+        solver = adj_lu_solvers[idx]
 
       x = adjlinalg.Vector(dolfin.Function(self.test_function().function_space()))
 
@@ -55,6 +55,7 @@ class LUSolver(dolfin.LUSolver):
   '''This object is overloaded so that solves using this class are automatically annotated,
   so that libadjoint can automatically derive the adjoint and tangent linear models.'''
   def __init__(self, *args):
+    self.__global_list_idx__ = None
 
     if len(args) > 0:
       self.matrix = args[0]
@@ -120,11 +121,12 @@ class LUSolver(dolfin.LUSolver):
       else:
         raise libadjoint.exceptions.LibadjointErrorInvalidInputs("LUSolver.solve() must be called with either (A, x, b) or (x, b).")
 
-      if self.parameters["reuse_factorization"]:
-        lu_solvers[A] = self
-        adj_lu_solvers[A] = None
+      if self.parameters["reuse_factorization"] and self.__global_list_idx__ is None:
+        self.__global_list_idx__ = len(lu_solvers)
+        lu_solvers.append(self)
+        adj_lu_solvers.append(None)
 
-      solving.annotate(A == b, x, eq_bcs, solver_parameters={"linear_solver": "lu"}, matrix_class=make_LUSolverMatrix(A, self.parameters["reuse_factorization"]))
+      solving.annotate(A == b, x, eq_bcs, solver_parameters={"linear_solver": "lu"}, matrix_class=make_LUSolverMatrix(self.__global_list_idx__, self.parameters["reuse_factorization"]))
 
     out = dolfin.LUSolver.solve(self, *args, **kwargs)
 
