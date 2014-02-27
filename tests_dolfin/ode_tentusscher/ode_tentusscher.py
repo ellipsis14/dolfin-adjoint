@@ -39,7 +39,7 @@ def main(u, form, time, Scheme, dt):
   solver = PointIntegralSolver(scheme)
   solver.parameters.reset_stage_solutions = True
   solver.parameters.newton_solver.reset_each_step = True
-  solver.parameters.newton_solver.absolute_tolerance = 1.0e-12
+  solver.parameters.newton_solver.relative_tolerance = 1.0e-12
   solver.parameters.newton_solver.maximum_iterations = 50
 
   for i in range(4):
@@ -107,3 +107,14 @@ if __name__ == "__main__":
       info_green("(%d) Pass" % i)
     else:
       info_red("(%d) Fail" % i)
+
+    dJdm_tlm = compute_gradient_tlm(J, m, forget=False)
+
+    minconv_tlm = taylor_test(Jhat, m, Jm, dJdm_tlm, \
+                              perturbation_direction=interpolate(Constant((0.1,)*num_states), V), seed=seed)
+
+    if minconv_tlm > 1.8:
+      info_green("(%d) Pass" % i)
+    else:
+      info_red("(%d) Fail" % i)
+
