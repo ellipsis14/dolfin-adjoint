@@ -2,6 +2,8 @@ from dolfin import *
 from dolfin_adjoint import *
 set_log_level(WARNING)
 
+parameters["adjoint"]["debug_cache"] = True
+
 class BidomainSolver(object):
     def __init__(self, dt):
         mesh = UnitIntervalMesh(2)

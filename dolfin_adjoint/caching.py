@@ -1,5 +1,6 @@
 import re
 import ufl.algorithms
+from dolfin import Constant
 
 ### A general dictionary that applies a key function before lookup
 class KeyedDict(dict):
@@ -42,11 +43,16 @@ lu_solvers = KeyedDict(keyfunc=lu_canonicalisation)
 
 ### Stuff for preassembly caching
 
+def form_constants(form):
+  constants = tuple([float(x) for x in ufl.algorithms.extract_coefficients(form) if isinstance(x, Constant)])
+  return constants
+
 def form_key(form):
+  constants = form_constants(form)
   try:
-    return ufl.algorithms.expand_indices(form)
+    return (ufl.algorithms.expand_indices(form), constants)
   except:
-    return form
+    return (form, constants)
 
 assembled_fwd_forms = set()
 assembled_adj_forms = KeyedDict(keyfunc=form_key)
