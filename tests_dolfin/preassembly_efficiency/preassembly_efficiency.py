@@ -156,7 +156,7 @@ if __name__ == "__main__":
   adj_html("adjoint.html", "adjoint")
 
   replay_timer = Timer("Replay")
-  success = replay_dolfin()
+  success = replay_dolfin(tol=1.0e-9)
   replay_time = replay_timer.stop()
 
   ratio = replay_time / fwd_time
