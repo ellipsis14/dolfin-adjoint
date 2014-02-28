@@ -77,7 +77,7 @@ class RHS(libadjoint.RHS):
       return adjlinalg.Vector(action)
     else:
       # RHS is a adjlinalg.Vector. Its derivative is therefore zero.
-      raise exceptions.LibadjointErrorNotImplemented("No derivative method for constant RHS.")
+      raise libadjoint.exceptions.LibadjointErrorNotImplemented("No derivative method for constant RHS.")
 
   def second_derivative_action(self, dependencies, values, inner_variable, inner_contraction_vector, outer_variable, hermitian, action_vector):
 
