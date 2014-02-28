@@ -297,7 +297,14 @@ class ReducedFunctionalNumPy(ReducedFunctional):
                            jac_g)            # to evaluate the constraint Jacobian
 
       pyipopt.set_loglevel(1) # turn off annoying pyipopt logging
-      if MPI.process_number() > 0:
+
+      try:
+        rank = MPI.process_number()
+      except RuntimeError:
+        from dolfin import mpi_comm_world
+        rank = MPI.rank(mpi_comm_world())
+
+      if rank > 0:
         nlp.int_option('print_level', 0) # disable redundant IPOPT output in parallel
       else:
         nlp.int_option('print_level', 6) # very useful IPOPT output
