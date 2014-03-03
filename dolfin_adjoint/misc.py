@@ -15,3 +15,10 @@ def pause_annotation():
 
 def continue_annotation(flag):
   backend.parameters["adjoint"]["stop_annotating"] = flag
+
+def rank():
+  # No idea what to do with firedrake here, so I assume one of them will fix it!
+  try:
+    return backend.MPI.process_number()
+  except backend.RuntimeError:
+    return backend.MPI.rank(backend.mpi_comm_world())

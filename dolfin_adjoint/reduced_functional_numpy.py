@@ -5,6 +5,7 @@ from dolfin_adjoint.adjglobals import adjointer, adj_reset_cache
 from reduced_functional import ReducedFunctional
 from utils import gather
 from functools import partial
+import misc
 
 class ReducedFunctionalNumPy(ReducedFunctional):
     ''' This class implements the reduced functional for a given functional/parameter combination. The core idea 
@@ -298,11 +299,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
 
       pyipopt.set_loglevel(1) # turn off annoying pyipopt logging
 
-      try:
-        rank = MPI.process_number()
-      except RuntimeError:
-        from dolfin import mpi_comm_world
-        rank = MPI.rank(mpi_comm_world())
+      rank = misc.rank()
 
       if rank > 0:
         nlp.int_option('print_level', 0) # disable redundant IPOPT output in parallel
