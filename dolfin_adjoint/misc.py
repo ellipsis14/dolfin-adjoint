@@ -20,5 +20,5 @@ def rank():
   # No idea what to do with firedrake here, so I assume one of them will fix it!
   try:
     return backend.MPI.process_number()
-  except backend.RuntimeError:
+  except RuntimeError:
     return backend.MPI.rank(backend.mpi_comm_world())
