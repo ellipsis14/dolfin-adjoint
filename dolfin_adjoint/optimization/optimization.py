@@ -6,7 +6,7 @@ from ..reduced_functional import ReducedFunctional
 from ..utils import gather
 import numpy as np
 import sys
-import misc
+from ..misc import rank
 
 def serialise_bounds(rf_np, bounds):
     ''' Converts bounds to an array of (min, max) tuples and serialises it in a parallel environment. ''' 
@@ -75,7 +75,7 @@ def minimize_scipy_generic(rf_np, method, bounds = None, **kwargs):
 
     if not "options" in kwargs:
         kwargs["options"] = {}
-    if misc.rank() != 0:
+    if rank() != 0:
         # Shut up all processors except the first one.
         kwargs["options"]["disp"] = False
     else:
