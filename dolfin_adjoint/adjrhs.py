@@ -95,13 +95,13 @@ class RHS(libadjoint.RHS):
 
       d_rhs = backend.derivative(current_form, dolfin_inner_variable, inner_contraction_vector.data)
       d_rhs = ufl.algorithms.expand_derivatives(d_rhs)
-      if d_rhs.integrals() == ():
+      if len(d_rhs.integrals()) == 0:
         return None
 
       d_rhs = backend.derivative(d_rhs, dolfin_outer_variable, trial)
       d_rhs = ufl.algorithms.expand_derivatives(d_rhs)
 
-      if d_rhs.integrals() == ():
+      if len(d_rhs.integrals()) == 0:
         return None
 
       if hermitian:

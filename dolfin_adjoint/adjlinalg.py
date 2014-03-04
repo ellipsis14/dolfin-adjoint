@@ -451,7 +451,7 @@ def wrap_assemble(form, test):
   try:
     b = backend.assemble(form)
   except RuntimeError:
-    assert form.integrals() == ()
+    assert len(form.integrals()) == 0
     b = backend.Function(test.function_space()).vector()
 
   return b

@@ -1,5 +1,4 @@
 import dolfin
-from dolfin import MPI 
 from dolfin_adjoint import constant 
 from ..reduced_functional_numpy import ReducedFunctionalNumPy, get_global, set_local
 from ..reduced_functional import ReducedFunctional

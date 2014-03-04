@@ -1,4 +1,5 @@
-from dolfin import MPI, inner, assemble, dx, Function
+from dolfin import inner, assemble, dx, Function
+from dolfin_adjoint.misc import rank
 from data_structures import CoefficientList, OptFunctional
 from line_search import FixedLineSearch, ArmijoLineSearch, StrongWolfeLineSearch 
 import numpy
@@ -33,7 +34,7 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
     line_search = options.get("line_search", "armijo")
     line_search_options = options.get("line_search_options", {})
 
-    if disp and MPI.process_number()==0:
+    if disp and rank()==0:
         print "Optimising using steepest descent with a " + line_search + " line search." 
         print "Maximum optimisation iterations: %i" % maxiter 
 
@@ -64,7 +65,7 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
         s.scale(-1)
 
         if disp:
-            if MPI.process_number()==0: 
+            if rank()==0: 
                 print "Iteration %i\tJ = %s\t|dJ| = %s" % (it, j, s.normL2())
 
         # Check for convergence                                                              # Reason:
@@ -109,7 +110,7 @@ def minimize_steepest_descent(rf, tol=1e-16, options={}, **args):
     # Print the reason for convergence
     if disp:
         n = s.normL2()
-        if MPI.process_number()==0:
+        if rank()==0:
             if maxiter != None and iter <= maxiter:
                 print "\nMaximum number of iterations reached.\n"
             elif gtol != None and n <= gtol: 

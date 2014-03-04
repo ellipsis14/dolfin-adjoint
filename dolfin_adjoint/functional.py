@@ -126,7 +126,7 @@ class Functional(libadjoint.Functional):
 
     d = backend.derivative(functional_value, values[dependencies.index(variable)].data)
     d = ufl.algorithms.expand_derivatives(d)
-    if d.integrals() == ():
+    if len(d.integrals()) == 0:
       raise SystemExit, "This isn't supposed to happen -- your functional is supposed to depend on %s" % variable
     return adjlinalg.Vector(d)
 
@@ -143,7 +143,7 @@ class Functional(libadjoint.Functional):
     d = backend.derivative(functional_value, values[dependencies.index(variable)].data)
     d = ufl.algorithms.expand_derivatives(d)
     d = backend.derivative(d, values[dependencies.index(variable)].data, contraction.data)
-    if d.integrals() == ():
+    if len(d.integrals()) == 0:
       raise SystemExit, "This isn't supposed to happen -- your functional is supposed to depend on %s" % variable
     return adjlinalg.Vector(d)
 

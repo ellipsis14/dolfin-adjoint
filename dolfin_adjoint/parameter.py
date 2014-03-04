@@ -171,7 +171,7 @@ class ScalarParameter(DolfinAdjointParameter):
         return None
 
       # Let's see if the form actually depends on the parameter m
-      if diff_form.integrals() != ():
+      if len(diff_form.integrals()) != 0:
         dFdm = backend.assemble(diff_form) # actually - dF/dm
         assert isinstance(dFdm, backend.GenericVector)
 
@@ -201,7 +201,7 @@ class ScalarParameter(DolfinAdjointParameter):
         return None
 
       # Let's see if the form actually depends on the parameter m
-      if diff_form.integrals() != ():
+      if len(diff_form.integrals()) != 0:
         dFdm = backend.assemble(diff_form) # actually - dF/dm
         assert isinstance(dFdm, backend.GenericVector)
 
@@ -231,7 +231,7 @@ class ScalarParameter(DolfinAdjointParameter):
 
     d = backend.derivative(form, get_constant(self.a), dparam)
     d = ufl.algorithms.expand_derivatives(d)
-    if list(d.integrals()) != []:
+    if len(d.integrals()) != 0:
       return backend.assemble(d)
     else:
       return None
@@ -262,7 +262,7 @@ class ScalarParameter(DolfinAdjointParameter):
     d = backend.derivative(d, get_constant(self.a), d2param)
     d = ufl.algorithms.expand_derivatives(d)
 
-    if d.integrals() != ():
+    if len(d.integrals()) != 0:
       return backend.assemble(d)
     else:
       return None
