@@ -7,10 +7,12 @@ import sys
 
 from dolfin import *
 from dolfin_adjoint import *
+from distutils.version import LooseVersion
 
 n = 30
 mesh = UnitIntervalMesh(n)
-dx = dx(mesh)
+if LooseVersion(dolfin.__version__) > LooseVersion('1.3.0'):
+    dx = dx(mesh)
 V = FunctionSpace(mesh, "CG", 2)
 
 def Dt(u, u_, timestep):
