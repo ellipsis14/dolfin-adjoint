@@ -231,7 +231,7 @@ class ScalarParameter(DolfinAdjointParameter):
 
     d = backend.derivative(form, get_constant(self.a), dparam)
     d = ufl.algorithms.expand_derivatives(d)
-    if d.integrals() != ():
+    if list(d.integrals()) != []:
       return backend.assemble(d)
     else:
       return None
