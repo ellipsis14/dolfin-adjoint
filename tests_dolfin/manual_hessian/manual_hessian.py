@@ -30,7 +30,7 @@ hbcs = [homogenize(bc) for bc in bcs]
 ufl_action = action
 def action(A, x):
   A = ufl.algorithms.expand_derivatives(A)
-  if A.integrals() != (): # form is not empty:
+  if len(A.integrals()) != 0: # form is not empty:
     return ufl_action(A, x)
   else:
     return A # form is empty, doesn't matter anyway

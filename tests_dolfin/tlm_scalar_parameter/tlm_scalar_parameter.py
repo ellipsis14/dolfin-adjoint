@@ -10,6 +10,7 @@ from dolfin_adjoint import *
 
 n = 30
 mesh = UnitIntervalMesh(n)
+dx = dx(mesh)
 V = FunctionSpace(mesh, "CG", 2)
 
 def Dt(u, u_, timestep):
