@@ -2,6 +2,7 @@ import sys
 import random
 from dolfin import *
 from dolfin_adjoint import *
+from dolfin_adjoint.misc import rank
 from math import sqrt
 
 dolfin.parameters["adjoint"]["record_all"] = True
@@ -9,7 +10,7 @@ dolfin.parameters["adjoint"]["record_all"] = True
 # Class representing the intial conditions
 class InitialConditions(Expression):
     def __init__(self):
-        random.seed(2 + MPI.process_number())
+        random.seed(2 + rank())
     def eval(self, values, x):
         values[0] = 0.63 + 0.02*(0.5 - random.random())
         values[1] = 0.0
