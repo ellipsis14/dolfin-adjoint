@@ -110,9 +110,6 @@ class Function(backend.Function):
     annotate = kwargs.pop("annotate", None)
     to_annotate = utils.to_annotate(annotate)
 
-    self.super_fn = None
-    self.super_idx = None
-
     if "name" in kwargs:
       self.adj_name = kwargs["name"]
 
