@@ -87,8 +87,8 @@ def dolfin_adjoint_interpolate(self, other, annotate=None):
 
     return out
 
-def dolfin_adjoint_sub(self, idx):
-    out = dolfin_sub(self, idx)
+def dolfin_adjoint_sub(self, idx, deepcopy=False):
+    out = dolfin_sub(self, idx, deepcopy=deepcopy)
     out.super_idx = idx
     out.super_fn  = self
     return out
@@ -162,8 +162,8 @@ class Function(backend.Function):
 
     return dolfin_adjoint_interpolate(self, other, annotate)
 
-  def sub(self, idx):
-    return dolfin_adjoint_sub(self, idx)
+  def sub(self, idx, deepcopy=False):
+    return dolfin_adjoint_sub(self, idx, deepcopy=deepcopy)
 
 backend.Function.assign = dolfin_adjoint_assign # so that Functions produced inside Expression etc. get it too
 if backend.__name__ == "dolfin":

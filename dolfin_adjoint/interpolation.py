@@ -24,18 +24,8 @@ def interpolate(v, V, annotate=None, name=None):
   if isinstance(v, backend.Function) and to_annotate:
     rhsdep = adjglobals.adj_variables[v]
     if adjglobals.adjointer.variable_known(rhsdep):
-      block_name = "Identity: %s" % str(V)
-      if len(block_name) > int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"]):
-        block_name = block_name[0:int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"])-1]
-      identity_block = libadjoint.Block(block_name)
-
-      def identity_assembly_cb(variables, dependencies, hermitian, coefficient, context):
-        assert coefficient == 1
-        return (adjlinalg.Matrix(adjlinalg.IdentityMatrix()), adjlinalg.Vector(backend.Function(V)))
-
-      identity_block.assemble = identity_assembly_cb
-
       rhs = InterpolateRHS(v, V)
+      identity_block = utils.get_identity_block(V)
 
       solving.register_initial_conditions(zip(rhs.coefficients(),rhs.dependencies()), linear=True)
 

@@ -4,6 +4,7 @@ from solving import solve, annotate as solving_annotate, do_checkpoint, register
 import libadjoint
 import adjlinalg
 import adjglobals
+import utils
 
 def register_assign(new, old, op=None):
 
@@ -11,16 +12,7 @@ def register_assign(new, old, op=None):
     assert op is not None
 
   fn_space = new.function_space()
-  block_name = "Identity: %s" % str(fn_space)
-  if len(block_name) > int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"]):
-    block_name = block_name[0:int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"])-1]
-  identity_block = libadjoint.Block(block_name)
-
-  def identity_assembly_cb(variables, dependencies, hermitian, coefficient, context):
-    assert coefficient == 1
-    return (adjlinalg.Matrix(adjlinalg.IdentityMatrix()), adjlinalg.Vector(None, fn_space=fn_space))
-
-  identity_block.assemble = identity_assembly_cb
+  identity_block = utils.get_identity_block(fn_space)
   dep = adjglobals.adj_variables.next(new)
 
   if backend.parameters["adjoint"]["record_all"] and isinstance(old, backend.Function):

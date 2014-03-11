@@ -23,7 +23,7 @@ if dolfin.__version__ > '1.2.0':
         if not adjglobals.adjointer.variable_known(current_var):
           solving.register_initial_conditions([(var, current_var)], linear=True)
 
-        identity_block = solving.get_identity(fn_space)
+        identity_block = utils.get_identity_block(fn_space)
         rhs = PointIntegralRHS(self, dt, current_var)
         next_var = adjglobals.adj_variables.next(var)
 

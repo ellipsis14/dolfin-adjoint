@@ -409,7 +409,7 @@ def register_initial_conditions(coeffdeps, linear, var=None):
 
 def register_initial_condition(coeff, dep):
   fn_space = coeff.function_space()
-  identity_block = get_identity(fn_space)
+  identity_block = utils.get_identity_block(fn_space)
 
   if backend.parameters["adjoint"]["record_all"]:
     adjglobals.adjointer.record_variable(dep, libadjoint.MemoryStorage(adjlinalg.Vector(coeff)))
@@ -466,27 +466,6 @@ def do_checkpoint(cs, var, rhs):
       adjglobals.disk_checkpoints.add(str(dep)) 
       adjglobals.adjointer.record_variable(dep, libadjoint.DiskStorage(adjlinalg.Vector(coeff), cs=True))
 
-
-def get_identity(fn_space):
-  block_name = "Identity: %s" % str(fn_space)
-  if len(block_name) > int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"]):
-    block_name = block_name[0:int(libadjoint.constants.adj_constants["ADJ_NAME_LEN"])-1]
-  identity_block = libadjoint.Block(block_name)
-
-  def identity_assembly_cb(variables, dependencies, hermitian, coefficient, context):
-    assert coefficient == 1
-    return (adjlinalg.Matrix(adjlinalg.IdentityMatrix()), adjlinalg.Vector(backend.Function(fn_space)))
-
-  identity_block.assemble = identity_assembly_cb
-
-  def identity_action_cb(variables, dependencies, hermitian, coefficient, input, context):
-    output = input.duplicate()
-    output.axpy(coefficient, input)
-    return output
-
-  identity_block.action = identity_action_cb
-
-  return identity_block
 
 def record(val):
   adjglobals.adjointer.record_variable(adjglobals.adj_variables[val], libadjoint.MemoryStorage(adjlinalg.Vector(val)))
