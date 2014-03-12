@@ -85,7 +85,7 @@ class FunctionAssignerRHS(libadjoint.RHS):
         if dep == variable:
           new_values.append(contraction_vector)
         else:
-          new_values.append(value)
+          new_values.append(value.duplicate())
 
       return self.__call__(dependencies, new_values)
     else:

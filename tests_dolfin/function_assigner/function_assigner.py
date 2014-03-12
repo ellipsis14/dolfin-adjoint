@@ -70,3 +70,6 @@ if __name__ == "__main__":
 
   minconv = taylor_test(Jhat, m, Jm, dJdm, seed=1.0e-3)
   assert minconv > 1.8
+
+  minconv = taylor_test(Jhat, m, Jm, dJdm_tlm, seed=1.0e-3)
+  assert minconv > 1.8
