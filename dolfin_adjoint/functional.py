@@ -69,7 +69,7 @@ class Functional(libadjoint.Functional):
   def __init__(self, timeform, verbose=False, name=None):
 
     if isinstance(timeform, ufl.form.Form):
-      if adjglobals.adjointer.adjointer.ntimesteps != 1:
+      if adjglobals.adjointer.adjointer.ntimesteps > 1:
         backend.info_red("You are using a steady-state functional (without the *dt term) in a time-dependent simulation.\ndolfin-adjoint will assume that you want to evaluate the functional at the end of time.")
       timeform = timeform*dt[FINISH_TIME]
 
