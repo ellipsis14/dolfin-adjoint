@@ -303,7 +303,7 @@ def test_scalar_parameter_adjoint(J, a, dJda, seed=None):
   for i in range(len(perturbations)):
     gradient_fd.append((functional_values[i] - f_direct)/perturbations[i])
 
-    remainder = abs(functional_values[i] - f_direct - dJda*perturbations[i])
+    remainder = abs(functional_values[i] - f_direct - float(dJda)*perturbations[i])
     with_gradient.append(remainder)
 
   info("Taylor remainder with adjoint information: " + str(with_gradient))
