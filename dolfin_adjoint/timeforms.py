@@ -143,6 +143,16 @@ class TimeForm(object):
     def __repr__(self):
         return "TimeForm("+repr(self.terms)+")"
 
+    def is_functional(self):
+      for term in self.terms:
+          form = term.form
+
+          fd = form.compute_form_data()
+          if fd.rank != 0:
+              return False
+          return True
+
+
 class TimeMeasure(object):
     '''Define a measure for an integral over some interval in time.'''
     def __init__(self, interval = None):

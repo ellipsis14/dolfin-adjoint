@@ -73,6 +73,9 @@ class Functional(libadjoint.Functional):
         backend.info_red("You are using a steady-state functional (without the *dt term) in a time-dependent simulation.\ndolfin-adjoint will assume that you want to evaluate the functional at the end of time.")
       timeform = timeform*dt[FINISH_TIME]
 
+      if not timeform.is_functional():
+          raise Exception, "Your functional must have rank 0, but is has rank >0"
+
     self.timeform = timeform
     self.verbose = verbose
     self.name = name
