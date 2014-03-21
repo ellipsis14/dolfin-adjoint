@@ -38,7 +38,6 @@ def main(u, form, time, Scheme, dt):
 
   solver = PointIntegralSolver(scheme)
   solver.parameters.reset_stage_solutions = True
-  solver.parameters.enable_debug_output = False
   solver.parameters.newton_solver.reset_each_step = True
   solver.parameters.newton_solver.maximum_iterations = 50
 
