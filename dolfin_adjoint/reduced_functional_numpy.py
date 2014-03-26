@@ -161,7 +161,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
             if minconv < 1.9:
                 raise RuntimeWarning, "A gradient test failed during execution."
             else:
-                info("Gradient test succesfull.")
+                info("Gradient test successful.")
             self(m_array) 
 
         return dJdm_global 
@@ -382,7 +382,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
           else:
               gJac = np.zeros(len(x))  # SNOPT fails if no constraints are given, hence add a dummy constraint
 
-          print "j = %f\t\t|dJ| = %f" % (f[0], np.linalg.norm(dj))
+          info("j = %f\t\t|dJ| = %f" % (f[0], np.linalg.norm(dj)))
           return np.array([dj]), gJac, fail
 
 
