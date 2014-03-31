@@ -423,6 +423,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
 
       return opt_prob, grad
 
+
 def copy_data(m):
     ''' Returns a deep copy of the given Function/Constant. '''
     if hasattr(m, "vector"): 

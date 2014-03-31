@@ -197,6 +197,32 @@ class ReducedFunctional(object):
 
         return val
 
+
+    def moola_problem(self):
+      '''Return a pyopt problem class that can be used with the moola package,
+      https://github.com/funsim/moola
+      '''
+      import moola
+      rf = self
+
+      class Functional(moola.Functional):
+          def __call__(self, x):
+              ''' Evaluates the functional for the parameter choice x. '''
+
+              return rf(x.data)
+
+
+          def gradient(self, x):
+              ''' Evaluates the gradient for the parameter choice x. '''
+
+              self(x)  # TODO: Rerun forward model only when necessary
+              return  moola.DolfinVector(rf.derivative(forget=False)[0])
+
+      functional = Functional()
+      problem = moola.Problem(functional)
+
+      return problem
+
 def replace_parameter_value(parameter, new_value):
     ''' Replaces the parameter value with new_value. '''
     if hasattr(parameter, 'var'):
