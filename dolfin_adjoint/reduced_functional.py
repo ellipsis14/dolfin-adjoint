@@ -216,7 +216,19 @@ class ReducedFunctional(object):
               ''' Evaluates the gradient for the parameter choice x. '''
 
               self(x)  # TODO: Rerun forward model only when necessary
-              return moola.DolfinLinearFunctional(rf.derivative(forget=False)[0])
+              return moola.DolfinDualVector(rf.derivative(forget=False)[0])
+
+          def hessian(self, x):
+              ''' Evaluates the gradient for the parameter choice x. '''
+
+              self(x)  # TODO: Rerun forward model only when necessary
+
+              def moola_hessian(direction):
+                  assert isinstance(direction, moola.DolfinPrimalVector)
+                  hes = rf.hessian(direction.data)[0]
+                  return moola.DolfinDualVector(hes)
+
+              return moola_hessian
 
       functional = Functional()
       problem = moola.Problem(functional)
