@@ -212,11 +212,11 @@ class ReducedFunctional(object):
               return rf(x.data)
 
 
-          def gradient(self, x):
+          def derivative(self, x):
               ''' Evaluates the gradient for the parameter choice x. '''
 
               self(x)  # TODO: Rerun forward model only when necessary
-              return  moola.DolfinVector(rf.derivative(forget=False)[0])
+              return moola.DolfinLinearFunctional(rf.derivative(forget=False)[0])
 
       functional = Functional()
       problem = moola.Problem(functional)
