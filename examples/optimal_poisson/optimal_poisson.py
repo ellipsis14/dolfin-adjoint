@@ -1,6 +1,6 @@
 """ Solves a optimal control problem constrained by the Poisson equation:
 
-    min_(u, m) \int_\Omega 1/2 || u - u_d ||^2 + alpha/2 ||m||^2
+    min_(u, m) \int_\Omega 1/2 || u - u_d ||^2
     
     subjecct to 
 
@@ -45,7 +45,7 @@ solve(F == 0, u, bc)
 x = triangle.x
 u_d = 1/(2*pi**2)*sin(pi*x[0])*sin(pi*x[1]) # the desired temperature profile
 
-J = Functional((inner(u-u_d, u-u_d))*dx)
+J = Functional((0.5*inner(u-u_d, u-u_d))*dx)
 rf = ReducedFunctional(J, InitialConditionParameter(m))
 
 
@@ -64,7 +64,7 @@ m_analytic = Expression("sin(pi*x[0])*sin(pi*x[1])")
 u_analytic = Expression("1/(2*pi*pi)*sin(pi*x[0])*sin(pi*x[1])")
 
 
-# Compute and print the errors
+# Compute errors between numerical and analytical solutions
 m.assign(m_opt)  # Solve the Poisson problem again for the optimal m
 solve(F == 0, u, bc)  
 control_error = errornorm(m_analytic, m_opt)
