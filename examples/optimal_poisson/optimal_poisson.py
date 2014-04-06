@@ -15,9 +15,15 @@ import moola
 dolfin.set_log_level(ERROR)
 
 
-# Define mesh
-n = 128
+# Create mesh
+n = 64
 mesh = UnitSquareMesh(n, n)
+
+# Refine mesh around the midpoint
+cf = CellFunction("bool", mesh)
+subdomain = CompiledSubDomain('std::abs(x[0]-0.5)<.25 && std::abs(x[1]-0.5)<0.25')
+subdomain.mark(cf, True)
+mesh = refine(mesh, cf)
 
 
 # Define discrete function spaces and funcions
