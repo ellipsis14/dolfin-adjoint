@@ -11,69 +11,57 @@
 """
 from dolfin import *
 from dolfin_adjoint import *
-try:
-    import moola
-except ImportError:
-    import sys
-    info_blue("Moola bindings unavailable, skipping test")
-    sys.exit(0)
-
+import moola
 dolfin.set_log_level(ERROR)
-parameters['std_out_all_processes'] = False
+
+
+# Define mesh
+n = 128
+mesh = UnitSquareMesh(n, n)
+
+
+# Define discrete function spaces and funcions
+V = FunctionSpace(mesh, "CG", 1)
+W = FunctionSpace(mesh, "DG", 0)
+
+m = Function(W, name='Control')
+u = Function(V, name='State')
+v = TestFunction(V)
+
+
+# Define and solve the Poisson equation to generate the dolfin-adjoint annotation
+F = (inner(grad(u), grad(v)) - m*v)*dx 
+bc = DirichletBC(V, 0.0, "on_boundary")
+solve(F == 0, u, bc)
+
+
+# Define functional of interest and the reduced functional
 x = triangle.x
+u_d = 1/(2*pi**2)*sin(pi*x[0])*sin(pi*x[1]) # the desired temperature profile
 
-def solve_pde(u, V, m):
-    v = TestFunction(V)
-    F = (inner(grad(u), grad(v)) - m*v)*dx 
-    bc = DirichletBC(V, 0.0, "on_boundary")
-    solve(F == 0, u, bc)
-
-def compute_errors(u, m):
-    solve_pde(u, V, m)
-
-    
-
-    # Define the analytical expressions
-    m_analytic = Expression("sin(pi*x[0])*sin(pi*x[1])")
-    u_analytic = Expression("1/(2*pi*pi)*sin(pi*x[0])*sin(pi*x[1])")
-
-    # Compute the error
-    control_error = errornorm(m_analytic, m)
-    state_error = errornorm(u_analytic, u)
-
-    print "Error in state: {}.".format(state_error)
-    print "Error in control: {}.".format(control_error)
-
-    return control_error, state_error
+J = Functional((inner(u-u_d, u-u_d))*dx)
+rf = ReducedFunctional(J, InitialConditionParameter(m))
 
 
-if __name__ == "__main__":
+# Solve the optimsiation problem with the Moola optimisation package
+problem = rf.moola_problem()
+solver = moola.NewtonCG(options={'gtol': 1e-5, 'maxiter': 20})
+m_moola = moola.DolfinPrimalVector(m)
+sol = solver.solve(problem, m_moola)
+m_opt = sol['Optimizer'].data
 
-    n = 128
-    mesh = UnitSquareMesh(n, n)
+plot(m_opt, interactive=True)
 
-    V = FunctionSpace(mesh, "CG", 1)
-    u = Function(V, name='State')
-    W = FunctionSpace(mesh, "DG", 0)
-    m = Function(W, name='Control')
 
-    u_d = 1/(2*pi**2)*sin(pi*x[0])*sin(pi*x[1]) 
+# Define the expressions of the analytical solution
+m_analytic = Expression("sin(pi*x[0])*sin(pi*x[1])")
+u_analytic = Expression("1/(2*pi*pi)*sin(pi*x[0])*sin(pi*x[1])")
 
-    J = Functional((inner(u-u_d, u-u_d))*dx)
 
-    # Run the forward model once to create the annotation
-    solve_pde(u, V, m)
-
-    # Run the optimisation 
-    rf = ReducedFunctional(J, InitialConditionParameter(m, value=m))
-    problem = rf.moola_problem()
-    
-    solver = moola.NewtonCG(options={'gtol': 1e-5, 'maxiter': 20})
-    m_moola = moola.DolfinPrimalVector(m)
-
-    sol = solver.solve(problem, m_moola)
-
-    m_opt = sol['Optimizer'].data
-
-    plot(m_opt, interactive=True)
-    compute_errors(u, m_opt)
+# Compute and print the errors
+m.assign(m_opt)  # Solve the Poisson problem again for the optimal m
+solve(F == 0, u, bc)  
+control_error = errornorm(m_analytic, m_opt)
+state_error = errornorm(u_analytic, u)
+print "Error in state: {}.".format(state_error)
+print "Error in control: {}.".format(control_error)
