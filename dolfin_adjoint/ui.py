@@ -29,4 +29,5 @@ if backend.__name__ == "dolfin":
   from optimization.multistage_optimization import minimize_multistage
   from optimization.constraints import InequalityConstraint, EqualityConstraint
   from pointintegralsolver import *
-  from functionassigner import FunctionAssigner
+  if hasattr(backend, 'FunctionAssigner'):
+    from functionassigner import FunctionAssigner

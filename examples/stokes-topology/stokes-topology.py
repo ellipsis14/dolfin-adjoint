@@ -80,12 +80,12 @@ def alpha(rho):
   return alphabar + (alphaunderbar - alphabar) * rho * (1 + q) / (rho + q)
 
 # Define the discrete function spaces
-n = 100
+N = 50
 delta = 1.5 # The aspect ratio of the domain, 1 high and \delta wide
 V = Constant(1.0/3) * delta # want the fluid to occupy 1/3 of the domain
 
-mesh = RectangleMesh(0.0, 0.0, delta, 1.0, n, n)
-A = FunctionSpace(mesh, "DG", 0)       # control function space
+mesh = RectangleMesh(0.0, 0.0, delta, 1.0, N, N)
+A = FunctionSpace(mesh, "CG", 1)       # control function space
 U = VectorFunctionSpace(mesh, "CG", 2) # velocity function space
 P = FunctionSpace(mesh, "CG", 1)       # pressure function space
 W = MixedFunctionSpace([U, P])         # mixed Taylor-Hood function space
@@ -157,7 +157,7 @@ if __name__ == "__main__":
 
       # Compute the integral of the control over the domain
       integral = self.smass.inner(self.tmpvec.vector())
-      if MPI.process_number() == 0:
+      if MPI.rank(mpi_comm_world()) == 0:
         print "Current control integral: ", integral
       return [self.V - integral]
 
@@ -180,6 +180,8 @@ if __name__ == "__main__":
   q.assign(0.1)
   rho.assign(rho_opt)
   adj_reset()
+
+  File("intermediate-guess-%s.xml.gz" % N) << rho
 
   w = forward(rho)
   (u, p) = split(w)
