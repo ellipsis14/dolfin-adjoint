@@ -233,12 +233,8 @@ class ReducedFunctional(object):
               ''' Evaluates the gradient for the parameter choice x. '''
 
               if memoize:
-                  hashx = hash(x)
 
-                  if self.latest_eval_hash != hashx:
-                      self.latest_eval_hash = hashx
-                      self.latest_eval_eval = rf(x.data)
-                      self.latest_eval_deriv = None
+                  self(x)
 
                   if self.latest_eval_deriv is None:
                       print "Using memoised forward solution for gradient evaluation"
@@ -255,7 +251,7 @@ class ReducedFunctional(object):
           def hessian(self, x):
               ''' Evaluates the gradient for the parameter choice x. '''
 
-              self(x)  # TODO: Rerun forward model only when necessary
+              self(x)
 
               def moola_hessian(direction):
                   assert isinstance(direction, moola.DolfinPrimalVector)
