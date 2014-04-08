@@ -220,14 +220,14 @@ class ReducedFunctional(object):
                       self.latest_eval_hash = hashx
                       self.latest_eval_eval = rf(x.data)
                       self.latest_eval_deriv = None
-                      moola.events.increment("functional evaluation")
+                      moola.events.increment("Functional evaluation")
                   else:
                       print  "Using memoised functional evaluation" 
 
                   return self.latest_eval_eval
 
               else:
-                  moola.events.increment("functional evaluation")
+                  moola.events.increment("Functional evaluation")
                   return rf(x.data)
 
 
@@ -240,7 +240,7 @@ class ReducedFunctional(object):
 
                   if self.latest_eval_deriv is None:
                       print "Using memoised forward solution for gradient evaluation"
-                      moola.events.increment("derivative evaluation")
+                      moola.events.increment("Derivative evaluation")
                       self.latest_eval_deriv = moola.DolfinDualVector(rf.derivative(forget=False)[0])
 
                   else:
@@ -249,7 +249,7 @@ class ReducedFunctional(object):
                   return self.latest_eval_deriv
 
               else:
-                  moola.events.increment("derivative evaluation")
+                  moola.events.increment("Derivative evaluation")
                   return moola.DolfinDualVector(rf.derivative(forget=False)[0])
 
           def hessian(self, x):
@@ -259,6 +259,7 @@ class ReducedFunctional(object):
 
               def moola_hessian(direction):
                   assert isinstance(direction, moola.DolfinPrimalVector)
+                  moola.events.increment("Hessian evaluation")
                   hes = rf.hessian(direction.data)[0]
                   return moola.DolfinDualVector(hes)
 
