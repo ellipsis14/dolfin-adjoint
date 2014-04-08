@@ -198,25 +198,59 @@ class ReducedFunctional(object):
         return val
 
 
-    def moola_problem(self):
-      '''Return a pyopt problem class that can be used with the moola package,
+    def moola_problem(self, memoize=True):
+      '''Returns a moola problem class that can be used with the moola package,
       https://github.com/funsim/moola
       '''
       import moola
       rf = self
 
       class Functional(moola.Functional):
+          latest_eval_hash = None
+          latest_eval_eval = None
+          latest_eval_deriv = None
+
           def __call__(self, x):
               ''' Evaluates the functional for the parameter choice x. '''
 
-              return rf(x.data)
+              if memoize:
+                  hashx = hash(x)
+
+                  if self.latest_eval_hash != hashx:
+                      self.latest_eval_hash = hashx
+                      self.latest_eval_eval = rf(x.data)
+                      self.latest_eval_deriv = None
+                  else:
+                      print  "Using memoised functional evaluation" 
+
+                  return self.latest_eval_eval
+
+              else:
+                  return rf(x.data)
 
 
           def derivative(self, x):
               ''' Evaluates the gradient for the parameter choice x. '''
 
-              self(x)  # TODO: Rerun forward model only when necessary
-              return moola.DolfinDualVector(rf.derivative(forget=False)[0])
+              if memoize:
+                  hashx = hash(x)
+
+                  if self.latest_eval_hash != hashx:
+                      self.latest_eval_hash = hashx
+                      self.latest_eval_eval = rf(x.data)
+                      self.latest_eval_deriv = None
+
+                  if self.latest_eval_deriv is None:
+                      print "Using memoised forward solution for gradient evaluation"
+                      self.latest_eval_deriv = moola.DolfinDualVector(rf.derivative(forget=False)[0])
+
+                  else:
+                      print "Using memoised gradient"
+
+                  return self.latest_eval_deriv
+
+              else:
+                  return moola.DolfinDualVector(rf.derivative(forget=False)[0])
 
           def hessian(self, x):
               ''' Evaluates the gradient for the parameter choice x. '''
