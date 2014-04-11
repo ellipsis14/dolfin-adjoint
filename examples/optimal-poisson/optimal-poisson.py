@@ -58,9 +58,10 @@ f_analytic = Expression("sin(pi*x[0])*sin(pi*x[1])")
 u_analytic = Expression("1/(2*pi*pi)*sin(pi*x[0])*sin(pi*x[1])")
 
 # Compute errors between numerical and analytical solutions
-f.assign(f_opt)  # Solve the Poisson problem again for the optimal m
+f.assign(f_opt) 
 solve(F == 0, u, bc)  
 control_error = errornorm(f_analytic, f_opt)
 state_error = errornorm(u_analytic, u)
-print "Error in state: {}.".format(state_error)
-print "Error in control: {}.".format(control_error)
+print "h(min):           %e." % mesh.hmin()
+print "Error in state:   %e." % state_error
+print "Error in control: %e." % control_error
