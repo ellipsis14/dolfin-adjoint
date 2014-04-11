@@ -14,7 +14,7 @@ V = VectorFunctionSpace(mesh, "CG", 2)  # Velocity
 Q = FunctionSpace(mesh, "CG", 1)        # Pressure
 W = MixedFunctionSpace([V, Q])
 
-# Define a measure on the circle boundary
+# Define a measure for the circle boundary
 class Circle(SubDomain):
     def inside(self, x, on_boundary):
         return on_boundary and (x[0]-10)**2 + (x[1]-5)**2 < 3**2
@@ -34,7 +34,7 @@ g = Function(V, name="Control")
 
 # Set parameter values
 nu = Constant(1)     # Viscosity coefficient
-gamma = Constant(1000) # Nitsche penalty parameter
+gamma = Constant(10) # Nitsche penalty parameter
 n = FacetNormal(mesh)
 h = CellSize(mesh)
 
@@ -44,7 +44,7 @@ noslip  = DirichletBC(W.sub(0), (0, 0), "on_boundary && (x[1] >= 9.9 || x[1] < 0
 inflow  = DirichletBC(W.sub(0), u_inflow, "on_boundary && x[0] <= 0.0")
 bcs = [inflow, noslip]
 
-# Define the variational formulation of the Navier-Stokes equations
+# Define the variational formulation of the Stokes equations
 a = (nu*inner(grad(u), grad(v))*dx 
         - nu*inner(grad(u)*n, v)*ds(2)
         - nu*inner(grad(v)*n, u)*ds(2)
@@ -67,7 +67,7 @@ solve(A, s.vector(), b)
 u, p = split(s)
 alpha = Constant(10)
 
-J = Functional(inner(grad(u), grad(u))*dx + alpha*inner(g, g)*ds(2))
+J = Functional(1./2*inner(grad(u), grad(u))*dx + alpha/2*inner(g, g)*ds(2))
 m = SteadyParameter(g)
 Jhat = ReducedFunctional(J, m)
 
