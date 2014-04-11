@@ -186,7 +186,7 @@ def add_pv_inversion(n):
 
 def add_rel_solve(n):
   for i in range(layers):
-    system.add_solve(inner(test, trial) * dx - alpha * test * trial * ds == -inner(grad(test), grad(psi[i][n])) * dx,
+    system.add_solve(inner(test, trial) * dx + alpha * test * trial * ds == -inner(grad(test), grad(psi[i][n])) * dx,
       rel[i][n], solver_parameters = lu_solver)
 
   return
