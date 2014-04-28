@@ -109,6 +109,11 @@ class LUSolver(dolfin.LUSolver):
           raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your solution x has to have a .function attribute; is it the .vector() of a Function?")
 
         try:
+          self.op_bcs = A.bcs
+        except AttributeError:
+          self.op_bcs = []
+
+        try:
           b = args[2].form
         except AttributeError:
           raise libadjoint.exceptions.LibadjointErrorInvalidInputs("Your RHS b has to have the .form attribute: was it assembled after from dolfin_adjoint import *?")
