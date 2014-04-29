@@ -41,7 +41,7 @@ if __name__ == "__main__":
     
     solver = moola.SteepestDescent(tol=1e-200, options={'gtol': 1e-10, 'maxiter': 1})
 
-    m_moola = moola.DolfinVector(m)
+    m_moola = moola.DolfinPrimalVector(m)
     sol = solver.solve(problem, m_moola)
 
     m_opt = sol['Optimizer'].data
