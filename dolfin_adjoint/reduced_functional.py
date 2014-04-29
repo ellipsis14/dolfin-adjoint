@@ -222,7 +222,8 @@ class ReducedFunctional(object):
                       self.latest_eval_deriv = None
                       moola.events.increment("Functional evaluation")
                   else:
-                      print  "Using memoised functional evaluation" 
+                      #print  "Using memoised functional evaluation" 
+                      pass
 
                   return self.latest_eval_eval
 
@@ -239,12 +240,13 @@ class ReducedFunctional(object):
                   self(x)
 
                   if self.latest_eval_deriv is None:
-                      print "Using memoised forward solution for gradient evaluation"
+                      #print "Using memoised forward solution for gradient evaluation"
                       moola.events.increment("Derivative evaluation")
                       self.latest_eval_deriv = moola.DolfinDualVector(rf.derivative(forget=False)[0])
 
                   else:
-                      print "Using memoised gradient"
+                      #print "Using memoised gradient"
+                      pass
 
                   return self.latest_eval_deriv
 
