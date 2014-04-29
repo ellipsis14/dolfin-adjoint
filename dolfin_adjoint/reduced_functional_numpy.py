@@ -227,22 +227,22 @@ class ReducedFunctionalNumPy(ReducedFunctional):
 
       if bounds is not None:
         ulb, uub = bounds
-        if isinstance(ulb, float):
-          lb = np.array([ulb for i in range(n)])
+        if isinstance(ulb, float) or isinstance(ulb, Constant):
+          lb = np.array([float(ulb)]*n)
         else:
-          lb = np.array(ulb)
+          lb = np.array([float(v) for v in ulb])
 
-        if isinstance(uub, float):
-          ub = np.array([uub for i in range(n)])
+        if isinstance(uub, float) or isinstance(uub, Constant):
+          ub = np.array([float(uub)]*n)
         else:
-          ub = np.array(uub)
+          ub = np.array([float(v) for v in uub])
 
       else:
         mx = np.finfo(np.double).max
-        ub = np.array([mx for i in range(n)])
+        ub = np.array([mx]*n)
 
         mn = np.finfo(np.double).min
-        lb = np.array([mn for i in range(n)])
+        lb = np.array([mn]*n)
 
       if constraints is None:
         nconstraints = 0
