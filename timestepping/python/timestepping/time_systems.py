@@ -2052,29 +2052,11 @@ class ManagedModel:
     x = packer.empty()
     packer.pack(parameters, x)
 
-    if hasattr(scipy.optimize, "minimize"):
-      res = scipy.optimize.minimize(fun, x, method = method, jac = jac, bounds = bounds, tol = tolerance, options = options)
-      if not res["success"]:
-        raise StateException("scipy.optimize.minimize failure")
-      dolfin.info("scipy.optimize.minimize success with %i functional evaluation(s)" % res["nfev"])
-      x = res["x"]
-    else:
-      if options is None:
-        options = {}
-      if method == "BFGS":
-        res = scipy.optimize.fmin_bfgs(fun, x, fprime = jac, gtol = tolerance, full_output = True, **options)
-        if not res[6] == 0:
-          raise StateException("scipy.optimize.fmin_bfgs failure")
-        dolfin.info("scipy.optimize.fmin_bfgs success with %i functional evaluation(s) and %i gradient calculation(s)" % (res[4], res[5]))
-        x = res[0]
-      elif method == "L-BFGS-B":
-        res = scipy.optimize.fmin_l_bfgs_b(fun, x, fprime = jac, bounds = bounds, pgtol = tolerance, **options)
-        if not res[2]["warnflag"] == 0:
-          raise StateException("scipy.optimize.fmin_l_bfgs_b failure")
-        dolfin.info("scipy.optimize.fmin_l_bfgs_b success with %i functional evaluation(s)" % res[2]["funcalls"])
-        x = res[0]
-      else:
-        raise NotImplementedException("%s optimisation method not supported with SciPy version %s" % (method, scipy.__version__))
+    res = scipy.optimize.minimize(fun, x, method = method, jac = jac, bounds = bounds, tol = tolerance, options = options)
+    if not res["success"]:
+      raise StateException("scipy.optimize.minimize failure")
+    dolfin.info("scipy.optimize.minimize success with %i functional evaluation(s)" % res["nfev"])
+    x = res["x"]
 
     reassemble_forward(x)
     if rerun_forward[0]:

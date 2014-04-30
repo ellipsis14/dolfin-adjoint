@@ -4,6 +4,7 @@
 # Copyright (C) 2008 Johan Hake
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -156,11 +157,7 @@ def add_dTdt_solve(T, dTdt, u, v, kappa, s = None, bc = {}, initial_guess = None
          inner(test_u, s) * dx
          )
          
-  ver = petsc_version()
-  if not ver is None and ver >= (3, 2, 0):
-    pre_assembly_parameters = {"bilinear_forms":{"term_optimisation":True, "expand_form":True}}
-  else:
-    pre_assembly_parameters = {"bilinear_forms":{"term_optimisation":False}}
+  pre_assembly_parameters = {"bilinear_forms":{"term_optimisation":True, "expand_form":True}}
   system.add_solve(inner(test_u, dTdt) * dx == L, dTdt,
     solver_parameters = dTdt_solver, initial_guess = initial_guess,
     pre_assembly_parameters = pre_assembly_parameters)

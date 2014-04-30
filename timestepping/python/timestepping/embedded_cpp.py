@@ -25,7 +25,6 @@ import instant
 import numpy
 
 from exceptions import *
-from fenics_versions import *
 
 __all__ = \
   [
@@ -61,11 +60,7 @@ class EmbeddedCpp:
                      dolfin.GenericVector:"GenericVector",
                      dolfin.Mesh:"Mesh"}
 
-  if dolfin_version() < (1, 1, 0):
-    __default_includes = """#include "dolfin.h"
-#define la_index uint"""
-  else:
-    __default_includes = """#include "dolfin.h" """
+  __default_includes = """#include "dolfin.h" """
 
   def __init__(self, code, includes = "", include_dirs = [], **kwargs):
     if not isinstance(code, str):
@@ -148,15 +143,10 @@ extern "C" {
   }
 }""" % (self.__includes, args, cast_code, self.__code)
 
-    if instant_version() < (1, 2, 0):
-      mod = instant.build_module(code = code,
-        cppargs = dolfin.parameters["form_compiler"]["cpp_optimize_flags"],
-        lddargs = "-ldolfin", include_dirs = self.__include_dirs)
-    else:
-      mod = instant.build_module(code = code,
-        cppargs = dolfin.parameters["form_compiler"]["cpp_optimize_flags"],
-        lddargs = "-ldolfin", include_dirs = self.__include_dirs,
-        cmake_packages = ["DOLFIN"])
+    mod = instant.build_module(code = code,
+      cppargs = dolfin.parameters["form_compiler"]["cpp_optimize_flags"],
+      lddargs = "-ldolfin", include_dirs = self.__include_dirs,
+      cmake_packages = ["DOLFIN"])
     path = os.path.dirname(mod.__file__)
     name = os.path.split(path)[-1]
     self.__lib = ctypes.cdll.LoadLibrary(os.path.join(path, "_%s.so" % name))

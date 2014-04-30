@@ -27,7 +27,6 @@ from exceptions import *
 from fenics_overrides import *
 from fenics_utils import *
 from statics import *
-from versions import *
 
 __all__ = \
   [
@@ -36,51 +35,24 @@ __all__ = \
     "PALinearForm"
   ]
 
-if ufl_version() < (1, 2, 0):
-  def form_integrals(form):
-    """
-    Return Integral s associated with the given Form.
-    """
-    
-    form_data = extract_form_data(form)
-    integrals = []
-    for integral_data in form_data.integral_data:
-      integrals += integral_data[2]
-    return integrals
+def form_integrals(form):
+  """
+  Return Integral s associated with the given Form.
+  """
   
-  def preprocess_integral(form, integral):
-    """
-    Given an Integral associated with the given Form, return the integrand and
-    a list of arguments which can be used to construct an Integral from the
-    integrand.
-    """
-    
-    form_data = extract_form_data(form)
-    integrand, measure = integral.integrand(), integral.measure()
-    repl = {}
-    for old, new in zip(form_data.arguments + form_data.coefficients, form_data.original_arguments + form_data.original_coefficients):
-      repl[old] = new
-    integrand = replace(integrand, repl)
-    return integrand, [measure]
-else:
-  def form_integrals(form):
-    """
-    Return Integral s associated with the given Form.
-    """
-    
-    return form.integrals()
+  return form.integrals()
+
+def preprocess_integral(form, integral):
+  """
+  Given an Integral associated with the given Form, return the integrand and
+  a list of arguments which can be used to construct an Integral from the
+  integrand.
+  """
   
-  def preprocess_integral(form, integral):
-    """
-    Given an Integral associated with the given Form, return the integrand and
-    a list of arguments which can be used to construct an Integral from the
-    integrand.
-    """
-    
-    integrand = integral.integrand()
-    domain_type, domain_description, compiler_data, domain_data = \
-      integral.domain_type(), integral.domain_description(), integral.compiler_data(), integral.domain_data()
-    return integrand, [domain_type, domain_description, compiler_data, domain_data]
+  integrand = integral.integrand()
+  domain_type, domain_description, compiler_data, domain_data = \
+    integral.domain_type(), integral.domain_description(), integral.compiler_data(), integral.domain_data()
+  return integrand, [domain_type, domain_description, compiler_data, domain_data]
 
 def matrix_optimisation(form):
   """

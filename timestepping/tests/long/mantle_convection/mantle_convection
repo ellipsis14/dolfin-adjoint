@@ -4,6 +4,7 @@
 #                    E. Rognes
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -41,8 +42,6 @@ from dolfin import *; import dolfin
 from timestepping import *
 
 dolfin.parameters["form_compiler"]["representation"] = "quadrature"
-if dolfin_version() < (1, 1, 0):
-  dolfin.parameters["form_compiler"]["quadrature_degree"] = 6
 
 def viscosity(T):
     eta = eta0 * exp(-b_val*T/deltaT + c_val*(1.0 - triangle.x[1])/height )
@@ -168,18 +167,12 @@ while (t + float(dt) <= finish):
 system.finalise()
 
 comp = system.compute_functional()
-if dolfin_version() < (1, 1, 0):
-  ref = 1.22249406767463906e+01
-else:
-  ref = 1.22249474184962530e+01
+ref = 1.22249474184962530e+01
 err = abs(comp - ref)
 print "%.17e" % comp
 print "%.17e" % ref
 print "%.17e" % err
-if dolfin_version() < (1, 1, 0):
-  assert(err < 5.0e-13)
-else:
-  assert(err < 8.0e-12)
+assert(err < 8.0e-12)
 
 dJdm = system.compute_gradient(T_ic, project = True)
 #write_vtu("mantle_convection_dJdm[1]", dJdm)
@@ -190,15 +183,9 @@ orders = system.taylor_test(T_ic, grad = dJdm, J = comp, fact = 5.0e-6)
 assert((orders > 1.99).all())
 
 comp = dJdm[0].norm("l2")
-if dolfin_version() < (1, 1, 0):
-  ref = 2.58801652091614098e+00
-else:
-  ref = 2.58833107778007188e+00
+ref = 2.58833107778007188e+00
 err = abs(comp - ref)
 print "%.17e" % comp
 print "%.17e" % ref
 print "%.17e" % err
-if dolfin_version() < (1, 1, 0):
-  assert(err < 5.0e-13)
-else:
-  assert(err < 7.0e-13)
+assert(err < 7.0e-13)
