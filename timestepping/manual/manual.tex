@@ -152,22 +152,20 @@ versions:
 \hline
 Dependency  & Tested dependency versions \\
 \hline
-Python  & 2.7.3, 2.7.4 \\
+Python  & 2.7.5, 2.7.6 \\
 \hline
-NumPy  & 1.6.1, 1.7.1 \\
-SciPy  & 0.9.0, 0.11.0 \\
-VTK    & 5.8.0 \\
-PETSc  & 3.1.0p8, 3.2.0p5 \\
+NumPy  & 1.7.1, 1.8.1 \\
+SciPy  & 0.12.0, 0.13.3 \\
+VTK    & 5.8.0, 5.10.1 \\
+PETSc  & 3.3-p7, 3.4.2 \\
 \hline
-DOLFIN   & 1.0.0, 1.1.1+, 1.2.0 \\
-FIAT     & 1.0.0, 1.1.0 \\
+DOLFIN   & 1.2.0, 1.3.0 \\
+FIAT     & 1.1.0, 1.3.0 \\
 FErari   & 1.0.0 \\
-FFC      & 1.0.0, 1.1.0, 1.2.0 \\
-Instant  & 1.0.0, 1.1.0, 1.2.0 \\
-SyFi     & 1.0 \\
-UFC      & 2.0.5, 2.1.1, 2.2.0 \\
-UFL      & 1.0.0, 1.1.0, 1.2.0 \\
-Viper    & 1.0.0 \\
+FFC      & 1.2.0, 1.3.0 \\
+Instant  & 1.2.0, 1.3.0 \\
+UFC      & 2.2.0, 2.3.0 \\
+UFL      & 1.2.0, 1.3.0
 \hline
 \end{tabular}
 \end{center}
@@ -544,14 +542,13 @@ where \verb+eq+ is a (possibly non-linear) \verb+dolfin.Equation+ depending on
 of a \verb+TimeFunction+. This registers a (possibly non-linear) variational
 problem represented by the equation \verb+eq+.
 
-If a registered variational problem is non-linear then the problem is solved
-using a Newton solver. The optional \verb+bcs+ is a \verb+dolfin.DirichletBC+ or
-a list of \verb+dolfin.DirichletBC+ objects, defining Dirichlet boundary
-conditions to be applied when solving the variational problem. The optional
+The optional \verb+bcs+ is a \verb+dolfin.DirichletBC+ or a list of
+\verb+dolfin.DirichletBC+ objects, defining Dirichlet boundary conditions to be
+applied when solving the variational problem. The optional
 \verb+solver_parameters+ is a dictionary of DOLFIN solver parameters for use in
 solving the variational problem, while the optional
-\verb+adjoint_solver_parameters+ is a dictionary of DOLFIN solver parameters for
-use in solving an associated adjoint variational problem. If
+\verb+adjoint_solver_parameters+ is a dictionary of DOLFIN linear solver
+parameters for use in solving an associated adjoint variational problem. If
 \verb+solver_parameters+ is not supplied then the default parameters defined in
 \verb+dolfin.parameters+ (at the time of the \verb+TimeSystem.assemble+ call --
 see section \ref{sect:assembly}) are used. If \verb+adjoint_solver_parameters+
@@ -913,7 +910,7 @@ grad = asystem.compute_gradient(parameters = parameters,
 where \verb+parameters+ is a \verb+dolfin.Constant+, a \verb+dolfin.Function+,
 or a list of \verb+dolfin.Constant+ or \verb+dolfin.Function+ objects, the
 optional \verb+project+ is a \linebreak boolean, and the optional
-\verb+project_solver_parameters+ is a dictionary of solver parameters. If
+\verb+project_solver_parameters+ is a dictionary of linear solver parameters. If
 \verb+parameters+ is a \verb+dolfin.Constant+ or \verb+dolfin.Function+ then it
 must have been declared as static (see section \ref{sect:statics}). If
 \verb+parameters+ is a list of \verb+dolfin.Constant+ or \verb+dolfin.Function+
@@ -928,8 +925,8 @@ parameter is returned as a \verb+GenericVector+. If \verb+project+ is
 \verb+True+ then the derivative with respect to a \verb+Function+ parameter is
 returned as a \verb+(GenericVector, Function)+ pair, where the \verb+Function+
 contains the derivative projected onto the parameter trial space, and where
-\verb+project_solver_parameters+ defines solver options for the associated mass
-matrix inversion.
+\verb+project_solver_parameters+ defines linear solver options for the
+associated mass matrix inversion.
 
 The \verb+compute_gradient+ method must be called after the forward model
 finalisation stage (after the \verb+ManagedModel.finalise+ call), and a
@@ -1545,7 +1542,7 @@ system.add_solve(inner(test, T[n + 1]) * dx ==
   inner(test, T[n]) * dx + dt * F(test, T[n + 1]),
   T[n + 1], solver_parameters = solver_parameters)
 \end{lstlisting}
-Note that \verb+solver_parameters+ should define Newton solver parameters if
+Note that \verb+solver_parameters+ should define non-linear solver parameters if
 $F(T)$ is non-linear.
 
 \subsection{Implicit trapezium rule}\label{sect:implicit_trapezium}
@@ -1578,7 +1575,7 @@ system.add_solve(inner(test, T[n + 1]) * dx ==
   dt * (0.5 * F(test, T[n + 1]) + 0.5 * F(test, T[n])),
   T[n + 1], solver_parameters = solver_parameters)
 \end{lstlisting}
-Note that \verb+solver_parameters+ should define Newton solver parameters if
+Note that \verb+solver_parameters+ should define non-linear solver parameters if
 $F(T)$ is non-linear.
 
 \section{Implicit midpoint rule}\label{sect:implicit_midpoint}.
@@ -1607,7 +1604,7 @@ system.add_solve(inner(test, T[n + 1]) * dx ==
   dt * F(test, 0.5 * T[n + 1] + 0.5 * T[n]),
   T[n + 1], solver_parameters = solver_parameters)
 \end{lstlisting}
-Note that \verb+solver_parameters+ should define Newton solver parameters if
+Note that \verb+solver_parameters+ should define non-linear solver parameters if
 $F(T)$ is non-linear.
 
 \section{Explicit Runge-Kutta}
@@ -1698,7 +1695,8 @@ discretisation of equation \eqref{eqn:t_timestep} yields:
 where $T^\delta \in V^\delta$ and
 $T^{\delta,-} = \lim_{t \rightarrow \left[ (n - 1) \Delta t \right]^{-}} T^{\delta}$.
 The time derivative has been integrated by parts and an ``upwind flux''
-approximation applied.
+approximation applied. For further details of discontinuous Galerkin in time
+methods see \citet{gresho2000}.
 
 \subsection{$P0$}
 
@@ -1793,9 +1791,9 @@ system.add_solve(
   inner(test2, 0.5 * T[n + 1][1] - 0.5 * T[n + 1][0]) * dx ==
   dt*(m_11 * F(test1, T[n + 1][0]) + m_12 * F(test1, T[n + 1][1]) +
       m_21 * F(test2, T[n + 1][0]) + m_22 * F(test2, T[n + 1][1])),
-  T[n + 1], solver_parameters = {"linear_solver":"lu"})
+  T[n + 1], solver_parameters = solver_parameters)
 \end{lstlisting}
-Note that \verb+solver_parameters+ should define Newton solver parameters if
+Note that \verb+solver_parameters+ should define non-linear solver parameters if
 $F(T)$ is non-linear.
 
 \bibliography{bibliography}

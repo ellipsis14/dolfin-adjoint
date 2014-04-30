@@ -262,6 +262,6 @@ system.add_solve(
   inner(test2, 0.5 * T[n + 1][1] - 0.5 * T[n + 1][0]) * dx ==
   dt*(m_11 * F(test1, T[n + 1][0]) + m_12 * F(test1, T[n + 1][1]) +
       m_21 * F(test2, T[n + 1][0]) + m_22 * F(test2, T[n + 1][1])),
-  T[n + 1], solver_parameters = {"linear_solver":"lu"})
+  T[n + 1], solver_parameters = solver_parameters)
   
 check("P1_DG", system, split(T[n])[1], tol = 1.0e-14)
