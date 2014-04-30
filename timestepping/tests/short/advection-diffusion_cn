@@ -22,6 +22,8 @@ from timestepping import *
 parameters["num_threads"] = 4
 
 def Plot(T, index):
+  import matplotlib
+  matplotlib.use("Agg")
   from matplotlib.pylab import plot, ylim, savefig, clf
   import numpy
   x = interpolate(Expression("x[0]"), space).vector().array()
