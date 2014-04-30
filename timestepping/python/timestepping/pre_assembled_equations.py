@@ -2,6 +2,7 @@
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -36,15 +37,15 @@ __all__ = \
 
 class PAEquationSolver(EquationSolver):
   """
-  An EquationSolver applying additional pre-assembly and solver caching
+  An EquationSolver applying additional pre-assembly and linear solver caching
   optimisations. This utilises pre-assembly of static terms. The arguments match
   those accepted by the DOLFIN solve function, with the following differences:
 
     Argument 1: May be a general equation. Linear systems are detected
       automatically.
     initial_guess: The initial guess for an iterative solver.
-    adjoint_solver_parameters: A dictionary of solver parameters for an adjoint
-      equation solve.
+    adjoint_solver_parameters: A dictionary of linear solver parameters for an
+      adjoint equation solve.
   """
   
   def __init__(self, *args, **kwargs):
@@ -114,23 +115,30 @@ class PAEquationSolver(EquationSolver):
         raise InvalidArgumentException("Invalid equation")
         
     # Initial guess sanity checking
-    if initial_guess is None:
-      if "krylov_solver" in solver_parameters and "nonzero_initial_guess" in solver_parameters["krylov_solver"] and solver_parameters["krylov_solver"]["nonzero_initial_guess"]:
-        initial_guess = x
-    else:
-      if is_linear and eq_lhs_rank == 1:
+    if is_linear:
+      if not "krylov_solver" in solver_parameters:
+        solver_parameters["krylov_solver"] = {}
+      def initial_guess_enabled():
+        return solver_parameters["krylov_solver"].get("nonzero_initial_guess", False)
+      def initial_guess_disabled():
+        return not solver_parameters["krylov_solver"].get("nonzero_initial_guess", True)
+      def enable_initial_guess():
+        solver_parameters["krylov_solver"]["nonzero_initial_guess"] = True
+        return 
+    
+      if initial_guess is None:
+        if initial_guess_enabled():
+          initial_guess = x
+      elif eq_lhs_rank == 1:
         # Supplied an initial guess for a linear solve with a rank 1 LHS -
         # ignore it
         initial_guess = None
       elif "linear_solver" in solver_parameters and not solver_parameters["linear_solver"] in ["direct", "lu"] and not dolfin.has_lu_solver_method(solver_parameters["linear_solver"]):
         # Supplied an initial guess with a Krylov solver - check the
         # initial_guess solver parameter
-        if not "krylov_solver" in solver_parameters:
-          solver_parameters["krylov_solver"] = {}
-        if not "nonzero_initial_guess" in solver_parameters["krylov_solver"]:
-          solver_parameters["krylov_solver"]["nonzero_initial_guess"] = True
-        elif not solver_parameters["krylov_solver"]["nonzero_initial_guess"]:
+        if initial_guess_disabled():
           raise ParameterException("initial_guess cannot be set if nonzero_initial_guess solver parameter is False")
+        enable_initial_guess()
       elif is_linear:
         # Supplied an initial guess for a linear solve with an LU solver -
         # ignore it
@@ -159,15 +167,16 @@ class PAEquationSolver(EquationSolver):
     Reassemble the PAEquationSolver. If no arguments are supplied, reassemble
     both the LHS and RHS. Otherwise, only reassemble the LHS or RHS if they
     depend upon the supplied Constant s or Function s. Note that this does
-    not clear the assembly or solver caches -- hence if a static Constant,
-    Function, or DicichletBC is modified then one should clear the caches before
-    calling reassemble on the PAEquationSolver.
+    not clear the assembly or linear solver caches -- hence if a static
+    Constant, Function, or DicichletBC is modified then one should clear the
+    caches before calling reassemble on the PAEquationSolver.
     """
     
-    x, eq, bcs, solver_parameters, pre_assembly_parameters = self.x(), \
-      self.eq(), self.bcs(), self.solver_parameters(), \
+    x, eq, bcs, linear_solver_parameters, pre_assembly_parameters = self.x(), \
+      self.eq(), self.bcs(), self.linear_solver_parameters(), \
       self.pre_assembly_parameters()
     x_deps = self.dependencies()
+    a, L, linear_solver, nl_solver = None, None, None, None
     if self.is_linear():
       for dep in x_deps:
         if dep is x:
@@ -184,26 +193,26 @@ class PAEquationSolver(EquationSolver):
               compress = pre_assembly_parameters["bilinear_forms"]["compress_matrices"])
             cache_info("Pre-assembled LHS terms in solve for %s    : 1" % x.name())
             cache_info("Non-pre-assembled LHS terms in solve for %s: 0" % x.name())
-            solver = solver_cache.solver(eq.lhs,
-              solver_parameters,
+            linear_solver = solver_cache.solver(eq.lhs,
+              linear_solver_parameters,
               bcs = bcs, symmetric_bcs = False,
               a = a)
-            solver.set_operator(a)
+            linear_solver.set_operator(a)
           elif len(bcs) == 0 and static_form:
             a = assembly_cache.assemble(eq.lhs,
               compress = pre_assembly_parameters["bilinear_forms"]["compress_matrices"])
             cache_info("Pre-assembled LHS terms in solve for %s    : 1" % x.name())
             cache_info("Non-pre-assembled LHS terms in solve for %s: 0" % x.name())
-            solver = solver_cache.solver(eq.lhs,
-              solver_parameters,
+            linear_solver = solver_cache.solver(eq.lhs,
+              linear_solver_parameters,
               a = a)
-            solver.set_operator(a)            
+            linear_solver.set_operator(a)            
           else:
             a = PABilinearForm(eq.lhs, pre_assembly_parameters = pre_assembly_parameters["bilinear_forms"])
             cache_info("Pre-assembled LHS terms in solve for %s    : %i" % (x.name(), a.n_pre_assembled()))
             cache_info("Non-pre-assembled LHS terms in solve for %s: %i" % (x.name(), a.n_non_pre_assembled()))
-            solver = solver_cache.solver(eq.lhs,
-              solver_parameters, pre_assembly_parameters["bilinear_forms"],
+            linear_solver = solver_cache.solver(eq.lhs,
+              linear_solver_parameters, pre_assembly_parameters["bilinear_forms"],
               static = a.is_static() and static_bcs,
               bcs = bcs, symmetric_bcs = pre_assembly_parameters["equations"]["symmetric_boundary_conditions"])
         else:
@@ -211,8 +220,8 @@ class PAEquationSolver(EquationSolver):
           a = PALinearForm(eq.lhs, pre_assembly_parameters = pre_assembly_parameters["linear_forms"])
           cache_info("Pre-assembled LHS terms in solve for %s    : %i" % (x.name(), a.n_pre_assembled()))
           cache_info("Non-pre-assembled LHS terms in solve for %s: %i" % (x.name(), a.n_non_pre_assembled()))
-          solver = None
-        return a, solver
+          linear_solver = None
+        return a, linear_solver
       def assemble_rhs():
         L = PALinearForm(eq.rhs, pre_assembly_parameters = pre_assembly_parameters["linear_forms"])
         cache_info("Pre-assembled RHS terms in solve for %s    : %i" % (x.name(), L.n_pre_assembled()))
@@ -220,33 +229,33 @@ class PAEquationSolver(EquationSolver):
         return L
 
       if len(args) == 0:
-        a, solver = assemble_lhs()
+        a, linear_solver = assemble_lhs()
         L = assemble_rhs()
       else:
-        a, solver = self.__a, self.__solver
+        a, linear_solver = self.__a, self.__linear_solver
         L = self.__L
         lhs_cs = ufl.algorithms.extract_coefficients(eq.lhs)
         rhs_cs = ufl.algorithms.extract_coefficients(eq.rhs)
         for dep in args:
           if dep in lhs_cs:
-            a, solver = assemble_lhs()
+            a, linear_solver = assemble_lhs()
             break
         for dep in args:
           if dep in rhs_cs:
             L = assemble_rhs()
             break
-    else:
+    elif self.solver_parameters().get("nonlinear_solver", "newton") == "newton":
       J, hbcs = self.J(), self.hbcs()
 
       def assemble_lhs():
         a = PABilinearForm(J, pre_assembly_parameters = pre_assembly_parameters["bilinear_forms"])
         cache_info("Pre-assembled LHS terms in solve for %s    : %i" % (x.name(), a.n_pre_assembled()))
         cache_info("Non-pre-assembled LHS terms in solve for %s: %i" % (x.name(), a.n_non_pre_assembled()))
-        solver = solver_cache.solver(J,
-          solver_parameters, pre_assembly_parameters["bilinear_forms"],
+        linear_solver = solver_cache.solver(J,
+          linear_solver_parameters, pre_assembly_parameters["bilinear_forms"],
           static = False,
           bcs = hbcs, symmetric_bcs = pre_assembly_parameters["equations"]["symmetric_boundary_conditions"])
-        return a, solver
+        return a, linear_solver
       def assemble_rhs():
         L = -eq.lhs
         if not is_zero_rhs(eq.rhs):
@@ -257,10 +266,10 @@ class PAEquationSolver(EquationSolver):
         return L
 
       if len(args) == 0:
-        a, solver = assemble_lhs()
+        a, linear_solver = assemble_lhs()
         L = assemble_rhs()
       else:
-        a, solver = self.__a, self.__solver
+        a, linear_solver = self.__a, self.__linear_solver
         L = self.__L
         lhs_cs = ufl.algorithms.extract_coefficients(J)
         rhs_cs = ufl.algorithms.extract_coefficients(eq.lhs)
@@ -268,7 +277,7 @@ class PAEquationSolver(EquationSolver):
           rhs_cs += ufl.algorithms.extract_coefficients(eq.rhs)
         for dep in args:
           if dep in lhs_cs:
-            a, solver = assemble_lhs()
+            a, linear_solver = assemble_lhs()
             break
         for dep in args:
           if dep in rhs_cs:
@@ -276,9 +285,11 @@ class PAEquationSolver(EquationSolver):
             break
        
       self.__dx = x.vector().copy()
-
-    self.__a, self.__solver = a, solver
-    self.__L = L
+    else:
+      problem = dolfin.NonlinearVariationalProblem(eq.lhs - eq.rhs, x, bcs = bcs, J = self.J())
+      nl_solver = dolfin.NonlinearVariationalSolver(problem)
+      nl_solver.parameters.update(self.solver_parameters())
+    self.__a, self.__L, self.__linear_solver, self.__nl_solver = a, L, linear_solver, nl_solver
 
     return
 
@@ -296,18 +307,16 @@ class PAEquationSolver(EquationSolver):
     else:
       return EquationSolver.dependencies(self, non_symbolic = True)
 
-  def solver(self):
+  def linear_solver(self):
     """
     Return the linear solver.
     """
     
-    return self.__solver
+    return self.__linear_solver
 
   def solve(self):
     """
-    Solve the equation. This utilises a custom Newton solver for non-linear
-    equations. The Newton solver is intended to have near identical behaviour
-    to the Newton solver supplied with DOLFIN, but utilises pre-assembly.
+    Solve the equation
     """
     
     x, pre_assembly_parameters = self.x(), self.pre_assembly_parameters()
@@ -315,30 +324,30 @@ class PAEquationSolver(EquationSolver):
       x.assign(self.__initial_guess)
     
     if self.is_linear():
-      bcs, solver = self.bcs(), self.solver()
+      bcs, linear_solver = self.bcs(), self.linear_solver()
 
       if isinstance(self.__a, dolfin.GenericMatrix):
         L = assemble(self.__L, copy = len(bcs) > 0)
         enforce_bcs(L, bcs)
 
-        solver.solve(x.vector(), L)
+        linear_solver.solve(x.vector(), L)
       elif self.__a.rank() == 2:
         a = assemble(self.__a, copy = len(bcs) > 0)
         L = assemble(self.__L, copy = len(bcs) > 0)
         apply_bcs(a, bcs, L = L, symmetric_bcs = pre_assembly_parameters["equations"]["symmetric_boundary_conditions"])
 
-        solver.set_operator(a)
-        solver.solve(x.vector(), L)
+        linear_solver.set_operator(a)
+        linear_solver.solve(x.vector(), L)
       else:
         assert(self.__a.rank() == 1)
-        assert(solver is None)
+        assert(linear_solver is None)
         a = assemble(self.__a, copy = False)
         L = assemble(self.__L, copy = False)
 
         x.vector().set_local(L.array() / a.array())
         x.vector().apply("insert")
         enforce_bcs(x.vector(), bcs)
-    else:
+    elif self.solver_parameters().get("nonlinear_solver", "newton") == "newton":
       # Newton solver, intended to have near identical behaviour to the Newton
       # solver supplied with DOLFIN. See
       # http://fenicsproject.org/documentation/tutorial/nonlinear.html for
@@ -350,7 +359,7 @@ class PAEquationSolver(EquationSolver):
         parameters = solver_parameters["newton_solver"]
       else:
         parameters = {}
-      solver = self.solver()
+      linear_solver = self.linear_solver()
 
       atol = default_parameters["absolute_tolerance"]
       rtol = default_parameters["relative_tolerance"]
@@ -371,10 +380,12 @@ class PAEquationSolver(EquationSolver):
           rtol = parameters[key]
         elif key == "relaxation_parameter":
           omega = parameters[key]
+        elif key in ["linear_solver", "preconditioner", "lu_solver", "krylov_solver"]:
+          pass
         elif key in ["method", "report"]:
-          raise NotImplementedException("Unsupported solver parameter: %s" % key)
+          raise NotImplementedException("Unsupported Newton solver parameter: %s" % key)
         else:
-          raise InvalidArgumentException("Unexpected solver parameter: %s" % key)
+          raise ParameterException("Unexpected Newton solver parameter: %s" % key)
 
       eq, bcs, hbcs = self.eq(), self.bcs(), self.hbcs()
       a, L = self.__a, self.__L
@@ -384,7 +395,7 @@ class PAEquationSolver(EquationSolver):
       enforce_bcs(x, bcs)
 
       dx = self.__dx
-      if not isinstance(solver, dolfin.GenericLUSolver):
+      if not isinstance(linear_solver, dolfin.GenericLUSolver):
         dx.zero()
         
       if r_def == "residual":
@@ -395,8 +406,8 @@ class PAEquationSolver(EquationSolver):
         if r_0 >= atol:
           l_a = assemble(a, copy = len(hbcs) > 0)
           apply_bcs(l_a, hbcs, symmetric_bcs = pre_assembly_parameters["equations"]["symmetric_boundary_conditions"])
-          solver.set_operator(l_a)
-          solver.solve(dx, l_L)
+          linear_solver.set_operator(l_a)
+          linear_solver.solve(dx, l_L)
           x.axpy(omega, dx)
           it += 1
           atol = max(atol, r_0 * rtol)
@@ -408,16 +419,16 @@ class PAEquationSolver(EquationSolver):
               break
             l_a = assemble(a, copy = len(hbcs) > 0)
             apply_bcs(l_a, hbcs, symmetric_bcs = pre_assembly_parameters["equations"]["symmetric_boundary_conditions"])
-            solver.set_operator(l_a)
-            solver.solve(dx, l_L)
+            linear_solver.set_operator(l_a)
+            linear_solver.solve(dx, l_L)
             x.axpy(omega, dx)
             it += 1
       elif r_def == "incremental":
         l_a = assemble(a, copy = len(hbcs) > 0)
         l_L = assemble(L, copy = len(hbcs) > 0)
         apply_bcs(l_a, hbcs, L = l_L, symmetric_bcs = pre_assembly_parameters["equations"]["symmetric_boundary_conditions"])
-        solver.set_operator(l_a)
-        solver.solve(dx, l_L)
+        linear_solver.set_operator(l_a)
+        linear_solver.solve(dx, l_L)
         x.axpy(omega, dx)
         it = 1
         r_0 = dx.norm("l2")
@@ -427,8 +438,8 @@ class PAEquationSolver(EquationSolver):
             l_a = assemble(a, copy = len(hbcs) > 0)
             l_L = assemble(L, copy = len(hbcs) > 0)
             apply_bcs(l_a, hbcs, L = l_L, symmetric_bcs = pre_assembly_parameters["equations"]["symmetric_boundary_conditions"])
-            solver.set_operator(l_a)
-            solver.solve(dx, l_L)
+            linear_solver.set_operator(l_a)
+            linear_solver.solve(dx, l_L)
             x.axpy(omega, dx)
             it += 1
             if dx.norm("l2") < atol:
@@ -441,6 +452,8 @@ class PAEquationSolver(EquationSolver):
         else:
           dolfin.warning("Newton solve for %s failed to converge after %i iterations" % (x_name, it))
 #      dolfin.info("Newton solve for %s converged after %i iterations" % (x_name, it))
+    else:
+      self.__nl_solver.solve()
 
     return
 

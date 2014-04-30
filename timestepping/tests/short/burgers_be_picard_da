@@ -49,7 +49,7 @@ class CustomSolver(EquationSolver):
                             eq = (test * (u[n + 1] - u[n]) / dt + test * dot(as_vector([u[n + 1]]), grad(u[n + 1])) + nu * dot(grad(test), grad(u[n + 1]))) * dx == 0,
                             x = u[n + 1],
                             bcs = [StaticDirichletBC(space, 0.0, "on_boundary")],
-                            solver_parameters = {"linear_solver":"lu"})
+                            solver_parameters = {"newton_solver":{"linear_solver":"lu"}})
     self.__x_1 = x_1 = dolfin.Function(u[n + 1].function_space())
     self.__x_2 = dolfin.Function(u[n + 1].function_space())
     self.__picard_lhs = test * trial * dx + dt * (test * dot(as_vector([x_1]), grad(trial)) + nu * dot(grad(test), grad(trial))) * dx

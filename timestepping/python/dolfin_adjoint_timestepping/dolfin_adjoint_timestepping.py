@@ -300,7 +300,8 @@ def da_annotate_equation_solve(solve):
       dolfin.inner(dolfin.TestFunction(x.function_space()), rhs) * dolfin.dx
     bcs = []
     solver_parameters = {"linear_solver":"default"}
-    adjoint_solver_parameters = solver_parameters
+    linear_solver_parameters = solver_parameters
+    adjoint_solver_parameters = linear_solver_parameters
   else:
     # Equation solve case
     assert(isinstance(solve, EquationSolver))
@@ -308,6 +309,7 @@ def da_annotate_equation_solve(solve):
     eq = solve.eq()
     bcs = solve.bcs()
     solver_parameters = solve.solver_parameters()
+    linear_solver_parameters = solve.linear_solver_parameters()
     adjoint_solver_parameters = solve.adjoint_solver_parameters()
   
   # Unwrap WrappedFunction s in the equation
@@ -328,7 +330,7 @@ def da_annotate_equation_solve(solve):
         self.__x_fn = x_fn
         self.__eq = eq
         self.__bcs = bcs
-        self.__solver_parameters = solver_parameters
+        self.__linear_solver_parameters = linear_solver_parameters
         self.__adjoint_solver_parameters = adjoint_solver_parameters
         self.parameters = dolfin.Parameters(**dolfin.parameters["timestepping"]["pre_assembly"])
         
@@ -401,28 +403,28 @@ def da_annotate_equation_solve(solve):
             a = assemble(self.data)
             apply_a_bcs = len(bcs) > 0
 
-        if ("solver", var.type) in cache:
+        if ("linear_solver", var.type) in cache:
           # Extract a linear solver from the cache
-          solver = cache[("solver", var.type)]
+          linear_solver = cache[("linear_solver", var.type)]
         else:
           # Create a new linear solver and cache it
           if var.type in ["ADJ_ADJOINT", "ADJ_SOA"]:
-            solver_parameters = self.__adjoint_solver_parameters
+            linear_solver_parameters = self.__adjoint_solver_parameters
           else:
-            solver_parameters = self.__solver_parameters
+            linear_solver_parameters = self.__linear_solver_parameters
           if static_a:
             if apply_a_bcs:
-              solver = cache[("solver", var.type)] = solver_cache.solver(self.data,
-                solver_parameters,
+              linear_solver = cache[("linear_solver", var.type)] = solver_cache.solver(self.data,
+                linear_solver_parameters,
                 bcs = bcs, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
             else:
-              solver = cache[("solver", var.type)] = solver_cache.solver(self.data,
-                solver_parameters,
+              linear_solver = cache[("linear_solver", var.type)] = solver_cache.solver(self.data,
+                linear_solver_parameters,
                 bcs = bcs, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"],
                 a = a)
           else:
-            solver = cache[("solver", var.type)] = solver_cache.solver(self.data,
-              solver_parameters,
+            linear_solver = cache[("linear_solver", var.type)] = solver_cache.solver(self.data,
+              linear_solver_parameters,
               bcs = bcs, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
         
         # Assemble the RHS
@@ -441,13 +443,32 @@ def da_annotate_equation_solve(solve):
         x = adjlinalg.Vector(dolfin.Function(self.__x.function_space()))
 
         # Solve and return
-        solver.set_operator(a)
-        solver.solve(x.data.vector(), b, annotate = False)
+        linear_solver.set_operator(a)
+        linear_solver.solve(x.data.vector(), b, annotate = False)
         return x
   else:
     # This is not a time level solve. Use the default Matrix type.
     DAMatrix = adjlinalg.Matrix
   
   # Annotate the equation
+  if dolfin_version() < (1, 3, 0):
+    if not solve.is_linear():
+      solver_parameters = copy.deepcopy(solver_parameters)      
+      nl_solver = solver_parameters.get("nonlinear_solver", "newton")
+      if nl_solver == "newton":
+        nl_solver_parameters = solver_parameters.get("newton_solver", {})
+      elif nl_solver == "snes":
+        nl_solver_parameters = solver_parameters.get("snes_solver", {})
+      else:
+        raise ParameterException("Invalid non-linear solver: %s" % nl_solver)
+      for key, default in [("linear_solver", "default"),
+                           ("preconditioner", "default"),
+                           ("lu_solver", {}),
+                           ("krylov_solver", {})]:
+        if key in nl_solver_parameters:
+          solver_parameters[key] = nl_solver_parameters[key]
+          del(nl_solver_parameters[key])
+        else:
+          solver_parameters[key] = default
   solving.annotate(eq, x_fn, bcs, solver_parameters = solver_parameters, matrix_class = DAMatrix)
   return True

@@ -2,6 +2,7 @@
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -300,8 +301,8 @@ class EquationSolver:
     x: The Function being solved for.
     bcs: A list of DirichletBC s.
     solver_parameters: A dictionary of solver parameters.
-    adjoint_solver_parameters: A dictionary of solver parameters for an adjoint
-      solve.
+    adjoint_solver_parameters: A dictionary of linear solver parameters for an
+      adjoint solve.
     pre_assembly_parameters: A dictionary of pre-assembly parameters.
   """
   
@@ -322,19 +323,42 @@ class EquationSolver:
     if not adjoint_solver_parameters is None and not isinstance(adjoint_solver_parameters, dict):
       raise InvalidArgumentException("adjoint_solver_parameters must be a dictionary")
 
-    solver_parameters = copy.deepcopy(solver_parameters)
-    if adjoint_solver_parameters is None:
-      adjoint_solver_parameters = solver_parameters
-    adjoint_solver_parameters = copy.deepcopy(adjoint_solver_parameters)
-    npre_assembly_parameters = dolfin.parameters["timestepping"]["pre_assembly"].copy()
-    npre_assembly_parameters.update(pre_assembly_parameters)
-    pre_assembly_parameters = npre_assembly_parameters;  del(npre_assembly_parameters)
-
     x_deps = ufl.algorithms.extract_coefficients(eq.lhs)
     if not is_zero_rhs(eq.rhs):
       x_deps += ufl.algorithms.extract_coefficients(eq.rhs)
 
     is_linear = not x in x_deps
+
+    solver_parameters = copy.deepcopy(solver_parameters)
+    if is_linear:
+      linear_solver_parameters = solver_parameters
+    else:
+      for key in ["linear_solver", "preconditioner", "lu_solver", "krylov_solver"]:
+        if key in solver_parameters:
+          raise ParameterException("Unexpected linear solver parameters")
+      nl_solver = solver_parameters.get("nonlinear_solver", "newton")
+      if nl_solver == "newton":
+        if "snes_solver" in solver_parameters:
+          raise ParameterException("Unexpected SNES solver parameters")
+        linear_solver_parameters = solver_parameters.get("newton_solver", {})
+      elif nl_solver == "snes":
+        if "newton_solver" in solver_parameters:
+          raise ParameterException("Unexpected Newton solver parameters")
+        linear_solver_parameters = solver_parameters.get("snes_solver", {})
+      else:
+        raise ParameterException("Invalid non-linear solver: %s" % nl_solver)
+      nlinear_solver_parameters = {}
+      for key in linear_solver_parameters:
+        if key in ["linear_solver", "preconditioner", "lu_solver", "krylov_solver"]:
+          nlinear_solver_parameters[key] = linear_solver_parameters[key]
+      linear_solver_parameters = nlinear_solver_parameters;  del(nlinear_solver_parameters)
+    linear_solver_parameters = copy.deepcopy(linear_solver_parameters)
+    if adjoint_solver_parameters is None:
+      adjoint_solver_parameters = linear_solver_parameters
+    adjoint_solver_parameters = copy.deepcopy(adjoint_solver_parameters)
+    npre_assembly_parameters = dolfin.parameters["timestepping"]["pre_assembly"].copy()
+    npre_assembly_parameters.update(pre_assembly_parameters)
+    pre_assembly_parameters = npre_assembly_parameters;  del(npre_assembly_parameters)
       
     self.__eq = eq
     self.__x = x
@@ -342,6 +366,7 @@ class EquationSolver:
     self.__J = None
     self.__hbcs = None
     self.__solver_parameters = solver_parameters
+    self.__linear_solver_parameters = linear_solver_parameters
     self.__adjoint_solver_parameters = adjoint_solver_parameters
     self.__pre_assembly_parameters = pre_assembly_parameters
     self.__x_deps = x_deps
@@ -450,6 +475,13 @@ class EquationSolver:
     """
     
     return self.__solver_parameters
+
+  def linear_solver_parameters(self):
+    """
+    Return linear solver parameters.
+    """
+    
+    return self.__linear_solver_parameters
 
   def adjoint_solver_parameters(self):
     """
