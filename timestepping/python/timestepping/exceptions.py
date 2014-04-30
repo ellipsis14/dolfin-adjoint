@@ -2,6 +2,7 @@
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -24,8 +25,7 @@ __all__ = \
     "NotImplementedException",
     "ParameterException",
     "StateException",
-    "TimeLevelException",
-    "VersionException"
+    "TimeLevelException"
   ]
 
 class AbstractMethodException(Exception):
@@ -50,7 +50,4 @@ class StateException(Exception):
   pass
 
 class TimeLevelException(Exception):
-  pass
-
-class VersionException(ImportError):
   pass

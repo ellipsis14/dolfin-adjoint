@@ -6,6 +6,7 @@
 # Copyright (C) 2010-2012 Anders Logg
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -53,15 +54,15 @@ from versions import *
 
 __all__ = []
 
-# Only versions 1.0.x, 1.1.x, and 1.2.x have been tested.
-if dolfin_version() < (1, 0, 0) or dolfin_version() >= (1, 3, 0):
-  raise VersionException("DOLFIN version %s not supported" % dolfin.__version__)
-if ufl_version() < (1, 0, 0) or ufl_version() >= (1, 3, 0):
-  raise VersionException("UFL version %s not supported" % ufl.__version__)
-if ffc_version() < (1, 0, 0) or ffc_version() >= (1, 3, 0):
-  raise VersionException("FFC version %s not supported" % ffc.__version__)
-if instant_version() < (1, 0, 0) or instant_version() >= (1, 3, 0):
-  raise VersionException("Instant version %s not supported" % instant.__version__)
+# Only versions 1.2.x and 1.3.x have been tested.
+if dolfin_version() < (1, 2, 0) or dolfin_version() >= (1, 4, 0):
+  dolfin.warning("DOLFIN version %s not supported" % dolfin.__version__)
+if ufl_version() < (1, 2, 0) or ufl_version() >= (1, 4, 0):
+  dolfin.warning("UFL version %s not supported" % ufl.__version__)
+if ffc_version() < (1, 2, 0) or ffc_version() >= (1, 4, 0):
+  dolfin.warning("FFC version %s not supported" % ffc.__version__)
+if instant_version() < (1, 2, 0) or instant_version() >= (1, 4, 0):
+  dolfin.warning("Instant version %s not supported" % instant.__version__)
 
 # DOLFIN patches.
 if dolfin_version() < (1, 1, 0):
@@ -174,7 +175,7 @@ if dolfin_version() < (1, 2, 0):
       return dolfin.as_vector([nm])
     else:
       return nm
-if dolfin_version() <= (1, 2, 0):    
+if dolfin_version() < (1, 3, 0):    
   __name_counter = [0]
   __Constant__init__orig = dolfin.Constant.__init__
   def Constant__init__(self, *args, **kwargs):
@@ -544,7 +545,7 @@ if ufl_version() < (1, 1, 0):
     return NotImplemented
   ufl.Form.__mul__ = Form__mul__
   del(Form__mul__)
-elif ufl_version() >= (1, 2, 0) and ufl_version() < (1, 3, 0):
+elif ufl_version() >= (1, 2, 0) and ufl_version() < (1, 4, 0):
   __Form_compute_form_data_orig = ufl.Form.compute_form_data
   def Form_compute_form_data(self, object_names = None, common_cell = None, element_mapping = None):
     if element_mapping is None:
