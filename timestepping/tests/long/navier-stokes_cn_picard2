@@ -166,19 +166,7 @@ def add_dTdt_solve(T, dTdt, u, v, kappa, s = None, bc = {}, initial_guess = None
 
 # Single point boundary condition, used to apply a reference node to pressure
 # solves
-cell = mesh.closest_cell(Point(0.5, 0.5))
-mesh_coords = mesh.coordinates()
-cells = mesh.cells()[cell]
-node = cells[0]
-r = numpy.sqrt((mesh_coords[node, 0] - 0.5) ** 2 + (mesh_coords[node, 1] - 0.5) ** 2)
-for lnode in cells[1:]:
-  lr = numpy.sqrt((mesh_coords[lnode, 0] - 0.5) ** 2 + (mesh_coords[lnode, 1] - 0.5) ** 2)
-  if lr < r:
-    node = lnode
-    r = lr
-p0_coord = mesh_coords[node, :]
-ref_bc = StaticDirichletBC(space_p, 0.0, "fabs(x[0] - %.17e) < DOLFIN_EPS && fabs(x[1] - %.17e) < DOLFIN_EPS" % (p0_coord[0], p0_coord[1]), method = "pointwise")
-del(mesh_coords)
+ref_bc = StaticDirichletBC(space_p, 0.0, "fabs(x[0]) < DOLFIN_EPS && fabs(x[1]) < DOLFIN_EPS", method = "pointwise")
 
 # Given a divergent velocity, compute the pressure increment and non-divergent
 # velocity
@@ -302,7 +290,7 @@ assert(err < 7.0e-11)
 
 # Verify pressure zero point
 p0 = numpy.empty(1);  p0[:] = numpy.NAN
-p[N].eval(p0, numpy.array(p0_coord, dtype = numpy.float_))
+p[N].eval(p0, numpy.array([0.0, 0.0], dtype = numpy.float_))
 print "%.17e" % abs(p0)
 assert(abs(p0) < 1.0e-16)
 
@@ -372,4 +360,4 @@ g = system.compute_gradient(u_bc)
 J = system.compute_functional()
 print "J = %.17e" % J
 orders = system.taylor_test(u_bc, J = J, grad = g, ntest = 2)
-assert((orders > 2.00).all())
+assert((orders > 1.99).all())
