@@ -2,6 +2,7 @@
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -108,6 +109,6 @@ err = (grad[0] - grad_da[0].vector()).norm("linf")
 print "%s %.17e" % (grad_da[0].vector().array(), err)
 assert(err < 2.0e-13)
 
-err = abs(float(grad[1]) - grad_da[1])
+err = abs(float(grad[1]) - float(grad_da[1]))
 print "%.17e %.17e" % (grad_da[1], err)
 assert(err < 4.0e-11)

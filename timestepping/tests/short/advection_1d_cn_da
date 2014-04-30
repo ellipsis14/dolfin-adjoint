@@ -3,6 +3,7 @@
 # Copyright (C) 2008 Johan Hake
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -99,6 +100,6 @@ err = abs(g[0].sum() - g_da[0].vector().sum())
 print "%.17e" % err
 assert(err < 1.0e-16)
 
-err = abs(float(g[1]) - g_da[1])
+err = abs(float(g[1]) - float(g_da[1]))
 print "%.17e" % err
 assert(err < 1.0e-16)

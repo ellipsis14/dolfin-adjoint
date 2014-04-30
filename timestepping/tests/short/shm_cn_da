@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -100,21 +101,19 @@ assert((orders > 1.98).all())
 assert(replay_dolfin(forget = False, tol = 0.0, stop = True))
 
 dJdp_da = compute_gradient(Functional(X[N][1] * dx * dolfin_adjoint.dt[FINISH_TIME]), ScalarParameter(omega))
-err = abs(float(dJdp) - dJdp_da)
+err = abs(float(dJdp) - float(dJdp_da))
 print "%.17e" % dJdp_da
 print "%.17e" % float(dJdp)
 print "%.17e" % err
 assert(err < 5.0e-16)
 
-import scipy.optimize
-if hasattr(scipy.optimize, "minimize"):
-  omega_old = float(omega)
-  omega.assign(0.0)
-  clear_caches(omega)
-  minimize(ReducedFunctional(Functional((X[N][1] - Constant(J)) * (X[N][1] - Constant(J)) * dx * dolfin_adjoint.dt[FINISH_TIME]),
-    ScalarParameter(omega)), bounds = (1.75 * numpy.pi, 2.25 * numpy.pi), tol = 1.0e-8)
-  err = abs(float(omega) - omega_old)
-  print "%.17e" % (float(omega) / numpy.pi)
-  print "%.17e" % (omega_old / numpy.pi)
-  print "%.17e" % (err / numpy.pi)
-  assert((err / numpy.pi) < 3.0e-12)
+omega_old = float(omega)
+omega.assign(0.0)
+clear_caches(omega)
+minimize(ReducedFunctional(Functional((X[N][1] - Constant(J)) * (X[N][1] - Constant(J)) * dx * dolfin_adjoint.dt[FINISH_TIME]),
+  ScalarParameter(omega)), bounds = (1.75 * numpy.pi, 2.25 * numpy.pi), tol = 1.0e-8)
+err = abs(float(omega) - omega_old)
+print "%.17e" % (float(omega) / numpy.pi)
+print "%.17e" % (omega_old / numpy.pi)
+print "%.17e" % (err / numpy.pi)
+assert((err / numpy.pi) < 3.0e-12)

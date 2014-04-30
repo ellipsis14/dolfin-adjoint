@@ -2,6 +2,7 @@
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -46,6 +47,7 @@ def system_info():
   
   return
 
+dolfin.parameters["adjoint"]["cache_factorizations"] = True
 dolfin.parameters["timestepping"]["pre_assembly"]["linear_forms"]["matrix_optimisation"] = False
 dolfin.parameters["timestepping"]["pre_assembly"]["linear_forms"]["term_optimisation"] = False
 
@@ -61,6 +63,7 @@ del(Constant__getattr__)
     
 # Modified version of code from dolfin-adjoint bzr trunk 717
 def get_constant(a):
+  import dolfin
   if isinstance(a, dolfin.Constant):
     return a
   else:
@@ -144,9 +147,7 @@ def AssignmentSolver__init__(self, *args, **kwargs):
     ret = solve_orig(self, *args, **kwargs)
     dolfin.parameters["adjoint"]["stop_annotating"] = not annotate
     if record:
-      x = self.x()
-      if isinstance(x, WrappedFunction):
-        x = x.fn()
+      x = unwrap_fns(self.x())
       adjglobals.adjointer.record_variable(adjglobals.adj_variables[x], libadjoint.MemoryStorage(adjlinalg.Vector(x)))
     return ret
   solve.__doc__ = solve_orig.__doc__
@@ -171,13 +172,11 @@ def EquationSolver__init__(self, *args, **kwargs):
     # ... and then restore the previous annotation status.
     dolfin.parameters["adjoint"]["stop_annotating"] = not annotate
     if record:
-      x = self.x()
       # We still want to wrap functions with WrappedFunction so that we can for
       # example write separate equations for u[0] and u[n]. However
       # dolfin-adjoint needs to treat these as the same Function, so
       # strategically unwrap WrappedFunction s.
-      if isinstance(x, WrappedFunction):
-        x = x.fn()
+      x = unwrap_fns(self.x())
       adjglobals.adjointer.record_variable(adjglobals.adj_variables[x], libadjoint.MemoryStorage(adjlinalg.Vector(x)))
     return ret
   solve.__doc__ = solve_orig.__doc__
@@ -211,13 +210,6 @@ class Functional(functional.Functional):
     
     return
   
-# Based on the ReducedFunctional class in reduced_functional.py
-class ReducedFunctional(reduced_functional.ReducedFunctional):
-  def eval_array(self, m_array):
-    # Clear caches
-    clear_caches()
-    return reduced_functional.ReducedFunctional.eval_array(self, m_array)
-
 # Based on dolfin_adjoint_assign in function.py.
 def da_annotate_assign(y, x):
   """
@@ -229,10 +221,8 @@ def da_annotate_assign(y, x):
     # Annotation disabled
     return False
   
-  if isinstance(x, WrappedFunction):
-    x = x.fn()
-  if isinstance(y, WrappedFunction):
-    y = y.fn()
+  x = unwrap_fns(x)
+  y = unwrap_fns(y)
   if not x == y:
     # ?? What does this do ??
     if not adjglobals.adjointer.variable_known(adjglobals.adj_variables[x]):
@@ -251,8 +241,22 @@ def clear_caches(*args):
   
   timestepping.clear_caches(*args)
   da_matrix_cache.clear()
+  dolfin_adjoint.adjglobals.adj_reset_cache()
   
   return
+
+def adj_reset_cache():
+  clear_caches()
+  
+  return
+
+__ReducedFunctionalNumPy__call__ = ReducedFunctionalNumPy.__call__
+def ReducedFunctionalNumPy__call__(self, *args, **kwargs):
+  timestepping.clear_caches()
+  da_matrix_cache.clear()
+  return __ReducedFunctionalNumPy__call__(self, *args, **kwargs)
+ReducedFunctionalNumPy.__call__ = ReducedFunctionalNumPy__call__
+del(ReducedFunctionalNumPy__call__)
 
 # Based on annotate in solving.py
 def da_annotate_equation_solve(solve):
