@@ -2,6 +2,7 @@
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -25,7 +26,6 @@ import embedded_cpp
 import exceptions
 import fenics_overrides
 import fenics_utils
-import quadrature
 import pre_assembled_adjoint
 import pre_assembled_equations
 import pre_assembled_forms
@@ -46,7 +46,6 @@ from fenics_utils import *
 from pre_assembled_adjoint import *
 from pre_assembled_equations import *
 from pre_assembled_forms import *
-from quadrature import *
 from statics import *
 from time_functions import *
 from time_levels import *
@@ -79,7 +78,6 @@ __all__ = \
   pre_assembled_adjoint.__all__ + \
   pre_assembled_equations.__all__ + \
   pre_assembled_forms.__all__ + \
-  quadrature.__all__ + \
   statics.__all__ + \
   time_functions.__all__ + \
   time_levels.__all__ + \
@@ -101,7 +99,6 @@ __all__ = \
     "pre_assembled_adjoint",
     "pre_assembled_equations",
     "pre_assembled_forms",
-    "quadrature",
     "statics",
     "time_functions",
     "time_levels",
