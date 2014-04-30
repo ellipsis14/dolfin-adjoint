@@ -22,7 +22,6 @@ import ufl
   
 from exceptions import *
 from fenics_utils import *
-from quadrature import *
 
 __all__ = \
   [
