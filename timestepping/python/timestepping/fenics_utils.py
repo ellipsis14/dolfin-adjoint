@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 # Copyright (C) 2007-2013 Anders Logg and Kristian B. Oelgaard
 # Copyright (C) 2008-2013 Martin Sandve Alnes
@@ -450,7 +450,7 @@ def lumped_mass(space, du = None):
   c = ufl.coefficient.Coefficient(space.ufl_element())
   if n_sub_spaces > 0:
     masslump = lumped_mass(space.sub(0), du = du[0])
-    for i in range(1, n_sub_spaces):
+    for i in xrange(1, n_sub_spaces):
       masslump += lumped_mass(space.sub(i), du = du[i])
     return masslump
   else:

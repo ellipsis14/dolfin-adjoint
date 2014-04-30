@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
@@ -486,7 +486,7 @@ class PALinearForm(PAForm):
             L = self._pre_assembled_L
       else:
         L = self._mult_assembled_L[0][0] * self._mult_assembled_L[0][1].vector()
-        for i in range(1, len(self._mult_assembled_L)):
+        for i in xrange(1, len(self._mult_assembled_L)):
           L += self._mult_assembled_L[i][0] * self._mult_assembled_L[i][1].vector()
         if not self._pre_assembled_L is None:
           L += self._pre_assembled_L
@@ -497,7 +497,7 @@ class PALinearForm(PAForm):
       else:
         L = self.__non_pre_assembled_L_tensor = assemble(self._non_pre_assembled_L)
       if not self._mult_assembled_L is None:
-        for i in range(len(self._mult_assembled_L)):
+        for i in xrange(len(self._mult_assembled_L)):
           L += self._mult_assembled_L[i][0] * self._mult_assembled_L[i][1].vector()
       if not self._pre_assembled_L is None:
         L += self._pre_assembled_L
@@ -518,7 +518,7 @@ class PALinearForm(PAForm):
     
     PAForm.replace(self, mapping)
     if not self._mult_assembled_L is None:
-      for i in range(len(self._mult_assembled_L)):
+      for i in xrange(len(self._mult_assembled_L)):
         mat, fn = self._mult_assembled_L[i]
         if fn in mapping:
           self._mult_assembled_L[i] = mat, mapping[fn]

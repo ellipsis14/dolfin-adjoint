@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
@@ -119,7 +119,7 @@ class AssemblyCache:
       counts[extract_form_data(key[0]).rank] += 1
 
     dolfin.info("Assembly cache status:")
-    for i in range(3):
+    for i in xrange(3):
       dolfin.info("Pre-assembled rank %i forms: %i" % (i, counts[i]))
 
     return

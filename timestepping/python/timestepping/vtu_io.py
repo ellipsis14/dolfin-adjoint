@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
@@ -108,18 +108,18 @@ def read_vtu(filename, space):
   if dim > 2:
     X[:, 2] = dolfin.interpolate(dolfin.Expression("x[2]"), space).vector().array()
   if degree == 0:
-    for i in range(n_cells):
+    for i in xrange(n_cells):
       cell = dof.cell_dofs(i)
       x = X[cell[0], :]
       vtu_cell = vtu.GetCell(i).GetPointIds()
-      vtu_x = numpy.array([vtu.GetPoint(vtu_cell.GetId(j))[:dim] for j in range(vtu_cell.GetNumberOfIds())])
+      vtu_x = numpy.array([vtu.GetPoint(vtu_cell.GetId(j))[:dim] for j in xrange(vtu_cell.GetNumberOfIds())])
       mag = abs(vtu_x).max(0)
       tol = 2.0e-15 * mag
       if any(abs(vtu_x.mean(0) - x) > tol):
         dolfin.info_red("Relative coordinate error: %.16e" % (abs(vtu_x.mean(0) - x) / mag).max())
         raise StateException("Invalid coordinates")
     
-    for i in range(vtu.GetCellData().GetNumberOfArrays()):
+    for i in xrange(vtu.GetCellData().GetNumberOfArrays()):
       cell_data = vtu.GetCellData().GetArray(i)
       if not cell_data.GetNumberOfComponents() == 1:
         raise NotImplementException("%i components not supported by read_vtu" % cell_data.GetNumberOfComponents())
@@ -128,7 +128,7 @@ def read_vtu(filename, space):
       name = cell_data.GetName()
       assert(not name in fields)
       data = numpy.empty(n)
-      for j in range(n_cells):
+      for j in xrange(n_cells):
         cell = dof.cell_dofs(j)
         data[cell[0]] = cell_data.GetTuple1(j)
       field = dolfin.Function(space, name = name)
@@ -141,7 +141,7 @@ def read_vtu(filename, space):
       if not (vtu.GetPoint(i)[:dim] == x).all():
         raise StateException("Invalid coordinates")
     
-    for i in range(vtu.GetPointData().GetNumberOfArrays()):
+    for i in xrange(vtu.GetPointData().GetNumberOfArrays()):
       point_data = vtu.GetPointData().GetArray(i)
       if not point_data.GetNumberOfComponents() == 1:
         raise NotImplementException("%i components not supported by read_vtu" % point_data.GetNumberOfComponents())
@@ -150,15 +150,15 @@ def read_vtu(filename, space):
       name = point_data.GetName()
       assert(not name in fields)
       data = numpy.empty(n)
-      for j in range(n_cells):
+      for j in xrange(n_cells):
         cell = dof.cell_dofs(j)
         vtu_cell = vtu.GetCell(j).GetPointIds()
         assert(len(cell) == vtu_cell.GetNumberOfIds())
         if cell_map is None:
-          for k in range(vtu_cell.GetNumberOfIds()):
+          for k in xrange(vtu_cell.GetNumberOfIds()):
             data[cell[k]] = point_data.GetTuple1(vtu_cell.GetId(k))
         else:
-          for k in range(vtu_cell.GetNumberOfIds()):
+          for k in xrange(vtu_cell.GetNumberOfIds()):
             data[cell[cell_map[k]]] = point_data.GetTuple1(vtu_cell.GetId(k))
       field = dolfin.Function(space, name = name)
       field.vector().set_local(data)
@@ -291,7 +291,7 @@ def write_vtu(filename, fns, index = None, t = None):
 
     dof = space.dofmap()
     nodes = set()
-    for i in range(mesh.num_cells()):
+    for i in xrange(mesh.num_cells()):
       cell =  dof.cell_dofs(i)
       for node in cell:
         nodes.add(node)
@@ -301,7 +301,7 @@ def write_vtu(filename, fns, index = None, t = None):
       xspace = dolfin.FunctionSpace(mesh, "CG", 1)
       xdof = xspace.dofmap()
       xnodes = set()
-      for i in range(mesh.num_cells()):
+      for i in xrange(mesh.num_cells()):
         cell =  xdof.cell_dofs(i)
         for node in cell:
           xnodes.add(node)
@@ -323,13 +323,13 @@ def write_vtu(filename, fns, index = None, t = None):
     points.SetDataTypeToDouble()
     points.SetNumberOfPoints(n)
     if dim == 1:
-      for i in range(n):
+      for i in xrange(n):
         points.SetPoint(i, x[i], 0.0, 0.0)
     elif dim == 2:
-      for i in range(n):
+      for i in xrange(n):
         points.SetPoint(i, x[i], y[i], 0.0)
     else:
-      for i in range(n):
+      for i in xrange(n):
         points.SetPoint(i, x[i], y[i], z[i])
     vtu.SetPoints(points)
       
@@ -365,12 +365,12 @@ def write_vtu(filename, fns, index = None, t = None):
         cell_type = vtk.vtkQuadraticTetra().GetCellType()
         id_list.SetNumberOfIds(10)
         cell_map = {0:0, 1:1, 2:2, 3:3, 4:9, 5:6, 6:8, 7:7, 8:5, 9:4}
-    for i in range(mesh.num_cells()):
+    for i in xrange(mesh.num_cells()):
       cell = xdof.cell_dofs(i)
       assert(len(cell) == id_list.GetNumberOfIds())
       if not cell_map is None:
-        cell = [cell[cell_map[j]] for j in range(len(cell))]
-      for j in range(len(cell)):
+        cell = [cell[cell_map[j]] for j in xrange(len(cell))]
+      for j in xrange(len(cell)):
         id_list.SetId(j, xnode_map[cell[j]])
       vtu.InsertNextCell(cell_type, id_list)
 

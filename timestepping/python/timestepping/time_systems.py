@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
@@ -635,7 +635,7 @@ class ForwardModel:
     Perform ns timesteps.
     """
     
-    for i in range(ns):
+    for i in xrange(ns):
       self.timestep_update()
       self.timestep_solve()
       self.timestep_cycle()
@@ -1096,7 +1096,7 @@ class ManagedModel:
         
         self.__memory_checkpointer.checkpoint((m, 0), lcp_cs(m * self.__disk_period))
         if m == self.__S // self.__disk_period:
-          for j in range(1, (self.__S % self.__disk_period) + 1):
+          for j in xrange(1, (self.__S % self.__disk_period) + 1):
             ls = m * self.__disk_period + j
             if m > 0 or j > 1:
               self.__forward.timestep_cycle()
@@ -1108,7 +1108,7 @@ class ManagedModel:
             self.__forward.timestep_update(s = s, cs = lupdate_cs(s))
             self.__memory_checkpointer.restore((m, i))
         else:
-          for j in range(1, self.__disk_period):
+          for j in xrange(1, self.__disk_period):
             ls = m * self.__disk_period + j
             if m > 0 or j > 1:
               self.__forward.timestep_cycle()
@@ -1193,7 +1193,7 @@ class ManagedModel:
     elif not self.__S is None:
       raise StateException("Timestep after finalisation")
     
-    for i in range(ns):
+    for i in xrange(ns):
       self.__s += 1
       self.__forward.timestep_update()
       self.__forward.timestep_solve()
@@ -1235,7 +1235,7 @@ class ManagedModel:
     self.__verify_timestep_checkpoint(-2, tolerance = tolerance)
 
 #    self.__verify_timestep_checkpoint(0, tolerance = tolerance)
-    for i in range(self.__S):
+    for i in xrange(self.__S):
       self.__forward.timestep_update()
       self.__forward.timestep_solve()
       self.__verify_timestep_checkpoint(i + 1, tolerance = tolerance)
@@ -1295,7 +1295,7 @@ class ManagedModel:
       self.__functional.initialise()
       self.__functional.addto(0)
       
-    for i in range(self.__S):
+    for i in xrange(self.__S):
       self.__forward.timestep_update()
       self.__forward.timestep_solve()
       if recheckpoint:
@@ -1409,9 +1409,9 @@ class ManagedModel:
     f_solves = self.__forward._ForwardModel__solves
     f_final_solves = self.__forward._ForwardModel__final_solves
 
-    dFdm = {j:[OrderedDict() for i in range(len(parameters))] for j in range(-1, 2)}
+    dFdm = {j:[OrderedDict() for i in xrange(len(parameters))] for j in xrange(-1, 2)}
     for i, parameter in enumerate(parameters):
-      for j, solves in zip(range(-1, 2), [f_init_solves, f_solves, f_final_solves]):
+      for j, solves in zip(xrange(-1, 2), [f_init_solves, f_solves, f_final_solves]):
         for f_solve in solves:
           f_x = f_solve.x()
           if isinstance(f_solve, AssignmentSolver):
@@ -1444,7 +1444,7 @@ class ManagedModel:
 
     cp_cs = copy.copy(self.__nl_cp_cs)
     update_cs = copy.copy(self.__update_cs)
-    for i in range(len(parameters)):
+    for i in xrange(len(parameters)):
       for f_der in dFdm[0][i].values():
         if isinstance(f_der, PAForm):
           for c in f_der.dependencies(non_symbolic = True):
@@ -1484,7 +1484,7 @@ class ManagedModel:
             update_cs.add(c)
         return update_cs
 
-    grad = [None for i in range(len(parameters))]
+    grad = [None for i in xrange(len(parameters))]
     for i, parameter in enumerate(parameters):
       if self.__functional is None or isinstance(self.__functional, TimeFunctional):
         der = ufl.form.Form([])
@@ -1546,7 +1546,7 @@ class ManagedModel:
       callback(s = self.__S + 1)
 
     self.__restore_timestep_checkpoint(-3)
-    for i in range(self.__S):
+    for i in xrange(self.__S):
       self.__adjoint.update_functional(self.__S - i)
       self.__adjoint.timestep_cycle()
       self.__restore_timestep_checkpoint(self.__S - i, cp_cs = cp_cs, update_cs = update_cs)
@@ -1672,7 +1672,7 @@ class ManagedModel:
       
     errs_1 = []
     errs_2 = []
-    for i in range(ntest - 1, -1, -1):
+    for i in xrange(ntest - 1, -1, -1):
       if isinstance(parameter, dolfin.Constant):
         parameter.assign(dolfin.Constant(parameter_orig + (2 ** i) * perturb))
 
@@ -1710,10 +1710,10 @@ class ManagedModel:
       if err == 0.0:
         errs_2[i] = numpy.NAN
     orders_1 = numpy.empty(len(errs_1) - 1)
-    for i in range(1, len(errs_1)):
+    for i in xrange(1, len(errs_1)):
       orders_1[i - 1] = -numpy.log(errs_1[i] / errs_1[i - 1]) / numpy.log(2.0)
     orders_2 = numpy.empty(len(errs_2) - 1)
-    for i in range(1, len(errs_2)):
+    for i in xrange(1, len(errs_2)):
       orders_2[i - 1] = -numpy.log(errs_2[i] / errs_2[i - 1]) / numpy.log(2.0)
 
     if any(orders_1 < 0.9):
@@ -1802,7 +1802,7 @@ class ManagedModel:
       for i, bound in enumerate(bounds):
         if not isinstance(bound, tuple) or not len(bound) == 2:
           raise InvalidArgumentException("bounds must be a list of tuples of lower and upper bounds")
-        for j in range(2):
+        for j in xrange(2):
           if bound[j] is None:
             pass
           elif isinstance(parameters[i], dolfin.Constant):
@@ -1921,7 +1921,7 @@ class ManagedModel:
           u_bounds = self.serialised(u_bounds)
 
         bounds = []
-        for i in range(self.__g_N):
+        for i in xrange(self.__g_N):
           l_bound = l_bounds[i]
           if numpy.isnan(l_bound):
             l_bound = None

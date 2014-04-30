@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 # Copyright (C) 2007 Anders Logg
 # Copyright (C) 2007-2011 Anders Logg and Garth N. Wells

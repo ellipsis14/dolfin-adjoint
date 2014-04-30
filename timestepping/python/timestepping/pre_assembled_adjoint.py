@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
@@ -346,7 +346,7 @@ class PAAdjointSolvers:
     if len(args) == 0:
       la_a, la_solvers = [], []
       la_L = []
-      for i in range(len(self.__a_x)):
+      for i in xrange(len(self.__a_x)):
         a_a, a_solver = assemble_lhs(i)
         a_L = assemble_rhs(i)
         la_a.append(a_a)
@@ -357,7 +357,7 @@ class PAAdjointSolvers:
     else:
       la_a, la_solvers = copy.copy(self.__a_a), copy.copy(self.__a_solvers)
       la_L = copy.copy(self.__a_L)
-      for i in range(len(self.__a_x)):
+      for i in xrange(len(self.__a_x)):
         for dep in args:
           if not self.__a_a_forms[i] is None and dep in ufl.algorithms.extract_coefficients(self.__a_a_forms[i]):
             la_a[i], la_solvers[i] = assemble_lhs(i)
@@ -392,7 +392,7 @@ class PAAdjointSolvers:
     Solve all adjoint equations.
     """
     
-    for i in range(len(self.__a_x)):
+    for i in xrange(len(self.__a_x)):
       a_a = self.__a_a[i]
       a_x = self.__a_x[i]
       a_L = self.__a_L[i]
@@ -454,7 +454,7 @@ class PAAdjointSolvers:
             L = assemble(a_L, copy = len(a_bcs) > 0)
         else:
           L = evaluate_a_L_as(0)
-          for i in range(1, len(a_L_as)):
+          for i in xrange(1, len(a_L_as)):
             add_a_L_as(i, L)
           if not a_L is None:
             L += assemble(a_L, copy = False)
@@ -465,7 +465,7 @@ class PAAdjointSolvers:
           L = assemble(a_L_rhs)
         if not a_L is None:
           L += assemble(a_L, copy = False)
-        for i in range(len(a_L_as)):
+        for i in xrange(len(a_L_as)):
           add_a_L_as(i, L)
 
       if a_a is None:
@@ -495,7 +495,7 @@ class PAAdjointSolvers:
     """
     
     if functional is None:
-      self.__a_L_rhs = [None for i in range(len(self.__a_x))]
+      self.__a_L_rhs = [None for i in xrange(len(self.__a_x))]
       self.__functional = None
     elif isinstance(functional, ufl.form.Form):
       if not extract_form_data(functional).rank == 0:
@@ -513,13 +513,13 @@ class PAAdjointSolvers:
         else:
           raise DependencyException("Invalid dependency")
 
-      self.__a_L_rhs = [None for i in range(len(self.__a_x))]
+      self.__a_L_rhs = [None for i in xrange(len(self.__a_x))]
       for i, a_x in enumerate(a_rhs):
         if a_x in self.__a_keys:
           self.__a_L_rhs[self.__a_keys[a_x]] = PALinearForm(a_rhs[a_x], pre_assembly_parameters = self.__a_pre_assembly_parameters[i]["linear_forms"])
       self.__functional = functional
     elif isinstance(functional, TimeFunctional):
-      self.__a_L_rhs = [None for i in range(len(self.__a_x))]
+      self.__a_L_rhs = [None for i in xrange(len(self.__a_x))]
       self.__functional = functional
     else:
       raise InvalidArgumentException("functional must be a Form or a TimeFunctional")
@@ -550,7 +550,7 @@ class PAAdjointSolvers:
       else:
         raise DependencyException("Invalid dependency")
 
-    self.__a_L_rhs = [None for i in range(len(self.__a_x))]
+    self.__a_L_rhs = [None for i in xrange(len(self.__a_x))]
     for a_x in a_rhs:
       if not a_x in self.__a_keys:
         dolfin.warning("Missing functional dependency %s" % a_x.name())

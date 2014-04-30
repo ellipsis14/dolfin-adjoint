@@ -1,7 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -76,7 +77,7 @@ class Version:
   
   def __str__(self):
     s = str(self.__ver[0])
-    for i in range(1, len(self.__ver)):
+    for i in xrange(1, len(self.__ver)):
       s += ".%i" % self.__ver[i]
     return s
   
@@ -84,13 +85,13 @@ class Version:
     if not isinstance(other, Version):
       other = Version(other)
     n = min(len(self.__ver), len(other.__ver))
-    for i in range(n):
+    for i in xrange(n):
       if not self.__ver[i] == other.__ver[i]:
         return False
-    for i in range(n, len(self.__ver)):
+    for i in xrange(n, len(self.__ver)):
       if not self.__ver[i] == 0:
         return False
-    for i in range(n, len(other.__ver)):
+    for i in xrange(n, len(other.__ver)):
       if not other.__ver[i] == 0:
         return False
     return True
@@ -99,13 +100,13 @@ class Version:
     if not isinstance(other, Version):
       other = Version(other)
     n = min(len(self.__ver), len(other.__ver))
-    for i in range(n):
+    for i in xrange(n):
       if other.__ver[i] > self.__ver[i]:
         return False
-    for i in range(n, len(self.__ver)):
+    for i in xrange(n, len(self.__ver)):
       if self.__ver[i] > 0:
         return True
-    for i in range(n, len(other.__ver)):
+    for i in xrange(n, len(other.__ver)):
       if other.__ver[i] > 0:
         return False
     return False
@@ -114,7 +115,7 @@ class Version:
     if not isinstance(other, Version):
       other = Version(other)
     n = min(len(self.__ver), len(other.__ver))
-    for i in range(n):
+    for i in xrange(n):
       if self.__ver[i] < other.__ver[i]:
         return True
     return False
