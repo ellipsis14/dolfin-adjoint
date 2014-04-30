@@ -3,6 +3,7 @@
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -100,4 +101,4 @@ g = system.compute_gradient(F, project = True)
 assembly_cache.info()
 
 orders = system.taylor_test(F, J = J, grad = g)
-assert((orders > 1.97).all())
+assert((orders > 1.96).all())

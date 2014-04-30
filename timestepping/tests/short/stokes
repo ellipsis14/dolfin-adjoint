@@ -2,6 +2,7 @@
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -257,5 +258,5 @@ err = abs(dJdm.array() - dolfin_adjoint_grad).max()
 print err
 assert(err < 5.0e-14)
 
-orders = system.taylor_test(ic, grad = dJdm, fact = 1.0e-3)
-assert((orders > 1.98).all())
+orders = system.taylor_test(ic, grad = dJdm, fact = 2.0e-3)
+assert((orders > 1.96).all())

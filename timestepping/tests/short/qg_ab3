@@ -3,6 +3,7 @@
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -81,21 +82,17 @@ Scale(dt, scale)
 mtime /= scale
 
 # Wind forcing
-class Wind(Expression):
-  def eval(self, value, x):
-    # PEQUOD wind forcing profile
-    lL = L / 2.0
-    xVal = x[0] - lL
-    yMid = B * xVal
-    yVal = x[1] - lL
-    if yVal < yMid:
-      ret = -numpy.pi * (1.0 / lL) * A * numpy.sin(numpy.pi * (lL + yVal) / (lL + yMid))
-    else:
-      ret = numpy.pi * (1.0 / lL) * (1.0 / A) * numpy.sin(numpy.pi * (yVal - yMid) / (lL - yMid))
-    value[:] = ret
-    return
-  def value_shape(self):
-    return tuple()
+def Wind(element):
+  # PEQUOD wind forcing profile
+  ex = "yVal < yMid ? " \
+       "-pi * (1.0 / lL) * A * sin(pi * (lL + yVal) / (lL + yMid)) : " \
+       "pi * (1.0 / lL) * (1.0 / A) * sin(pi * (yVal - yMid) / (lL - yMid))"
+  for key, value in reversed([("lL", "L / 2.0"),
+                              ("xVal", "x[0] - lL"),
+                              ("yMid", "B * xVal"),
+                              ("yVal", "x[1] - lL")]):
+    ex = ex.replace(key, "(%s)" % value)
+  return Expression(ex, A = A, B = B, L = L, element = element)
 # Stratification
 smat = numpy.zeros((layers, layers))
 if layers > 1:
@@ -114,7 +111,7 @@ for i in range(1, len(ss)):
   if abs(ss[i]) < mss:
       blayer = i
       mss = abs(ss[i])
-assert(mss < 2.0e-13)
+assert(mss < 6.0e-13)
 ss = [Constant(ss[i]) for i in range(layers)]
 
 mesh   = RectangleMesh(0.0, 0.0, L, L, ngrid, ngrid)
@@ -260,19 +257,20 @@ def check(f, ref, tol, scale = None):
   if not scale is None:
     v *= scale
   err = abs(v - ref)
-  print "%.17e %.17e %.17e" % (v, ref, err)
+  if MPI.process_number() == 0:
+    print "%.17e %.17e %.17e" % (v, ref, err)
   assert(err < tol)
   return
 
-check(q[0][-2], 2.20073680358033627e+06, 2.0e-8)
-check(q[1][-2], 2.20073680358033627e+06, 2.0e-8)
-check(q[2][-2], 2.20073680358033627e+06, 2.0e-8)
-check(q[0][-1], 2.20076449380046502e+06, 8.0e-9)
-check(q[1][-1], 2.20073797596434690e+06, 3.0e-8)
-check(q[2][-1], 2.20073726492761029e+06, 2.0e-8)
-check(q[0][0], 2.20079218441609666e+06, 9.0e-9)
-check(q[1][0], 2.20073914890155755e+06, 9.0e-9)
-check(q[2][0], 2.20073772634891700e+06, 8.0e-9)
+check(q[0][-2], 2.20073680358033301e+06, 6.0e-9)
+check(q[1][-2], 2.20073680358033301e+06, 6.0e-9)
+check(q[2][-2], 2.20073680358033301e+06, 6.0e-9)
+check(q[0][-1], 2.20076218325539399e+06, 2.0e-8)
+check(q[1][-1], 2.20073722609829763e+06, 2.0e-8)
+check(q[2][-1], 2.20073664257621206e+06, 5.0e-9)
+check(q[0][0], 2.20078756258992990e+06, 2.0e-8)
+check(q[1][0], 2.20073764809644828e+06, 2.0e-8)
+check(q[2][0], 2.20073648092393950e+06, 2.0e-8)
 
 t = 2.0 * float(dt)
 c = 0
@@ -282,13 +280,13 @@ while t < mtime:
   c += 1
 #  print t * scale / (3600.0 * 24.0)
   if c == 1:
-    check(q[0][n], 2.20081987591721490e+06, 9.0e-9)
-    check(q[1][n], 2.20074032217920711e+06, 8.0e-9)
-    check(q[2][n], 2.20073818778413581e+06, 8.0e-9)
+    check(q[0][n], 2.20081294249316910e+06, 2.0e-8)
+    check(q[1][n], 2.20073806973259058e+06, 8.0e-9)
+    check(q[2][n], 2.20073631881801412e+06, 1.0e-8)
   elif c == 2:
-    check(q[0][n], 2.20084756830502208e+06, 2.0e-8)
-    check(q[1][n], 2.20074149579874752e+06, 9.0e-9)
-    check(q[2][n], 2.20073864923472283e+06, 8.0e-9)
+    check(q[0][n], 2.20083832296478748e+06, 1.0e-8)
+    check(q[1][n], 2.20073849100763723e+06, 7.0e-9)
+    check(q[2][n], 2.20073615625938540e+06, 8.0e-9)
 
 system.finalise()
 
