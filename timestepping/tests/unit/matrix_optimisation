@@ -1,0 +1,80 @@
+#!/usr/bin/env python
+
+# Copyright (C) 2014 University of Edinburgh
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, version 3 of the License
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+import numpy;  numpy.random.seed(0)
+import ufl
+
+from dolfin import *
+from timestepping import *
+
+mesh = UnitSquareMesh(10, 10)
+space = FunctionSpace(mesh, "CG", 1)
+test, trial = TestFunction(space), TrialFunction(space)
+
+F = Function(space)
+G = StaticFunction(space)
+
+F.vector().set_local(numpy.random.random(F.vector().local_size()));  F.vector().apply("insert")
+G.vector().set_local(numpy.random.random(G.vector().local_size()));  G.vector().apply("insert")
+
+c = Constant(1.0)
+sc = StaticConstant(1.0)
+
+# These forms should *not* be pre-assembled via the matrix optimisation. Note
+# that term based optimisation is disabled -- otherwise some of these can be
+# optimised via pre-assembly.
+for form in [inner(test, F ** sc) * dx,
+             inner(test, F * F) * dx,
+             inner(test, c * F) * dx,
+             inner(c * test, F) * dx,
+             inner(test, F + G) * dx,
+             inner(test, F + c) * dx,
+             inner(test, F + sc) * dx,
+             inner(test, ufl.classes.Conditional(eq(1, 1), F + sc, F + sc)) * dx
+             ]:
+  pform = PALinearForm(form, pre_assembly_parameters = {"term_optimisation":False,
+                                                        "matrix_optimisation":True,
+                                                        "compress_matrices":True})
+  print pform.n_pre_assembled(), pform.n_non_pre_assembled()
+  assert(pform.n_pre_assembled() == 0)
+  assert(pform.n_non_pre_assembled() == 1)
+  err = (assemble(form) - assemble(pform)).norm("linf")
+  print "%.17e" % err
+  assert(err == 0.0)
+
+# These forms should be pre-assembled via the matrix optimisation
+for form in [inner(test, F) * dx,
+             inner(grad(test), grad(F)) * dx,
+             inner(test, sc * F) * dx,
+             inner(sc * test, F) * dx,
+             inner(grad(test), sc * grad(F)) * dx,
+             inner(sc * grad(test), grad(F)) * dx,
+             inner(grad(test), grad(sc * F)) * dx,
+             inner(grad(sc * test), grad(F)) * dx,
+             inner(grad(test), as_vector([sc, sc]) * F) * dx,
+             inner(as_vector([sc, sc]) * test, grad(F)) * dx,
+             inner(grad(test), as_vector([F, 0])) * dx]:
+  pform = PALinearForm(form, pre_assembly_parameters = {"term_optimisation":False,
+                                                        "matrix_optimisation":True,
+                                                        "compress_matrices":True})
+  print pform.n_pre_assembled(), pform.n_non_pre_assembled()
+  assert(pform.n_pre_assembled() > 0)
+  assert(pform.n_non_pre_assembled() == 0)
+  assert(pform._pre_assembled_L is None)
+  assert(len(pform._mult_assembled_L) == 1)
+  err = (assemble(form) - assemble(pform)).norm("linf")
+  print "%.17e" % err
+  assert(err < 2.0e-15)

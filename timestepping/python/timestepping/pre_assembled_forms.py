@@ -2,6 +2,7 @@
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -81,6 +82,66 @@ else:
     domain_type, domain_description, compiler_data, domain_data = \
       integral.domain_type(), integral.domain_description(), integral.compiler_data(), integral.domain_data()
     return integrand, [domain_type, domain_description, compiler_data, domain_data]
+
+def matrix_optimisation(form):
+  """
+  Attempt to convert a linear form into the action of a bi-linear form.
+  Return a (bi-linear Form, Function) pair on success, and None on failure.
+  """
+
+  if not isinstance(form, ufl.form.Form):
+    raise InvalidArgumentException("form must be a Form")
+
+  # Find the test function
+  args = ufl.algorithms.extract_arguments(form)
+  if not len(args) == 1:
+    # This is not a linear form
+    return None
+
+  # Look for a single non-static Function dependency
+  tcs = extract_non_static_coefficients(form)
+  if not len(tcs) == 1:
+    # Found too many non-static coefficients
+    return None
+  elif not isinstance(tcs[0], dolfin.Function):
+    # The only non-static coefficient is not a Function
+    return None
+  # Found a single non-static Function dependency
+  fn = tcs[0]
+
+  # Look for a static bi-linear form whose action can be used to construct
+  # the linear form
+  mat_form = derivative(form, fn,
+    # Hack to work around an obscure FEniCS bug
+    expand = dolfin.MPI.num_processes() == 1 or
+      (not is_r0_function_space(args[0].function_space()) and not is_r0_function(fn)))
+  if n_non_static_coefficients(mat_form) > 0:
+    # The form is non-linear
+    return None
+
+  # Check that all terms in the form definitely depend upon fn
+  def all_terms_dep(expr, fn):
+    def lall_terms_dep(expr, fn):
+      if not is_expand_expr_supported(expr):
+        # expand_expr cannot handle this term. May yield a false negative here.
+        return False
+      elif not fn in ufl.algorithms.extract_coefficients(expr):
+        # A true negative
+        return False
+      else:
+        return True
+    for term in expand_expr(expr):
+      if not lall_terms_dep(term, fn):
+        return False
+    return True
+  for integral in form_integrals(form):
+    integrand, iargs = preprocess_integral(form, integral)
+    if not all_terms_dep(integrand, fn):
+      # The form might have a term which doesn't depend upon fn at all
+      return None
+
+  # Success
+  return mat_form, fn
 
 class PAForm:
   """
@@ -346,24 +407,6 @@ class PALinearForm(PAForm):
     mult_assembled_L = OrderedDict()
     non_pre_assembled_L = []
     
-    def matrix_optimisation(tform):
-      args = ufl.algorithms.extract_arguments(tform)
-      if not len(args) == 1:
-        return None
-      tcs = extract_non_static_coefficients(tform)
-      if not len(tcs) == 1 or not isinstance(tcs[0], dolfin.Function):
-        return None
-      fn = tcs[0]
-        
-      expand = dolfin.MPI.num_processes() == 1 or \
-        (not is_r0_function_space(args[0].function_space()) and not is_r0_function(fn))
-      mat_form = derivative(tform, fn, expand = expand)
-      
-      if n_non_static_coefficients(mat_form) > 0:
-        return None
-      else:
-        return fn, mat_form
-    
     if is_static_form(form):
       pre_assembled_L.append(form)
     elif self.pre_assembly_parameters["term_optimisation"]:
@@ -401,17 +444,17 @@ class PALinearForm(PAForm):
           else:
             pre_assembled_L += pterm[0]
             for mform in pterm[1]:
-              if mform[0] in mult_assembled_L:
-                mult_assembled_L[mform[0]].append(mform[1])
+              if mform[1] in mult_assembled_L:
+                mult_assembled_L[mform[1]].append(mform[0])
               else:
-                mult_assembled_L[mform[0]] = [mform[1]]
+                mult_assembled_L[mform[1]] = [mform[0]]
             non_pre_assembled_L += pterm[2]
     elif self.pre_assembly_parameters["matrix_optimisation"]:
       mform = matrix_optimisation(form)
       if mform is None:
         non_pre_assembled_L.append(form)
       else:
-        mult_assembled_L[mform[0]] = [mform[1]]
+        mult_assembled_L[mform[1]] = [mform[0]]
     else:
       non_pre_assembled_L.append(form)
 

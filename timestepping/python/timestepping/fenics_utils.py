@@ -3,6 +3,7 @@
 # Copyright (C) 2008-2013 Martin Sandve Alnes
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -38,6 +39,7 @@ __all__ = \
     "expand_solver_parameters",
     "extract_form_data",
     "is_empty_form",
+    "is_expand_expr_supported",
     "is_general_constant",
     "is_r0_function",
     "is_r0_function_space",
@@ -172,6 +174,68 @@ def differentiate_expr(expr, u):
 
   return der
 
+def is_expand_expr_supported(expr):
+  """
+  Return whether the supplied Expr is supported by expand_expr.
+  """
+  
+  if not isinstance(expr, ufl.expr.Expr):
+    raise InvalidArgumentException("expr must be an Expr")
+
+  def multiple_terms(expr):
+    if isinstance(expr, (ufl.algebra.Sum,
+                         ufl.indexsum.IndexSum)):
+      return True
+    else:
+      for op in expr.operands():
+        if multiple_terms(op):
+          return True
+      # May yield a false negative here
+      return False
+
+  if not isinstance(expr, (ufl.algebra.Sum,
+                           ufl.algebra.Product,
+                           ufl.indexsum.IndexSum,
+                           ufl.indexed.Indexed,
+                           ufl.tensors.ComponentTensor,
+                           ufl.algebra.Division,
+                           ufl.restriction.PositiveRestricted,
+                           ufl.restriction.NegativeRestricted,
+                           ufl.differentiation.Grad,
+                           ufl.tensoralgebra.Dot,
+                           ufl.tensoralgebra.Inner,
+                           ufl.differentiation.CoefficientDerivative,
+                           ufl.differentiation.VariableDerivative,
+                           ufl.constantvalue.IntValue,
+                           ufl.argument.Argument,
+                           dolfin.Expression,
+                           dolfin.Function,
+                           dolfin.Constant,
+                           ufl.constantvalue.FloatValue,
+                           ufl.geometry.Circumradius,
+                           ufl.algebra.Abs,
+                           ufl.geometry.FacetNormal,
+                           ufl.mathfunctions.Sqrt,
+                           ufl.classes.Variable,
+                           ufl.mathfunctions.Exp,
+                           ufl.constantvalue.Zero,
+                           ufl.algebra.Power,
+                           ufl.indexing.MultiIndex,
+                           ufl.classes.Label)):
+    if isinstance(expr, (ufl.tensors.ListTensor,
+                         ufl.classes.Conditional)):
+      for op in expr.operands():
+        if multiple_terms(op):
+          return False
+    else:
+      return False
+
+  for op in expr.operands():
+    if not is_expand_expr_supported(op):
+      return False
+
+  return True
+    
 def expand_expr(expr):
   """
   Recursively expand the supplied Expr into the largest possible Sum.
@@ -226,11 +290,6 @@ def expand_expr(expr):
     ops = expr.operands()
     assert(len(ops) == 1)
     return [ufl.restriction.NegativeRestricted(term) for term in expand_expr(ops[0])]
-  # Only defined for UFL versions >= 1.0.0 and < 1.2.0
-  elif hasattr(ufl.differentiation, "SpatialDerivative") and isinstance(expr, ufl.differentiation.SpatialDerivative):
-    ops = expr.operands()
-    assert(len(ops) == 2)
-    return [ufl.differentiation.SpatialDerivative(term, ops[1]) for term in expand_expr(ops[0])]
   elif isinstance(expr, ufl.differentiation.Grad):
     ops = expr.operands()
     assert(len(ops) == 1)
@@ -251,15 +310,17 @@ def expand_expr(expr):
                          ufl.algebra.Abs,
                          ufl.geometry.FacetNormal,
                          ufl.mathfunctions.Sqrt,
-                         ufl.operators.Variable,
+                         ufl.classes.Variable,
                          ufl.mathfunctions.Exp,
-                         ufl.constantvalue.Zero)):
-    return [expr]
-  # Expr types grey-list. It might be possible to expand these.
-  elif isinstance(expr, (ufl.tensors.ComponentTensor,
-                         ufl.tensors.ListTensor,
+                         ufl.constantvalue.Zero,
                          ufl.algebra.Power,
-                         ufl.operators.Conditional)):
+                         ufl.indexing.MultiIndex,
+                         ufl.classes.Label)):
+    return [expr]
+  # Expr types grey-list. It might be possible to expand these, but just ignore
+  # them at present.
+  elif isinstance(expr, (ufl.tensors.ListTensor,
+                         ufl.classes.Conditional)):
     return [expr]
   else:
     dolfin.warning("Expr type %s not expanded by expand_expr" % expr.__class__)
