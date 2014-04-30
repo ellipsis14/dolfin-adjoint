@@ -2,6 +2,7 @@
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -204,7 +205,13 @@ extern "C" {
       elif isinstance(arg, float):
         largs.append(ctypes.c_double(arg))
       elif isinstance(arg, numpy.ndarray):
-        largs.append(arg.ctypes.data)
+        if arg.dtype == "int32":
+          largs.append(arg.ctypes.data_as(ctypes.POINTER(ctypes.c_int)))
+        elif arg.dtype == "int64":
+          largs.append(arg.ctypes.data_as(ctypes.POINTER(ctypes.c_long)))
+        else:
+          assert(arg.dtype == "float64")
+          largs.append(arg.ctypes.data_as(ctypes.POINTER(ctypes.c_double)))
       else:
         assert(isinstance(arg, tuple(self.__boost_classes.keys())))
         largs.append(ctypes.c_void_p(int(arg.this)))
