@@ -26,7 +26,6 @@ from caches import *
 from exceptions import *
 from fenics_overrides import *
 from fenics_utils import *
-from quadrature import *
 from statics import *
 from versions import *
 
