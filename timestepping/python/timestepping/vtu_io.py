@@ -137,9 +137,20 @@ def read_vtu(filename, space):
 
       fields[name] = field
   else:
-    for i, x in enumerate(X):
-      if not (vtu.GetPoint(i)[:dim] == x).all():
-        raise StateException("Invalid coordinates")
+    for i in xrange(n_cells):
+      cell = dof.cell_dofs(i)
+      vtu_cell = vtu.GetCell(i).GetPointIds()
+      assert(len(cell) == vtu_cell.GetNumberOfIds())
+      if cell_map is None:
+        for j in xrange(vtu_cell.GetNumberOfIds()):
+          if not (X[cell[j]] == vtu.GetPoint(vtu_cell.GetId(j))[:dim]).all():
+            dolfin.info_red("Coordinate error: %.16e" % (abs(X[cell[j]] - vtu.GetPoint(vtu_cell.GetId(j))[:dim]).max()))
+            raise StateException("Invalid coordinates")
+      else:
+        for j in xrange(vtu_cell.GetNumberOfIds()):
+          if not (X[cell[cell_map[j]]] == vtu.GetPoint(vtu_cell.GetId(j))[:dim]).all():
+            dolfin.info_red("Coordinate error: %.16e" % (abs(X[cell[cell_map[j]]] - vtu.GetPoint(vtu_cell.GetId(j))[:dim]).max()))
+            raise StateException("Invalid coordinates")
     
     for i in xrange(vtu.GetPointData().GetNumberOfArrays()):
       point_data = vtu.GetPointData().GetArray(i)
