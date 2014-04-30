@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -70,7 +71,7 @@ z_h = 0.5 * (z_n + z_np1)
 system.add_solve((1.0 / dt) * inner(test, X[n + 1] - X[n]) * dx ==
   inner(test_1, sigma * (y_h - x_h)) * dx +
   inner(test_2, r * x_h - y_h - x_h * z_h) * dx +
-  inner(test_3, -b * z_h + x_h * y_h) * dx, X[n + 1], solver_parameters = solver)
+  inner(test_3, -b * z_h + x_h * y_h) * dx, X[n + 1], solver_parameters = {"newton_solver":solver})
 
 def update(s, cs = None):
   print "t = %.2f" % (max(s - 1, 0) * float(dt))

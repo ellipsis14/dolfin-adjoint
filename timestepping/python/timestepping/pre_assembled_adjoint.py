@@ -2,6 +2,7 @@
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -161,11 +162,11 @@ class TimeFunctional:
 class PAAdjointSolvers:
   """
   Defines a set of solves for adjoint equations, applying pre-assembly and
-  solver caching optimisations. Expects as input a list of earlier forward
-  equations and a list of later forward equations. If the earlier equations
-  solve for {x_1, x_2, ...}, then the Function s on which the later equations
-  depend should all be static or in the {x_1, x_2, ...}, although the failure
-  of this requirement is not treated as an error.
+  linear solver caching optimisations. Expects as input a list of earlier
+  forward equations and a list of later forward equations. If the earlier
+  equations solve for {x_1, x_2, ...}, then the Function s on which the later
+  equations depend should all be static or in the {x_1, x_2, ...}, although the
+  failure of this requirement is not treated as an error.
 
   Constructor arguments:
     f_solves_a: Earlier time forward equations, as a list of AssignmentSolver s
@@ -294,7 +295,7 @@ class PAAdjointSolvers:
     Reassemble the adjoint solvers. If no arguments are supplied then all
     equations are re-assembled. Otherwise, only the LHSs or RHSs which depend
     upon the supplied Constant s or Function s are reassembled. Note that this
-    does not clear the assembly or solver caches -- hence if a static
+    does not clear the assembly or linear solver caches -- hence if a static
     Constant, Function, or DirichletBC is modified then one should clear the
     caches before calling reassemble on the PAAdjointSolvers.
     """
@@ -312,7 +313,7 @@ class PAAdjointSolvers:
             a_a = assembly_cache.assemble(self.__a_a_forms[i],
               bcs = self.__a_bcs[i], symmetric_bcs = self.__a_pre_assembly_parameters[i]["equations"]["symmetric_boundary_conditions"],
               compress = self.__a_pre_assembly_parameters[i]["bilinear_forms"]["compress_matrices"])
-            a_solver = solver_cache.solver(self.__a_a_forms[i],
+            a_solver = linear_solver_cache.linear_solver(self.__a_a_forms[i],
               self.__a_solver_parameters[i],
               bcs = self.__a_bcs[i], symmetric_bcs = self.__a_pre_assembly_parameters[i]["equations"]["symmetric_boundary_conditions"],
               a = a_a)
@@ -320,13 +321,13 @@ class PAAdjointSolvers:
           elif len(self.__a_bcs[i]) == 0 and static_form:
             a_a = assembly_cache.assemble(self.__a_a_forms[i],
               compress = self.__a_pre_assembly_parameters[i]["bilinear_forms"]["compress_matrices"])
-            a_solver = solver_cache.solver(self.__a_a_forms[i],
+            a_solver = linear_solver_cache.linear_solver(self.__a_a_forms[i],
               self.__a_solver_parameters[i],
               a = a_a)
             a_solver.set_operator(a_a)            
           else:
             a_a = PABilinearForm(self.__a_a_forms[i], pre_assembly_parameters = self.__a_pre_assembly_parameters[i]["bilinear_forms"])
-            a_solver = solver_cache.solver(self.__a_a_forms[i],
+            a_solver = linear_solver_cache.linear_solver(self.__a_a_forms[i],
               self.__a_solver_parameters[i], self.__a_pre_assembly_parameters[i]["bilinear_forms"],
               static = a_a.is_static() and static_bcs,
               bcs = self.__a_bcs[i], symmetric_bcs = self.__a_pre_assembly_parameters[i]["equations"]["symmetric_boundary_conditions"])

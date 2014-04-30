@@ -414,16 +414,16 @@ def da_annotate_equation_solve(solve):
             linear_solver_parameters = self.__linear_solver_parameters
           if static_a:
             if apply_a_bcs:
-              linear_solver = cache[("linear_solver", var.type)] = solver_cache.solver(self.data,
+              linear_solver = cache[("linear_solver", var.type)] = linear_solver_cache.linear_solver(self.data,
                 linear_solver_parameters,
                 bcs = bcs, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
             else:
-              linear_solver = cache[("linear_solver", var.type)] = solver_cache.solver(self.data,
+              linear_solver = cache[("linear_solver", var.type)] = linear_solver_cache.linear_solver(self.data,
                 linear_solver_parameters,
                 bcs = bcs, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"],
                 a = a)
           else:
-            linear_solver = cache[("linear_solver", var.type)] = solver_cache.solver(self.data,
+            linear_solver = cache[("linear_solver", var.type)] = linear_solver_cache.linear_solver(self.data,
               linear_solver_parameters,
               bcs = bcs, symmetric_bcs = self.parameters["equations"]["symmetric_boundary_conditions"])
         

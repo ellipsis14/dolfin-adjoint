@@ -2,6 +2,7 @@
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -42,8 +43,8 @@ __all__ = \
     "rhs"
   ]
   
-# Assembly and solver functions and classes used in this module. These can be
-# overridden externally.
+# Assembly and linear solver functions and classes used in this module. These
+# can be overridden externally.
 _KrylovSolver = dolfin.KrylovSolver
 _LinearSolver = dolfin.LinearSolver
 _LUSolver = dolfin.LUSolver
@@ -98,53 +99,51 @@ def LinearSolver(*args, **kwargs):
   Arguments: One of:
     1. Arguments as accepted by the DOLFIN LinearSolver constructor.
   or:
-    2. A dictionary of solver parameters.
+    2. A dictionary of linear solver parameters.
   """
   
   if not len(args) == 1 or not len(kwargs) == 0 or not isinstance(args[0], dict):
     return _LinearSolver(*args, **kwargs)  
-  solver_parameters = args[0]
+  linear_solver_parameters = args[0]
 
-  solver = "lu"
+  linear_solver = "lu"
   pc = None
   kp = {}
   lp = {}
-  for key in solver_parameters:
+  for key in linear_solver_parameters:
     if key == "linear_solver":
-      solver = solver_parameters[key]
+      linear_solver = linear_solver_parameters[key]
     elif key == "preconditioner":
-      pc = solver_parameters[key]
+      pc = linear_solver_parameters[key]
     elif key == "krylov_solver":
-      kp = solver_parameters[key]
+      kp = linear_solver_parameters[key]
     elif key == "lu_solver":
-      lp = solver_parameters[key]
-    elif key == "newton_solver":
-      pass
+      lp = linear_solver_parameters[key]
     elif key in ["print_matrix", "print_rhs", "reset_jacobian", "symmetric"]:
-      raise NotImplementedException("Unsupported solver parameter: %s" % key)
+      raise NotImplementedException("Unsupported linear solver parameter: %s" % key)
     else:
-      raise InvalidArgumentException("Unexpected solver parameter: %s" % key)
+      raise InvalidArgumentException("Unexpected linear solver parameter: %s" % key)
   
-  if solver in ["default", "direct", "lu"]:
+  if linear_solver in ["default", "direct", "lu"]:
     is_lu = True
-    solver = "default"
-  elif solver == "iterative":
+    linear_solver = "default"
+  elif linear_solver == "iterative":
     is_lu = False
-    solver = "gmres"
+    linear_solver = "gmres"
   else:
-    is_lu = dolfin.has_lu_solver_method(solver)
+    is_lu = dolfin.has_lu_solver_method(linear_solver)
   
   if is_lu:
-    solver = _LUSolver(solver)
-    solver.parameters.update(lp)
+    linear_solver = _LUSolver(linear_solver)
+    linear_solver.parameters.update(lp)
   else:
     if pc is None:
-      solver = _KrylovSolver(solver)
+      linear_solver = _KrylovSolver(linear_solver)
     else:
-      solver = _KrylovSolver(solver, pc)
-    solver.parameters.update(kp)
+      linear_solver = _KrylovSolver(linear_solver, pc)
+    linear_solver.parameters.update(kp)
 
-  return solver
+  return linear_solver
 
 def adjoint(form, reordered_arguments = None, adjoint_arguments = None):
   """

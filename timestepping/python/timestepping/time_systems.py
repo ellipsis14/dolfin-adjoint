@@ -2,6 +2,7 @@
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -1376,7 +1377,8 @@ class ManagedModel:
          b. project is True: The derivative is returned as a (GenericVector,
             Function) pair, where the Function contains the derivative projected
             onto the trial space of parameters. project_solver_parameters
-            defines solver options for the associated mass matrix inversion.
+            defines linear solver options for the associated mass matrix
+            inversion.
       3. parameters is a list of Constant s or Function s: The derivative is
          returned as a list. If parameters[i] is a Constant, then element i
          of the returned list has a type as given by 1. above. If parameters[i]
@@ -1575,11 +1577,11 @@ class ManagedModel:
           ngrad.append((grad[i], dolfin.Function(space, name = "gradient_%s" % parameter.name())))
           mass = dolfin.inner(dolfin.TestFunction(space), dolfin.TrialFunction(space)) * dolfin.dx
           a = assembly_cache.assemble(mass)
-          solver = solver_cache.solver(mass,
+          linear_solver = linear_solver_cache.linear_solver(mass,
             project_solver_parameters,
             a = a)
-          solver.set_operator(a)
-          solver.solve(ngrad[-1][1].vector(), ngrad[-1][0])
+          linear_solver.set_operator(a)
+          linear_solver.solve(ngrad[-1][1].vector(), ngrad[-1][0])
         else:
           ngrad.append(grad[i])
     return ngrad

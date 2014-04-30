@@ -43,7 +43,7 @@ __all__ = \
     "evaluate_expr",
     "expand",
     "expand_expr",
-    "expand_solver_parameters",
+    "expand_linear_solver_parameters",
     "extract_form_data",
     "form_quadrature_degree",
     "is_empty_form",
@@ -568,42 +568,51 @@ def is_zero_rhs(rhs):
     return float(rhs) == 0.0
   else:
     return False
-
-def expand_solver_parameters(solver_parameters, default_solver_parameters = {}):
+  
+def apply_default_parameters(parameters, default):
   """
-  Return an expanded dictionary of solver parameters with all defaults
-  explicitly specified. The optional default_solver_parameters argument can
-  be used to override global defaults.
+  Return a parameters dictionary with a default values set.
+  """
+
+  lparameters = {}
+  for key in parameters:
+    if not isinstance(parameters[key], dict):
+      lparameters[key] = parameters[key]
+    else:
+      lparameters[key] = apply_default_parameters(parameters[key], default.get(key, {}))
+  for key in default:
+    if not key in lparameters:
+      lparameters[key] = copy.deepcopy(default[key])
+      
+  return lparameters
+
+def expand_linear_solver_parameters(linear_solver_parameters, default_linear_solver_parameters = {}):
+  """
+  Return an expanded dictionary of linear solver parameters with all defaults
+  explicitly specified. The optional default_linear_solver_parameters argument
+  can be used to override global defaults.
   """
   
-  if not isinstance(solver_parameters, dict):
-    raise InvalidArgumentException("solver_parameters must be a dictionary")
-  if not isinstance(default_solver_parameters, dict):
-    raise InvalidArgumentException("default_solver_parameters must be a dictionary")
-
-  def apply(parameters, default):
-    lparameters = copy.copy(default)
-    for key in parameters:
-      if not isinstance(parameters[key], dict):
-        lparameters[key] = parameters[key]
-      elif key in default:
-        lparameters[key] = apply(parameters[key], default[key])
-      else:
-        lparameters[key] = apply(parameters[key], {})
-    return lparameters
+  if not isinstance(linear_solver_parameters, dict):
+    raise InvalidArgumentException("linear_solver_parameters must be a dictionary")
+  if not isinstance(default_linear_solver_parameters, dict):
+    raise InvalidArgumentException("default_linear_solver_parameters must be a dictionary")
   
-  if not len(default_solver_parameters) == 0:
-    solver_parameters = apply(solver_parameters, default_solver_parameters)
-  solver_parameters = apply(solver_parameters, {"linear_solver":"default",
-    "lu_solver":dolfin.parameters["lu_solver"].to_dict(),
-    "krylov_solver":dolfin.parameters["krylov_solver"].to_dict()})
+  linear_solver_parameters = apply_default_parameters(linear_solver_parameters, default_linear_solver_parameters)
+  linear_solver_parameters = apply_default_parameters(linear_solver_parameters,
+    {"linear_solver":"default",
+     "preconditioner":"default",
+     "lu_solver":dolfin.parameters["lu_solver"].to_dict(),
+     "krylov_solver":dolfin.parameters["krylov_solver"].to_dict()
+    })
   
-  if solver_parameters["linear_solver"] in ["default", "lu"] or dolfin.has_lu_solver_method(solver_parameters["linear_solver"]):
-    del(solver_parameters["krylov_solver"])
+  if linear_solver_parameters["linear_solver"] in ["default", "lu"] or dolfin.has_lu_solver_method(linear_solver_parameters["linear_solver"]):
+    del(linear_solver_parameters["preconditioner"])
+    del(linear_solver_parameters["krylov_solver"])
   else:
-    del(solver_parameters["lu_solver"])
+    del(linear_solver_parameters["lu_solver"])
   
-  return solver_parameters
+  return linear_solver_parameters
   
 def is_empty_form(form):
   """

@@ -3,6 +3,7 @@
 
 # Copyright (C) 2009 Garth N. Wells
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -80,9 +81,8 @@ u_ic.interpolate(InitialConditions())
 system.add_solve(u_ic, U[0])
 
 # Compute the chemical potential df/dc
-c = variable(c)
 f    = 100*c**2*(1-c)**2
-dfdc = diff(f, c)
+dfdc = derivative(f, c, StaticConstant(1.0))
 
 # mu_(n+theta)
 mu_mid = (1.0-theta)*mu0 + theta*mu
@@ -98,7 +98,7 @@ a = derivative(L, u, du)
 # Create nonlinear problem
 system.add_solve(L == 0, u, J = a,
   initial_guess = u0,
-  solver_parameters = {"newton_solver":{"convergence_criterion":"incremental", "absolute_tolerance":1.0e-16, "relative_tolerance":1.0e-8}, "linear_solver":"lu"})
+  solver_parameters = {"newton_solver":{"convergence_criterion":"incremental", "absolute_tolerance":1.0e-16, "relative_tolerance":1.0e-8, "linear_solver":"lu"}})
 
 system = system.assemble(adjoint = True, disk_period = 10, functional = split(U[N])[0] * split(U[N])[0] * dx)
 

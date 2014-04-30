@@ -2,6 +2,7 @@
 
 # Copyright (C) 2011-2012 by Imperial College London
 # Copyright (C) 2013 University of Oxford
+# Copyright (C) 2014 University of Edinburgh
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
@@ -31,7 +32,7 @@ __all__ = \
     "AssemblyCache",
     "SolverCache",
     "assembly_cache",
-    "solver_cache",
+    "linear_solver_cache",
     "cache_info",
     "clear_caches"
   ]
@@ -146,9 +147,9 @@ class AssemblyCache:
 
 class SolverCache:
   """
-  A cache of LUSolver s and KrylovSolver s. The solver method can be used to
-  return an LUSolver or KrylovSolver suitable for solving an equation with the
-  supplied rank 2 Form defining the LHS matrix.
+  A cache of LUSolver s and KrylovSolver s. The linear_solver method can be used
+  to return an LUSolver or KrylovSolver suitable for solving an equation with
+  the supplied rank 2 Form defining the LHS matrix.
   """
   
   def __init__(self):
@@ -162,19 +163,19 @@ class SolverCache:
 
     return
 
-  def solver(self, form, solver_parameters,
+  def linear_solver(self, form, linear_solver_parameters,
     pre_assembly_parameters = None,
     static = None,
     bcs = [], symmetric_bcs = False,
     a = None):
     """
     Return a linear solver suitable for solving an equation with the supplied
-    rank 2 Form defining the LHS. If such a solver exists in the cache, return
-    the cached solver.
+    rank 2 Form defining the LHS. If such a linear solver exists in the cache,
+    return the cached linear solver.
 
     Arguments:
       form: The form defining the matrix.
-      solver_parameters: Linear solver parameters.
+      linear_solver_parameters: Linear solver parameters.
       bcs: Dirichlet BCs applied to the matrix.
       symmetric_bcs: Whether the Dirichlet BCs are applied so as to yield a
         symmetric matrix.
@@ -188,8 +189,8 @@ class SolverCache:
       
     This has three intended use cases:
       1. Pre-assembled form:
-           solver = solver_cache.solver(form,
-             solver_parameters, pre_assembly_parameters,
+           linear_solver = linear_solver_cache.linear_solver(form,
+             linear_solver_parameters, pre_assembly_parameters,
              static = static,
              bcs = bcs, symmetric_bcs = symmetric_bcs)
          If the default pre-assembly parameters are used, then an empty
@@ -202,45 +203,62 @@ class SolverCache:
       2. Cached matrix:
            a = assembly_cache.assemble(form, ...)
            apply_bcs(a, bcs, ..., symmetric_bcs = symmetric_bcs)
-           solver = solver_cache.solver(form,
-             solver_parameters,
+           linear_solver = linear_solver_cache.linear_solver(form,
+             linear_solver_parameters,
              bcs = bcs, symmetric_bcs = symmetric_bcs,
              a = a)
       3. Custom assembled form:
-           solver = solver_cache.solver(form,
-             solver_parameters,
+           linear_solver = linear_solver_cache.linear_solver(form,
+             linear_solver_parameters,
              bcs = bcs, symmetric_bcs = symmetric_bcs)
          and then assemble the form using:
            a = assemble(form, ...)
            apply_bcs(a, bcs, ..., symmetric_bcs = symmetric_bcs)
     """
     
-    def expanded_solver_parameters(form, solver_parameters, static, bcs, symmetric_bcs):
+    def expanded_linear_solver_parameters(form, linear_solver_parameters, static, bcs, symmetric_bcs):
       if static:
-        default = {"lu_solver":{"reuse_factorization":True, "same_nonzero_pattern":True},
-                   "krylov_solver":{"preconditioner":{"reuse":True}}}
-        if dolfin_version() >= (1, 1, 0) and (len(bcs) == 0 or symmetric_bcs) and is_self_adjoint_form(form):
-          default["lu_solver"]["symmetric_operator"] = True
-        solver_parameters = expand_solver_parameters(solver_parameters,
-          default_solver_parameters = default)
+        if dolfin_version() < (1, 3, 0):
+          default = {"lu_solver":{"reuse_factorization":True, "same_nonzero_pattern":True},
+                    "krylov_solver":{"preconditioner":{"reuse":True}}}
+        else:
+          default = {"lu_solver":{"reuse_factorization":True, "same_nonzero_pattern":True},
+                    "krylov_solver":{"preconditioner":{"structure":"same"}}}
+        if (len(bcs) == 0 or symmetric_bcs) and is_self_adjoint_form(form):
+          if dolfin_version() < (1, 3, 0):
+            default["lu_solver"]["symmetric_operator"] = True
+          else:
+            default["lu_solver"]["symmetric"] = True
+        linear_solver_parameters = expand_linear_solver_parameters(linear_solver_parameters,
+          default_linear_solver_parameters = default)
       else:
-        default = {"lu_solver":{"reuse_factorization":False, "same_nonzero_pattern":False},
-                   "krylov_solver":{"preconditioner":{"reuse":False}}}
-        if dolfin_version() >= (1, 1, 0) and (len(bcs) == 0 or symmetric_bcs) and is_self_adjoint_form(form):
-          default["lu_solver"]["symmetric_operator"] = True
-        solver_parameters = expand_solver_parameters(solver_parameters,
-          default_solver_parameters = default)
+        if dolfin_version() < (1, 3, 0):
+          default = {"lu_solver":{"reuse_factorization":False, "same_nonzero_pattern":False},
+                    "krylov_solver":{"preconditioner":{"reuse":False}}}
+        else:
+          default = {"lu_solver":{"reuse_factorization":False, "same_nonzero_pattern":False},
+                    "krylov_solver":{"preconditioner":{"structure":"different_nonzero_pattern"}}}
+        if (len(bcs) == 0 or symmetric_bcs) and is_self_adjoint_form(form):
+          if dolfin_version() < (1, 3, 0):
+            default["lu_solver"]["symmetric_operator"] = True
+          else:
+            default["lu_solver"]["symmetric"] = True
+        linear_solver_parameters = expand_linear_solver_parameters(linear_solver_parameters,
+          default_linear_solver_parameters = default)
         
         static_parameters = False
-        if solver_parameters["linear_solver"] in ["direct", "lu"] or dolfin.has_lu_solver_method(solver_parameters["linear_solver"]):
-          static_parameters = solver_parameters["lu_solver"]["reuse_factorization"] or \
-                              solver_parameters["lu_solver"]["same_nonzero_pattern"]
+        if linear_solver_parameters["linear_solver"] in ["direct", "lu"] or dolfin.has_lu_solver_method(linear_solver_parameters["linear_solver"]):
+          static_parameters = linear_solver_parameters["lu_solver"]["reuse_factorization"] or \
+                              linear_solver_parameters["lu_solver"]["same_nonzero_pattern"]
         else:
-          static_parameters = solver_parameters["krylov_solver"]["preconditioner"]["reuse"]
+          if dolfin_version() < (1, 3, 0):
+            static_parameters = linear_solver_parameters["krylov_solver"]["preconditioner"]["reuse"]
+          else:
+            static_parameters = not linear_solver_parameters["krylov_solver"]["preconditioner"]["structure"] == "different_nonzero_pattern"
         if static_parameters:
-          raise ParameterException("Non-static solve supplied with static solver parameters")
+          raise ParameterException("Non-static solve supplied with static linear solver parameters")
         
-      return solver_parameters
+      return linear_solver_parameters
     
     def form_key(form, static):
       if static:
@@ -275,8 +293,8 @@ class SolverCache:
       raise InvalidArgumentException("form must be a rank 2 Form")
     elif not extract_form_data(form).rank == 2:
       raise InvalidArgumentException("form must be a rank 2 Form")
-    if not isinstance(solver_parameters, dict):
-      raise InvalidArgumentException("solver_parameters must be a dictionary")
+    if not isinstance(linear_solver_parameters, dict):
+      raise InvalidArgumentException("linear_solver_parameters must be a dictionary")
       
     if a is None:
       if static is None:
@@ -290,14 +308,14 @@ class SolverCache:
         if not isinstance(bc, dolfin.cpp.DirichletBC):
           raise InvalidArgumentException("bcs must be a list of DirichletBC s")
       
-      solver_parameters = expanded_solver_parameters(form, solver_parameters, static, bcs, symmetric_bcs)
+      linear_solver_parameters = expanded_linear_solver_parameters(form, linear_solver_parameters, static, bcs, symmetric_bcs)
       if not pre_assembly_parameters is None:
         npre_assembly_parameters = dolfin.parameters["timestepping"]["pre_assembly"]["bilinear_forms"].copy()
         npre_assembly_parameters.update(pre_assembly_parameters)
         pre_assembly_parameters = npre_assembly_parameters;  del(npre_assembly_parameters)
               
       key = (form_key(form, static),
-             parameters_key(solver_parameters),
+             parameters_key(linear_solver_parameters),
              parameters_key(pre_assembly_parameters),
              bc_key(bcs, symmetric_bcs),
              None)
@@ -312,10 +330,10 @@ class SolverCache:
       
       static = True      
       
-      solver_parameters = expanded_solver_parameters(form, solver_parameters, True, bcs, symmetric_bcs)    
+      linear_solver_parameters = expanded_linear_solver_parameters(form, linear_solver_parameters, True, bcs, symmetric_bcs)    
       
       key = (form_key(form, True),
-             parameters_key(solver_parameters),
+             parameters_key(linear_solver_parameters),
              None,
              bc_key(bcs, symmetric_bcs),
              a.id())
@@ -325,7 +343,7 @@ class SolverCache:
         cache_info("Creating new static linear solver", dolfin.info_red)
       else:
         cache_info("Creating new non-static linear solver", dolfin.info_red)
-      self.__cache[key] = LinearSolver(solver_parameters)
+      self.__cache[key] = LinearSolver(linear_solver_parameters)
     else:
       if static:
         cache_info("Using cached static linear solver", dolfin.info_green)
@@ -335,7 +353,7 @@ class SolverCache:
 
   def clear(self, *args):
     """
-    Clear the cache. If arguments are supplied, clear only the solvers
+    Clear the cache. If arguments are supplied, clear only the linear solvers
     associated with Form s which depend upon the supplied Constant s or
     Function s.
     """
@@ -355,17 +373,17 @@ class SolverCache:
 
     return
 
-# Default assembly and solver caches.
+# Default assembly and linear solver caches.
 assembly_cache = AssemblyCache()
-solver_cache = SolverCache()
+linear_solver_cache = SolverCache()
 def clear_caches(*args):
   """
-  Clear the default assembly and solver caches. If arguments are supplied, clear
-  only cached data associated with Form s which depend upon the supplied
-  Constant s or Function s.
+  Clear the default assembly and linear solver caches. If arguments are
+  supplied, clear only cached data associated with Form s which depend upon the
+  supplied Constant s or Function s.
   """
 
   assembly_cache.clear(*args)
-  solver_cache.clear(*args)
+  linear_solver_cache.clear(*args)
   
   return

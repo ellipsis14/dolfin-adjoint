@@ -193,7 +193,7 @@ class PAEquationSolver(EquationSolver):
               compress = pre_assembly_parameters["bilinear_forms"]["compress_matrices"])
             cache_info("Pre-assembled LHS terms in solve for %s    : 1" % x.name())
             cache_info("Non-pre-assembled LHS terms in solve for %s: 0" % x.name())
-            linear_solver = solver_cache.solver(eq.lhs,
+            linear_solver = linear_solver_cache.linear_solver(eq.lhs,
               linear_solver_parameters,
               bcs = bcs, symmetric_bcs = False,
               a = a)
@@ -203,7 +203,7 @@ class PAEquationSolver(EquationSolver):
               compress = pre_assembly_parameters["bilinear_forms"]["compress_matrices"])
             cache_info("Pre-assembled LHS terms in solve for %s    : 1" % x.name())
             cache_info("Non-pre-assembled LHS terms in solve for %s: 0" % x.name())
-            linear_solver = solver_cache.solver(eq.lhs,
+            linear_solver = linear_solver_cache.linear_solver(eq.lhs,
               linear_solver_parameters,
               a = a)
             linear_solver.set_operator(a)            
@@ -211,7 +211,7 @@ class PAEquationSolver(EquationSolver):
             a = PABilinearForm(eq.lhs, pre_assembly_parameters = pre_assembly_parameters["bilinear_forms"])
             cache_info("Pre-assembled LHS terms in solve for %s    : %i" % (x.name(), a.n_pre_assembled()))
             cache_info("Non-pre-assembled LHS terms in solve for %s: %i" % (x.name(), a.n_non_pre_assembled()))
-            linear_solver = solver_cache.solver(eq.lhs,
+            linear_solver = linear_solver_cache.linear_solver(eq.lhs,
               linear_solver_parameters, pre_assembly_parameters["bilinear_forms"],
               static = a.is_static() and static_bcs,
               bcs = bcs, symmetric_bcs = pre_assembly_parameters["equations"]["symmetric_boundary_conditions"])
@@ -251,7 +251,7 @@ class PAEquationSolver(EquationSolver):
         a = PABilinearForm(J, pre_assembly_parameters = pre_assembly_parameters["bilinear_forms"])
         cache_info("Pre-assembled LHS terms in solve for %s    : %i" % (x.name(), a.n_pre_assembled()))
         cache_info("Non-pre-assembled LHS terms in solve for %s: %i" % (x.name(), a.n_non_pre_assembled()))
-        linear_solver = solver_cache.solver(J,
+        linear_solver = linear_solver_cache.linear_solver(J,
           linear_solver_parameters, pre_assembly_parameters["bilinear_forms"],
           static = False,
           bcs = hbcs, symmetric_bcs = pre_assembly_parameters["equations"]["symmetric_boundary_conditions"])
