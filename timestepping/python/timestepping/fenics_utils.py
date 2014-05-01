@@ -137,7 +137,8 @@ def form_quadrature_degree(form):
     if dolfin.parameters["form_compiler"]["quadrature_degree"] > 0:
       quadrature_degree = dolfin.parameters["form_compiler"]["quadrature_degree"]
     else:
-      # Update to code above, for FFC 1.2.x
+      # This is based upon code from _analyze_form and
+      # _attach_integral_metadata in analysis.py, FFC bzr trunk revision 1761
       form_data = extract_form_data(form)
       quadrature_degree = -1
       for integral in form.integrals():
