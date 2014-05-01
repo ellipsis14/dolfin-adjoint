@@ -176,7 +176,7 @@ class PAEquationSolver(EquationSolver):
       self.eq(), self.bcs(), self.linear_solver_parameters(), \
       self.pre_assembly_parameters()
     x_deps = self.dependencies()
-    a, L, linear_solver, nl_solver = None, None, None, None
+    a, L, linear_solver = None, None, None
     if self.is_linear():
       for dep in x_deps:
         if dep is x:
@@ -285,11 +285,7 @@ class PAEquationSolver(EquationSolver):
             break
        
       self.__dx = x.vector().copy()
-    else:
-      problem = dolfin.NonlinearVariationalProblem(eq.lhs - eq.rhs, x, bcs = bcs, J = self.J())
-      nl_solver = dolfin.NonlinearVariationalSolver(problem)
-      nl_solver.parameters.update(self.solver_parameters())
-    self.__a, self.__L, self.__linear_solver, self.__nl_solver = a, L, linear_solver, nl_solver
+    self.__a, self.__L, self.__linear_solver = a, L, linear_solver
 
     return
 
@@ -453,7 +449,10 @@ class PAEquationSolver(EquationSolver):
           dolfin.warning("Newton solve for %s failed to converge after %i iterations" % (x_name, it))
 #      dolfin.info("Newton solve for %s converged after %i iterations" % (x_name, it))
     else:
-      self.__nl_solver.solve()
+      problem = dolfin.NonlinearVariationalProblem(self.eq().lhs - self.eq().rhs, x, bcs = self.bcs(), J = self.J())
+      nl_solver = dolfin.NonlinearVariationalSolver(problem)
+      nl_solver.parameters.update(self.solver_parameters())
+      nl_solver.solve()
 
     return
 
