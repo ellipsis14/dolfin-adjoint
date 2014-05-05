@@ -76,7 +76,7 @@ while t < maxTime:
   system.timestep()
   t += float(dt)
 #  gradPsi = grad(psi[n])
-#  print "%.6f %.6g" % (t / (3600.0 * 24.0), assemble(0.5 * dot(gradPsi, gradPsi) * dx))
+#  print("%.6f %.6g" % (t / (3600.0 * 24.0), assemble(0.5 * dot(gradPsi, gradPsi) * dx)))
 system.finalise()
 
 #write_vtu("bve_rk2", psi[N], t = t)
@@ -87,9 +87,9 @@ J = system.compute_functional()
 
 ref = 1.15116124138032544e+17
 err = abs(J - ref)
-print "%.17e" % J
-print "%.17e" % ref
-print "%.17e" % (err / ref)
+print("%.16e" % J)
+print("%.16e" % ref)
+print("%.16e" % (err / ref))
 assert(err < 9.0e-11 * ref)
 
 system.verify_checkpoints(tolerance = 5.0e-6)

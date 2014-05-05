@@ -75,23 +75,23 @@ system.verify_checkpoints()
 
 J = system.compute_functional()
 err = abs(J - 7.0)
-print J, err
+print(J, err)
 assert(err < 1.0e-16)
 
 grad = system.compute_gradient(one)
 err = abs(grad.array()[0] - 5.0)
-print grad.array()[0], err
+print(grad.array()[0], err)
 assert(err < 1.0e-16)
 
 f.set_min_s(1)
 J = system.compute_functional(rerun_forward = True)
 err = abs(J - 9.0)
-print J, err
+print(J, err)
 assert(err < 1.0e-16)
 
 grad = system.compute_gradient(one)
 err = abs(grad.array()[0] - 6.0)
-print grad.array()[0], err
+print(grad.array()[0], err)
 assert(err < 1.0e-16)
 
 class Functional(TimeFunctional):
@@ -128,10 +128,10 @@ system.set_functional(f)
 
 J = system.compute_functional(rerun_forward = True)
 err = abs(J - 18.0)
-print J, err
+print(J, err)
 assert(err < 1.0e-16)
 
 grad = system.compute_gradient(one)
 err = abs(grad.array()[0] - 13.0)
-print grad.array()[0], err
+print(grad.array()[0], err)
 assert(err < 1.0e-16)

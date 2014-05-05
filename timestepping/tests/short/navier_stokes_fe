@@ -157,41 +157,41 @@ while t < T + DOLFIN_EPS:
   s += 1
 assert(s == max_s)
 system.finalise()
-print "Forward time: %.6f" % timer.stop()
+print("Forward time: %.6f" % timer.stop())
 
 comp = U[N].vector().norm("l2")
 if dolfin_version() < (1, 3, 0):
   ref = 2.41757348438712061e+00
   err = abs(comp - ref)
-  print "%.16e" % comp
-  print "%.16e" % ref
-  print "%.16e" % err
+  print("%.16e" % comp)
+  print("%.16e" % ref)
+  print("%.16e" % err)
   assert(err < 4.0e-14)
 else:
   ref = 2.4175743164434169e+00
   err = abs(comp - ref)
-  print "%.16e" % comp
-  print "%.16e" % ref
-  print "%.16e" % err
+  print("%.16e" % comp)
+  print("%.16e" % ref)
+  print("%.16e" % err)
   assert(err < 1.0e-14)
 
 timer = Timer("adjoint")
 dJdm = system.compute_gradient(ic)
-print "Adjoint time: %.6f" % timer.stop()
+print("Adjoint time: %.6f" % timer.stop())
 comp = dJdm.norm("l2")
 if dolfin_version() < (1, 3, 0):
   ref = 2.67535924915400351e-05
   err = abs(comp - ref)
-  print "%.16e" % comp
-  print "%.16e" % ref
-  print "%.16e" % err
+  print("%.16e" % comp)
+  print("%.16e" % ref)
+  print("%.16e" % err)
   assert(err < 3.0e-18)
 else:
   ref = 2.6753594226550049e-05
   err = abs(comp - ref)
-  print "%.16e" % comp
-  print "%.16e" % ref
-  print "%.16e" % err
+  print("%.16e" % comp)
+  print("%.16e" % ref)
+  print("%.16e" % err)
   assert(err < 4.0e-19)
 
 orders = system.taylor_test(ic, grad = dJdm, fact = 1.0e-7)

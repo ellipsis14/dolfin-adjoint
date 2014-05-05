@@ -26,7 +26,7 @@ handle = File("dolfin_vtkprecision.pvd")
 handle << (F, 0.0)
 coords = mesh.coordinates()
 arr = F.vector().array()
-print "%.17e, %.17e, %.17e" % (coords[2, 0], arr.min(), arr.max())
+print("%.16e, %.16e, %.16e" % (coords[2, 0], arr.min(), arr.max()))
 
 import numpy, vtk
 reader = vtk.vtkXMLUnstructuredGridReader()
@@ -39,28 +39,28 @@ coords = vtu.GetPoints().GetData()
 coords = numpy.array([coords.GetTuple3(i) for i in xrange(n)])
 arr = data.GetArray(F.name())
 arr = numpy.array([arr.GetValue(i) for i in xrange(n)])
-print "%.17e, %.17e, %.17e" % (coords[2, 0], arr.min(), arr.max())
+print("%.16e, %.16e, %.16e" % (coords[2, 0], arr.min(), arr.max()))
 
 comp = coords[2, 0]
 ref = (1.0 + 1.0e-14) * (2.0 / 10.0)
 err = abs(comp - ref)
-print "%.17e" % comp
-print "%.17e" % ref
-print "%.17e" % err
+print("%.16e" % comp)
+print("%.16e" % ref)
+print("%.16e" % err)
 assert(err == 0.0)
 
 comp = arr.min()
 ref = 1.0 + 1.0e-14
 err = abs(comp - ref)
-print "%.17e" % comp
-print "%.17e" % ref
-print "%.17e" % err
+print("%.16e" % comp)
+print("%.16e" % ref)
+print("%.16e" % err)
 assert(err == 0.0)
 
 comp = arr.max()
 ref = 1.0 + 1.0e-14
 err = abs(comp - ref)
-print "%.17e" % comp
-print "%.17e" % ref
-print "%.17e" % err
+print("%.16e" % comp)
+print("%.16e" % ref)
+print("%.16e" % err)
 assert(err == 0.0)

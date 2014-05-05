@@ -281,7 +281,7 @@ def diagnostics(t):
     linfo = info_red
   else:
     linfo = info
-  linfo("Time, ||u||_inf, ||v||_inf, min(T), max(T), eps, Courant, ||div U||_inf, psi_mid, Nu = %.2f, %.17e, %.17e, %.17e, %.17e, %.7e, %.17e, %.17e, %.17e, %.17e"
+  linfo("Time, ||u||_inf, ||v||_inf, min(T), max(T), eps, Courant, ||div U||_inf, psi_mid, Nu = %.2f, %.16e, %.16e, %.16e, %.16e, %.7e, %.16e, %.16e, %.16e, %.16e"
     % (t, u_norm[0], u_norm[1], T_range[0], T_range[1], eps, c_norm, div_U_norm, psi_mid, Nu))
   return
 def update(s, cs = None):
@@ -320,8 +320,8 @@ orders = [numpy.empty(len(errs[0]) - 1) for i in xrange(len(errs))]
 for i in xrange(len(errs)):
   for j in xrange(1, len(errs[0])):
     orders[i][j - 1] = numpy.log(errs[i][j] / errs[i][j - 1]) / numpy.log(2.0)
-print errs
-print orders
+print(errs)
+print(orders)
 assert((orders[0] > 2.0).all())
 assert((orders[1] > 2.0).all())
 assert((orders[2] > 1.0).all())
@@ -354,13 +354,13 @@ system.finalise()
 
 # Verify incompressibility
 err = div_U.vector().norm("linf")
-print "%.17e" % err
+print("%.16e" % err)
 assert(err < 7.0e-9)
 
 # Verify pressure zero point
 p0 = numpy.empty(1);  p0[:] = numpy.NAN
 p[N].eval(p0, numpy.array([0.0, 0.0], dtype = numpy.float_))
-print "%.17e" % abs(p0)
+print("%.16e" % abs(p0))
 assert(abs(p0) < 5.0e-14)
 
 # Verify the solution. Reference value from de Vahl Davis and Jones,
@@ -369,9 +369,9 @@ assert(abs(p0) < 5.0e-14)
 J = system.compute_functional()
 ref = 1.118
 err = abs(J - ref)
-print "%.17e" % J
-print "%.17e" % ref
-print "%.17e" % err
+print("%.16e" % J)
+print("%.16e" % ref)
+print("%.16e" % err)
 assert(err < 1.0e-3)
 
 # Verify the solution. Reference value from de Vahl Davis and Jones,
@@ -382,9 +382,9 @@ psi.eval(psi_mid, numpy.array([0.5, 0.5], dtype = numpy.float_))
 psi_mid = abs(float(psi_mid[0]))
 ref = 1.174
 err = abs(psi_mid - ref)
-print "%.17e" % psi_mid
-print "%.17e" % ref
-print "%.17e" % err
+print("%.16e" % psi_mid)
+print("%.16e" % ref)
+print("%.16e" % err)
 assert(err < 4.0e-3)
 
 # Verify the checkpoints

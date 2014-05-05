@@ -61,5 +61,5 @@ assert(La.n_non_pre_assembled() == 1)
 comp = La.assemble()
 ref = assemble(L)
 err = (comp - ref).norm("linf")
-print "%.17e" % err
+print("%.16e" % err)
 assert(err < 3.0e-14)

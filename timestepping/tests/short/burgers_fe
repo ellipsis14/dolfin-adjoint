@@ -71,7 +71,7 @@ dolfin_adjoint_solution = numpy.array(map(float, """0.00000000e+00   9.16019591e
   -4.13369567e-01  -3.22458618e-01  -2.30966635e-01  -1.38897326e-01
   -4.65223388e-02""".split()))
 err = abs(u[N].vector().array() - dolfin_adjoint_solution).max()
-print u[N].vector().array(), err
+print(u[N].vector().array(), err)
 assert(err < 5.0e-9)
 
 system.verify_checkpoints()
@@ -96,7 +96,7 @@ dolfin_adjoint_grad = numpy.array(map(float, """4.35808910e-06   4.60253704e-03 
   -3.59324138e-02  -2.96427211e-02  -2.21058634e-02  -1.36433869e-02
   -4.61188534e-03""".split()))
 err = abs(grad[0].array() - dolfin_adjoint_grad).max()
-print grad[0].array(), err
+print(grad[0].array(), err)
 assert(err < 5.0e-11)
 
 orders = system.taylor_test(ic, J = J, grad = grad[0])

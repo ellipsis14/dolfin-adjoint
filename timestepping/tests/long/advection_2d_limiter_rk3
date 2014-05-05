@@ -226,7 +226,7 @@ system.add_solve(LimiterSolver(T_i[n + 1],  T[n + 1]))
 
 # Simple callback to display the model time
 def update(s, cs = None):
-  print "Time = %.6f" % (max(s - 1, 0) * float(dt))
+  print("Time = %.6f" % (max(s - 1, 0) * float(dt)))
   return
 system.set_update(update)
 
@@ -241,7 +241,7 @@ t = 0.0
 T_int = assemble(T[n] * dx)
 T_range = [], [], []
 T_range[0].append(t);  T_range[1].append(T[n].vector().min()); T_range[2].append(T[n].vector().max())
-print "T_int, T_int_err, T_min, T_max = %.17e, %.17e, %.17e, %.17e" % (T_int, abs(T_int - T_int_0), T_range[1][-1], T_range[2][-1])
+print("T_int, T_int_err, T_min, T_max = %.16e, %.16e, %.16e, %.16e" % (T_int, abs(T_int - T_int_0), T_range[1][-1], T_range[2][-1]))
 #index = 0
 #write_vtu("advection_2d_limiter_rk3", T[n], index = index, t = t)
 while t * (1.0 + 1.0e-9) < 2.0 * numpy.pi:
@@ -250,7 +250,7 @@ while t * (1.0 + 1.0e-9) < 2.0 * numpy.pi:
 #  s += 1
   T_int = assemble(T[n] * dx)
   T_range[0].append(t);  T_range[1].append(T[n].vector().min()); T_range[2].append(T[n].vector().max())
-  print "T_int, T_int_err, T_min, T_max = %.17e, %.17e, %.17e, %.17e" % (T_int, abs(T_int - T_int_0), T_range[1][-1], T_range[2][-1])
+  print("T_int, T_int_err, T_min, T_max = %.16e, %.16e, %.16e, %.16e" % (T_int, abs(T_int - T_int_0), T_range[1][-1], T_range[2][-1]))
 #  if s % 100 == 0:
 #    index += 1
 #    write_vtu("advection_2d_limiter_rk3", T[n], index = index, t = t)
@@ -262,7 +262,7 @@ T_int = assemble(T[N] * dx)
 T_int_err = abs(T_int - T_int_0)
 T_min = T[n].vector().min()
 T_max = T[n].vector().max()
-print "T_int, T_int_err, T_min, T_max = %.17e, %.17e, %.17e, %.17e" % (T_int, T_int_err, T_min, T_max)
+print("T_int, T_int_err, T_min, T_max = %.16e, %.16e, %.16e, %.16e" % (T_int, T_int_err, T_min, T_max))
 assert(T_int_err < 7.0e-16)
 assert(T_min > -1.3e-14)
 assert(T_max < 1.0)

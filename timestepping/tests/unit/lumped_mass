@@ -34,11 +34,11 @@ pa_solve(inner(test, G) * dx == inner(test, F) * dx, G, solver_parameters = {"li
 pa_solve(lumped_mass(space) == inner(test, F) * dx, H)
 
 err = (G.vector() - F.vector()).norm("linf")
-print "%.17e" % err
+print("%.16e" % err)
 assert(err < 3.0e-16)
 
 err = (H.vector() - F.vector()).norm("linf")
-print "%.17e" % err
+print("%.16e" % err)
 assert(err < 2.0e-16)
 
 del(space, test, F, G, H)
@@ -56,7 +56,7 @@ pa_solve(lumped_mass(space) == inner(test, F) * dx, H)
 comp = assemble(F * dx)
 ref = assemble(H * dx)
 err = abs(comp - ref)
-print "%.17e" % comp
-print "%.17e" % ref
-print "%.17e" % err
+print("%.16e" % comp)
+print("%.16e" % ref)
+print("%.16e" % err)
 assert(err < 2.0e-15)

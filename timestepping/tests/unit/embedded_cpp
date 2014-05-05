@@ -46,9 +46,9 @@ code.run(F = F, m = m)
 comp = m[0]
 ref = 0.5
 err = abs(comp - ref)
-print "%.17e" % comp
-print "%.17e" % ref
-print "%.17e" % err
+print("%.16e" % comp)
+print("%.16e" % ref)
+print("%.16e" % err)
 assert(err < 1.0e-16)
 
 code = EmbeddedCpp(code = "b[0] = mesh->num_vertices();", b = long_arr, mesh = dolfin.Mesh)

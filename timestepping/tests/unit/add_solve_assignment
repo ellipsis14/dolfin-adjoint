@@ -33,15 +33,15 @@ system = system.assemble()
 comp = T[-1].vector().array()[0]
 ref = 1.0
 err = abs(comp - ref)
-print "%.17e" % comp
-print "%.17e" % ref
-print "%.17e" % err
+print("%.16e" % comp)
+print("%.16e" % ref)
+print("%.16e" % err)
 assert(err < 1.0e-16)
 
 comp = T[0].vector().array()[0]
 ref = 2.0
 err = abs(comp - ref)
-print "%.17e" % comp
-print "%.17e" % ref
-print "%.17e" % err
+print("%.16e" % comp)
+print("%.16e" % ref)
+print("%.16e" % err)
 assert(err < 1.0e-16)

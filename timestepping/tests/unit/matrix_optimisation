@@ -48,11 +48,11 @@ for form in [inner(test, F ** sc) * dx,
   pform = PALinearForm(form, pre_assembly_parameters = {"term_optimisation":False,
                                                         "matrix_optimisation":True,
                                                         "compress_matrices":True})
-  print pform.n_pre_assembled(), pform.n_non_pre_assembled()
+  print(pform.n_pre_assembled(), pform.n_non_pre_assembled())
   assert(pform.n_pre_assembled() == 0)
   assert(pform.n_non_pre_assembled() == 1)
   err = (assemble(form) - assemble(pform)).norm("linf")
-  print "%.17e" % err
+  print("%.16e" % err)
   assert(err == 0.0)
 
 # These forms should be pre-assembled via the matrix optimisation
@@ -70,11 +70,11 @@ for form in [inner(test, F) * dx,
   pform = PALinearForm(form, pre_assembly_parameters = {"term_optimisation":False,
                                                         "matrix_optimisation":True,
                                                         "compress_matrices":True})
-  print pform.n_pre_assembled(), pform.n_non_pre_assembled()
+  print(pform.n_pre_assembled(), pform.n_non_pre_assembled())
   assert(pform.n_pre_assembled() > 0)
   assert(pform.n_non_pre_assembled() == 0)
   assert(pform._pre_assembled_L is None)
   assert(len(pform._mult_assembled_L) == 1)
   err = (assemble(form) - assemble(pform)).norm("linf")
-  print "%.17e" % err
+  print("%.16e" % err)
   assert(err < 2.0e-15)

@@ -36,7 +36,7 @@ optionParser.add_option("-l", "--long-tests", action = "store_true", dest = "lon
 optionParser.add_option("-S", "--no-short-tests", action = "store_false", dest = "short", help = "Disable short tests", default = True)
 opts, args = optionParser.parse_args()
 if len(args) > 0:
-  print "Unexpected trailing argument"
+  print("Unexpected trailing argument")
   sys.exit(1)
 
 path = os.path.abspath(os.path.dirname(__file__))
@@ -183,16 +183,16 @@ for success in test_success:
     successes += 1
   else:
     failures += 1
-print \
-"""\
+print(
+"""
 ----------------------------------------------------------------------
 Summary:
 
 Successes: %i
-Failures: %i""" % (successes, failures)
+Failures: %i""" % (successes, failures))
 if failures > 0:
-  print "Failures:"
+  print("Failures:")
   for i, success in enumerate(test_success):
     if not success == 1:
-      print tests[i][2]
+      print(tests[i][2])
   sys.exit(1)

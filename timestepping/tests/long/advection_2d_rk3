@@ -118,7 +118,7 @@ system.add_solve(LinearCombination((1.0 / 3.0, T[n]), (2.0 / 3.0, T[n + f2]), (2
 
 # Simple callback to display the model time
 def update(s, cs = None):
-  print "Time = %.6f" % (max(s - 1, 0) * float(dt))
+  print("Time = %.6f" % (max(s - 1, 0) * float(dt)))
   return
 system.set_update(update)
 
@@ -131,7 +131,7 @@ T_int_0 = assemble(T[0] * dx)
 t = 0.0
 #s = 0
 T_int = assemble(T[n] * dx)
-print "T_int, T_int_err, T_min, T_max = %.17e, %.17e, %.17e, %.17e" % (T_int, abs(T_int - T_int_0), T[n].vector().min(), T[n].vector().max())
+print("T_int, T_int_err, T_min, T_max = %.16e, %.16e, %.16e, %.16e" % (T_int, abs(T_int - T_int_0), T[n].vector().min(), T[n].vector().max()))
 #index = 0
 #write_vtu("advection_2d_rk3", T[n], index = index, t = t)
 while t * (1.0 + 1.0e-9) < 2.0 * numpy.pi:
@@ -139,7 +139,7 @@ while t * (1.0 + 1.0e-9) < 2.0 * numpy.pi:
   t += float(dt)
 #  s += 1
   T_int = assemble(T[n] * dx)
-  print "T_int, T_int_err, T_min, T_max = %.17e, %.17e, %.17e, %.17e" % (T_int, abs(T_int - T_int_0), T[n].vector().min(), T[n].vector().max())
+  print("T_int, T_int_err, T_min, T_max = %.16e, %.16e, %.16e, %.16e" % (T_int, abs(T_int - T_int_0), T[n].vector().min(), T[n].vector().max()))
 #  if s % 100 == 0:
 #    index += 1
 #    write_vtu("advection_2d_rk3", T[n], index = index, t = t)
@@ -151,7 +151,7 @@ T_int = assemble(T[N] * dx)
 T_int_err = abs(T_int - T_int_0)
 T_min = T[n].vector().min()
 T_max = T[n].vector().max()
-print "T_int, T_int_err, T_min, T_max = %.17e, %.17e, %.17e, %.17e" % (T_int, T_int_err, T_min, T_max)
+print("T_int, T_int_err, T_min, T_max = %.16e, %.16e, %.16e, %.16e" % (T_int, T_int_err, T_min, T_max))
 assert(T_int_err < 4.0e-15)
 assert(T_min > -4.5e-2)
 assert(T_max < 1.0 + 6.6e-2)

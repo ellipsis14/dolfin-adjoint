@@ -43,6 +43,6 @@ system.set_functional(u[N + 1] * dx)
 grad = system.compute_gradient(a)
 
 err = abs(float(grad) - 5.0)
-print float(grad), err
+print(float(grad), err)
 
 assert(err < 1.0e-16)

@@ -84,7 +84,7 @@ system.verify_checkpoints()
 
 J = system.compute_functional()
 g = system.compute_gradient([T_ic, T_bc])
-print g[0].sum(), float(g[1])
+print(g[0].sum(), float(g[1]))
 
 orders = system.taylor_test(T_ic, J = J, grad = g[0])
 assert((orders > 1.99).all())
@@ -97,9 +97,9 @@ assert(replay_dolfin(forget = False, tol = 0.0, stop = True))
 g_da = compute_gradient(Functional(T[N] * T[N] * dx * dolfin_adjoint.dt[FINISH_TIME]), [InitialConditionParameter(T_ic), ScalarParameter(T_bc)])
 
 err = abs(g[0].sum() - g_da[0].vector().sum())
-print "%.17e" % err
+print("%.16e" % err)
 assert(err < 1.0e-16)
 
 err = abs(float(g[1]) - float(g_da[1]))
-print "%.17e" % err
+print("%.16e" % err)
 assert(err < 1.0e-16)

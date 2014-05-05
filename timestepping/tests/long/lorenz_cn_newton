@@ -74,7 +74,7 @@ system.add_solve((1.0 / dt) * inner(test, X[n + 1] - X[n]) * dx ==
   inner(test_3, -b * z_h + x_h * y_h) * dx, X[n + 1], solver_parameters = {"newton_solver":solver})
 
 def update(s, cs = None):
-  print "t = %.2f" % (max(s - 1, 0) * float(dt))
+  print("t = %.2f" % (max(s - 1, 0) * float(dt)))
   return
 system.set_update(update)
 
@@ -154,13 +154,13 @@ dJdr_err = abs(float(dJdr) - dJdr_ref)
 
 orders = system.taylor_test(r, J = J, grad = dJdr, ntest = 2, fact = 1.0e-6)
 
-print "J = %.17e (internal)" % (J / float(ns))
-print "J = %.17e (external)" % (av / float(ns))
-print "Error in J = %.17e" % (J_err / float(ns))
-print "dJdr (computed)  = %.17e" % (float(dJdr) / float(ns))
-print "dJdr (reference) = %.17e" % (dJdr_ref / float(ns))
-print "Absolute error in dJdr = %.17e" % (dJdr_err / float(ns))
-print "Relative error in dJdr = %.6f%%" % (100.0 * dJdr_err / dJdr_ref)
+print("J = %.16e (internal)" % (J / float(ns)))
+print("J = %.16e (external)" % (av / float(ns)))
+print("Error in J = %.16e" % (J_err / float(ns)))
+print("dJdr (computed)  = %.16e" % (float(dJdr) / float(ns)))
+print("dJdr (reference) = %.16e" % (dJdr_ref / float(ns)))
+print("Absolute error in dJdr = %.16e" % (dJdr_err / float(ns)))
+print("Relative error in dJdr = %.6f%%" % (100.0 * dJdr_err / dJdr_ref))
 
 #from matplotlib.pylab import *
 #subplot(131)

@@ -48,5 +48,5 @@ T_ic_orig.assign(T_ic)
 system.minimise_functional(T_ic, tolerance = 1.0e-14, parameters_0 = 0.5, bounds = (0.0, 1.0))
 
 err = (T_ic.vector() - T_ic_orig.vector()).norm("linf")
-print "%.17e" % err
+print("%.16e" % err)
 assert(err < 2.0e-3)

@@ -2013,7 +2013,7 @@ class ManagedModel:
       else:
         fn = self.compute_functional()
       n_fun[0] += 1
-      dolfin.info("Functional evaluation %i       : %.17e" % (n_fun[0], fn))
+      dolfin.info("Functional evaluation %i       : %.16e" % (n_fun[0], fn))
       if numpy.isnan(fn):
         raise StateException("NaN functional value")      
       
@@ -2037,7 +2037,7 @@ class ManagedModel:
         
       n_jac[0] += 1
       grad_norm = abs(garr).max()
-      dolfin.info("Gradient calculation %i inf norm: %.17e" % (n_jac[0], grad_norm))
+      dolfin.info("Gradient calculation %i inf norm: %.16e" % (n_jac[0], grad_norm))
 
       return garr
 

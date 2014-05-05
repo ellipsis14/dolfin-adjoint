@@ -254,7 +254,7 @@ def diagnostics(t):
     linfo = info_red
   else:
     linfo = info
-  linfo("Time, ||u||_inf, ||v||_inf, eps, ||div U||_inf, min(psi), max(psi) = %.2f, %.17e, %.17e, %.7e, %.17e, %.17e, %.17e"
+  linfo("Time, ||u||_inf, ||v||_inf, eps, ||div U||_inf, min(psi), max(psi) = %.2f, %.16e, %.16e, %.7e, %.16e, %.16e, %.16e"
     % (t, u_norm[0], u_norm[1], eps, div_U_norm, psi_range[0], psi_range[1]))
   return
 def update(s, cs = None):
@@ -285,13 +285,13 @@ system.finalise()
 
 # Verify incompressibility
 err = div_U.vector().norm("linf")
-print "%.17e" % err
+print("%.16e" % err)
 assert(err < 7.0e-11)
 
 # Verify pressure zero point
 p0 = numpy.empty(1);  p0[:] = numpy.NAN
 p[N].eval(p0, numpy.array([0.0, 0.0], dtype = numpy.float_))
-print "%.17e" % abs(p0)
+print("%.16e" % abs(p0))
 assert(abs(p0) < 1.0e-16)
 
 ## Verify the solution. Reference value from Botella and Peyret, Computers &
@@ -299,18 +299,18 @@ assert(abs(p0) < 1.0e-16)
 #ref = 0.1189366
 #comp = psi.vector().max()
 #err = abs(ref - comp)
-#print "%.17e" % comp
-#print "%.17e" % ref
-#print "%.17e" % err
+#print("%.16e" % comp)
+#print("%.16e" % ref)
+#print("%.16e" % err)
 
 ## Verify the solution. Reference value from Botella and Peyret, Computers &
 ## Fluids, 1998, 421 - 433, table 12.
 #ref = -1.729717e-3
 #comp = psi.vector().min()
 #err = abs(ref - comp)
-#print "%.17e" % comp
-#print "%.17e" % ref
-#print "%.17e" % err
+#print("%.16e" % comp)
+#print("%.16e" % ref)
+#print("%.16e" % err)
 
 # Verify the checkpoints
 system.verify_checkpoints()
@@ -351,13 +351,13 @@ g = system.compute_gradient(u_bc)
 #    assert(x_1[0] == c[0][0] and x_1[1] == c[0][1])
 #    mass_1 = assemble(inner(TestFunction(space_u_1), TrialFunction(space_u_1)) * dx).array()
 #    c[1] = numpy.linalg.solve(mass_1, c[1])
-#    handle.write("%.17e %.17e %.17e %.17e\n" % (c[0][0], c[1][0], c[0][1], c[1][1]))
+#    handle.write("%.16e %.16e %.16e %.16e\n" % (c[0][0], c[1][0], c[0][1], c[1][1]))
 #    plot(c[0], c[1], color = "k")
 #handle.close()
 #savefig("g.png")
 
 # Verify the derivative
 J = system.compute_functional()
-print "J = %.17e" % J
+print("J = %.16e" % J)
 orders = system.taylor_test(u_bc, J = J, grad = g, ntest = 2)
 assert((orders > 1.99).all())

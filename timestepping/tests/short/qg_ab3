@@ -258,7 +258,7 @@ def check(f, ref, tol, scale = None):
     v *= scale
   err = abs(v - ref)
   if MPI.process_number() == 0:
-    print "%.17e %.17e %.17e" % (v, ref, err)
+    print("%.16e %.16e %.16e" % (v, ref, err))
   assert(err < tol)
   return
 
@@ -278,7 +278,7 @@ while t < mtime:
   system.timestep()
   t += float(dt)
   c += 1
-#  print t * scale / (3600.0 * 24.0)
+#  print(t * scale / (3600.0 * 24.0))
   if c == 1:
     check(q[0][n], 2.20081294249316910e+06, 2.0e-8)
     check(q[1][n], 2.20073806973259058e+06, 8.0e-9)

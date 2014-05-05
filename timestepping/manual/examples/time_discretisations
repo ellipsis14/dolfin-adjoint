@@ -41,7 +41,7 @@ def check(name, system, T_f, ns_i = 0, tol = 0.0):
       lT_f, solver_parameters = solver_parameters)
     T_f = lT_f
   err = (T_f.vector() - (T_ic.vector() + 0.5 * (ns_i + 2) * x.vector())).norm("linf")
-  print "%s: %.17e" % (name, err)
+  print("%s: %.16e" % (name, err))
   assert(err < tol)
   return
 

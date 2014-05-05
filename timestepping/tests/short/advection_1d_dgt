@@ -96,8 +96,8 @@ for i in xrange(6):
   errs[i] = sqrt(assemble((T[N][1] - T_ref[1]) * (T[N][1] - T_ref[1]) * dx))
   
 orders = numpy.array([-numpy.log(errs[i + 1] / errs[i]) / numpy.log(2.0) for i in xrange(len(errs) - 1)])
-print errs
-print orders
+print(errs)
+print(orders)
 assert((orders > 2.86).all())
 assert(orders[-1] > 2.98)
 

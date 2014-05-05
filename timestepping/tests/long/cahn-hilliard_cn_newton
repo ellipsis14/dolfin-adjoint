@@ -118,9 +118,9 @@ system.finalise()
 comp = U[N].vector().norm("l2")
 ref = 5.64531728147374452e+02
 err = abs(ref - comp)
-print "%.17e" % comp
-print "%.17e" % ref
-print "%.17e" % err
+print("%.16e" % comp)
+print("%.16e" % ref)
+print("%.16e" % err)
 assert(err < 8.0e-11)
 
 system.verify_checkpoints()

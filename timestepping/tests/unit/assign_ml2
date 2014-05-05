@@ -38,7 +38,7 @@ system.timestep()
 system.timestep()
 system.finalise()
 
-print u[N].vector().array()
+print(u[N].vector().array())
 
 system.verify_checkpoints()
 
@@ -46,6 +46,6 @@ system.set_functional(u[N] * dx)
 grad = system.compute_gradient(ic)
 
 err = abs(grad.array()[0] - 1.0)
-print grad.array()[0], err
+print(grad.array()[0], err)
 
 assert(err < 1.0e-16)

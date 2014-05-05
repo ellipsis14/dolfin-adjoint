@@ -79,15 +79,15 @@ while t * (1.0 + 1.0e-9) < T:
   system.timestep()
   t += float(dt)
   E = energy(n)
-  info("Time, X[0], X[1], E, E err = %.2f %.6f %.6f %.6f %.17e" % (t, assemble(X[n][0] * dx), assemble(X[n][1] * dx), E, abs(E - E0)))
+  info("Time, X[0], X[1], E, E err = %.2f %.6f %.6f %.6f %.16e" % (t, assemble(X[n][0] * dx), assemble(X[n][1] * dx), E, abs(E - E0)))
 
 system.finalise()
 parameters["adjoint"]["stop_annotating"] = True
 
 err = abs(E - E0)
-print "%.17e" % E
-print "%.17e" % E0
-print "%.17e" % err
+print("%.16e" % E)
+print("%.16e" % E0)
+print("%.16e" % err)
 assert(err < 3.0e-14)
 
 system.verify_checkpoints()
@@ -102,9 +102,9 @@ assert(replay_dolfin(forget = False, tol = 0.0, stop = True))
 
 dJdp_da = compute_gradient(Functional(X[N][1] * dx * dolfin_adjoint.dt[FINISH_TIME]), ScalarParameter(omega))
 err = abs(float(dJdp) - float(dJdp_da))
-print "%.17e" % dJdp_da
-print "%.17e" % float(dJdp)
-print "%.17e" % err
+print("%.16e" % dJdp_da)
+print("%.16e" % float(dJdp))
+print("%.16e" % err)
 assert(err < 5.0e-16)
 
 omega_old = float(omega)
@@ -113,7 +113,7 @@ clear_caches(omega)
 minimize(ReducedFunctional(Functional((X[N][1] - Constant(J)) * (X[N][1] - Constant(J)) * dx * dolfin_adjoint.dt[FINISH_TIME]),
   ScalarParameter(omega)), bounds = (1.75 * numpy.pi, 2.25 * numpy.pi), tol = 1.0e-8)
 err = abs(float(omega) - omega_old)
-print "%.17e" % (float(omega) / numpy.pi)
-print "%.17e" % (omega_old / numpy.pi)
-print "%.17e" % (err / numpy.pi)
+print("%.16e" % (float(omega) / numpy.pi))
+print("%.16e" % (omega_old / numpy.pi))
+print("%.16e" % (err / numpy.pi))
 assert((err / numpy.pi) < 3.0e-12)

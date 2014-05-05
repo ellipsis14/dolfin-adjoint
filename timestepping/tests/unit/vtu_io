@@ -36,7 +36,7 @@ for mesh, e in [(UnitIntervalMesh(10), [("CG", 1), ("CG", 2), ("CG", 3), ("DG", 
 
     G = read_vtu(filename, space).values()[0]
     err = (F.vector() - G.vector()).norm("linf")
-    print "%iD, P%i_%s: %.17e" % (mesh.geometry().dim(), args[1], args[0], err)
+    print("%iD, P%i_%s: %.16e" % (mesh.geometry().dim(), args[1], args[0], err))
     assert(err == 0.0)
     
     space = MixedFunctionSpace([FunctionSpace(mesh, *args)])
@@ -50,7 +50,7 @@ for mesh, e in [(UnitIntervalMesh(10), [("CG", 1), ("CG", 2), ("CG", 3), ("DG", 
     space = FunctionSpace(mesh, *args)
     G = read_vtu(filename, space).values()[0]
     err = (F.vector() - G.vector()).norm("linf")
-    print "%iD, [P%i_%s][0]: %.17e" % (mesh.geometry().dim(), args[1], args[0], err)
+    print("%iD, [P%i_%s][0]: %.16e" % (mesh.geometry().dim(), args[1], args[0], err))
     assert(err == 0.0)
     
     space = space * space
@@ -65,7 +65,7 @@ for mesh, e in [(UnitIntervalMesh(10), [("CG", 1), ("CG", 2), ("CG", 3), ("DG", 
     for G in read_vtu(filename, space.split()[0].collapse()).values():
       i = {"_1":0, "_2":1}[G.name()[-2:]]
       err = (F[i].vector() - G.vector()).norm("linf")
-      print "%iD, [P%i_%s, P%i_%s][%i]: %.17e" % (mesh.geometry().dim(), args[1], args[0], args[1], args[0], i, err)
+      print("%iD, [P%i_%s, P%i_%s][%i]: %.16e" % (mesh.geometry().dim(), args[1], args[0], args[1], args[0], i, err))
       assert(err == 0.0)
     
     space = VectorFunctionSpace(mesh, *args) 
@@ -87,5 +87,5 @@ for mesh, e in [(UnitIntervalMesh(10), [("CG", 1), ("CG", 2), ("CG", 3), ("DG", 
     for G in read_vtu(filename, space).values():
       i = {("_%i" % (i + 1)):i for i in xrange(mesh.geometry().dim())}[G.name()[-2:]]
       err = (F[i].vector() - G.vector()).norm("linf")
-      print "%iD, vector P%i_%s, component %i: %.17e" % (mesh.geometry().dim(), args[1], args[0], i, err)
+      print("%iD, vector P%i_%s, component %i: %.16e" % (mesh.geometry().dim(), args[1], args[0], i, err))
       assert(err == 0.0)

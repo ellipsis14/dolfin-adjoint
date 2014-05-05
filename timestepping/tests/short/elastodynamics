@@ -169,7 +169,7 @@ system = system.assemble(adjoint = True)
 while t <= T:
 
     t += dt
-    print "Time: ", t
+    print("Time: ", t)
 
     system.timestep()
 
@@ -184,9 +184,9 @@ system.finalise()
 ref = 1.75583029098237819e+00
 comp = U[N].vector().norm("l2")
 err = abs(ref - comp)
-print "%.17e" % comp
-print "%.17e" % ref
-print "%.17e" % err
+print("%.16e" % comp)
+print("%.16e" % ref)
+print("%.16e" % err)
 assert(err < 2.0e-14)
 
 system.set_functional(dot(U[N], U[N]) * dx)

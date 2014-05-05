@@ -87,7 +87,7 @@ dolfin_adjoint_solution = numpy.array(map(float, """0.00000000e+00   9.17928930e
   -4.16040972e-01  -3.23911175e-01  -2.31801178e-01  -1.39350797e-01
   -4.66659586e-02""".split()))
 err = abs(u[N].vector().array() - dolfin_adjoint_solution).max()
-print u[N].vector().array(), err
+print(u[N].vector().array(), err)
 assert(err < 5.0e-9)
 
 system.verify_checkpoints()
@@ -95,7 +95,7 @@ system.verify_checkpoints()
 system.set_functional(u[N] * u[N] * dx)
 J = system.compute_functional()
 grad = system.compute_gradient([ic, nu])
-print grad[0].array(), float(grad[1])
+print(grad[0].array(), float(grad[1]))
 
 orders = system.taylor_test(ic, J = J, grad = grad[0])
 assert((orders > 1.99).all())
@@ -108,9 +108,9 @@ assert(replay_dolfin(forget = False, tol = 2.0e-14, stop = True))
 grad_da = compute_gradient(Functional(u[N] * u[N] * dx * dolfin_adjoint.dt[FINISH_TIME]), [InitialConditionParameter(ic), ScalarParameter(nu)])
 
 err = (grad[0] - grad_da[0].vector()).norm("linf")
-print "%s %.17e" % (grad_da[0].vector().array(), err)
+print("%s %.16e" % (grad_da[0].vector().array(), err))
 assert(err < 6.0e-15)
 
 err = abs(float(grad[1]) - float(grad_da[1]))
-print "%.17e %.17e" % (grad_da[1], err)
+print("%.16e %.16e" % (grad_da[1], err))
 assert(err < 4.0e-12)

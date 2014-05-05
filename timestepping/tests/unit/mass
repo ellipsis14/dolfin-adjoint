@@ -64,7 +64,7 @@ for solve in system._ManagedModel__forward._ForwardModel__init_solves \
     a, L = solve._PAEquationSolver__a, solve._PAEquationSolver__L
     assert(isinstance(a, dolfin.GenericMatrix))
     assert(isinstance(L, PALinearForm))
-    print solve.x().name(), L.n_pre_assembled(), L.n_non_pre_assembled()
+    print(solve.x().name(), L.n_pre_assembled(), L.n_non_pre_assembled())
     assert(L.n_non_pre_assembled() == 0)
 
 system.timestep()
@@ -75,7 +75,7 @@ system.finalise()
 def check(F, ref, tol):
   val = assemble(F[N] * dx)
   err = abs(val - ref)
-  print val, err
+  print(val, err)
   assert(err < tol)
   return
 check(F1, 1.0, 2.0e-15)

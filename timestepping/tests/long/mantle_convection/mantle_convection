@@ -66,7 +66,7 @@ W = stokes_space(mesh)
 V = W.sub(0).collapse()
 Q = FunctionSpace(mesh, "DG", 1)
 
-print "Number of degrees of freedom:", (W*Q).dim()
+print("Number of degrees of freedom:", (W*Q).dim())
 
 # Define boundary conditions for the temperature
 top_temperature = StaticDirichletBC(Q, 0.0, "x[1] == %g" % height, method = "geometric")
@@ -127,7 +127,7 @@ eta = viscosity(T[n + 1])
 system.add_solve(a == L, w[n + 1], bcs, solver_parameters={"linear_solver":"mumps"})
 
 def update(s, cs = None):
-  print "Time = %.5f" % (max(s - 1, 0) * float(dt))
+  print("Time = %.5f" % (max(s - 1, 0) * float(dt)))
   return
 system.set_update(update)
 
@@ -169,9 +169,9 @@ system.finalise()
 comp = system.compute_functional()
 ref = 1.22249474184962530e+01
 err = abs(comp - ref)
-print "%.17e" % comp
-print "%.17e" % ref
-print "%.17e" % err
+print("%.16e" % comp)
+print("%.16e" % ref)
+print("%.16e" % err)
 assert(err < 8.0e-12)
 
 dJdm = system.compute_gradient(T_ic, project = True)
@@ -185,7 +185,7 @@ assert((orders > 1.99).all())
 comp = dJdm[0].norm("l2")
 ref = 2.58833107778007188e+00
 err = abs(comp - ref)
-print "%.17e" % comp
-print "%.17e" % ref
-print "%.17e" % err
+print("%.16e" % comp)
+print("%.16e" % ref)
+print("%.16e" % err)
 assert(err < 7.0e-13)

@@ -82,7 +82,7 @@ system.verify_checkpoints()
 
 J = system.compute_functional()
 g = system.compute_gradient([T_ic, T_bc])
-print float(g[0]), float(g[1])
+print(float(g[0]), float(g[1]))
 
 orders = system.taylor_test(T_ic, J = J, grad = g[0])
 assert((orders > 1.99).all())

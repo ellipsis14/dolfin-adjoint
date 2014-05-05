@@ -33,13 +33,13 @@ n4 = n - Fraction(3, 2)
 # Create a FinalTimeLevel with an offset of 1
 N2 = N + 1
 
-print n1 == n2  # False
-print n1 > n2   # True
-print n1 == n3  # True
-print n1 >= n3  # True
+print(n1 == n2)  # False
+print(n1 > n2)   # True
+print(n1 == n3)  # True
+print(n1 >= n3)  # True
 
-print N1 == N2  # False
-print N1 <= N2  # True
+print(N1 == N2)  # False
+print(N1 <= N2)  # True
 
 assert(not n1 == n2)
 assert(n1 > n2)

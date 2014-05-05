@@ -113,7 +113,7 @@ def update(s, cs = None):
     t = 0.0
   else:
     t = (s + 1) * float(dt)
-  print "Time (days) = %.6f" % (t / (3600.0 * 24.0))
+  print("Time (days) = %.6f" % (t / (3600.0 * 24.0)))
   return
 system.set_update(update)
 
@@ -129,10 +129,10 @@ def diagnostics(n, t):
     c_solver.solve()
     grad_psi = grad(psi[n])
     c_norm = c.vector().norm("linf")
-    print "Time (days), KE, Courant = %.6f, %.17e, %.17e" % (t / (3600.0 * 24.0), assemble(0.5 * H * dot(grad_psi, grad_psi) * dx), c_norm)
+    print("Time (days), KE, Courant = %.6f, %.16e, %.16e" % (t / (3600.0 * 24.0), assemble(0.5 * H * dot(grad_psi, grad_psi) * dx), c_norm))
   else:
     grad_psi = grad(psi[n])
-    print "Time (days), KE = %.6f, %.17e" % (t / (3600.0 * 24.0), assemble(0.5 * H * dot(grad_psi, grad_psi) * dx))
+    print("Time (days), KE = %.6f, %.16e" % (t / (3600.0 * 24.0), assemble(0.5 * H * dot(grad_psi, grad_psi) * dx)))
 
   sys.stdout.flush()
   sys.stderr.flush()
