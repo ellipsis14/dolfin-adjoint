@@ -47,16 +47,11 @@ class TimeLevel:
     3. A TimeLevel, acting as a copy constructor.
   """
   
-  def __init__(self, *args):
-    if len(args) == 0:
-      offset = 0
-    elif len(args) == 1:
-      if isinstance(args[0], (int, Fraction)):
-        offset = args[0]
-      elif isinstance(args[0], TimeLevel):
-        offset = args[0].__offset
-      else:
-        raise InvalidArgumentException("Require no arguments, or TimeLevel, integer, or Fraction")
+  def __init__(self, arg = 0):
+    if isinstance(arg, (int, Fraction)):
+      offset = arg
+    elif isinstance(arg, TimeLevel):
+      offset = arg.__offset
     else:
       raise InvalidArgumentException("Require no arguments, or TimeLevel, integer, or Fraction")
 
@@ -145,16 +140,11 @@ class FinalTimeLevel:
     3. A FinalTimeLevel, acting as a copy constructor.
   """
   
-  def __init__(self, *args):
-    if len(args) == 0:
-      offset = 0
-    elif len(args) == 1:
-      if isinstance(args[0], (int, Fraction)):
-        offset = args[0]
-      elif isinstance(args[0], FinalTimeLevel):
-        offset = args[0].__offset
-      else:
-        raise InvalidArgumentException("Require no arguments, or FinalTimeLevel, integer, or Fraction")
+  def __init__(self, arg = 0):
+    if isinstance(arg, (int, Fraction)):
+      offset = arg
+    elif isinstance(arg, FinalTimeLevel):
+      offset = arg.__offset
     else:
       raise InvalidArgumentException("Require no arguments, or FinalTimeLevel, integer, or Fraction")
 
