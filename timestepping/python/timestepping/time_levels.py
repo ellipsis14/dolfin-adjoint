@@ -39,12 +39,13 @@ class TimeLevel:
   returns a TimeLevel with the associated offset increased or decreased by the
   given integer or Fraction.
 
-  Constructor arguments: One of:
-    1. No arguments. The time level is assigned an offset of zero.
-  or:
-    2. An integer or Fraction, which is used to set the offset.
-  or:
-    3. A TimeLevel, acting as a copy constructor.
+  Constructor arguments:
+    arg: One of:
+        1. No arguments. The time level is assigned an offset of zero.
+      or:
+        2. An integer or Fraction, which is used to set the offset.
+      or:
+        3. A TimeLevel, acting as a copy constructor.
   """
   
   def __init__(self, arg = 0):
@@ -132,12 +133,13 @@ class FinalTimeLevel:
   well defined, and returns a FinalTimeLevel with the associated offset
   increased or decreased by the given integer or Fraction.
 
-  Constructor arguments: One of:
-    1. No arguments. The final time level is assigned an offset of zero.
-  or:
-    2. An integer or Fraction, which is used to set the offset.
-  or:
-    3. A FinalTimeLevel, acting as a copy constructor.
+  Constructor arguments:
+    arg: One of:
+        1. No arguments. The final time level is assigned an offset of zero.
+      or:
+        2. An integer or Fraction, which is used to set the offset.
+      or:
+        3. A FinalTimeLevel, acting as a copy constructor.
   """
   
   def __init__(self, arg = 0):
