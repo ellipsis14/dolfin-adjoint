@@ -444,3 +444,13 @@ class AdjointTimeFunction(TimeLevels):
     """
     
     return self.__tfn
+  
+  def zero(self):
+    """
+    Zero the TimeFunction.
+    """
+    
+    for level in self.levels():
+      self[level].vector().zero()
+      
+    return

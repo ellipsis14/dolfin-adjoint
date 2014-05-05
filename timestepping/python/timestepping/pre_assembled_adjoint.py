@@ -108,9 +108,11 @@ class AdjointVariableMap:
     """
 
     for a_fn in self.__f_fns:
-      if not hasattr(a_fn, "_time_level_data") or isinstance(a_fn._time_level_data[1], TimeLevel):
+      if not hasattr(a_fn, "_time_level_data"):
         a_fn.vector().zero()
-
+    for a_tfn in self.__f_tfns:
+      a_tfn.zero()
+        
     return
 
 class TimeFunctional:
