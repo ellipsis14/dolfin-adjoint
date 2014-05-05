@@ -46,6 +46,7 @@ class WrappedFunction(dolfin.Function):
         2. A Function. The WrappedFunction is assigned the function space of
            the given Function, and wraps the Function.
     name: A string defining the name of the function.
+    label: A string defining the label of the function.
   """
   
   def __init__(self, arg, name = "u", label = "a WrappedFunction"):
