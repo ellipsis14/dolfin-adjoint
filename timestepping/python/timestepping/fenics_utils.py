@@ -217,7 +217,7 @@ def evaluate_expr(expr, copy = False):
     for op in ops[1:]:
       nval = evaluate_expr(op)
       if not isinstance(nval, float) or not nval == 1.0:
-        val *= evaluate_expr(op)
+        val *= nval
   elif isinstance(expr, ufl.algebra.Sum):
     ops = expr.operands()
     assert(len(ops) > 0)
@@ -225,7 +225,7 @@ def evaluate_expr(expr, copy = False):
     for op in ops[1:]:
       nval = evaluate_expr(op)
       if not isinstance(nval, float) or not nval == 0.0:
-        val += evaluate_expr(op)
+        val += nval
   elif isinstance(expr, ufl.algebra.Division):
     ops = expr.operands()
     assert(len(ops) == 2)

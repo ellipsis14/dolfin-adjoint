@@ -340,6 +340,7 @@ class PAEquationSolver(EquationSolver):
         a = assemble(self.__a, copy = False)
         L = assemble(self.__L, copy = False)
 
+        assert(L.local_range() == a.local_range())
         x.vector().set_local(L.array() / a.array())
         x.vector().apply("insert")
         enforce_bcs(x.vector(), bcs)

@@ -1667,8 +1667,8 @@ class ManagedModel(object):
         rfact = fact
       numpy.random.seed(0)
       perturb.set_local(rfact * numpy.random.random(shape) - (0.5 * rfact))
-      numpy.random.seed()
       perturb.apply("insert")
+      numpy.random.seed()
       
     errs_1 = []
     errs_2 = []
@@ -1859,7 +1859,8 @@ class ManagedModel(object):
         if n_p > 1:          
           p_N = dolfin.Vector()
           p_N.resize((p, p + 1))
-          p_N.set_local(numpy.array([l_N], dtype = numpy.float_));  p_N.apply("insert")
+          p_N.set_local(numpy.array([l_N], dtype = numpy.float_))
+          p_N.apply("insert")
           p_N = numpy.array([int(N + 0.5) for N in p_N.gather(numpy.arange(n_p, dtype = numpy.intc))], dtype = numpy.intc)
           g_N = p_N.sum()
 
@@ -1887,7 +1888,8 @@ class ManagedModel(object):
         if self.__n_p == 1:
           return arr.copy()
         else:
-          self.__l_vec.set_local(arr);  self.__l_vec.apply("insert")
+          self.__l_vec.set_local(arr)
+          self.__l_vec.apply("insert")
           return self.__l_vec.gather(self.__g_range)
 
       def serialised_bounds(self, bounds):

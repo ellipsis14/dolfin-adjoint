@@ -417,7 +417,6 @@ class PAAdjointSolvers(object):
           else:
             L = evaluate_expr(a_L_as[i], copy = True)
             if isinstance(L, float):
-              assert(isinstance(L, float))
               l_L = L
               L = a_x.vector().copy()
               L[:] = l_L
@@ -477,6 +476,7 @@ class PAAdjointSolvers(object):
       elif a_solver is None:
         assert(a_a.rank() == 1)
         a_a = assemble(a_a, copy = False)
+        assert(L.local_range() == a_a.local_range())
         a_x.vector().set_local(L.array() / a_a.array())
         a_x.vector().apply("insert")
         enforce_bcs(a_x.vector(), a_bcs)
