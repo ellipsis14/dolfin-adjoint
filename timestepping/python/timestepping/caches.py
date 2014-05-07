@@ -46,7 +46,7 @@ def cache_info(msg, info = dolfin.info):
     info(msg)
   return
     
-class AssemblyCache:
+class AssemblyCache(object):
   """
   A cache of assembled Form s. The assemble method can be used to assemble a
   given Form. If an assembled version of the Form exists in the cache, then the
@@ -145,7 +145,7 @@ class AssemblyCache:
 
     return
 
-class SolverCache:
+class SolverCache(object):
   """
   A cache of LUSolver s and KrylovSolver s. The linear_solver method can be used
   to return an LUSolver or KrylovSolver suitable for solving an equation with

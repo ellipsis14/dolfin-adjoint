@@ -33,7 +33,7 @@ __all__ = \
     "ufl_version"
   ]
 
-class Version:
+class Version(object):
   """
   Defines and enables comparisons between version numbers. Is supplied with
   rich comparison methods.

@@ -31,7 +31,7 @@ __all__ = \
     "MemoryCheckpointer"
   ]
 
-class Checkpointer:
+class Checkpointer(object):
   """
   A template for Constant and Function storage.
   """

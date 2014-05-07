@@ -46,7 +46,7 @@ __all__ = \
     "TimeSystem"
   ]
 
-class TimeSystem:
+class TimeSystem(object):
   """
   Used to register timestep equations.
   """
@@ -500,7 +500,7 @@ class TimeSystem:
     
 _assemble_classes.append(TimeSystem)
 
-class ForwardModel:
+class ForwardModel(object):
   """
   Used to solve timestep equations with timestep specific optimisations applied.
 
@@ -681,7 +681,7 @@ class ForwardModel:
       
     return
     
-class AdjointModel:
+class AdjointModel(object):
   """
   Used to solve adjoint timestep equations with timestep specific optimisations
   applied. This assumes that forward model data is updated externally.
@@ -947,7 +947,7 @@ class AdjointModel:
 
     return
   
-class ManagedModel:
+class ManagedModel(object):
   """
   Used to solve forward and adjoint timestep equations. This performs necessary
   storage and recovery management.
@@ -1838,7 +1838,7 @@ class ManagedModel:
  
     dolfin.info("Running functional minimisation")
 
-    class Packer:
+    class Packer(object):
       def __init__(self, parameters):
         p = dolfin.MPI.process_number()
 

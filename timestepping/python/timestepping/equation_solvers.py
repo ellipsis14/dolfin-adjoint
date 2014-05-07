@@ -32,7 +32,7 @@ __all__ = \
     "LinearCombination"
   ]
 
-class LinearCombination:
+class LinearCombination(object):
   """
   A linear combination.
 
@@ -145,7 +145,7 @@ class LinearCombination:
 
     return
 
-class AssignmentSolver:
+class AssignmentSolver(object):
   """
   A "solver" defining a direct assignment.
 
@@ -292,7 +292,7 @@ class AssignmentSolver:
 
     return
   
-class EquationSolver:
+class EquationSolver(object):
   """
   A generic linear or non-linear equation solver.
 

@@ -114,7 +114,7 @@ def matrix_optimisation(form):
   # Success
   return mat_form, fn
 
-class PAForm:
+class PAForm(object):
   """
   A pre-assembled form. Given a form of arbitrary rank, this finds and
   pre-assembles static terms.
