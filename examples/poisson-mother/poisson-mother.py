@@ -46,10 +46,10 @@ rf = ReducedFunctional(J, control)
 
 # Solve the optimsiation problem with the Moola optimisation package
 problem = rf.moola_problem()
-solver = moola.NewtonCG(options={'gtol': 1e-5, 'maxiter': 20})
 f_moola = moola.DolfinPrimalVector(f)
-sol = solver.solve(problem, f_moola)
-f_opt = sol['Optimizer'].data
+solver = moola.NewtonCG(problem, f_moola, options={'gtol': 1e-5, 'maxiter': 20})
+sol = solver.solve()
+f_opt = sol['control'].data
 
 plot(f_opt, interactive=True)
 
