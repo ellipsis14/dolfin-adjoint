@@ -36,7 +36,7 @@ bc = DirichletBC(V, 0.0, "on_boundary")
 solve(F == 0, u, bc)
 
 # Define functional of interest and the reduced functional
-x = triangle.x
+x = SpatialCoordinate(mesh)
 d = 1/(2*pi**2)*sin(pi*x[0])*sin(pi*x[1]) # the desired temperature profile
 
 alpha = Constant(1e-2)
