@@ -63,7 +63,7 @@ timestepping finite element models.
 
 __license__ = "LGPL-3"
 
-__version__ = "1.2.0+"
+__version__ = "1.3.0"
 
 __all__ = \
   caches.__all__ + \
@@ -85,10 +85,6 @@ __all__ = \
   versions.__all__ + \
   vtu_io.__all__ + \
   [ 
-    "__doc__",
-    "__license__",
-    "__name__",
-    "__version__",
     "caches",
     "checkpointing",
     "equation_solvers",
