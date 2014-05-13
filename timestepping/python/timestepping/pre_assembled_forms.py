@@ -35,13 +35,6 @@ __all__ = \
     "PALinearForm"
   ]
 
-def form_integrals(form):
-  """
-  Return Integral s associated with the given Form.
-  """
-  
-  return form.integrals()
-
 def preprocess_integral(form, integral):
   """
   Given an Integral associated with the given Form, return the integrand and
@@ -105,7 +98,7 @@ def matrix_optimisation(form):
       if not lall_terms_dep(term, fn):
         return False
     return True
-  for integral in form_integrals(form):
+  for integral in form.integrals():
     integrand, iargs = preprocess_integral(form, integral)
     if not all_terms_dep(integrand, fn):
       # The form might have a term which doesn't depend upon fn at all
@@ -158,7 +151,7 @@ class PAForm(object):
       pre_assembled_L = []
       non_pre_assembled_L = []
       
-      for integral in form_integrals(form):
+      for integral in form.integrals():
         integrand, iargs = preprocess_integral(form, integral)
         if self.pre_assembly_parameters["expand_form"]:
           if isinstance(integrand, ufl.algebra.Sum):
@@ -383,7 +376,7 @@ class PALinearForm(PAForm):
     elif self.pre_assembly_parameters["term_optimisation"]:
       quadrature_degree = form_quadrature_degree(form)
     
-      for integral in form_integrals(form):
+      for integral in form.integrals():
         integrand, iargs = preprocess_integral(form, integral)
         if self.pre_assembly_parameters["expand_form"]:
           if isinstance(integrand, ufl.algebra.Sum):
