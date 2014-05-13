@@ -625,5 +625,13 @@ def is_empty_form(form):
 
   if len(form.integrals()) == 0:
     return True
-  else:
-    return len(extract_form_data(form).integral_data) == 0
+  
+  zero = True
+  for integral in form.integrals():
+    if not isinstance(integral.integrand(), ufl.algebra.Zero):
+      zero = False
+      break
+  if zero:
+    return True
+  
+  return len(extract_form_data(form).integral_data) == 0
