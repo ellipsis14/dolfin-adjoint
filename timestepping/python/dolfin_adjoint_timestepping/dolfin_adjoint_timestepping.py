@@ -288,7 +288,7 @@ def da_annotate_equation_solve(solve):
       for term in rhs[1:]:
         nrhs += term[0] * term[1]
       rhs = nrhs;  del(nrhs)
-    if isinstance(rhs, (float, int, ufl.constantvalue.FloatValue, ufl.constantvalue.IntValue, ufl.constantvalue.Zero)):
+    if isinstance(rhs, (float, int, ufl.constantvalue.ConstantValue)):
       # This is a direct assignment, so register an assignment
       return da_annotate_assign(dolfin.Constant(rhs), x_fn)
     elif isinstance(rhs, (dolfin.Constant, dolfin.Function)):

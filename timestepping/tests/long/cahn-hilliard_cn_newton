@@ -82,7 +82,7 @@ system.add_solve(u_ic, U[0])
 
 # Compute the chemical potential df/dc
 f    = 100*c**2*(1-c)**2
-dfdc = derivative(f, c, StaticConstant(1.0))
+dfdc = differentiate_expr(f, c)
 
 # mu_(n+theta)
 mu_mid = (1.0-theta)*mu0 + theta*mu

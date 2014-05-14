@@ -239,7 +239,7 @@ def evaluate_expr(expr, copy = False):
       val = expr.vector()
       if copy:
         val = val.copy()
-  elif isinstance(expr, (ufl.constantvalue.FloatValue, ufl.constantvalue.IntValue, dolfin.Constant)):
+  elif isinstance(expr, (dolfin.Constant, ufl.constantvalue.ConstantValue)):
     val = float(expr)
   elif isinstance(expr, ufl.differentiation.CoefficientDerivative):
     val = evaluate_expr(ufl.algorithms.expand_derivatives(expr))
@@ -248,7 +248,7 @@ def evaluate_expr(expr, copy = False):
 
   return val
 
-def differentiate_expr(expr, u):
+def differentiate_expr(expr, u, expand = True):
   """
   Wrapper for the UFL derivative function. This chooses an argument equal to
   Constant(1.0). Form s should be differentiated using the derivative function.
@@ -256,23 +256,29 @@ def differentiate_expr(expr, u):
   
   if not isinstance(expr, ufl.expr.Expr):
     raise InvalidArgumentException("expr must be an Expr")
-  if not isinstance(u, (dolfin.Constant, dolfin.Function)):
-    raise InvalidArgumentException("u must be a Constant or Function")
+  if isinstance(u, ufl.indexed.Indexed):
+    op = u.operands()
+    assert(len(op) == 2)
+    if not isinstance(op[0], (dolfin.Constant, dolfin.Function)):
+      raise InvalidArgumentException("Invalid Indexed")
+  elif not isinstance(u, (dolfin.Constant, dolfin.Function)):
+    raise InvalidArgumentException("u must be an Indexed, Constant, or Function")
 
   if expr is u:
-    der = dolfin.Constant(1.0)
+    der = ufl.constantvalue.IntValue(1)
   else:
-    der = ufl.derivative(expr, u, argument = dolfin.Constant(1.0))
+    unity = dolfin.Constant(1.0)
+    der = dolfin.replace(ufl.derivative(expr, u, argument = unity), {unity:ufl.constantvalue.IntValue(1)})
 
-    # Based on code from expand_derivatives1 in UFL file ad.py, (see e.g. bzr
-    # 1.1.x branch revision 1484)
-    cell = der.cell()
-    if cell is None or cell.is_undefined():
-      dim = 0
-    else:
-      dim = der.cell().geometric_dimension()
-      
-    der = ufl.algorithms.expand_derivatives(der, dim = dim)
+    if expand:
+      # Based on code from expand_derivatives1 in UFL file ad.py, (see e.g. bzr
+      # 1.1.x branch revision 1484)
+      cell = der.cell()
+      if cell is None:
+        dim = 0
+      else:
+        dim = der.cell().geometric_dimension()
+      der = ufl.algorithms.expand_derivatives(der, dim = dim)
 
   return der
 
@@ -628,7 +634,7 @@ def is_empty_form(form):
   
   zero = True
   for integral in form.integrals():
-    if not isinstance(integral.integrand(), ufl.algebra.Zero):
+    if not isinstance(integral.integrand(), ufl.constantvalue.Zero):
       zero = False
       break
   if zero:

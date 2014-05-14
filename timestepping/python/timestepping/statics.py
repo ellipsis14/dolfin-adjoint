@@ -81,7 +81,7 @@ def is_static_coefficient(c):
   Return whether the supplied argument is a static Coefficient.
   """
   
-  return isinstance(c, (ufl.constantvalue.FloatValue, ufl.constantvalue.IntValue)) or (hasattr(c, "_time_static") and c._time_static)
+  return isinstance(c, ufl.constantvalue.ConstantValue) or (hasattr(c, "_time_static") and c._time_static)
 
 def extract_non_static_coefficients(form):
   """

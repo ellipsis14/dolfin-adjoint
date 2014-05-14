@@ -554,10 +554,10 @@ elif ufl_version() >= (1, 2, 0) and ufl_version() < (1, 4, 0):
   ufl.Form.compute_form_data = Form_compute_form_data
   del(Form_compute_form_data)
   
-  def Cell_is_undefined(self):
-    return False
-  ufl.geometry.Cell.is_undefined = Cell_is_undefined
-  del(Cell_is_undefined)
+#  def Cell_is_undefined(self):
+#    return False
+#  ufl.geometry.Cell.is_undefined = Cell_is_undefined
+#  del(Cell_is_undefined)
 
 # FFC patches.
 if ffc_version() < (1, 2, 0):
