@@ -47,7 +47,6 @@ __all__ = \
     "extract_form_data",
     "form_quadrature_degree",
     "is_empty_form",
-    "is_expand_expr_supported",
     "is_general_constant",
     "is_r0_function",
     "is_r0_function_space",
@@ -281,68 +280,6 @@ def differentiate_expr(expr, u, expand = True):
       der = ufl.algorithms.expand_derivatives(der, dim = dim)
 
   return der
-
-def is_expand_expr_supported(expr):
-  """
-  Return whether the supplied Expr is supported by expand_expr.
-  """
-  
-  if not isinstance(expr, ufl.expr.Expr):
-    raise InvalidArgumentException("expr must be an Expr")
-
-  def multiple_terms(expr):
-    if isinstance(expr, (ufl.algebra.Sum,
-                         ufl.indexsum.IndexSum)):
-      return True
-    else:
-      for op in expr.operands():
-        if multiple_terms(op):
-          return True
-      # May yield a false negative here
-      return False
-
-  if not isinstance(expr, (ufl.algebra.Sum,
-                           ufl.algebra.Product,
-                           ufl.indexsum.IndexSum,
-                           ufl.indexed.Indexed,
-                           ufl.tensors.ComponentTensor,
-                           ufl.algebra.Division,
-                           ufl.restriction.PositiveRestricted,
-                           ufl.restriction.NegativeRestricted,
-                           ufl.differentiation.Grad,
-                           ufl.tensoralgebra.Dot,
-                           ufl.tensoralgebra.Inner,
-                           ufl.differentiation.CoefficientDerivative,
-                           ufl.differentiation.VariableDerivative,
-                           ufl.constantvalue.IntValue,
-                           ufl.argument.Argument,
-                           dolfin.Expression,
-                           dolfin.Function,
-                           dolfin.Constant,
-                           ufl.constantvalue.FloatValue,
-                           ufl.geometry.Circumradius,
-                           ufl.algebra.Abs,
-                           ufl.geometry.FacetNormal,
-                           ufl.mathfunctions.Sqrt,
-                           ufl.classes.Variable,
-                           ufl.mathfunctions.Exp,
-                           ufl.constantvalue.Zero,
-                           ufl.algebra.Power,
-                           ufl.indexing.MultiIndex,
-                           ufl.classes.Label)):
-    if isinstance(expr, (ufl.tensors.ListTensor,
-                         ufl.classes.Conditional)):
-      for op in expr.operands():
-        if multiple_terms(op):
-          return False
-    else:
-      return False
-
-  for op in expr.operands():
-    if not is_expand_expr_supported(op):
-      return False
-
-  return True
     
 def expand_expr(expr):
   """

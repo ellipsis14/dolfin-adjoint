@@ -82,27 +82,9 @@ def matrix_optimisation(form):
   if n_non_static_coefficients(mat_form) > 0:
     # The form is non-linear
     return None
-
-  # Check that all terms in the form definitely depend upon fn
-  def all_terms_dep(expr, fn):
-    def lall_terms_dep(expr, fn):
-      if not is_expand_expr_supported(expr):
-        # expand_expr cannot handle this term. May yield a false negative here.
-        return False
-      elif not fn in ufl.algorithms.extract_coefficients(expr):
-        # A true negative
-        return False
-      else:
-        return True
-    for term in expand_expr(expr):
-      if not lall_terms_dep(term, fn):
-        return False
-    return True
-  for integral in form.integrals():
-    integrand, iargs = preprocess_integral(form, integral)
-    if not all_terms_dep(integrand, fn):
-      # The form might have a term which doesn't depend upon fn at all
-      return None
+  elif not expand(action(mat_form, fn)) == expand(form):
+    # The bi-linear form cannot be used to construct the linear form
+    return None
 
   # Success
   return mat_form, fn
