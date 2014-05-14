@@ -1,3 +1,9 @@
+dolfin-adjoint (1.3.0) trusty; urgency=low
+
+  * Bump our version number to match DOLFIN's
+
+ -- Simon Funke <simon@simula.no>  Wed, May 2014 14:49:40 +0100
+
 dolfin-adjoint (1.2.0) precise; urgency=low
 
   * Bump our version number to match DOLFIN's
