@@ -38,13 +38,13 @@ if __name__ == "__main__":
     # Run the optimisation 
     rf = ReducedFunctional(J, InitialConditionParameter(m, value=m))
     problem = rf.moola_problem()
-    
-    solver = moola.SteepestDescent(tol=1e-200, options={'gtol': 1e-10, 'maxiter': 1})
-
     m_moola = moola.DolfinPrimalVector(m)
-    sol = solver.solve(problem, m_moola)
+    
+    solver = moola.SteepestDescent(problem, m_moola, options={'jtol': 0, 'gtol': 1e-10, 'maxiter': 1})
 
-    m_opt = sol['Optimizer'].data
+    sol = solver.solve()
+
+    m_opt = sol['control'].data
 
     #assert max(abs(sol["Optimizer"].data + 1./2*np.pi)) < 1e-9
     #assert sol["Number of iterations"] < 50
