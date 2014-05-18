@@ -24,6 +24,10 @@ def dolfin_adjoint_assign(self, other, annotate=None, *args, **kwargs):
   if self is other:
     return
 
+  if isinstance(other, ufl.algebra.Sum) or isinstance(other, ufl.algebra.Product):
+    errmsg = '''Cannot use Function.assign(linear combination of other Functions) yet.'''
+    raise libadjoint.exceptions.LibadjointErrorNotImplemented(errmsg)
+
   # ignore anything not a backend.Function, unless the user insists
   if not isinstance(other, backend.Function) and (annotate is not True):
     return dolfin_assign(self, other, *args, **kwargs)
