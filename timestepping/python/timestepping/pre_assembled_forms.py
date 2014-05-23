@@ -82,8 +82,13 @@ def matrix_optimisation(form):
   if n_non_static_coefficients(mat_form) > 0:
     # The form is non-linear
     return None
-  elif not expand(action(mat_form, fn)) == expand(form):
-    # The bi-linear form cannot be used to construct the linear form
+  try:
+    rhs_form = rhs(replace(form, {fn:dolfin.TrialFunction(fn.function_space())}))
+  except ufl.log.UFLException:
+    # The form might be inhomogeneous
+    return None
+  if not is_empty_form(rhs_form):
+    # The form might be inhomogeneous
     return None
 
   # Success
