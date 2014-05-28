@@ -264,12 +264,7 @@ class SolverCache(object):
       if static:
         return expand(form)
       else:
-        args = ufl.algorithms.extract_arguments(form)
-        assert(len(args) == 2)
-        test, trial = args
-        if test.count() > trial.count():
-          test, trial = trial, test
-        return test, trial
+        return extract_test_and_trial(form)
     
     def bc_key(bcs, symmetric_bcs):
       if len(bcs) == 0:

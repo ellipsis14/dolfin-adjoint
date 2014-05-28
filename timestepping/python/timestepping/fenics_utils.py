@@ -40,6 +40,7 @@ __all__ = \
     "apply_bcs",
     "differentiate_expr",
     "enforce_bcs",
+    "extract_test_and_trial",
     "evaluate_expr",
     "expand",
     "expand_expr",
@@ -414,6 +415,24 @@ def expand(form, dim = None):
   else:
     return nform
 
+def extract_test_and_trial(form):
+  """
+  Extract the test and trial function from a bi-linear form.
+  """
+
+  if not isinstance(form, ufl.form.Form):
+    raise InvalidArgumentException("form must be a Form")
+
+  args = ufl.algorithms.extract_arguments(form)
+  if not len(args) == 2:
+    raise InvalidArgumentException("form must be a bi-linear Form")
+  test, trial = args
+  if test.count() > trial.count():
+    test, trial = trial, test
+  assert(test.count() == trial.count() - 1)
+
+  return test, trial
+
 def is_self_adjoint_form(form):
   """
   Return True if the supplied Form is self-adjoint. May return false negatives.
@@ -422,19 +441,10 @@ def is_self_adjoint_form(form):
   if not isinstance(form, ufl.form.Form):
     raise InvalidArgumentException("form must be a Form")
   
-  def arguments(form):
-    args = ufl.algorithms.extract_arguments(form)
-    assert(len(args) == 2)
-    test, trial = args
-    if test.count() > trial.count():
-      test, trial = trial, test
-    return test, trial
-  
   a_form = dolfin.adjoint(form)
   
-  test, trial = arguments(form)
-  a_test, a_trial = arguments(a_form)
-  assert(a_test.count() == a_trial.count() - 1)
+  test, trial = extract_test_and_trial(form)
+  a_test, a_trial = extract_test_and_trial(a_form)
   
   if not test.element() == a_trial.element():
     return False

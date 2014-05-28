@@ -167,12 +167,7 @@ def adjoint(form, reordered_arguments = None, adjoint_arguments = None):
     assert(a_test.count() == a_trial.count() - 1)
 
     a_form = dolfin.adjoint(form)
-    args = ufl.algorithms.extract_arguments(a_form)
-    assert(len(args) == 2)
-    test, trial = args
-    if test.count() > trial.count():
-      test, trial = trial, test
-    assert(test.count() == trial.count() - 1)
+    test, trial = extract_test_and_trial(a_form)
 
     if not test.element() == a_test.element() or not trial.element() == a_trial.element():
       raise InvalidArgumentException("Invalid adjoint_arguments")
