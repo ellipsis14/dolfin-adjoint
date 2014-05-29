@@ -128,9 +128,11 @@ class LinearCombination(object):
       lalpha = float(self.__alpha[0])
     else:
       lalpha = evaluate_expr(self.__alpha[0], copy = False)
-    if isinstance(lalpha, float) and lalpha == 1.0:
-      x[:] = self.__y[0].vector()[:]
+    if isinstance(lalpha, float):
+      x.zero()
+      x.axpy(lalpha, self.__y[0].vector())
     else:
+      assert(isinstance(lalpha, dolfin.GenericVector))
       x[:] = lalpha * self.__y[0].vector()[:]
     for alpha, y in zip(self.__alpha[1:], self.__y[1:]):
       if isinstance(alpha, (ufl.constantvalue.FloatValue, dolfin.Constant)):
@@ -277,11 +279,11 @@ class AssignmentSolver(object):
     """
     Solve for x.
     """
-    
-    if isinstance(self.__y, (ufl.constantvalue.FloatValue, dolfin.Constant)):
-      self.__x.vector()[:] = float(self.__y)
-    elif isinstance(self.__y, dolfin.Function):
-      self.__x.vector()[:] = self.__y.vector()
+
+    if isinstance(self.__y, ufl.constantvalue.FloatValue):
+      self.__x.assign(dolfin.Constant(self.__y))
+    elif isinstance(self.__y, (dolfin.Constant, dolfin.Function)):
+      self.__x.assign(self.__y)
     elif is_general_constant(self.__y):
       self.__x.assign(dolfin.Constant([y_c for y_c in self.__y]))
     elif isinstance(self.__y, LinearCombination):
