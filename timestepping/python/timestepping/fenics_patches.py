@@ -419,7 +419,7 @@ if dolfin_version() < (1, 1, 0):
     return
   dolfin.DirichletBC.zero_columns = DirichletBC_zero_columns
   del(DirichletBC_zero_columns)
-elif dolfin_version() < (1, 3, 0):
+elif dolfin_version() < (1, 4, 0):
   __GenericMatrix_compress_orig = dolfin.GenericMatrix.compress
   def GenericMatrix_compress(self):
     if dolfin.MPI.num_processes() == 1 or self.size(0) == self.size(1):
