@@ -21,6 +21,7 @@ __all__ = \
     "AbstractMethodException",
     "CheckpointException",
     "DependencyException",
+    "IOException",
     "InvalidArgumentException",
     "NotImplementedException",
     "ParameterException",
@@ -38,6 +39,9 @@ class DependencyException(Exception):
   pass
 
 class InvalidArgumentException(TypeError):
+  pass
+
+class IOException(IOError):
   pass
 
 class NotImplementedException(Exception):

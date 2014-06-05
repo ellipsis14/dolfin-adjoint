@@ -117,7 +117,7 @@ def read_vtu(filename, space):
       tol = 2.0e-15 * mag
       if any(abs(vtu_x.mean(0) - x) > tol):
         dolfin.info_red("Relative coordinate error: %.16e" % (abs(vtu_x.mean(0) - x) / mag).max())
-        raise StateException("Invalid coordinates")
+        raise IOException("Invalid coordinates")
     
     for i in xrange(vtu.GetCellData().GetNumberOfArrays()):
       cell_data = vtu.GetCellData().GetArray(i)
@@ -145,12 +145,12 @@ def read_vtu(filename, space):
         for j in xrange(vtu_cell.GetNumberOfIds()):
           if not (X[cell[j]] == vtu.GetPoint(vtu_cell.GetId(j))[:dim]).all():
             dolfin.info_red("Coordinate error: %.16e" % (abs(X[cell[j]] - vtu.GetPoint(vtu_cell.GetId(j))[:dim]).max()))
-            raise StateException("Invalid coordinates")
+            raise IOException("Invalid coordinates")
       else:
         for j in xrange(vtu_cell.GetNumberOfIds()):
           if not (X[cell[cell_map[j]]] == vtu.GetPoint(vtu_cell.GetId(j))[:dim]).all():
             dolfin.info_red("Coordinate error: %.16e" % (abs(X[cell[cell_map[j]]] - vtu.GetPoint(vtu_cell.GetId(j))[:dim]).max()))
-            raise StateException("Invalid coordinates")
+            raise IOException("Invalid coordinates")
     
     for i in xrange(vtu.GetPointData().GetNumberOfArrays()):
       point_data = vtu.GetPointData().GetArray(i)
@@ -433,5 +433,7 @@ def write_vtu(filename, fns, index = None, t = None):
     writer.SetBlockSize(2 ** 15)
     writer.SetInput(vtu)
     writer.Write()
+    if not writer.GetProgress() == 1.0 or not writer.GetErrorCode() == 0:
+      raise IOException("Failed to write vtu file: %s" % filename)
       
   return
