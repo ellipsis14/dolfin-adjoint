@@ -24,6 +24,11 @@ def dolfin_adjoint_assign(self, other, annotate=None, *args, **kwargs):
   if self is other:
     return
 
+  to_annotate = utils.to_annotate(annotate)
+  # if we shouldn't annotate, just assign
+  if not to_annotate:
+    return dolfin_assign(self, other, *args, **kwargs)
+
   if isinstance(other, ufl.algebra.Sum) or isinstance(other, ufl.algebra.Product):
     errmsg = '''Cannot use Function.assign(linear combination of other Functions) yet.'''
     raise libadjoint.exceptions.LibadjointErrorNotImplemented(errmsg)
@@ -36,11 +41,6 @@ def dolfin_adjoint_assign(self, other, annotate=None, *args, **kwargs):
   if hasattr(self, "function_space") and hasattr(other, "function_space"):
     if str(self.function_space()) != str(other.function_space()):
       return dolfin_assign(self, other, *args, **kwargs)
-
-  to_annotate = utils.to_annotate(annotate)
-  # if we shouldn't annotate, just assign
-  if not to_annotate:
-    return dolfin_assign(self, other, *args, **kwargs)
 
   other_var = adjglobals.adj_variables[other]
   self_var = adjglobals.adj_variables[self]
