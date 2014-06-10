@@ -86,6 +86,7 @@ class QForm(ufl.form.Form):
       return ufl.form.Form.__cmp__(self, other)
     else:
       return comp
+    
   def __hash__(self):
     return hash((self.__quadrature_degree, ufl.form.Form.__hash__(self)))
 

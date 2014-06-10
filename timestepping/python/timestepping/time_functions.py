@@ -68,6 +68,9 @@ class WrappedFunction(dolfin.Function):
     self.__label = label
 
     return
+  
+  def __eq__(self, other):
+    return isinstance(other, WrappedFunction) and other is self
 
   def allocate(self):
     """
