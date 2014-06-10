@@ -71,6 +71,9 @@ class WrappedFunction(dolfin.Function):
   
   def __eq__(self, other):
     return isinstance(other, WrappedFunction) and other is self
+  
+  def __ne__(self, other):
+    return not self == other
 
   def allocate(self):
     """
