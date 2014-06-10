@@ -50,9 +50,9 @@ class AdjointVariableMap(object):
   
   def __init__(self):
     self.__a_tfns = {}
-    self.__f_tfns = {}
+    self.__f_tfns = OrderedDict()
     self.__a_fns = {}
-    self.__f_fns = {}
+    self.__f_fns = OrderedDict()
 
     return
 

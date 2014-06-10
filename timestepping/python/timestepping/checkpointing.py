@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from collections import OrderedDict
 import cPickle
 import copy
 import os
@@ -153,7 +154,7 @@ class MemoryCheckpointer(Checkpointer):
       raise CheckpointException("Attempting to overwrite checkpoint with key %s" % str(key))
     cs = self._Checkpointer__check_cs(cs)
   
-    c_cs = {}
+    c_cs = OrderedDict()
     for c in cs:
       c_cs[c] = self._Checkpointer__pack(c)
 
@@ -278,7 +279,7 @@ class DiskCheckpointer(Checkpointer):
       raise CheckpointException("Attempting to overwrite checkpoint with key %s" % key)
     cs = self._Checkpointer__check_cs(cs)
 
-    c_cs = {}
+    c_cs = OrderedDict()
     id_map = {}
     for c in cs:
       c_id = c.id()
