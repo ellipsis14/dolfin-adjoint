@@ -110,7 +110,7 @@ def run_test(i, np, test, test_success):
   sys.stdout.write("Running test: %s\n" % test)
   
   env = copy.copy(os.environ)
-  env["PYTHONPATH"] = "%s:%s" % (os.path.join(path, "python"), os.environ["PYTHONPATH"])
+  env["PYTHONPATH"] = "%s:%s" % (os.path.join(path, "python"), os.environ.get("PYTHONPATH", ""))
 
   cwd = os.getcwd()
   tmppath = tempfile.mkdtemp()
