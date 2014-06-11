@@ -233,8 +233,7 @@ class TimeSystem(object):
         x_deps += ufl.algorithms.extract_coefficients(eq.rhs)
       eq_lhs = eq.lhs
 
-      lhs_data = extract_form_data(eq_lhs)
-      if lhs_data.rank == 2:
+      if form_rank(eq_lhs) == 2:
         for dep in x_deps:
           if dep is x:
             raise DependencyException("Invalid non-linear solve")
@@ -869,7 +868,7 @@ class AdjointModel(object):
       self.__a_cycle.set_functional(None)
       self.__a_final_solves.set_functional(None)
     elif isinstance(functional, ufl.form.Form):
-      if not extract_form_data(functional).rank == 0:
+      if not form_rank(functional) == 0:
         raise InvalidArgumentException("functional must be rank 0")
 
       for f_dep in ufl.algorithms.extract_coefficients(functional):
@@ -1433,7 +1432,7 @@ class ManagedModel(object):
             assert(isinstance(f_solve, EquationSolver))
             f_der = f_solve.derivative(parameter)
             if not is_empty_form(f_der):
-              rank = extract_form_data(f_der).rank
+              rank = form_rank(f_der)
               if rank == 1:
                 f_der = PALinearForm(f_der)
               else:

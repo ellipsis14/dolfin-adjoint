@@ -31,6 +31,8 @@ from timestepping import *
 import numpy
 
 parameters["form_compiler"]["optimize"] = True
+if dolfin_version() < (1, 3, 0):
+  parameters["form_compiler"]["representation"] = "quadrature"
 
 Constant = StaticConstant
 DirichletBC = StaticDirichletBC
@@ -262,12 +264,12 @@ def check(f, ref, tol, scale = None):
   assert(err < tol)
   return
 
-check(q[0][-2], 2.20073680358033301e+06, 6.0e-9)
-check(q[1][-2], 2.20073680358033301e+06, 6.0e-9)
-check(q[2][-2], 2.20073680358033301e+06, 6.0e-9)
+check(q[0][-2], 2.20073680358033301e+06, 2.0e-8)
+check(q[1][-2], 2.20073680358033301e+06, 2.0e-8)
+check(q[2][-2], 2.20073680358033301e+06, 2.0e-8)
 check(q[0][-1], 2.20076218325539399e+06, 2.0e-8)
 check(q[1][-1], 2.20073722609829763e+06, 2.0e-8)
-check(q[2][-1], 2.20073664257621206e+06, 5.0e-9)
+check(q[2][-1], 2.20073664257621206e+06, 9.0e-9)
 check(q[0][0], 2.20078756258992990e+06, 2.0e-8)
 check(q[1][0], 2.20073764809644828e+06, 2.0e-8)
 check(q[2][0], 2.20073648092393950e+06, 2.0e-8)

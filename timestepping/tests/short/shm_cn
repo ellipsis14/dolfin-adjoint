@@ -99,7 +99,7 @@ assert((orders > 1.98).all())
 
 omega_old = float(omega)
 system.set_functional((X[N][1] - Constant(J)) * (X[N][1] - Constant(J)) * dx)
-system.minimise_functional(omega, tolerance = 1.0e-14, parameters_0 = 0.0, bounds = (1.75 * numpy.pi, 2.25 * numpy.pi))
+system.minimise_functional(omega, tolerance = 1.0e-12, parameters_0 = 0.0, bounds = (1.75 * numpy.pi, 2.25 * numpy.pi))
 err = abs(float(omega) - omega_old)
 print("%.16e" % (float(omega) / numpy.pi))
 print("%.16e" % (omega_old / numpy.pi))

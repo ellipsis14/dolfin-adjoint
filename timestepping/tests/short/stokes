@@ -258,5 +258,5 @@ err = abs(dJdm.array() - dolfin_adjoint_grad).max()
 print(err)
 assert(err < 5.0e-14)
 
-orders = system.taylor_test(ic, grad = dJdm, fact = 2.0e-3)
-assert((orders > 1.96).all())
+orders = system.taylor_test(ic, grad = dJdm, fact = 3.0e-3)
+assert((orders > 1.97).all())

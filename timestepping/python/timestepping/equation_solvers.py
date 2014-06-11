@@ -578,7 +578,7 @@ class EquationSolver(object):
       raise InvalidArgumentException("parameter must be a Constant or Function")
 
     if self.is_linear():
-      if extract_form_data(self.__eq.lhs).rank == 1:
+      if form_rank(self.__eq.lhs) == 1:
         if parameter is self.__x:
           form = self.__eq.lhs
         elif parameter in ufl.algorithms.extract_coefficients(self.__eq.lhs):
@@ -599,7 +599,7 @@ class EquationSolver(object):
     Solve the equation. This calls the DOLFIN solve function.
     """
 
-    if self.is_linear() and extract_form_data(self.__eq.lhs).rank == 1:
+    if self.is_linear() and form_rank(self.__eq.lhs) == 1:
       raise NotImplementedException("Solve for linear variational problem with rank 1 LHS not implemented")
     
     if self.__J is None:

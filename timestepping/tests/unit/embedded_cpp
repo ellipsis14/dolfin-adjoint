@@ -21,14 +21,14 @@ from dolfin import *
 from timestepping import *
 
 code = EmbeddedCpp(code = "b[0] = a;", a = int, b = long_arr)
-b = numpy.empty((1,), numpy.int)
+b = numpy.empty((1,), numpy.int64)
 for i in xrange(-10, 11):
   code.run(a = i, b = b)
   assert(b == i)
 
 code = EmbeddedCpp(code = \
   """
-  boost::shared_ptr<GenericVector> F_vec = F->vector();
+  shared_ptr<GenericVector> F_vec = F->vector();
   
   m[0] = 0.0;
   for(size_t i = 0;i < F_vec->local_size();i++){
@@ -37,7 +37,7 @@ code = EmbeddedCpp(code = \
   m[0] /= F_vec->local_size();
   """,
   F = dolfin.Function, m = double_arr)
-m = numpy.empty((1,), numpy.float)
+m = numpy.empty((1,), numpy.float64)
 mesh = UnitIntervalMesh(10)
 space = FunctionSpace(mesh, "CG", 1)
 F = Function(space, name = "F")

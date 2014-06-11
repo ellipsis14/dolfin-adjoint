@@ -25,6 +25,7 @@ import instant
 import numpy
 
 from exceptions import *
+from fenics_versions import *
 
 __all__ = \
   [
@@ -87,8 +88,26 @@ class EmbeddedCpp(object):
           cls = self.__boost_classes[cls]
         args[arg] = cls
 
+    if dolfin_version() < (1, 4, 0):
+      includes = \
+"""
+namespace boost {
+}
+using namespace boost;
+
+%s""" % includes
+    else:
+      includes = \
+"""
+#include <memory>
+using namespace std;
+
+%s""" % includes
+
     self.__code = code
-    self.__includes = """%s
+    self.__includes = \
+"""
+%s
 
 %s""" % (includes, self.__default_includes)
     self.__include_dirs = copy.copy(include_dirs)
@@ -123,11 +142,12 @@ class EmbeddedCpp(object):
         while name_mangle in self.__args.keys():
           name_mangle = "%s_" % name_mangle
         args += "void* %s" % name_mangle
-        cast_code += "    boost::shared_ptr<%s> %s = (*((boost::shared_ptr<%s>*)%s));\n" % \
+        cast_code += "    shared_ptr<%s> %s = (*((shared_ptr<%s>*)%s));\n" % \
           (self.__boost_classes[arg], name, self.__boost_classes[arg], name_mangle)
 
     code = \
-"""%s
+"""
+%s
 
 // Keep SWIG happy
 namespace dolfin {
@@ -135,7 +155,7 @@ namespace dolfin {
 using namespace dolfin;
 
 extern "C" {
-  int code(%s){
+  int code(%s) {
 %s
 
 %s
@@ -240,8 +260,9 @@ class CellKernel(EmbeddedCpp):
       raise InvalidArgumentException("finalisation_code must be a string")
 
     code = \
-"""%s
-    for(size_t cell = 0;cell < %i;cell++){
+"""
+%s
+    for(size_t cell = 0;cell < %i;cell++) {
 %s
     }
 %s""" % (initialisation_code, mesh.num_cells(), kernel_code, finalisation_code)

@@ -221,7 +221,7 @@ class PAAdjointSolvers(object):
       else:
         assert(isinstance(f_solve, EquationSolver))
         f_a = f_solve.tangent_linear()[0]
-        f_a_rank = extract_form_data(f_a).rank
+        f_a_rank = form_rank(f_a)
         if f_a_rank == 2:
           a_test, a_trial = dolfin.TestFunction(a_space), dolfin.TrialFunction(a_space)
           a_a = adjoint(f_a, adjoint_arguments = (a_test, a_trial))
@@ -307,7 +307,7 @@ class PAAdjointSolvers(object):
         a_a = None
         a_solver = None
       else:
-        a_a_rank = extract_form_data(self.__a_a_forms[i]).rank
+        a_a_rank = form_rank(self.__a_a_forms[i])
         if a_a_rank == 2:
           static_bcs = n_non_static_bcs(self.__a_bcs[i]) == 0
           static_form = is_static_form(self.__a_a_forms[i])
@@ -500,7 +500,7 @@ class PAAdjointSolvers(object):
       self.__a_L_rhs = [None for i in xrange(len(self.__a_x))]
       self.__functional = None
     elif isinstance(functional, ufl.form.Form):
-      if not extract_form_data(functional).rank == 0:
+      if not form_rank(functional) == 0:
         raise InvalidArgumentException("functional must be rank 0")
 
       a_rhs = OrderedDict()

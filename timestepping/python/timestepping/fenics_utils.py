@@ -33,6 +33,7 @@ import ffc
 import ufl
   
 from exceptions import *
+from versions import *
   
 __all__ = \
   [
@@ -45,8 +46,8 @@ __all__ = \
     "expand",
     "expand_expr",
     "expand_linear_solver_parameters",
-    "extract_form_data",
     "form_quadrature_degree",
+    "form_rank",
     "is_empty_form",
     "is_general_constant",
     "is_r0_function",
@@ -140,7 +141,7 @@ def form_quadrature_degree(form):
     else:
       # This is based upon code from _analyze_form and
       # _attach_integral_metadata in analysis.py, FFC bzr trunk revision 1761
-      form_data = extract_form_data(form)
+      form_data = extract_form_data(copy.copy(form))
       quadrature_degree = -1
       for integral in form.integrals():
         rep = dolfin.parameters["form_compiler"]["representation"]
@@ -165,6 +166,16 @@ def extract_form_data(form):
     form_data = form.compute_form_data()
 
   return form_data
+
+def form_rank(form):
+  """
+  Return the rank of the supplied Form.
+  """
+  
+  if not isinstance(form, ufl.form.Form):
+    raise InvalidArgumentException("form must be a Form")
+  
+  return len(ufl.algorithms.extract_arguments(form))
 
 def is_general_constant(c):
   """
@@ -297,26 +308,18 @@ def expand_expr(expr):
       terms += expand_expr(term)
     return terms
   elif isinstance(expr, ufl.algebra.Product):
-    fact1, fact2 = expr.operands()[0], ufl.algebra.Product(*expr.operands()[1:])
+    ops = expr.operands()
+    fact1 = ops[0]
+    fact2 = ops[1]
+    for op in ops[2:]:
+      fact2 *= op
     fact1_terms = expand_expr(fact1)
     fact2_terms = expand_expr(fact2)
     terms = []
     for term1 in fact1_terms:
-      if isinstance(term1, ufl.algebra.Product):
-        term1 = list(term1.operands())
-      else:
-        term1 = [term1]
       for term2 in fact2_terms:
-        if isinstance(term2, ufl.algebra.Product):
-          term2 = list(term2.operands())
-        else:
-          term2 = [term2]
-        terms.append(ufl.algebra.Product(*(term1 + term2)))
+        terms.append(term1 * term2)
     return terms
-  elif isinstance(expr, ufl.indexsum.IndexSum):
-    ops = expr.operands()
-    assert(len(ops) == 2)
-    return [ufl.indexsum.IndexSum(term, ops[1]) for term in expand_expr(ops[0])]
   elif isinstance(expr, ufl.indexed.Indexed):
     ops = expr.operands()
     assert(len(ops) == 2)
@@ -367,40 +370,22 @@ def expand_expr(expr):
   # Expr types grey-list. It might be possible to expand these, but just ignore
   # them at present.
   elif isinstance(expr, (ufl.tensors.ListTensor,
-                         ufl.classes.Conditional)):
+                         ufl.classes.Conditional,
+                         ufl.indexsum.IndexSum)):
     return [expr]
   else:
     dolfin.warning("Expr type %s not expanded by expand_expr" % expr.__class__)
     return [expr]
 
-def lumped_mass(space, du = None):
+def lumped_mass(space):
   """
   Return a linear form which can be assembled to yield a lumped mass matrix.
   """
   
   if not isinstance(space, dolfin.FunctionSpaceBase):
     raise InvalidArgumentException("space must be a FunctionSpace")
-  n_sub_spaces = space.num_sub_spaces()
-  if du is None:
-    du = dolfin.TrialFunction(space)
-  else:
-    if not isinstance(du, ufl.argument.Argument):
-      raise InvalidArgumentException("du must be an Argument")
-    elif n_sub_spaces > 0:
-      if not du.shape() == (n_sub_spaces,):
-        raise InvalidArgumentException("Invalid du shape")
-    else:
-      if not du.shape() == tuple():
-        raise InvalidArgumentException("Invalid du shape")        
-
-  c = ufl.coefficient.Coefficient(space.ufl_element())
-  if n_sub_spaces > 0:
-    masslump = lumped_mass(space.sub(0), du = du[0])
-    for i in xrange(1, n_sub_spaces):
-      masslump += lumped_mass(space.sub(i), du = du[i])
-    return masslump
-  else:
-    return ufl.algorithms.expand_derivatives(dolfin.derivative(c * dolfin.dx, c, du = du))
+  
+  return dolfin.TestFunction(space) * dolfin.dx
 
 def expand(form, dim = None):
   """
@@ -416,23 +401,42 @@ def expand(form, dim = None):
   else:
     return nform
 
-def extract_test_and_trial(form):
-  """
-  Extract the test and trial function from a bi-linear form.
-  """
+if dolfin_version() < (1, 4, 0):
+  def extract_test_and_trial(form):
+    """
+    Extract the test and trial function from a bi-linear form.
+    """
 
-  if not isinstance(form, ufl.form.Form):
-    raise InvalidArgumentException("form must be a Form")
+    if not isinstance(form, ufl.form.Form):
+      raise InvalidArgumentException("form must be a Form")
 
-  args = ufl.algorithms.extract_arguments(form)
-  if not len(args) == 2:
-    raise InvalidArgumentException("form must be a bi-linear Form")
-  test, trial = args
-  if test.count() > trial.count():
-    test, trial = trial, test
-  assert(test.count() == trial.count() - 1)
+    args = ufl.algorithms.extract_arguments(form)
+    if not len(args) == 2:
+      raise InvalidArgumentException("form must be a bi-linear Form")
+    test, trial = args
+    if test.count() > trial.count():
+      test, trial = trial, test
+    assert(test.count() == trial.count() - 1)
 
-  return test, trial
+    return test, trial
+else:
+  def extract_test_and_trial(form):
+    """
+    Extract the test and trial function from a bi-linear form.
+    """
+
+    if not isinstance(form, ufl.form.Form):
+      raise InvalidArgumentException("form must be a Form")
+
+    args = ufl.algorithms.extract_arguments(form)
+    if not len(args) == 2:
+      raise InvalidArgumentException("form must be a bi-linear Form")
+    test, trial = args
+    if test.number() > trial.number():
+      test, trial = trial, test
+    assert(test.number() == trial.number() - 1)
+
+    return test, trial
 
 def is_self_adjoint_form(form):
   """
@@ -588,4 +592,4 @@ def is_empty_form(form):
   if zero:
     return True
   
-  return len(extract_form_data(form).integral_data) == 0
+  return len(extract_form_data(copy.copy(form)).integral_data) == 0

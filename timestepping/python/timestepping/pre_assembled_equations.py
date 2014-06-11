@@ -78,7 +78,7 @@ class PAEquationSolver(EquationSolver):
     eq, x, bcs, J, tol, goal, form_parameters, solver_parameters = dolfin.fem.solving._extract_args(*args, **kwargs)
 
     # Relax requirements on equation syntax
-    eq_lhs_rank = extract_form_data(eq.lhs).rank
+    eq_lhs_rank = form_rank(eq.lhs)
     if eq_lhs_rank == 1:
       form = eq.lhs
       if not is_zero_rhs(eq.rhs):
@@ -94,7 +94,7 @@ class PAEquationSolver(EquationSolver):
           cache_info("Detected that solve for %s is linear" % x.name())
           form = replace(form, {x:dolfin.TrialFunction(x.function_space())})
           eq = lhs(form) == rhs(form)
-          eq_lhs_rank = extract_form_data(eq.lhs).rank
+          eq_lhs_rank = form_rank(eq.lhs)
           assert(eq_lhs_rank == 2)
           is_linear = True
       else:
@@ -107,7 +107,7 @@ class PAEquationSolver(EquationSolver):
       if not x in ufl.algorithms.extract_coefficients(form):
         # Linear solve, rank 2 LHS
         eq = lhs(form) == rhs(form)
-        eq_lhs_rank = extract_form_data(eq.lhs).rank
+        eq_lhs_rank = form_rank(eq.lhs)
         assert(eq_lhs_rank == 2)
         is_linear = True
       else:
@@ -183,7 +183,7 @@ class PAEquationSolver(EquationSolver):
           raise DependencyException("Invalid non-linear solve")
 
       def assemble_lhs():
-        eq_lhs_rank = extract_form_data(eq.lhs).rank
+        eq_lhs_rank = form_rank(eq.lhs)
         if eq_lhs_rank == 2:
           static_bcs = n_non_static_bcs(bcs) == 0
           static_form = is_static_form(eq.lhs)

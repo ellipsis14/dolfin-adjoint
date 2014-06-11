@@ -164,8 +164,6 @@ def adjoint(form, reordered_arguments = None, adjoint_arguments = None):
       raise InvalidArgumentException("adjoint_arguments must be a pair of Argument s")
 
     a_test, a_trial = adjoint_arguments
-    assert(a_test.count() == a_trial.count() - 1)
-
     a_form = dolfin.adjoint(form)
     test, trial = extract_test_and_trial(a_form)
 
@@ -235,7 +233,7 @@ def derivative(form, u, du = None, expand = True):
     if isinstance(u, dolfin.Constant):
       du = dolfin.Constant(1.0)
     elif isinstance(u, dolfin.Function):
-      rank = extract_form_data(form).rank
+      rank = form_rank(form)
       if rank == 0:
         du = dolfin.TestFunction(u.function_space())
       elif rank == 1:

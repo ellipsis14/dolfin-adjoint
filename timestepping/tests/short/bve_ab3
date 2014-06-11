@@ -158,6 +158,6 @@ system.finalise()
 dJdm = system.compute_gradient(q_ic, project = True)
 #write_vtu("bve_ab3_dJdm", dJdm[1])
 
-system.verify_checkpoints()
+system.verify_checkpoints(tolerance = 2.0e-8)
 orders = system.taylor_test(q_ic, grad = dJdm, fact = 1.0e-7)
 assert((orders > 1.99).all())

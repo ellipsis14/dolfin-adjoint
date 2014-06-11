@@ -27,6 +27,7 @@ from exceptions import *
 from fenics_overrides import *
 from fenics_utils import *
 from statics import *
+from versions import *
 
 __all__ = \
   [
@@ -35,17 +36,36 @@ __all__ = \
     "PALinearForm"
   ]
 
-def preprocess_integral(form, integral):
-  """
-  Given an Integral associated with the given Form, return the integrand and
-  a list of arguments which can be used to construct an Integral from the
-  integrand.
-  """
+if dolfin_version() < (1, 4, 0):
+  def preprocess_integral(form, integral):
+    """
+    Given an Integral associated with the given Form, return the integrand and
+    a list of arguments which can be used to construct an Integral from the
+    integrand.
+    """
+    
+    integrand = integral.integrand()
+    domain_type, domain_description, compiler_data, domain_data = \
+      integral.domain_type(), integral.domain_description(), integral.compiler_data(), integral.domain_data()
+    return integrand, [domain_type, domain_description, compiler_data, domain_data]
+
+  def _assemble_tensor(form, tensor):
+    return dolfin.assemble(form, tensor = tensor, reset_sparsity = False)
+else:
+  def preprocess_integral(form, integral):
+    """
+    Given an Integral associated with the given Form, return the integrand and
+    a list of arguments which can be used to construct an Integral from the
+    integrand.
+    """
+    
+    integrand = integral.integrand()
+    integral_type, domain, subdomain_id, metadata, subdomain_data = \
+      integral.integral_type(), integral.domain(), integral.subdomain_id(), integral.metadata(), integral.subdomain_data()
+    return integrand, [integral_type, domain, subdomain_id, metadata, subdomain_data]
   
-  integrand = integral.integrand()
-  domain_type, domain_description, compiler_data, domain_data = \
-    integral.domain_type(), integral.domain_description(), integral.compiler_data(), integral.domain_data()
-  return integrand, [domain_type, domain_description, compiler_data, domain_data]
+  def _assemble_tensor(form, tensor):
+    return dolfin.assemble(form, tensor = tensor)
 
 def matrix_optimisation(form):
   """
@@ -124,7 +144,7 @@ class PAForm(object):
 
     self._set_optimise(form)
 
-    self.__rank = extract_form_data(form).rank
+    self.__rank = form_rank(form)
     self.__deps = ufl.algorithms.extract_coefficients(form)
 
     return
@@ -279,7 +299,7 @@ class PABilinearForm(PAForm):
   """
   
   def __init__(self, form, pre_assembly_parameters = {}):
-    if not extract_form_data(form).rank == 2:
+    if not form_rank(form) == 2:
       raise InvalidArgumentException("form must be a rank 2 form")
     
     PAForm.__init__(self, form,
@@ -288,9 +308,8 @@ class PABilinearForm(PAForm):
     
     if not self._non_pre_assembled_L is None and not self._pre_assembled_L is None:
       # Work around a (rare) reproducibility issue:
-      # assemble(form, tensor = tensor, reset_sparsity = False) can give (very
-      # slightly) different results if given matrices with different sparsity
-      # patterns.
+      # _assemble_tensor(form, tensor = tensor) can give (very slightly)
+      # different results if given matrices with different sparsity patterns.
       
       # The coefficients may contain invalid data, or be non-wrapping
       # WrappedFunction s. Replace the coefficients with Constant(1.0).
@@ -325,7 +344,7 @@ class PABilinearForm(PAForm):
     else:
       if hasattr(self, "_PABilinearForm__non_pre_assembled_L_tensor"):
         L = self.__non_pre_assembled_L_tensor
-        assemble(self._non_pre_assembled_L, tensor = L, reset_sparsity = False)
+        _assemble_tensor(self._non_pre_assembled_L, tensor = L)
         if not self._pre_assembled_L is None:
           # The pre-assembled matrix and the non-pre-assembled matrix have
           # previously been configured so as to have the same sparsity pattern
@@ -344,7 +363,7 @@ class PALinearForm(PAForm):
   """
   
   def __init__(self, form, pre_assembly_parameters = {}):
-    if not extract_form_data(form).rank == 1:
+    if not form_rank(form) == 1:
       raise InvalidArgumentException("form must be a rank 1 form")
     
     PAForm.__init__(self, form,
@@ -471,11 +490,7 @@ class PALinearForm(PAForm):
         if not self._pre_assembled_L is None:
           L += self._pre_assembled_L
     else:
-      if hasattr(self, "_PALinearForm__non_pre_assembled_L_tensor"):
-        L = self.__non_pre_assembled_L_tensor
-        assemble(self._non_pre_assembled_L, tensor = L, reset_sparsity = False)
-      else:
-        L = self.__non_pre_assembled_L_tensor = assemble(self._non_pre_assembled_L)
+      L = assemble(self._non_pre_assembled_L)
       if not self._mult_assembled_L is None:
         for i in xrange(len(self._mult_assembled_L)):
           L += self._mult_assembled_L[i][0] * self._mult_assembled_L[i][1].vector()

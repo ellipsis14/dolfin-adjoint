@@ -80,7 +80,7 @@ class AssemblyCache(object):
       if not isinstance(bc, dolfin.cpp.DirichletBC):
         raise InvalidArgumentException("bcs must be a list of DirichletBC s")
 
-    rank = extract_form_data(form).rank
+    rank = form_rank(form)
     if len(bcs) == 0:
       if not rank == 2:
         compress = None
@@ -116,7 +116,7 @@ class AssemblyCache(object):
     
     counts = [0, 0, 0]
     for key in self.__cache.keys():
-      counts[extract_form_data(key[0]).rank] += 1
+      counts[form_rank(key[0])] += 1
 
     dolfin.info("Assembly cache status:")
     for i in xrange(3):
@@ -286,7 +286,7 @@ class SolverCache(object):
     
     if not isinstance(form, ufl.form.Form):
       raise InvalidArgumentException("form must be a rank 2 Form")
-    elif not extract_form_data(form).rank == 2:
+    elif not form_rank(form) == 2:
       raise InvalidArgumentException("form must be a rank 2 Form")
     if not isinstance(linear_solver_parameters, dict):
       raise InvalidArgumentException("linear_solver_parameters must be a dictionary")
