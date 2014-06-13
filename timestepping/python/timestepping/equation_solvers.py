@@ -168,7 +168,7 @@ class AssignmentSolver(object):
     if not isinstance(x, dolfin.Function):
       raise InvalidArgumentException("x must be a Function")
 
-    if isinstance(y, (int, float)):
+    if isinstance(y, (int, float, ufl.constantvalue.IntValue)):
       y = ufl.constantvalue.FloatValue(y)
     elif isinstance(y, dolfin.Function):
       if y is x:

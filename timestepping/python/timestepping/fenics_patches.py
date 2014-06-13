@@ -533,9 +533,16 @@ elif dolfin_version() < (1, 5, 0):
   dolfin.DirichletBC.zero_columns = DirichletBC_zero_columns
   del(DirichletBC_zero_columns)
 if dolfin_version() == (1, 4, 0):
-  dolfin.info_blue = lambda message : dolfin.info(ufl.log.BLUE % message)
-  dolfin.info_green = lambda message : dolfin.info(ufl.log.GREEN % message)
-  dolfin.info_red = lambda message : dolfin.info(ufl.log.RED % message)
+  __all__ += \
+    [
+      "info_blue",
+      "info_green",
+      "info_red"
+    ]
+  
+  info_blue = dolfin.info_blue = lambda message : dolfin.info(ufl.log.BLUE % message)
+  info_green = dolfin.info_green = lambda message : dolfin.info(ufl.log.GREEN % message)
+  info_red = dolfin.info_red = lambda message : dolfin.info(ufl.log.RED % message)
   
   def MPI_num_processes(self):
     return dolfin.MPI.size(dolfin.mpi_comm_world())

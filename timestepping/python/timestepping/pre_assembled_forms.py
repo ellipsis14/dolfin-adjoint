@@ -37,7 +37,7 @@ __all__ = \
   ]
 
 if dolfin_version() < (1, 4, 0):
-  def preprocess_integral(form, integral):
+  def preprocess_integral(integral):
     """
     Given an Integral associated with the given Form, return the integrand and
     a list of arguments which can be used to construct an Integral from the
@@ -52,7 +52,7 @@ if dolfin_version() < (1, 4, 0):
   def _assemble_tensor(form, tensor):
     return dolfin.assemble(form, tensor = tensor, reset_sparsity = False)
 else:
-  def preprocess_integral(form, integral):
+  def preprocess_integral(integral):
     """
     Given an Integral associated with the given Form, return the integrand and
     a list of arguments which can be used to construct an Integral from the
@@ -159,7 +159,7 @@ class PAForm(object):
       non_pre_assembled_L = []
       
       for integral in form.integrals():
-        integrand, iargs = preprocess_integral(form, integral)
+        integrand, iargs = preprocess_integral(integral)
         if self.pre_assembly_parameters["expand_form"]:
           if isinstance(integrand, ufl.algebra.Sum):
             terms = [(term, expand_expr(term)) for term in integrand.operands()]
@@ -383,7 +383,7 @@ class PALinearForm(PAForm):
       quadrature_degree = form_quadrature_degree(form)
     
       for integral in form.integrals():
-        integrand, iargs = preprocess_integral(form, integral)
+        integrand, iargs = preprocess_integral(integral)
         if self.pre_assembly_parameters["expand_form"]:
           if isinstance(integrand, ufl.algebra.Sum):
             terms = [(term, expand_expr(term)) for term in integrand.operands()]

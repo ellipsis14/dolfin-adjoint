@@ -350,19 +350,17 @@ def expand_expr(expr):
                          ufl.differentiation.VariableDerivative)):
     return expand_expr(expand(expr))
   # Expr types white-list. These cannot be expanded.
-  elif isinstance(expr, (ufl.constantvalue.IntValue,
+  elif isinstance(expr, (ufl.constantvalue.ConstantValue,
                          ufl.argument.Argument,
                          dolfin.Expression,
                          dolfin.Function,
                          dolfin.Constant,
-                         ufl.constantvalue.FloatValue,
                          ufl.geometry.Circumradius,
                          ufl.algebra.Abs,
                          ufl.geometry.FacetNormal,
                          ufl.mathfunctions.Sqrt,
                          ufl.classes.Variable,
                          ufl.mathfunctions.Exp,
-                         ufl.constantvalue.Zero,
                          ufl.algebra.Power,
                          ufl.indexing.MultiIndex,
                          ufl.classes.Label)):
