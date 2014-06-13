@@ -19,6 +19,7 @@ def main(ic, annotate=False):
   times  = [float(t)]
 
   if annotate: adj_start_timestep(time=t)
+  timestep = 0
 
   while t < T:
     print "Solving for t == %s" % (t + dt)
@@ -27,28 +28,31 @@ def main(ic, annotate=False):
     u_prev.assign(u_next, annotate=annotate)
 
     t += dt
-    states.append(Function(u_next))
+    timestep += 1
+    states.append(Function(u_next, name="Temperature%s" % timestep))
     times.append(float(t))
 
     if annotate: adj_inc_timestep(time=t, finished=t>=T)
 
-  return (times, states)
+  return (times, states, u_prev)
 
 if __name__ == "__main__":
   true_ic = interpolate(Expression("sin(2*pi*x[0])*sin(2*pi*x[1])"), V)
-  (times, true_states) = main(true_ic, annotate=False)
+  (times, true_states, u) = main(true_ic, annotate=False)
+  data = Function(u, name="Agh")
 
   guess_ic = interpolate(Expression("15 * x[0] * (1 - x[0]) * x[1] * (1 - x[1])"), V)
-  (times, computed_states) = main(guess_ic, annotate=True)
+  (times, computed_states, u) = main(guess_ic, annotate=True)
 
   success = replay_dolfin(tol=0.0, stop=True)
   assert success
 
+  #data = true_states[-1]
   combined = zip(times, true_states, computed_states)
-  J_orig = assemble(inner(computed_states[-1] - true_states[-1], computed_states[-1] - true_states[-1])*dx)
+  J_orig = assemble(inner(u - data, u - data)*dx)
   print "Base functional value: ", J_orig
 
-  J = Functional(inner(computed_states[-1] - true_states[-1], computed_states[-1] - true_states[-1])*dx*dt[FINISH_TIME])
+  J = Functional(inner(u - data, u - data)*dx*dt[FINISH_TIME])
   m = InitialConditionParameter("Temperature")
   rf = ReducedFunctional(J, m)
 
