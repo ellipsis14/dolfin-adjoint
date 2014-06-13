@@ -29,7 +29,7 @@ def main(ic, annotate=False):
 
     t += dt
     timestep += 1
-    states.append(Function(u_next, name="TemperatureX%s" % timestep))
+    states.append(Function(u_next, name="TemperatureT%s" % timestep, annotate=False))
     times.append(float(t))
 
     if annotate: adj_inc_timestep(time=t, finished=t>=T)
@@ -46,7 +46,7 @@ if __name__ == "__main__":
   success = replay_dolfin(tol=0.0, stop=True)
   assert success
 
-  data = Function(true_states[-1], name="TemperatureX3")
+  data = Function(true_states[-1])
   combined = zip(times, true_states, computed_states)
   J_orig = assemble(inner(u - data, u - data)*dx)
   print "Base functional value: ", J_orig
