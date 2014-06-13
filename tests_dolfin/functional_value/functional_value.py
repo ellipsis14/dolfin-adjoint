@@ -39,7 +39,6 @@ def main(ic, annotate=False):
 if __name__ == "__main__":
   true_ic = interpolate(Expression("sin(2*pi*x[0])*sin(2*pi*x[1])"), V)
   (times, true_states, u) = main(true_ic, annotate=False)
-  data = Function(u, name="Agh")
 
   guess_ic = interpolate(Expression("15 * x[0] * (1 - x[0]) * x[1] * (1 - x[1])"), V)
   (times, computed_states, u) = main(guess_ic, annotate=True)
@@ -47,7 +46,7 @@ if __name__ == "__main__":
   success = replay_dolfin(tol=0.0, stop=True)
   assert success
 
-  #data = true_states[-1]
+  data = Function(true_states[-1], name="Temperature3")
   combined = zip(times, true_states, computed_states)
   J_orig = assemble(inner(u - data, u - data)*dx)
   print "Base functional value: ", J_orig
