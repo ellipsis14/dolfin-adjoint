@@ -41,6 +41,9 @@ if __name__ == "__main__":
   guess_ic = interpolate(Expression("15 * x[0] * (1 - x[0]) * x[1] * (1 - x[1])"), V)
   (times, computed_states) = main(guess_ic, annotate=True)
 
+  success = replay_dolfin(tol=0.0, stop=True)
+  assert success
+
   combined = zip(times, true_states, computed_states)
   J_orig = assemble(inner(computed_states[-1] - true_states[-1], computed_states[-1] - true_states[-1])*dx)
   print "Base functional value: ", J_orig
