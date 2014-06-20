@@ -62,6 +62,9 @@ to the better minimum.
 from dolfin import *
 from dolfin_adjoint import *
 
+import dbg
+dbg.listen()
+
 try:
   import pyipopt
 except ImportError:
@@ -80,7 +83,7 @@ def alpha(rho):
   return alphabar + (alphaunderbar - alphabar) * rho * (1 + q) / (rho + q)
 
 # Define the discrete function spaces
-N = 50
+N = 200
 delta = 1.5 # The aspect ratio of the domain, 1 high and \delta wide
 V = Constant(1.0/3) * delta # want the fluid to occupy 1/3 of the domain
 
@@ -129,10 +132,12 @@ if __name__ == "__main__":
 
   # Define the reduced functionals
   controls = File("output/control_iterations_guess.pvd")
+  allctrls = File("output/allcontrols.pvd")
   rho_viz = Function(A, name="ControlVisualisation")
   def eval_cb(j, rho):
     rho_viz.assign(rho)
     controls << rho_viz
+    allctrls << rho_viz
 
   J = Functional(0.5 * inner(alpha(rho) * u, u) * dx + mu * inner(grad(u), grad(u)) * dx)
   m = SteadyParameter(rho)
@@ -153,15 +158,16 @@ if __name__ == "__main__":
       self.tmpvec = Function(A)
 
     def function(self, m):
+      print "Evaluting constraint residual"
       self.tmpvec.vector()[:] = m
 
       # Compute the integral of the control over the domain
       integral = self.smass.inner(self.tmpvec.vector())
-      if MPI.rank(mpi_comm_world()) == 0:
-        print "Current control integral: ", integral
+      print "Current control integral: ", integral
       return [self.V - integral]
 
     def jacobian(self, m):
+      print "Computing constraint Jacobian"
       return [-self.smass]
 
     def length(self):
@@ -170,7 +176,7 @@ if __name__ == "__main__":
 
   # Solve the optimisation problem with q = 0.01
   nlp = rfn.pyipopt_problem(bounds=(lb, ub), constraints=VolumeConstraint(V))
-  nlp.int_option('max_iter', 30)
+  nlp.int_option('max_iter', 20)
   rho_opt = nlp.solve()
   File("output/control_solution_guess.xml.gz") << rho_opt
 
@@ -192,6 +198,7 @@ if __name__ == "__main__":
   def eval_cb(j, rho):
     rho_viz.assign(rho)
     controls << rho_viz
+    allctrls << rho_viz
 
   J = Functional(0.5 * inner(alpha(rho) * u, u) * dx + mu * inner(grad(u), grad(u)) * dx)
   m = SteadyParameter(rho)
@@ -200,7 +207,7 @@ if __name__ == "__main__":
 
   # Solve the optimisation problem with q = 0.1
   nlp = rfn.pyipopt_problem(bounds=(lb, ub), constraints=VolumeConstraint(V))
-  nlp.int_option('max_iter', 100)
+  nlp.int_option('max_iter', 200)
   rho_opt = nlp.solve()
   File("output/control_solution_final.xml.gz") << rho_opt
 

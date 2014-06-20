@@ -147,9 +147,14 @@ class TimeForm(object):
       for term in self.terms:
           form = term.form
 
-          fd = form.compute_form_data()
-          if fd.rank != 0:
+          if hasattr(form, 'compute_form_data'):
+            fd = form.compute_form_data()
+            if fd.rank != 0:
+                return False
+          else:
+            if term.form.arguments():
               return False
+
           return True
 
 
