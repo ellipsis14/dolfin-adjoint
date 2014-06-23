@@ -75,14 +75,14 @@ class InitialConditionParameter(DolfinAdjointParameter):
       raise TypeError, "The coefficient must be a Function or a String"
     self.coeff = coeff
     self.value = value
-    self.var = None 
+    self.var = None
     # Find the first occurance of the coeffcient
     for t in range(adjglobals.adjointer.timestep_count):
       var = libadjoint.Variable(str(coeff), t, 0)
       if adjglobals.adjointer.variable_known(var):
-        self.var = var 
+        self.var = var
         break
-    # Fallback option for cases where the parameter is initialised before the annotation 
+    # Fallback option for cases where the parameter is initialised before the annotation
     if not self.var:
       self.var = libadjoint.Variable(str(coeff), 0, 0)
 
@@ -127,8 +127,11 @@ class ScalarParameter(DolfinAdjointParameter):
     self.a = a
     self.coeff = coeff
 
-    # I can't believe I'm making this nauseous hack. I *hate* Constant.assign. It's
-    # either constant or it isn't! Make up your minds!
+    # I can't believe I'm making this nauseous hack. I *hate*
+    # Constant.assign. It's either constant or it isn't! Make up your
+    # minds!
+    # MER: A dolfin.Constant is constant as in not spatially varying,
+    # not necessarily constant throughout the program.
     if isinstance(a, str):
       constant.scalar_parameters.append(a)
     else:
@@ -348,7 +351,7 @@ class TimeConstantParameter(InitialConditionParameter):
 class SteadyParameter(InitialConditionParameter):
   '''SteadyParameter is just another name for InitialConditionParameter,
   since from dolfin-adjoint's point of view they're exactly the same. But it
-  confuses people to talk about initial conditions of data in steady state problems, 
+  confuses people to talk about initial conditions of data in steady state problems,
   so hence this alias.'''
   pass
 

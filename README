@@ -1,0 +1,8 @@
+The dolfin-adjoint project automatically derives the discrete adjoint
+and tangent linear models from a forward model written in the Python
+interface to DOLFIN.
+
+See INSTALL for detailed installation instructions
+
+See AUTHORS for a list of contributors to dolfin-adjoint
+
