@@ -80,7 +80,15 @@ class KrylovSolver(dolfin.KrylovSolver):
       tnsp = self.tnsp
 
       if nsp is not None:
-        assert tnsp is not None, "Need to set transpose nullspace with solver.set_transpose_nullspace"
+        msg = """
+        The transpose nullspace is not set.
+
+        The nullspace of the KrylovSolver is set. In this case,
+        the transpose nullspace must also be set, use:
+
+          solver.set_transpose_nullspace(nullspace)
+        """
+        assert tnsp is not None, msg
 
       class KrylovSolverMatrix(adjlinalg.Matrix):
         def __init__(self, *args, **kwargs):
@@ -199,7 +207,7 @@ def transpose_operators(operators):
   for i in range(2):
     op = operators[i]
 
-    if op is None: 
+    if op is None:
       out[i] = None
     elif isinstance(op, dolfin.cpp.GenericMatrix):
       out[i] = op.__class__()
