@@ -18,10 +18,12 @@ __author__ = "Marie E. Rognes (meg@simula.no)"
 from dolfin import *
 from dolfin_adjoint import *
 
+set_log_level(PROGRESS)
 parameters["form_compiler"]["optimize"] = True
 parameters["form_compiler"]["cpp_optimize"] = True
 
-set_log_level(PROGRESS)
+def J(y, z, u, alpha):
+    1./2*inner(y - z, y - z)*dx + alpha/2.*inner(u, u)*dx
 
 def forward(mesh, T):
 
@@ -36,12 +38,12 @@ def forward(mesh, T):
     y0 = interpolate(y0, V)
 
     # Assign y0 to the first component of w_:
-    w_ = Function(W)
+    w_ = Function(W, name="Initial velocity-pressure")
     dolfin.assign(w_.sub(0), y0)
     (y_, p_) = split(w_)
 
     # Define trial and test functions
-    w = Function(W)
+    w = Function(W, name="Velocity-pressure")
     (y, p) = TrialFunctions(W)
     (phi, q) = TestFunctions(W)
 
@@ -49,13 +51,12 @@ def forward(mesh, T):
     Re = 10.0
     nu = Constant(1.0/Re)
     dT = Constant(0.01)
+
     num_steps = int(T/float(dT))
     print "Number of timesteps: %i." % num_steps
 
-    # Define initial control functions.
-    # The control is time-dependent, hence the control is a list
-    # if functions in V of length T/dT
-    u = [Function(V)]*num_steps
+    # Define the control function u
+    u = [Function(V, name="Control_%d" % i) for i in range(num_steps+1)]
 
     # Preassemble the left hand side of the weak Stokes equations
     a  = (inner(y, phi)*dx + dT*inner(nu*grad(y), grad(phi))*dx
@@ -72,18 +73,20 @@ def forward(mesh, T):
 
     # Create (suboptimal) Krylov solver
     solver = KrylovSolver(A, "gmres")
+    #solver = LUSolver(A)
 
-    # Create null space basis and attach it to the Krylov solver
-    null_vec = Vector(w.vector())
-    Q.dofmap().set(null_vec, 1.0)
-    null_vec *= 1.0/null_vec.norm("l2")
-    nullspace = VectorSpaceBasis([null_vec])
-    solver.set_nullspace(nullspace)
+    if isinstance(solver, KrylovSolver):
+        # Create null space basis and attach it to the Krylov solver
+        null_vec = Vector(w.vector())
+        Q.dofmap().set(null_vec, 1.0)
+        null_vec *= 1.0/null_vec.norm("l2")
+        nullspace = VectorSpaceBasis([null_vec])
+        solver.set_nullspace(nullspace)
 
-    # For the adjoint, the transpose nullspace must also be set. This
-    # system is symmetric, so the transpose nullspace is the same as
-    # the nullspace
-    solver.set_transpose_nullspace(nullspace);
+        # For the adjoint, the transpose nullspace must also be
+        # set. This system is symmetric, so the transpose nullspace is
+        # the same as the nullspace
+        solver.set_transpose_nullspace(nullspace);
 
     # Time-stepping
     progress = Progress("Time-stepping", num_steps)
@@ -98,30 +101,41 @@ def forward(mesh, T):
         solver.solve(w.vector(), b)
 
         # Plot solution
-        #(y, p) = w.split(deepcopy=True)
-        #plot(p, title="p")
+        (y, p) = w.split(deepcopy=True)
+        plot(p, title="p")
 
         # Update previous solution
         w_.assign(w)
 
         progress += 1
 
-    return (y, p, u)
+    return (w, u)
 
 
 if __name__ == "__main__":
 
     # Define mesh and end time
-    n = 20
+    n = 10
     mesh = UnitSquareMesh(n, n)
     T = 0.1
 
     # Set-up forward problem
-    (y, p, u) = forward(mesh, T)
+    (w, u) = forward(mesh, T)
+    (y, p) = split(w)
 
-    # Define tracking type functional:
+    # Define tracking type functional via the observations z:
     alpha = 1.0
     #alpha = 0.01
-    z = Constant((0.0, 0.0))
+    z = Function(w.function_space().sub(0).collapse(), name="Observations")
+
+    # FIXME: What notation to use here?
     j = 1./2*inner(y-z, y-z)*dx*dt #+ alpha/2.*u**2*dx*dt
     J = Functional(j)
+
+    # Define the reduced functional (see tutorial on PDE-constrained
+    # optimisation)
+    # FIXME: Which Parameter type to use?
+    # FIXME: Why is a Parameter needed at all?
+    Jtilde = ReducedFunctional(J, u)
+
+
