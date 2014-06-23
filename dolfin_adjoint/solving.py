@@ -163,7 +163,7 @@ def annotate(*args, **kwargs):
   # With the initial conditions out of the way, let us now define the callbacks that
   # define the actions of the operator the user has passed in on the lhs of this equation.
 
-  # Our equation may depend on Expressions, and those Expressions may have parameters 
+  # Our equation may depend on Expressions, and those Expressions may have parameters
   # (e.g. for time-dependent boundary conditions).
   # In order to successfully replay the forward solve, we need to keep those parameters around.
   # In expressions.py, we overloaded the Expression class to record all of the parameters
@@ -190,7 +190,7 @@ def annotate(*args, **kwargs):
       # Homogenise the adjoint boundary conditions. This creates the adjoint
       # solution associated with the lifted discrete system that is actually solved.
       adjoint_bcs = [backend.homogenize(bc) for bc in eq_bcs if isinstance(bc, backend.DirichletBC)] + [bc for bc in eq_bcs if not isinstance(bc, backend.DirichletBC)]
-      if len(adjoint_bcs) == 0: 
+      if len(adjoint_bcs) == 0:
         adjoint_bcs = None
       else:
         adjoint_bcs = misc.uniq(adjoint_bcs)
@@ -399,10 +399,12 @@ def register_initial_conditions(coeffdeps, linear, var=None):
 
       if hasattr(coeff, "split"):
         if coeff.split is True:
-          errmsg = '''Cannot use Function.split() (yet). To adjoint this, we need functionality
-          not yet present in DOLFIN. See https://bugs.launchpad.net/dolfin/+bug/891127 .
+          errmsg = """
+          dolfin-adjoint does not support dolfin.Function.split().
 
-          Your model may well work if you use split(func) instead of func.split().'''
+          To circumvent this, consider using split(func) rather
+          than func.split()
+          """
           raise libadjoint.exceptions.LibadjointErrorNotImplemented(errmsg)
 
       register_initial_condition(coeff, dep)
@@ -425,7 +427,7 @@ def register_initial_condition(coeff, dep):
 
 def do_checkpoint(cs, var, rhs):
   if cs == int(libadjoint.constants.adj_constants["ADJ_CHECKPOINT_STORAGE_MEMORY"]):
-    for coeff in adjglobals.adj_variables.keys(): 
+    for coeff in adjglobals.adj_variables.keys():
       dep = adjglobals.adj_variables[coeff]
       # Do not checkpoint variables which are (yet) unknown to libadjoint
       if not adjglobals.adjointer.variable_known(dep):
@@ -449,7 +451,7 @@ def do_checkpoint(cs, var, rhs):
 
   elif cs == int(libadjoint.constants.adj_constants["ADJ_CHECKPOINT_STORAGE_DISK"]):
 
-    for coeff in adjglobals.adj_variables.keys(): 
+    for coeff in adjglobals.adj_variables.keys():
       dep = adjglobals.adj_variables[coeff]
       # Do not checkpoint variables which are (yet) unknown to libadjoint
       if not adjglobals.adjointer.variable_known(dep):
@@ -463,7 +465,7 @@ def do_checkpoint(cs, var, rhs):
         else:
           continue
 
-      adjglobals.disk_checkpoints.add(str(dep)) 
+      adjglobals.disk_checkpoints.add(str(dep))
       adjglobals.adjointer.record_variable(dep, libadjoint.DiskStorage(adjlinalg.Vector(coeff), cs=True))
 
 
