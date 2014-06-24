@@ -25,7 +25,7 @@ parameters["form_compiler"]["cpp_optimize"] = True
 #def J(y, z, u, alpha):
 #    1./2*inner(y - z, y - z)*dx + alpha/2.*inner(u, u)*dx
 
-def forward(u, mesh, T, J=None):
+def forward(u, m, mesh, T, J=None):
 
     # Define Taylor-Hood function spaces
     V = VectorFunctionSpace(mesh, "CG", 2)
@@ -89,8 +89,11 @@ def forward(u, mesh, T, J=None):
 
         t += dT
 
+        #u.assign(m[n], annotate=True)
+        u.assign(m[n])
+
         # Assemble left hand side and apply boundary condition
-        L = inner(dT*u[n] + y_, phi)*dx
+        L = inner(dT*u + y_, phi)*dx
         assemble(L, tensor=b)
         bc.apply(b)
 
@@ -127,10 +130,11 @@ if __name__ == "__main__":
 
     # Define the control function u
     V = VectorFunctionSpace(mesh, "CG", 2)
-    u = [Function(V, name="Control_%d" % i) for i in range(num_steps)]
+    u = Function(V, name="Control")
+    m = [Function(V, name="Control_%d" % i) for i in range(num_steps)]
 
     # Set-up forward problem
-    w = forward(u, mesh, T)
+    w = forward(u, m, mesh, T)
     (y, p) = split(w)
 
     # Define tracking type functional via the observations z:
@@ -149,7 +153,8 @@ if __name__ == "__main__":
     # dolfin-adjoint treats them differently because of what has
     # happened to them though the course of the tape. y has varied, z
     # has not.
-    j = 1./2*inner(y-z, y-z)*dx*dt + trapezoidal(u, dT, alpha)
+    #j = 1./2*inner(y-z, y-z)*dx*dt + trapezoidal(u, dT, alpha)
+    j = 1./2*inner(y-z, y-z)*dx*dt + alpha/2.*inner(u, u)*dx*dt
     J = Functional(j)
 
     # Define the reduced functional (see tutorial on PDE-constrained
@@ -158,12 +163,12 @@ if __name__ == "__main__":
     # Jtilde = ReducedFunctional(J, u) # FUTURE
     #replay_dolfin(forget=False, stop=True)
 
-    controls = map(SteadyParameter, u)
-    compute_gradient(J, controls)
+    controls = map(SteadyParameter, m)
+    #compute_gradient(J, controls)
 
     # Optimize
-    #Jtilde = ReducedFunctional(J, controls)
-    #u_opt = minimize(Jtilde)
+    Jtilde = ReducedFunctional(J, controls)
+    u_opt = minimize(Jtilde)
 
 # Problems I ran into
 # 1. What Parameter to use
