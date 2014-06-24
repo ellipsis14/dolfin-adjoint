@@ -2,6 +2,7 @@ import libadjoint
 from dolfin import Function, Constant, info_red, info_green, File
 from dolfin_adjoint import adjlinalg, adjrhs, constant, drivers
 from dolfin_adjoint.adjglobals import adjointer, mem_checkpoints, disk_checkpoints
+from functional import Functional
 import cPickle as pickle
 import hashlib
 
@@ -12,11 +13,11 @@ class ReducedFunctional(object):
         solving the PDE that is annotated by dolfin-adjoint. The ReducedFunctional object may also be used
         to compute derivatives of that map. '''
 
-    def __init__(self, functional, parameter, scale=1.0, eval_cb=None, derivative_cb=None, replay_cb=None, hessian_cb=None, cache=False):
+    def __init__(self, functional, parameter, scale=1.0, eval_cb=None, derivative_cb=None, replay_cb=None, hessian_cb=None, cache=None):
         ''' Creates a reduced functional object that mpas parameter values to functional values. '''
 
         # Check the types of the inputs 
-        self._check_input_types(functional, parameter, scale, cache)
+        self.__check_input_types(functional, parameter, scale, cache)
 
         #: The objective functional.
         self.functional = functional
@@ -54,8 +55,8 @@ class ReducedFunctional(object):
         #: evaluated.
         self.replay_cb = replay_cb
 
-        #: If True, caching (memoization) will be activated. The parameter->ouput pairs
-        #: are stored on disk.
+        #: If not None, caching (memoization) will be activated. The parameter->ouput pairs
+        #: are stored on disk in the filename given by cache.
         self.cache = cache
         if cache is not None:
             try:
@@ -79,18 +80,19 @@ class ReducedFunctional(object):
         if len(self.parameter) == 1:
             self.H = drivers.hessian(functional, self.parameter[0], warn=False)
 
-    def _check_input_types(functional, parameter, scale, cache):
+    def __check_input_types(self, functional, parameter, scale, cache):
 
-        if not isinstance(reduced_functional, ReducedFunctional):
-            raise TypeError("reduced_functional should be a ReducedFunctional")
+        if not isinstance(functional, Functional):
+            raise TypeError("functional should be a Functional")
 
         # TODO: Check that parameter is a dolfin-adjoint.Parameter.
 
         if not isinstance(scale, float):
             raise TypeError("scale should be a float")
 
-        if not isinstance(cache, bool):
-            raise TypeError("scale should be a bool")
+        if cache is not None:
+            if not isinstance(cache, str):
+                raise TypeError("cache should be a filename")
 
     def __del__(self):
 
