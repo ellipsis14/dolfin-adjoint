@@ -135,7 +135,7 @@ if __name__ == "__main__":
 
       # Compute the integral of the control over the domain
       integral = self.smass.inner(self.tmpvec.vector())
-      if MPI.process_number() == 0:
+      if MPI.rank(mpi_comm_world()) == 0:
         print "Current control integral: ", integral
       return [self.V - integral]
 
