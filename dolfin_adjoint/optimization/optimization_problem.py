@@ -1,5 +1,5 @@
 from ..reduced_functional import ReducedFunctional
-from constraints import Constraint
+from constraints import Constraint, canonicalise
 import collections
 
 __all__ = ['MinimizationProblem', 'MaximizationProblem']
@@ -26,7 +26,7 @@ class OptimizationProblem(object):
         #: constraints: general (possibly nonlinear) constraints on the controls.
         #: None means no constraints, otherwise a Constraint object or a list of 
         #: Constraints.
-        self.constraints = constraints
+        self.constraints = canonicalise(constraints)
 
     def __check_arguments(self, reduced_functional, bounds, constraints):
 
