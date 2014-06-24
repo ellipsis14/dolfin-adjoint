@@ -17,6 +17,10 @@ from interpolation import interpolate
 from constant import Constant
 from timeforms import dt, TimeMeasure, START_TIME, FINISH_TIME
 
+# Expose PDE-constrained optimization utilities
+from optimization.optimization_problem import *
+from optimization.optimization_solver import *
+
 if backend.__name__ == "dolfin":
   from newton_solver import NewtonSolver
   from krylov_solver import KrylovSolver
