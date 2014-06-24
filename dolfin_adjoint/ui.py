@@ -29,7 +29,6 @@ if backend.__name__ == "dolfin":
   from reduced_functional import ReducedFunctional, replace_parameter_value, replace_tape_value
   from reduced_functional_numpy import ReducedFunctionalNumPy, ReducedFunctionalNumpy
   from optimization.optimization import minimize, maximize, print_optimization_methods, minimise, maximise
-  from optimization.steepest_descent import minimize_steepest_descent
   from optimization.multistage_optimization import minimize_multistage
   from optimization.constraints import InequalityConstraint, EqualityConstraint
   from pointintegralsolver import *
