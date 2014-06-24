@@ -1,6 +1,7 @@
 from optimization_solver import OptimizationSolver
 from ..reduced_functional_numpy import ReducedFunctionalNumPy
 import constraints
+from ..misc import rank
 
 import dolfin
 import numpy
@@ -51,6 +52,14 @@ class IPOPTSolver(OptimizationSolver):
                              dJ,                # to evaluate the gradient
                              fun_g,             # to evaluate the constraints
                              jac_g)             # to evaluate the constraint Jacobian
+
+        pyipopt.set_loglevel(1)                 # turn off annoying pyipopt logging
+
+        if rank() > 0:
+            nlp.int_option('print_level', 0)    # disable redundant IPOPT output in parallel
+        else:
+            nlp.int_option('print_level', 6)    # very useful IPOPT output
+
         self.pyipopt_problem = nlp
 
     def __get_bounds(self):
@@ -132,6 +141,7 @@ class IPOPTSolver(OptimizationSolver):
         else:
             # The length of the constraint vector
             nconstraints = len(constraint)
+            nparameters = len(self.rfn.get_parameters())
 
             # The constraint function
             def fun_g(x, user_data=None):
@@ -145,10 +155,10 @@ class IPOPTSolver(OptimizationSolver):
                     # FIXME: Don't have any sparsity information on constraints;
                     # pass in a dense matrix (it usually is anyway).
                     rows = []
-                    for i in range(len(constraint)):
-                        rows += [i] * n
-                    cols = range(n) * len(constraint)
-                    return (numpy.array(rows), np.array(cols))
+                    for i in range(nconstraints):
+                        rows += [i] * nparameters
+                    cols = range(nparameters) * nconstraints
+                    return (numpy.array(rows), numpy.array(cols))
                 else:
                   return numpy.array(constraint.jacobian(x))
 
@@ -183,9 +193,9 @@ class IPOPTSolver(OptimizationSolver):
     def __copy_data(self, m):
         """Returns a deep copy of the given Function/Constant."""
         if hasattr(m, "vector"): 
-            return Function(m.function_space())
+            return dolfin.Function(m.function_space())
         elif hasattr(m, "value_size"): 
-            return Constant(m(()))
+            return dolfin.Constant(m(()))
         else:
             raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
 
