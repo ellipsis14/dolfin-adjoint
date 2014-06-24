@@ -10,6 +10,7 @@ class OptimizationProblem(object):
     a MinimizationProblem or a MaximizationProblem."""
     def __init__(self, reduced_functional, bounds=None, constraints=None):
 
+        bounds = self.enlist(bounds)
         self.__check_arguments(reduced_functional, bounds, constraints)
 
         #: reduced_functional: a dolfin_adjoint.ReducedFunctional object that
@@ -21,7 +22,7 @@ class OptimizationProblem(object):
         #: the number controls for the reduced_functional. Each entry in the list
         #: must be a tuple (lb, ub), where ub and lb are floats, or objects
         #: of the same kind as the control.
-        self.bounds = self.enlist(bounds)
+        self.bounds = bounds
 
         #: constraints: general (possibly nonlinear) constraints on the controls.
         #: None means no constraints, otherwise a Constraint object or a list of 
@@ -37,15 +38,15 @@ class OptimizationProblem(object):
             raise TypeError("reduced_functional should be a ReducedFunctional")
 
         if bounds is not None:
-            if len(bounds) != len(reduced_functional.parameters):
+            if len(bounds) != len(reduced_functional.parameter):
                 raise TypeError("bounds should be of length number of controls of the ReducedFunctional")
-            for bound in bounds:
+            for (bound, parameter) in zip(bounds, reduced_functional.parameter):
                 if len(bound) != 2:
                     raise TypeError("Each bound should be a tuple of length 2 (lb, ub)")
 
                 for b in bound:
-                    klass = reduced_functional.parameters[i].data().__class__
-                    if not (isinstance(b, (float, NoneType, klass))):
+                    klass = parameter.data().__class__
+                    if not (isinstance(b, (float, type(None), klass))):
                         raise TypeError("This pair (lb, ub) should be None, a float, or a %s." % klass)
 
         if not ((constraints is None) or
@@ -68,7 +69,7 @@ class OptimizationProblem(object):
 
         if len(bounds) == 2: # support 'bounds=(lb, ub)' as well as 'bounds=[(lb, ub)]'
             for bound in bounds:
-                if isinstance(bounds, collections.Iterable):
+                if isinstance(bound, collections.Iterable):
                     should_i_make_a_damn_list = False
 
         if should_i_make_a_damn_list:
