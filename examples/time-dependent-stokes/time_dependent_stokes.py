@@ -89,8 +89,8 @@ def forward(u, m, mesh, T, J=None):
 
         t += dT
 
-        #u.assign(m[n], annotate=True)
-        u.assign(m[n])
+        u.assign(m[n], annotate=True)
+        #u.assign(m[n])
 
         # Assemble left hand side and apply boundary condition
         L = inner(dT*u + y_, phi)*dx
@@ -121,10 +121,10 @@ def forward(u, m, mesh, T, J=None):
 if __name__ == "__main__":
 
     # Define mesh and time parameters
-    n = 10
+    n = 16
     mesh = UnitSquareMesh(n, n)
     T = 0.1
-    dT = Constant(0.01)
+    dT = Constant(0.001)
     num_steps = int(T/float(dT))
     print "Number of timesteps: %i." % num_steps
 
@@ -167,8 +167,11 @@ if __name__ == "__main__":
     #compute_gradient(J, controls)
 
     # Optimize
+    set_log_level(ERROR)
     Jtilde = ReducedFunctional(J, controls)
-    u_opt = minimize(Jtilde)
+    u_opt = minimize(Jtilde, tol=1.e-10)
+    [plot(m) for m in u_opt]
+    interactive()
 
 # Problems I ran into
 # 1. What Parameter to use
