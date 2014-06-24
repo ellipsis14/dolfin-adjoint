@@ -17,10 +17,10 @@ class ReducedFunctionalNumPy(ReducedFunctional):
             This "NumPy version" of the reduced functional is created from an existing ReducedFunctional object:
               rf_np = ReducedFunctionalNumPy(rf = rf)
         '''
-        super(ReducedFunctionalNumPy, self).__init__(rf.functional, rf.parameter, scale = rf.scale, 
-                                                     eval_cb = rf.eval_cb, derivative_cb = rf.derivative_cb, 
-                                                     replay_cb = rf.replay_cb, hessian_cb = rf.hessian_cb, 
-                                                     ignore = rf.ignore, cache = rf.cache)
+        super(ReducedFunctionalNumPy, self).__init__(rf.functional, rf.parameter, scale=rf.scale, 
+                                                     eval_cb=rf.eval_cb, derivative_cb=rf.derivative_cb, 
+                                                     replay_cb=rf.replay_cb, hessian_cb=rf.hessian_cb, 
+                                                     cache=rf.cache)
         self.current_func_value = rf.current_func_value
 
         self.__base_call__ = rf.__call__
