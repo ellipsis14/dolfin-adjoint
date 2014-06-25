@@ -24,6 +24,12 @@ def make_LUSolverMatrix(idx, reuse_factorization):
 
       if var.type in ['ADJ_FORWARD', 'ADJ_TLM']:
         solver = lu_solvers[idx]
+        if solver is None:
+          A = assembly.assemble(self.data); [bc.apply(A) for bc in bcs]
+          lu_solvers[idx] = LUSolver(A)
+          lu_solvers[idx].parameters["reuse_factorization"] = True
+        solver = lu_solvers[idx]
+
       else:
         if adj_lu_solvers[idx] is None:
           A = assembly.assemble(self.data); [bc.apply(A) for bc in bcs]

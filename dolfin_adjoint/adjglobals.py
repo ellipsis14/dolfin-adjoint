@@ -72,6 +72,10 @@ def adj_reset_cache():
   caching.pis_fwd_to_tlm.clear()
   caching.pis_fwd_to_adj.clear()
 
+  if backend.__name__ == "dolfin":
+    lusolver.lu_solvers = [None] * len(lusolver.lu_solvers)
+    lusolver.adj_lu_solvers = [None] * len(lusolver.adj_lu_solvers)
+
 def adj_html(*args, **kwargs):
   '''This routine dumps the current state of the adjglobals.adjointer to a HTML visualisation.
   Use it like:
@@ -87,9 +91,6 @@ def adj_reset():
   expressions.expression_attrs.clear()
   adj_variables.__init__()
   function_names.__init__()
-  if backend.__name__ == "dolfin":
-    lusolver.lu_solvers = []
-    lusolver.adj_lu_solvers = []
   adj_reset_cache()
 
 # Map from FunctionSpace to LUSolver that has factorised the fsp mass matrix
