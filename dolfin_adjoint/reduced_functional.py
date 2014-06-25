@@ -204,7 +204,7 @@ class ReducedFunctional(object):
 
         return scaled_dfunc_value
 
-    def hessian(self, m_dot):
+    def hessian(self, m_dot, project=False):
         ''' Evaluates the Hessian action in direction m_dot. '''
         assert(len(self.parameter) == 1)
 
@@ -218,9 +218,10 @@ class ReducedFunctional(object):
 
         if isinstance(m_dot, list):
           assert len(m_dot) == 1
-          Hm = self.H(m_dot[0])
+          Hm = self.H(m_dot[0], project=project)
         else:
-          Hm = self.H(m_dot)
+          Hm = self.H(m_dot, project=project)
+
         if self.hessian_cb:
             self.hessian_cb(self.scale * self.current_func_value,
                             unlist([p.data() for p in self.parameter]),
