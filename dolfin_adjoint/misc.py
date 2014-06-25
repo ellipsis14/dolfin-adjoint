@@ -1,5 +1,4 @@
-import backend 
-
+import backend
 
 def uniq(seq):
   '''Remove duplicates from a list, preserving order'''
@@ -19,6 +18,8 @@ def continue_annotation(flag):
 def rank():
   # No idea what to do with firedrake here, so I assume one of them will fix it!
   try:
-    return backend.MPI.process_number()
-  except RuntimeError:
+    # DOLFIN 1.4 and onwards
     return backend.MPI.rank(backend.mpi_comm_world())
+  except RuntimeError:
+    # Will be removed in DOLFIN 1.5:
+    return backend.MPI.process_number()
