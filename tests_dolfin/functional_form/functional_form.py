@@ -1,3 +1,5 @@
+"Test expected failures"
+
 from dolfin import *
 from dolfin_adjoint import *
 
@@ -21,18 +23,18 @@ J = Functional(form_valid)
 form_invalid = inner(u-ud, s)*dx
 try:
     J = Functional(form_invalid)
-except UFLException:
+except Exception:
     pass
 
 # Form has not rank 0
-form_invalid = inner(u, s)*dx 
+form_invalid = inner(u, s)*dx
 try:
     J = Functional(form_invalid)
 except Exception:
     pass
 
 # Form has not rank 0
-form_invalid = inner(u, v)*dx 
+form_invalid = inner(u, v)*dx
 try:
     J = Functional(form_invalid)
 except Exception:
