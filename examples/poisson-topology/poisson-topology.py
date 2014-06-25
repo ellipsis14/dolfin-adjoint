@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
 
 r"""
-Solve example 1 of 
+Solve example 1 of
 
 @article{gersborg2006,
 year={2006},
@@ -141,7 +141,15 @@ if __name__ == "__main__":
       """Return the number of components in the constraint vector (here, one)."""
       return 1
 
-  problem = MinimizationProblem(Jhat, bounds=(lb, ub), constraints=VolumeConstraint(V))
+  problem = MinimizationProblem(Jhat, bounds=(lb, ub),
+                                constraints=VolumeConstraint(V))
   solver  = IPOPTSolver(problem)
   a_opt   = solver.solve()
   File("output/control_solution.xml.gz") << a_opt
+
+  # Consider this short form
+  # parameters["optimization_backend"] = "TAO"
+  # a_opt = optimize(problem)
+
+
+
