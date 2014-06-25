@@ -3,7 +3,7 @@ import backend
 import libadjoint
 
 import solving
-import assign
+import assignment
 import expressions
 import adjrhs
 
@@ -57,11 +57,11 @@ def annotate_split(bigfn, idx, smallfn, bcs):
     smallfn_massed = backend.Function(fn_space)
     backend.solve(mass == backend.action(mass, smallfn), smallfn_massed)
     assert False, "No idea how to assign to a subfunction yet .. "
-    #assign.dolfin_assign(bigfn, smallfn_massed)
+    #assignment.dolfin_assign(bigfn, smallfn_massed)
 
   if backend.parameters["adjoint"]["record_all"]:
     smallfn_record = backend.Function(fn_space)
-    assign.dolfin_assign(smallfn_record, smallfn)
+    assignment.dolfin_assign(smallfn_record, smallfn)
     adjglobals.adjointer.record_variable(var, libadjoint.MemoryStorage(adjlinalg.Vector(smallfn_record)))
 
 class SplitRHS(adjrhs.RHS):
@@ -91,7 +91,7 @@ class SplitRHS(adjrhs.RHS):
       # fn = outfn.split()[idx]; fn.vector()[:] = values_I_want_to_assign_to_outfn[idx]
       # for whatever reason
       assert False, "No idea how to assign to a subfunction yet .. "
-      assign.dolfin_assign(outfn, contraction_vector.data)
+      assignment.dolfin_assign(outfn, contraction_vector.data)
 
       action = backend.inner(bigtest, outfn)*backend.dx
 

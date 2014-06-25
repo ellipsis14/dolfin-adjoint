@@ -2,7 +2,7 @@ import backend
 import ufl
 from solving import solve, annotate as solving_annotate
 import libadjoint
-import assign
+import assignment
 import adjlinalg
 import adjglobals
 import utils
@@ -65,7 +65,7 @@ def dolfin_adjoint_assign(self, other, annotate=None, *args, **kwargs):
     adjglobals.adj_variables.forget(self)
 
   out = dolfin_assign(self, other, *args, **kwargs)
-  assign.register_assign(self, other)
+  assignment.register_assign(self, other)
   return out
 
 def dolfin_adjoint_split(self, *args, **kwargs):
@@ -88,7 +88,7 @@ def dolfin_adjoint_str(self):
 def dolfin_adjoint_interpolate(self, other, annotate=None):
     out = dolfin_interpolate(self, other)
     if annotate is True:
-      assign.register_assign(self, other, op=backend.interpolate)
+      assignment.register_assign(self, other, op=backend.interpolate)
       adjglobals.adjointer.record_variable(adjglobals.adj_variables[self], libadjoint.MemoryStorage(adjlinalg.Vector(self)))
 
     return out
@@ -146,7 +146,7 @@ class Function(backend.Function):
           known = True
 
         if known or (annotate is True):
-          assign.register_assign(self, args[0])
+          assignment.register_assign(self, args[0])
 
   def assign(self, other, annotate=None, *args, **kwargs):
     '''To disable the annotation, just pass :py:data:`annotate=False` to this routine, and it acts exactly like the

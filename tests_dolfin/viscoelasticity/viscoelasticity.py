@@ -142,7 +142,7 @@ def crank_nicolson_step(Z, z_, k_n, g, v_D_mid, ds, params):
     # of components (same deal as for slip for Stokes for
     # instance). Use penalty instead
     beta = Constant(penalty_beta)
-    h = tetrahedron.volume
+    h = CellVolume(Z.mesh())
     F_penalty = 0.5*(beta*inv(h)*inner((tau0 + tau1)*n,
                                        (sigma0 + sigma1)*n - g)*ds(1))
     F = F + F_penalty
@@ -178,7 +178,7 @@ def bdf2_step(Z, z_, z__, k_n, g, v_D, ds, params):
 
     # Enforce essential bc on stress by penalty
     beta = Constant(penalty_beta)
-    h = tetrahedron.volume
+    h = CellVolume(Z.mesh())
     F_penalty = beta*inv(h)*inner((tau0 + tau1)*n,
                                   (sigma0 + sigma1)*n - g)*ds(1)
     F = F + F_penalty
