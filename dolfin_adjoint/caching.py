@@ -1,6 +1,6 @@
 import re
 import ufl.algorithms
-from dolfin import Constant
+from backend import Constant
 
 ### A general dictionary that applies a key function before lookup
 class KeyedDict(dict):

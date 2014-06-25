@@ -1,5 +1,5 @@
 import libadjoint
-from dolfin import Function, Constant, info_red, info_green, File
+from backend import Function, Constant, info_red, info_green, File
 from dolfin_adjoint import adjlinalg, adjrhs, constant, drivers
 from dolfin_adjoint.adjglobals import adjointer, mem_checkpoints, disk_checkpoints
 import cPickle as pickle
