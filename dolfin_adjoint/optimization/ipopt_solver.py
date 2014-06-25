@@ -15,7 +15,7 @@ class IPOPTSolver(OptimizationSolver):
         try:
             import pyipopt
         except ImportError:
-            print("You need to install pyipopt. Make sure to install IPOPT with HSL support!")
+            print("You need to install pyipopt. It is recommended to install IPOPT with HSL support!")
             raise
 
         OptimizationSolver.__init__(self, problem, parameters)
