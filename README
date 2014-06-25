@@ -1,13 +1,2 @@
-The dolfin-adjoint project automatically derives the discrete adjoint
-and tangent linear models from a forward model written in the Python
-interface to DOLFIN.
 
-See INSTALL for detailed installation instructions
-
-The dolfin-adjoint project is developed and maintained by the following authors:
-
-* Patrick E. Farrell (Mathematical Institute, University of Oxford)
-* Simon W. Funke (Center for Biomedical Computing, Simula Research Laboratory / Applied Modelling and Computation Group, Imperial College London)
-* David A. Ham (Department of Mathematics and Department of Computing, Imperial College London)
-* Marie E. Rognes (Center for Biomedical Computing, Simula Research Laboratory)
-* James R. Maddison (School of Mathematics, University of Edinburgh)
+www.dolfin-adjoint.org
