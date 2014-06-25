@@ -108,11 +108,6 @@ if __name__ == "__main__":
   # and derives and solves the adjoint equation each time the functional gradient is to be evaluated.
   Jhat = ReducedFunctional(J, m, eval_cb=eval_cb)
 
-  # The ReducedFunctional object takes in high-level dolfin objects (i.e. the input to the evaluation Jhat(a) would be a Function). But
-  # all optimisation algorithms expect to pass numpy arrays in and out. This ReducedFunctionalNumpy wraps the ReducedFunctional to handle
-  # array input and output.
-  rfn  = ReducedFunctionalNumPy(Jhat)
-
   # Now configure the constraints on the control.
 
   # Bound constraints
@@ -146,8 +141,7 @@ if __name__ == "__main__":
       """Return the number of components in the constraint vector (here, one)."""
       return 1
 
-  # Solve the optimisation problem
-  nlp = rfn.pyipopt_problem(bounds=(lb, ub), constraints=VolumeConstraint(V))
-  a_opt = nlp.solve(full=False)
-
+  problem = MinimizationProblem(Jhat, bounds=(lb, ub), constraints=VolumeConstraint(V))
+  solver  = IPOPTSolver(problem)
+  a_opt   = solver.solve()
   File("output/control_solution.xml.gz") << a_opt
