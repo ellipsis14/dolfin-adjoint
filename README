@@ -6,8 +6,8 @@ See INSTALL for detailed installation instructions
 
 The dolfin-adjoint project is developed and maintained by the following authors:
 
-Patrick E. Farrell (Mathematical Institute, University of Oxford)
-Simon W. Funke (Center for Biomedical Computing, Simula Research Laboratory / Applied Modelling and Computation Group, Imperial College London)
-David A. Ham (Department of Mathematics and Department of Computing, Imperial College London)
-Marie E. Rognes (Center for Biomedical Computing, Simula Research Laboratory)
-James R. Maddison (School of Mathematics, University of Edinburgh)See AUTHORS for a list of contributors to dolfin-adjoint
+* Patrick E. Farrell (Mathematical Institute, University of Oxford)
+* Simon W. Funke (Center for Biomedical Computing, Simula Research Laboratory / Applied Modelling and Computation Group, Imperial College London)
+* David A. Ham (Department of Mathematics and Department of Computing, Imperial College London)
+* Marie E. Rognes (Center for Biomedical Computing, Simula Research Laboratory)
+* James R. Maddison (School of Mathematics, University of Edinburgh)
