@@ -103,11 +103,12 @@ class IPOPTSolver(OptimizationSolver):
 
         else:
             # Unfortunately you really need to specify bounds, I think?!
+            nparameters = len(self.rfn.get_parameters())
             max_float = numpy.finfo(numpy.double).max
-            ub = numpy.array([max_float]*n)
+            ub = numpy.array([max_float]*nparameters)
 
             min_float = numpy.finfo(numpy.double).min
-            lb = numpy.array([min_float]*n)
+            lb = numpy.array([min_float]*nparameters)
 
         return (lb, ub)
 
