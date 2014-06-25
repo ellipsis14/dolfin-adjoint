@@ -1,4 +1,5 @@
 from optimization_solver import OptimizationSolver
+from optimization_problem import MaximizationProblem, MinimizationProblem
 from ..reduced_functional_numpy import ReducedFunctionalNumPy
 import constraints
 from ..misc import rank
@@ -59,6 +60,11 @@ class IPOPTSolver(OptimizationSolver):
             nlp.int_option('print_level', 0)    # disable redundant IPOPT output in parallel
         else:
             nlp.int_option('print_level', 6)    # very useful IPOPT output
+
+        if isinstance(self.problem, MaximizationProblem):
+            # multiply objective function by -1 internally in
+            # ipopt to maximise instead of minimise
+            nlp.num_option('obj_scaling_factor', -1.0)
 
         self.pyipopt_problem = nlp
 
