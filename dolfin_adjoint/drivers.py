@@ -217,7 +217,7 @@ class BasicHessian(libadjoint.Matrix):
   def update(self, m):
     pass
 
-  def __call__(self, m_dot):
+  def __call__(self, m_dot, project=False):
 
     hess_action_timer = backend.Timer("Hessian action")
 
@@ -294,7 +294,7 @@ class BasicHessian(libadjoint.Matrix):
     if isinstance(Hm, backend.Function):
       Hm.rename("d^2(%s)/d(%s)^2" % (str(self.J), str(self.m)), "a Function from dolfin-adjoint")
 
-    return Hm
+    return postprocess(Hm, project)
 
   def action(self, x, y):
     assert isinstance(x.data, backend.Function)
