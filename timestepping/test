@@ -109,7 +109,7 @@ if opts.local:
 def run_test(i, np, test, test_success):
   sys.stdout.write("Running test: %s\n" % test)
   
-  env = copy.copy(os.environ)
+  env = copy.deepcopy(os.environ)
   env["PYTHONPATH"] = os.path.join(path, "python")
   if "PYTHONPATH" in os.environ:
     env["PYTHONPATH"] = "%s:%s" % (env["PYTHONPATH"], os.environ["PYTHONPATH"])
