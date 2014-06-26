@@ -29,8 +29,8 @@ def enlist(x):
     else:
         return Enlisted([x])
 
-def delist(x):
-    if isinstance(x, Enlisted):
+def delist(x, list_type):
+    if isinstance(list_type, Enlisted):
         assert len(x) == 1
         return x[0]
     else:

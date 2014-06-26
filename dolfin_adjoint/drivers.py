@@ -159,7 +159,7 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
 
   rename(J, dJdparam, param)
 
-  return postprocess(dJdparam, project)
+  return postprocess(dJdparam, project, list_type=enlisted_controls)
 
 def rename(J, dJdparam, param):
   if isinstance(dJdparam, list):
@@ -182,9 +182,9 @@ def project_test(func):
   else:
     return func
 
-def postprocess(dJdparam, project):
+def postprocess(dJdparam, project, list_type):
   if isinstance(dJdparam, list):
-    return delist(dJdparam.__class__([postprocess(x, project) for x in dJdparam]))
+    return delist([postprocess(x, project, list_type) for x in dJdparam], list_type=list_type)
   else:
     if project:
       dJdparam = project_test(dJdparam)
@@ -294,7 +294,7 @@ class BasicHessian(libadjoint.Matrix):
     if isinstance(Hm, backend.Function):
       Hm.rename("d^2(%s)/d(%s)^2" % (str(self.J), str(self.m)), "a Function from dolfin-adjoint")
 
-    return postprocess(Hm, project)
+    return postprocess(Hm, project, list_type=[])
 
   def action(self, x, y):
     assert isinstance(x.data, backend.Function)

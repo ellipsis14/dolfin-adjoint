@@ -129,7 +129,7 @@ class ReducedFunctional(object):
               output.data.rename(str(fwd_var), "a Function from dolfin-adjoint")
 
             if self.replay_cb is not None:
-              self.replay_cb(fwd_var, output.data, delist(value))
+              self.replay_cb(fwd_var, output.data, delist(value, list_type=self.parameter))
 
             # Check if we checkpointing is active and if yes
             # record the exact same checkpoint variables as 
@@ -163,7 +163,7 @@ class ReducedFunctional(object):
 
         self.current_func_value = func_value 
         if self.eval_cb:
-            self.eval_cb(self.scale * func_value, delist(value))
+            self.eval_cb(self.scale * func_value, delist(value, list_type=self.parameter))
 
         if self.cache:
             # Add result to cache
@@ -187,7 +187,7 @@ class ReducedFunctional(object):
         dfunc_value = enlist(dfunc_value)
 
         adjointer.reset_revolve()
-        scaled_dfunc_value = self.parameter.__class__([])
+        scaled_dfunc_value = []
         for df in list(dfunc_value):
             if hasattr(df, "function_space"):
                 scaled_dfunc_value.append(Function(df.function_space(), self.scale * df.vector()))
@@ -196,8 +196,8 @@ class ReducedFunctional(object):
 
         if self.derivative_cb:
             if self.current_func_value is not None:
-              values = self.parameter.__class__([p.data() for p in self.parameter])
-              self.derivative_cb(self.scale * self.current_func_value, delist(scaled_dfunc_value), delist(values))
+              values = [p.data() for p in self.parameter]
+              self.derivative_cb(self.scale * self.current_func_value, delist(scaled_dfunc_value, list_type=self.parameter), delist(values, list_type=self.parameter))
             else:
               info_red("Gradient evaluated without functional evaluation, not calling derivative callback function")
 
@@ -227,7 +227,7 @@ class ReducedFunctional(object):
 
         if self.hessian_cb:
             self.hessian_cb(self.scale * self.current_func_value,
-                            delist([p.data() for p in self.parameter]),
+                            delist([p.data() for p in self.parameter], list_type=self.parameter),
                             m_dot,
                             Hm.vector() * self.scale)
 
