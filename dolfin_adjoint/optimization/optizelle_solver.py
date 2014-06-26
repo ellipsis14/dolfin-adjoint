@@ -140,26 +140,45 @@ try:
             self.scale = scale
 
         def eval(self, x):
-            if self.last_x is not None:
-                normsq = DolfinVectorSpace.normsqdiff(x, self.last_x)
-                if normsq == 0.0:
-                    return self.last_J
+            print "Evaluating objective functional."
+            try:
+                if self.last_x is not None:
+                    normsq = DolfinVectorSpace.normsqdiff(x, self.last_x)
+                    if normsq == 0.0:
+                        return self.last_J
 
-            self.last_x = DolfinVectorSpace.init(x)
-            self.last_J = self.scale*self.rf(x)
-            return self.last_J
+                self.last_x = DolfinVectorSpace.init(x)
+                self.rf(x)
+                self.last_J = self.scale*self.rf(x)
+                return self.last_J
+            except:
+                import traceback
+                traceback.print_exc()
+                raise
 
         def grad(self, x, grad):
-            self.eval(x)
-            out = self.rf.derivative(forget=False, project=True)
-            DolfinVectorSpace.scal(self.scale, out)
-            DolfinVectorSpace.copy(out, grad)
+            print "Evaluating objective gradient."
+            try:
+                self.eval(x)
+                out = self.rf.derivative(forget=False, project=True)
+                DolfinVectorSpace.scal(self.scale, out)
+                DolfinVectorSpace.copy(out, grad)
+            except:
+                import traceback
+                traceback.print_exc()
+                raise
 
         def hessvec(self, x, dx, H_dx):
-            self.eval(x)
-            H = self.rf.hessian(dx, project=True)
-            DolfinVectorSpace.scal(self.scale, H)
-            DolfinVectorSpace.copy(H, H_dx)
+            print "Evaluating objective Hessian."
+            try:
+                self.eval(x)
+                H = self.rf.hessian(dx, project=True)
+                DolfinVectorSpace.scal(self.scale, H)
+                DolfinVectorSpace.copy(H, H_dx)
+            except:
+                import traceback
+                traceback.print_exc()
+                raise
 
 
     class OptizelleConstraints(Optizelle.VectorValuedFunction):
@@ -168,8 +187,9 @@ try:
             interface.
         '''
 
-        def __init__(self, constraints):
+        def __init__(self, problem, constraints):
             self.constraints = constraints
+            self.list_type = problem.reduced_functional.parameter
 
         def eval(self, x, y):
             ''' Evaluates the constraints and stores the result in y. '''
@@ -181,7 +201,7 @@ try:
             print "In Constraint evaluation"
 
             try:
-                y[:] = self.constraints.function(x)
+                y[:] = self.constraints.function(delist(x, self.list_type))
             except:
                 import traceback
                 traceback.print_exc()
@@ -196,7 +216,7 @@ try:
             print "In Jacobian action evaluation"
 
             try: 
-                self.constraints.jacobian_action(x, dx, y)
+                self.constraints.jacobian_action(delist(x, self.list_type), delist(dx, self.list_type), y)
             except:
                 import traceback
                 traceback.print_exc()
@@ -216,7 +236,7 @@ try:
             print "In Jacobian adjoint action evaluation"
 
             try: 
-                self.constraints.jacobian_adjoint_action(x, dy, z)
+                self.constraints.jacobian_adjoint_action(delist(x, self.list_type), dy, delist(z, self.list_type))
             except:
                 import traceback
                 traceback.print_exc()
@@ -235,7 +255,7 @@ try:
             print "In Hessian action evaluation."
 
             try: 
-                self.constraints.hessian_action(x, dx, dy, z)
+                self.constraints.hessian_action(delist(x, self.list_type), delist(dx, self.list_type), delist(dy, self.list_type), z)
             except:
                 import traceback
                 traceback.print_exc()
@@ -270,11 +290,20 @@ class OptizelleSolver(OptimizationSolver):
             import Optizelle.Constrained.State
             import Optizelle.Constrained.Functions
             import Optizelle.Constrained.Algorithms
+            import Optizelle.EqualityConstrained.State
+            import Optizelle.EqualityConstrained.Functions
+            import Optizelle.EqualityConstrained.Algorithms
+            import Optizelle.InequalityConstrained.State
+            import Optizelle.InequalityConstrained.Functions
+            import Optizelle.InequalityConstrained.Algorithms
         except ImportError:
             print("Could not import Optizelle.")
             raise
 
         OptimizationSolver.__init__(self, problem, parameters)
+
+        # TODO: Add bound support to Optizelle
+        assert self.problem.bounds is None
 
         self.__build_optizelle_state()
 
@@ -289,8 +318,12 @@ class OptizelleSolver(OptimizationSolver):
 
         # Create the appropriate Optizelle state, taking into account which
         # type of constraints we have (unconstrained, (in)-equality constraints).
-        num_equality_constraints = len(self.problem.constraints.equality_constraints())
-        num_inequality_constraints = len(self.problem.constraints.inequality_constraints())
+        if self.problem.constraints is None:
+            num_equality_constraints = 0
+            num_inequality_constraints = 0
+        else:
+            num_equality_constraints = len(self.problem.constraints.equality_constraints())
+            num_inequality_constraints = len(self.problem.constraints.inequality_constraints())
 
         x = [p.data() for p in self.problem.reduced_functional.parameter]
 
@@ -312,7 +345,7 @@ class OptizelleSolver(OptimizationSolver):
             equality_constraints = self.problem.constraints.equality_constraints()
 
             self.fns.f = OptizelleObjective(self.problem.reduced_functional, scale=scale)
-            self.fns.g = OptizelleConstraints(equality_constraints)
+            self.fns.g = OptizelleConstraints(self.problem, equality_constraints)
 
         # Inequality constraints only
         elif num_equality_constraints == 0 and num_inequality_constraints > 0:
@@ -326,7 +359,7 @@ class OptizelleSolver(OptimizationSolver):
             inequality_constraints = self.problem.constraints.inequality_constraints()
 
             self.fns.f = OptizelleObjective(self.problem.reduced_functional, scale=scale)
-            self.fns.h = OptizelleConstraints(inequality_constraints)
+            self.fns.h = OptizelleConstraints(self.problem, inequality_constraints)
 
         # Inequality and equality constraints
         else:
@@ -344,8 +377,8 @@ class OptizelleSolver(OptimizationSolver):
             inequality_constraints = self.problem.constraints.inequality_constraints()
 
             self.fns.f = OptizelleObjective(self.problem.reduced_functional, scale=scale)
-            self.fns.g = OptizelleConstraints(equality_constraints)
-            self.fns.h = OptizelleConstraints(inequality_constraints)
+            self.fns.g = OptizelleConstraints(self.problem, equality_constraints)
+            self.fns.h = OptizelleConstraints(self.problem, inequality_constraints)
 
         # Set solver parameters
         self.__set_optizelle_parameters()
@@ -374,6 +407,13 @@ class OptizelleSolver(OptimizationSolver):
     def solve(self):
         """Solve the optimization problem and return the optimized parameters."""
 
+        if self.problem.constraints is None:
+            num_equality_constraints = 0
+            num_inequality_constraints = 0
+        else:
+            num_equality_constraints = len(self.problem.constraints.equality_constraints())
+            num_inequality_constraints = len(self.problem.constraints.inequality_constraints())
+
         # No constraints
         if self.problem.constraints is None:
             Optizelle.Unconstrained.Algorithms.getMin(DolfinVectorSpace, Optizelle.Messaging(), self.fns, self.state)
@@ -394,5 +434,5 @@ class OptizelleSolver(OptimizationSolver):
         print("The algorithm converged due to: %s" % (Optizelle.StoppingCondition.to_string(self.state.opt_stop)))
 
         # Return the optimal control
-        x_wrapped = self.problem.reduced_functional.parameter.__class__(self.state.x)
-        return delist(x_wrapped)
+        list_type = self.problem.reduced_functional.parameter
+        return delist(self.state.x, list_type)
