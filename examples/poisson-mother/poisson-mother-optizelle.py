@@ -47,7 +47,43 @@ J = Functional((0.5*inner(u-d, u-d))*dx + alpha/2*f**2*dx)
 control = SteadyParameter(f)
 rf = ReducedFunctional(J, control)
 
-problem = MinimizationProblem(rf)
+# Volume constraints
+class VolumeConstraint(InequalityConstraint):
+    """A class that enforces the volume constraint g(a) = volume - a*dx >= 0."""
+    def __init__(self, volume, W):
+      self.volume  = float(volume)
+
+      # The derivative of the constraint g(x) is constant (it is the diagonal of the lumped mass matrix for the control function space), so let's assemble it here once.
+      # This is also useful in rapidly calculating the integral each time without re-assembling.
+      self.smass  = assemble(TestFunction(W) * Constant(1) * dx)
+      self.tmpvec = Function(W)
+
+    def function(self, m):
+      self.tmpvec.assign(m)
+
+      # Compute the integral of the control over the domain
+      integral = self.smass.inner(self.tmpvec.vector())
+      if MPI.rank(mpi_comm_world()) == 0:
+        print "Current control integral: ", integral
+        print "Maximum of control: ", m.vector().max()
+        print "Minimum of control: ", m.vector().min()
+      return [self.volume - integral]
+
+    def jacobian_action(self, m, dm, result):
+      result[:] = self.smass.inner(-dm.vector())
+
+    def jacobian_adjoint_action(self, m, dp, result):
+      #result.vector()[:] = -self.smass*dp
+      result.vector()[:] = -1.*dp[0]
+
+    def hessian_action(self, m, dm, dp, result):
+      result.vector()[:] = 0.0
+
+    def length(self):
+      """Return the number of components in the constraint vector (here, one)."""
+      return 1
+
+problem = MinimizationProblem(rf, constraints=VolumeConstraint(0.6, W))
 parameters = {
              "maximum_iterations": 5,
              "optizelle_parameters":
@@ -55,7 +91,8 @@ parameters = {
                  "msg_level" : 10,
                  "algorithm_class" : Optizelle.AlgorithmClass.LineSearch,
                  "H_type" : Optizelle.Operators.UserDefined,
-                 "dir" : Optizelle.LineSearchDirection.NewtonCG,
+                 "dir" : Optizelle.LineSearchDirection.BFGS,
+                 "ipm": Optizelle.InteriorPointMethod.PrimalDual,
                  "linesearch_iter_max" : 50,
                  "krylov_iter_max" : 100,
                  "eps_krylov" : 1e-9
@@ -65,3 +102,4 @@ parameters = {
 solver = OptizelleSolver(problem, parameters=parameters)
 f_opt = solver.solve()
 plot(f_opt, interactive=True)
+print "Volume: ", assemble(f_opt*dx)

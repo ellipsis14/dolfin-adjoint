@@ -101,7 +101,7 @@ class DolfinVectorSpace(object):
         raise NotImplementedError
 
     @staticmethod
-    def linv(x,y,z):
+    def linv(x, y, z):
         raise NotImplementedError
 
     @staticmethod
@@ -130,6 +130,80 @@ class DolfinVectorSpace(object):
 
 try:
     import Optizelle
+    import copy
+
+    class RmVectorSpace(object):
+        @staticmethod
+        def init(x):
+            """Memory allocation and size setting"""
+            return copy.deepcopy(x) 
+
+        @staticmethod
+        def copy(x,y):
+            """y <- x (Shallow.  No memory allocation.)"""
+            numpy.copyto(y,x) 
+
+        @staticmethod
+        def scal(alpha,x):
+            """x <- alpha * x"""
+            x.__imul__(alpha)
+
+        @staticmethod
+        def zero(x):
+            """x <- 0"""
+            x.fill(0.)
+
+        @staticmethod
+        def axpy(alpha,x,y):
+            """y <- alpha * x + y"""
+            y.__iadd__(alpha*x)
+
+        @staticmethod
+        def innr(x,y):
+            """<- <x,y>"""
+            return numpy.inner(x,y) 
+
+        @staticmethod
+        def rand(x):
+            """x <- random"""
+            numpy.copyto(x,map(lambda x:random.normalvariate(0.,1.),x))
+
+        @staticmethod
+        def prod(x,y,z):
+            """Jordan product, z <- x o y"""
+            numpy.copyto(z,x*y)
+
+        @staticmethod
+        def id(x):
+            """Identity element, x <- e such that x o e = x"""
+            x.fill(1.)
+
+        @staticmethod
+        def linv(x,y,z):
+            """Jordan product inverse, z <- inv(L(x)) y where L(x) y = x o y"""
+            numpy.copyto(z,numpy.divide(y,x))
+
+        @staticmethod
+        def barr(x):
+            """Barrier function, <- barr(x) where x o grad barr(x) = e"""
+            return reduce(lambda x,y:x+math.log(y),x,0.)
+            
+        @staticmethod
+        def srch(x,y):
+            """Line search, <- argmax {alpha \in Real >= 0 : alpha x + y >= 0} where y > 0"""
+            alpha = float("inf")
+            for i in xrange(0,len(x)):
+                if x[i] < 0:
+                    alpha0 = -y[i]/x[i]
+                    if alpha0 < alpha:
+                        alpha=alpha0
+            return alpha
+
+        @staticmethod
+        def symm(x):
+            """Symmetrization, x <- symm(x) such that L(symm(x)) is a symmetric operator"""
+            pass
+
 
     # May not have optizelle installed.
     class OptizelleObjective(Optizelle.ScalarValuedFunction):
@@ -339,7 +413,7 @@ class OptizelleSolver(OptimizationSolver):
             # Allocate memory for the equality multiplier 
             y = numpy.zeros(num_equality_constraints)
 
-            self.state = Optizelle.EqualityConstrained.State.t(DolfinVectorSpace, Optizelle.Rm, Optizelle.Messaging(), x, y)
+            self.state = Optizelle.EqualityConstrained.State.t(DolfinVectorSpace, RmVectorSpace, Optizelle.Messaging(), x, y)
             self.fns = Optizelle.Constrained.Functions.t()
 
             equality_constraints = self.problem.constraints.equality_constraints()
@@ -353,7 +427,7 @@ class OptizelleSolver(OptimizationSolver):
             # Allocate memory for the inequality multiplier 
             z = numpy.zeros(num_inequality_constraints)
 
-            self.state = Optizelle.InequalityConstrained.State.t(DolfinVectorSpace, Optizelle.Rm, Optizelle.Messaging(), x, z)
+            self.state = Optizelle.InequalityConstrained.State.t(DolfinVectorSpace, RmVectorSpace, Optizelle.Messaging(), x, z)
             self.fns = Optizelle.InequalityConstrained.Functions.t()
 
             inequality_constraints = self.problem.constraints.inequality_constraints()
@@ -370,7 +444,7 @@ class OptizelleSolver(OptimizationSolver):
             # Allocate memory for the inequality multiplier 
             z = numpy.zeros(num_ineq)
 
-            self.state = Optizelle.Constrained.State.t(DolfinVectorSpace, Optizelle.Rm, Optizelle.Rm, Optizelle.Messaging(), x, y, z)
+            self.state = Optizelle.Constrained.State.t(DolfinVectorSpace, RmVectorSpace, RmVectorSpace, Optizelle.Messaging(), x, y, z)
             self.fns = Optizelle.Constrained.Functions.t()
 
             equality_constraints = self.problem.constraints.equality_constraints()
@@ -420,15 +494,15 @@ class OptizelleSolver(OptimizationSolver):
 
         # Equality constraints only
         elif num_equality_constraints > 0 and num_inequality_constraints == 0:
-            Optizelle.EqualityConstrained.Algorithms.getMin(DolfinVectorSpace, Optizelle.Rm, Optizelle.Messaging(), self.fns, self.state)
+            Optizelle.EqualityConstrained.Algorithms.getMin(DolfinVectorSpace, RmVectorSpace, Optizelle.Messaging(), self.fns, self.state)
 
         # Inequality constraints only
         elif num_equality_constraints == 0 and num_inequality_constraints > 0:
-            Optizelle.InequalityConstrained.Algorithms.getMin(DolfinVectorSpace, Optizelle.Rm, Optizelle.Messaging(), self.fns, self.state)
+            Optizelle.InequalityConstrained.Algorithms.getMin(DolfinVectorSpace, RmVectorSpace, Optizelle.Messaging(), self.fns, self.state)
 
         # Inequality and equality constraints
         else:
-            Optizelle.Constrained.Algorithms.getMin(DolfinVectorSpace, Optizelle.Rm, Optizelle.Rm, Optizelle.Messaging(), self.fns, self.state)
+            Optizelle.Constrained.Algorithms.getMin(DolfinVectorSpace, RmVectorSpace, RmVectorSpace, Optizelle.Messaging(), self.fns, self.state)
 
         # Print out the reason for convergence
         print("The algorithm converged due to: %s" % (Optizelle.StoppingCondition.to_string(self.state.opt_stop)))
