@@ -43,7 +43,8 @@ v = StaticFunction(space, name = "v")
 v.vector().set_local(random.random(v.vector().local_size()))
 v.vector().apply("insert")
 
-# A form with three terms which will be assembled using incomplete quadrature
+# A linear form with three terms which will be assembled using incomplete
+# quadrature
      # Cannot be pre-assembled
 L = (inner(test, 1.0 / (u * u)) * dx
      # Can be pre-assembled
@@ -52,7 +53,7 @@ L = (inner(test, 1.0 / (u * u)) * dx
    + inner(test, (1.0 / (v * v * v * v)) * u) * dx)
 
 # Pre-assembled linear form
-La = PALinearForm(L)
+La = PALinearForm(L, pre_assembly_parameters = {"term_optimisation":True, "matrix_optimisation":True})
 assert(La.n_pre_assembled() == 2)
 assert(La.n_non_pre_assembled() == 1)
 
@@ -63,3 +64,23 @@ ref = assemble(L)
 err = (comp - ref).norm("linf")
 print("%.16e" % err)
 assert(err < 3.0e-14)
+
+# A bi-linear form with two terms which will be assembled using incomplete
+# quadrature
+     # Cannot be pre-assembled
+L = (inner(test, trial / (u * u)) * dx
+     # Can be pre-assembled
+   + inner(test, trial / (v * v * v)) * dx)
+
+# Pre-assembled bi-linear form
+La = PABilinearForm(L, pre_assembly_parameters = {"term_optimisation":True})
+assert(La.n_pre_assembled() == 1)
+assert(La.n_non_pre_assembled() == 1)
+
+# Verify that assembling the form and the pre-assembled form gives the same
+# answer
+comp = La.assemble()
+ref = assemble(L)
+err = (comp - ref).norm("linf")
+print("%.16e" % err)
+assert(err < 3.0e-15)

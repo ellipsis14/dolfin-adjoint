@@ -50,7 +50,7 @@ if dolfin_version() < (1, 4, 0):
     return integrand, [domain_type, domain_description, compiler_data, domain_data]
 
   def _assemble_tensor(form, tensor):
-    return dolfin.assemble(form, tensor = tensor, reset_sparsity = False)
+    return assemble(form, tensor = tensor, reset_sparsity = False)
 else:
   def preprocess_integral(integral):
     """
@@ -65,7 +65,7 @@ else:
     return integrand, [integral_type, domain, subdomain_id, metadata, subdomain_data]
   
   def _assemble_tensor(form, tensor):
-    return dolfin.assemble(form, tensor = tensor)
+    return assemble(form, tensor = tensor)
 
 def matrix_optimisation(form):
   """
@@ -167,9 +167,9 @@ class PAForm(object):
             terms = [(integrand, expand_expr(integrand))]
         else:
           if isinstance(integrand, ufl.algebra.Sum):
-            terms = [[(term, term)] for term in integrand.operands()]
+            terms = [(term, [term]) for term in integrand.operands()]
           else:
-            terms = [[(term, term)]]        
+            terms = [(integrand, [integrand])]    
         for term in terms:
           pterm = [], []
           for sterm in term[1]:
@@ -276,19 +276,6 @@ class PAForm(object):
     
     return self.__deps
   
-  def replace(self, mapping):
-    """
-    Replace coefficients.
-    """
-    
-    for i, dep in enumerate(self.__deps):
-      if dep in mapping:
-        self.__deps[i] = mapping[dep]
-    if not self._non_pre_assembled_L is None:
-      self._non_pre_assembled_L = replace(self._non_pre_assembled_L, mapping)
-    
-    return
-  
 _assemble_classes.append(PAForm)
     
 class PABilinearForm(PAForm):
@@ -350,6 +337,9 @@ class PABilinearForm(PAForm):
           # previously been configured so as to have the same sparsity pattern
           # (below)
           L.axpy(1.0, self._pre_assembled_L, True)
+        # A copy is not really required here
+        #if copy:
+        #  L = L.copy()
       else:
         L = self.__non_pre_assembled_L_tensor = assemble(self._non_pre_assembled_L)
         assert(self._pre_assembled_L is None)
@@ -505,17 +495,3 @@ class PALinearForm(PAForm):
     """
     
     return self.__static
-  
-  def replace(self, mapping):
-    """
-    Replace coefficients.
-    """
-    
-    PAForm.replace(self, mapping)
-    if not self._mult_assembled_L is None:
-      for i in xrange(len(self._mult_assembled_L)):
-        mat, fn = self._mult_assembled_L[i]
-        if fn in mapping:
-          self._mult_assembled_L[i] = mat, mapping[fn]
-    
-    return
