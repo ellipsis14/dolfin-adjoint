@@ -3,6 +3,7 @@ from optimization_problem import MaximizationProblem, MinimizationProblem
 from ..reduced_functional_numpy import ReducedFunctionalNumPy
 import constraints
 from ..misc import rank
+from ..enlisting import enlist, delist
 
 import dolfin
 import numpy
@@ -210,12 +211,7 @@ class IPOPTSolver(OptimizationSolver):
         """Solve the optimization problem and return the optimized parameters."""
         guess = self.rfn.get_parameters()
         results = self.pyipopt_problem.solve(guess)
-        new_params = [self.__copy_data(p.data()) for p in self.rfn.parameter]
+        new_params = self.problem.reduced_functional.parameter.__class__([self.__copy_data(p.data()) for p in self.rfn.parameter])
         self.rfn.set_local(new_params, results[0])
 
-        # FIXME: if the parameters were passed as a list of length one, don't
-        # un-list it.
-        if len(new_params) == 1:
-            new_params = new_params[0]
-
-        return new_params
+        return delist(new_params)
