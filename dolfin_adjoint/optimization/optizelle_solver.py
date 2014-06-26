@@ -17,6 +17,8 @@ class DolfinVectorSpace(object):
             return Function(x)
         elif isinstance(x, Constant):
             return Constant(float(x))
+        elif isinstance(x, numpy.ndarray):
+            return numpy.array(x)
         else:
             raise NotImplementedError
 
@@ -26,6 +28,8 @@ class DolfinVectorSpace(object):
             y.assign(x)
         elif isinstance(x, Constant):
             y.assign(float(x))
+        elif isinstance(x, numpy.ndarray):
+            y[:] = x
         else:
             raise NotImplementedError
 
@@ -35,6 +39,8 @@ class DolfinVectorSpace(object):
             x.vector()[:] *= alpha
         elif isinstance(x, Constant):
             x.assign(alpha * float(x))
+        elif isinstance(x, numpy.ndarray):
+            x.__imul__(alpha)
         else:
             raise NotImplementedError
 
@@ -44,6 +50,8 @@ class DolfinVectorSpace(object):
             x.vector().zero()
         elif isinstance(x, Constant):
             x.assign(0.0)
+        elif isinstance(x, numpy.ndarray):
+            x.fill(0.0)
         else:
             raise NotImplementedError
 
@@ -53,6 +61,8 @@ class DolfinVectorSpace(object):
             y.vector().axpy(alpha, x.vector())
         elif isinstance(x, Constant):
             y.assign(alpha * float(x) + float(y))
+        elif isinstance(x, numpy.ndarray):
+            y.__iadd__(alpha*x)
         else:
             raise NotImplementedError
 
@@ -62,6 +72,52 @@ class DolfinVectorSpace(object):
             return assemble(inner(x, y)*dx)
         elif isinstance(x, Constant):
             return float(x)*float(y)
+        elif isinstance(x, numpy.ndarray):
+            return numpy.inner(x, y)
+        else:
+            raise NotImplementedError
+
+    @staticmethod
+    def __prod_obj(x, y, z):
+        if isinstance(x, GenericFunction):
+            raise NotImplementedError
+        elif isinstance(x, Constant):
+            raise NotImplementedError
+        elif isinstance(x, numpy.ndarray):
+            z[:] = x*y
+        else:
+            raise NotImplementedError
+
+    @staticmethod
+    def __id_obj(x):
+        if isinstance(x, GenericFunction):
+            raise NotImplementedError
+        elif isinstance(x, Constant):
+            raise NotImplementedError
+        elif isinstance(x, numpy.ndarray):
+            x.fill(1.0)
+        else:
+            raise NotImplementedError
+
+    @staticmethod
+    def __linv_obj(x, y, z):
+        if isinstance(x, GenericFunction):
+            raise NotImplementedError
+        elif isinstance(x, Constant):
+            raise NotImplementedError
+        elif isinstance(x, numpy.ndarray):
+            z[:] = numpy.divide(y, x)
+        else:
+            raise NotImplementedError
+
+    @staticmethod
+    def __barr_obj(x):
+        if isinstance(x, GenericFunction):
+            raise NotImplementedError
+        elif isinstance(x, Constant):
+            raise NotImplementedError
+        elif isinstance(x, numpy.ndarray):
+            return sum(math.log(xx) for xx in x)
         else:
             raise NotImplementedError
 
@@ -95,19 +151,19 @@ class DolfinVectorSpace(object):
 
     @staticmethod
     def prod(x, y, z):
-        raise NotImplementedError
+        [DolfinVectorSpace.__prod_obj(xx, yy, zz) for (xx, yy, zz) in zip(x, y, z)]
 
     @staticmethod
     def id(x):
-        raise NotImplementedError
+        [DolfinVectorSpace.__id_obj(xx) for xx in x]
 
     @staticmethod
     def linv(x, y, z):
-        raise NotImplementedError
+        [DolfinVectorSpace.__linv_obj(xx, yy, zz) for (xx, yy, zz) in zip(x, y, z)]
 
     @staticmethod
     def barr(x):
-        raise NotImplementedError
+        return sum(DolfinVectorSpace.__barr_obj(xx) for xx in x)
 
     @staticmethod
     def srch(x,y):
@@ -423,7 +479,7 @@ class OptizelleSolver(OptimizationSolver):
         # Equality constraints only
         elif num_equality_constraints > 0 and num_inequality_constraints == 0:
 
-            # Allocate memory for the equality multiplier 
+            # Allocate memory for the equality multiplier
             y = numpy.zeros(num_equality_constraints)
 
             self.state = Optizelle.EqualityConstrained.State.t(DolfinVectorSpace, RmVectorSpace, Optizelle.Messaging(), x, y)
@@ -437,7 +493,7 @@ class OptizelleSolver(OptimizationSolver):
         # Inequality constraints only
         elif num_equality_constraints == 0 and num_inequality_constraints > 0:
 
-            # Allocate memory for the inequality multiplier 
+            # Allocate memory for the inequality multiplier
             z = numpy.zeros(num_inequality_constraints)
 
             self.state = Optizelle.InequalityConstrained.State.t(DolfinVectorSpace, RmVectorSpace, Optizelle.Messaging(), x, z)
@@ -451,11 +507,11 @@ class OptizelleSolver(OptimizationSolver):
         # Inequality and equality constraints
         else:
 
-            # Allocate memory for the equality multiplier 
-            y = numpy.zeros(num_eq)
+            # Allocate memory for the equality multiplier
+            y = numpy.zeros(num_equality_constraints)
 
-            # Allocate memory for the inequality multiplier 
-            z = numpy.zeros(num_ineq)
+            # Allocate memory for the inequality multiplier
+            z = numpy.zeros(num_inequality_constraints)
 
             self.state = Optizelle.Constrained.State.t(DolfinVectorSpace, RmVectorSpace, RmVectorSpace, Optizelle.Messaging(), x, y, z)
             self.fns = Optizelle.Constrained.Functions.t()
