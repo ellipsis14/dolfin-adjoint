@@ -11,11 +11,26 @@ class Constraint(object):
     raise NotImplementedError, "Constraint.function must be supplied"
 
   def jacobian(self, m):
-    """Return a list of vector-like objects representing the gradient of the constraint function with respect to the parameter m.
+    """Returns the full Jacobian matrix as a list of vector-like objects representing the gradient of the constraint function with respect to the parameter m.
 
        The objects returned must be of the same type as m's data."""
 
-    raise NotImplementedError, "Constraint.jacobian must be supplied"
+    raise NotImplementedError, "Constraint.jacobian not implemented"
+
+  def jacobian_action(self, m, dm, result):
+    """Computes the Jacobian action in direction dm and stores the result in result. """ 
+
+    raise NotImplementedError, "Constraint.jacobian_action is not implemented"
+
+  def jacobian_adjoint_action(self, m, dp, result):
+    """Computes the Jacobian adjoint action in direction dp and stores the result in result. """ 
+
+    raise NotImplementedError, "Constraint.jacobian_adjoint_action is not implemented"
+
+  def hessian_action(self, m, dm, dp, result):
+    """Computes the Hessian action in direction dm and dp and stores the result in result. """ 
+
+    raise NotImplementedError, "Constraint.jacobian_adjoint_action is not implemented"
 
   def length(self):
     """Return the number of constraints (len(function(m)))."""
@@ -51,11 +66,30 @@ class MergedConstraints(Constraint):
   def jacobian(self, m):
     return reduce(append, [gather(c.jacobian(m)) for c in self.constraints], [])
 
+  def jacobian_action(self, m, dm, result):
+    return reduce(append, [gather(c.jacobian_action(m, dm, result)) for c in self.constraints], [])
+
+  def jacobian_adjoint_action(self, m, dp, result):
+    return reduce(append, [gather(c.jacobian_adjoint_action(m, dp, result)) for c in self.constraints], [])
+
+  def hessian_action(self, m, dm, dp, result):
+    return reduce(append, [gather(c.hessian_action(m, dm, dp, result)) for c in self.constraints], [])
+
   def __iter__(self):
     return iter(self.constraints)
 
   def length(self):
     return sum(c.length() for c in self.constraints)
+
+  def equality_constraints(self):
+    ''' Filters out the equality constraints '''
+    constraints = [c for c in self.constraints if isinstance(c, EqualityConstraint)]
+    return MergedConstraints(constraints)
+
+  def inequality_constraints(self):
+    ''' Filters out the inequality constraints '''
+    constraints = [c for c in self.constraints if isinstance(c, InequalityConstraint)]
+    return MergedConstraints(constraints)
 
 def canonicalise(constraints):
   if constraints is None:
