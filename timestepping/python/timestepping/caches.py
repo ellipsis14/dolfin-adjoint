@@ -277,7 +277,7 @@ class SolverCache(object):
         return None
       assert(isinstance(opts, (dolfin.Parameters, dict)))
       fopts = []
-      for key in opts.keys():
+      for key in sorted(opts.keys()):
         if isinstance(opts[key], (dolfin.Parameters, dict)):
           fopts.append(parameters_key(opts[key]))
         else:
