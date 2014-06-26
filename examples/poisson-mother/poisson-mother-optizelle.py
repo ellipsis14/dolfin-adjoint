@@ -83,21 +83,21 @@ class VolumeConstraint(InequalityConstraint):
       """Return the number of components in the constraint vector (here, one)."""
       return 1
 
-problem = MinimizationProblem(rf, constraints=VolumeConstraint(0.5, W))
+problem = MinimizationProblem(rf, constraints=VolumeConstraint(10., W))
 parameters = {
              "maximum_iterations": 50,
              "optizelle_parameters":
                  {
                  "msg_level" : 10,
-                 "algorithm_class" : Optizelle.AlgorithmClass.LineSearch,
+                 "algorithm_class" : Optizelle.AlgorithmClass.TrustRegion,
                  "H_type" : Optizelle.Operators.UserDefined,
-                 "dir" : Optizelle.LineSearchDirection.BFGS,
-                 "ipm": Optizelle.InteriorPointMethod.PrimalDual,
-                 "sigma": 0.1,
+                 "dir" : Optizelle.LineSearchDirection.NewtonCG,
+                 "ipm": Optizelle.InteriorPointMethod.LogBarrier,
+                 "sigma": 0.001,
                  "gamma": 0.995,
                  "linesearch_iter_max" : 50,
                  "krylov_iter_max" : 100,
-                 "eps_krylov" : 1e-9
+                 "eps_krylov" : 1e-4
                  }
              }
 
