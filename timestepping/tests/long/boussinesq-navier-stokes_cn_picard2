@@ -234,7 +234,7 @@ add_dTdt_solve(T[n] + 0.5 * dt * dTdt[n + hf], dTdt[n + hf], u[n], v[n], kappa, 
 system.add_solve(LinearCombination((1.0, T[n]), (dt, dTdt[n + hf])), T[n + hf])
 
 # Timestep iteration 2
-# Ford et al, MWR, 2004, pp. 2816 - 2831 is unclear at to how the pressure is
+# Ford et al, MWR, 2004, pp. 2816 - 2831 is unclear as to how the pressure is
 # handled on the second iteration, but I believe this is what was intended.
 # This is also how Fluidity handles this step (C J Cotter, personal comm.,
 # 01/2013).

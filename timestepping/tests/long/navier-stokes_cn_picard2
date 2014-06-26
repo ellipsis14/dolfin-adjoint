@@ -220,7 +220,7 @@ add_dp_solve(u_s[n + hf], v_s[n + hf], dp[n + hf], grad_dp_x[n + hf], grad_dp_y[
 system.add_solve(LinearCombination((1.0, p[n]), (1.0, dp[n + hf])), p[n + hf])
 
 # Timestep iteration 2
-# Ford et al, MWR, 2004, pp. 2816 - 2831 is unclear at to how the pressure is
+# Ford et al, MWR, 2004, pp. 2816 - 2831 is unclear as to how the pressure is
 # handled on the second iteration, but I believe this is what was intended.
 # This is also how Fluidity handles this step (C J Cotter, personal comm.,
 # 01/2013).
