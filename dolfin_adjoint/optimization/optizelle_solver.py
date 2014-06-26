@@ -2,6 +2,7 @@ from optimization_solver import OptimizationSolver
 from optimization_problem import MaximizationProblem
 import constraints
 import numpy
+import math
 from ..enlisting import enlist, delist
 
 from backend import *
@@ -186,7 +187,14 @@ try:
         @staticmethod
         def barr(x):
             """Barrier function, <- barr(x) where x o grad barr(x) = e"""
-            return reduce(lambda x,y:x+math.log(y),x,0.)
+            try:
+                return sum(math.log(xx) for xx in x)
+            except ValueError:
+                return -numpy.inf
+            except:
+                import traceback
+                traceback.print_exc()
+                raise
             
         @staticmethod
         def srch(x,y):
