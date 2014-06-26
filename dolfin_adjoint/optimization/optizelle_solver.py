@@ -140,7 +140,6 @@ try:
             self.scale = scale
 
         def eval(self, x):
-            print "Evaluating objective functional."
             try:
                 if self.last_x is not None:
                     normsq = DolfinVectorSpace.normsqdiff(x, self.last_x)
@@ -157,7 +156,6 @@ try:
                 raise
 
         def grad(self, x, grad):
-            print "Evaluating objective gradient."
             try:
                 self.eval(x)
                 out = self.rf.derivative(forget=False, project=True)
@@ -169,7 +167,6 @@ try:
                 raise
 
         def hessvec(self, x, dx, H_dx):
-            print "Evaluating objective Hessian."
             try:
                 self.eval(x)
                 H = self.rf.hessian(dx, project=True)
@@ -198,10 +195,11 @@ try:
             if len(self.constraints) == 0:
                 return
 
-            print "In Constraint evaluation"
 
             try:
-                y[:] = self.constraints.function(delist(x, self.list_type))
+                x_list = delist(x, self.list_type)
+
+                y[:] = self.constraints.function(x_list)
             except:
                 import traceback
                 traceback.print_exc()
@@ -213,10 +211,11 @@ try:
             if len(self.constraints) == 0:
                 return
 
-            print "In Jacobian action evaluation"
-
             try: 
-                self.constraints.jacobian_action(delist(x, self.list_type), delist(dx, self.list_type), y)
+                x_list = delist(x, self.list_type)
+                dx_list = delist(dx, self.list_type)
+
+                self.constraints.jacobian_action(x_list, dx_list, y)
             except:
                 import traceback
                 traceback.print_exc()
@@ -228,15 +227,14 @@ try:
                     z=g'(x)*dy
             '''
 
-            print "In Jacobian adjoint action evaluation. Number of constraints: %s" % len(self.constraints)
-
             if len(self.constraints) == 0:
                 return
 
-            print "In Jacobian adjoint action evaluation"
-
             try: 
-                self.constraints.jacobian_adjoint_action(delist(x, self.list_type), dy, delist(z, self.list_type))
+                x_list = delist(x, self.list_type)
+                z_list = delist(z, self.list_type)
+
+                self.constraints.jacobian_adjoint_action(x_list, dy, z_list)
             except:
                 import traceback
                 traceback.print_exc()
@@ -252,10 +250,12 @@ try:
             if len(self.constraints) == 0:
                 return
 
-            print "In Hessian action evaluation."
-
             try: 
-                self.constraints.hessian_action(delist(x, self.list_type), delist(dx, self.list_type), delist(dy, self.list_type), z)
+                x_list = delist(x, self.list_type)
+                dx_list = delist(dx, self.list_type)
+                z_list = delist(z, self.list_type)
+
+                self.constraints.hessian_action(x_list, dx_list, dy, z_list)
             except:
                 import traceback
                 traceback.print_exc()

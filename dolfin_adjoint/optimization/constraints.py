@@ -30,7 +30,7 @@ class Constraint(object):
   def hessian_action(self, m, dm, dp, result):
     """Computes the Hessian action in direction dm and dp and stores the result in result. """ 
 
-    raise NotImplementedError, "Constraint.jacobian_adjoint_action is not implemented"
+    raise NotImplementedError, "Constraint.hessian_action is not implemented"
 
   def length(self):
     """Return the number of constraints (len(function(m)))."""
@@ -67,13 +67,28 @@ class MergedConstraints(Constraint):
     return reduce(append, [gather(c.jacobian(m)) for c in self.constraints], [])
 
   def jacobian_action(self, m, dm, result):
-    return reduce(append, [gather(c.jacobian_action(m, dm, result)) for c in self.constraints], [])
+    start = 0
+    stop  = 0
+    for c in self.constraints:
+      stop += c.length()
+      c.jacobian_action(m, dm, result[start:stop])
+      start = stop
 
   def jacobian_adjoint_action(self, m, dp, result):
-    return reduce(append, [gather(c.jacobian_adjoint_action(m, dp, result)) for c in self.constraints], [])
+    start = 0
+    stop  = 0
+    for c in self.constraints:
+      stop += c.length()
+      c.jacobian_adjoint_action(m, dp[start:stop], result)
+      start = stop
 
   def hessian_action(self, m, dm, dp, result):
-    return reduce(append, [gather(c.hessian_action(m, dm, dp, result)) for c in self.constraints], [])
+    start = 0
+    stop  = 0
+    for c in self.constraints:
+      stop += c.length()
+      c.hessian_action(m, dm, dp[start:stop], result)
+      start = stop
 
   def __iter__(self):
     return iter(self.constraints)
