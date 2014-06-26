@@ -211,7 +211,7 @@ class IPOPTSolver(OptimizationSolver):
         """Solve the optimization problem and return the optimized parameters."""
         guess = self.rfn.get_parameters()
         results = self.pyipopt_problem.solve(guess)
-        new_params = self.problem.reduced_functional.parameter.__class__([self.__copy_data(p.data()) for p in self.rfn.parameter])
+        new_params = [self.__copy_data(p.data()) for p in self.rfn.parameter]
         self.rfn.set_local(new_params, results[0])
 
-        return delist(new_params)
+        return delist(new_params, list_type=self.problem.reduced_functional.parameter)
