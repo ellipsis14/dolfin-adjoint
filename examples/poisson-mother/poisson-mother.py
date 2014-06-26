@@ -77,9 +77,9 @@ subdomain = CompiledSubDomain('std::abs(x[0]-0.5)<.25 && std::abs(x[1]-0.5)<0.25
 subdomain.mark(cf, True)
 mesh = refine(mesh, cf)
 
-#The resulting mesh looks like this:
+# The resulting mesh looks like this:
 #
-#.. image:: mesh.png
+# .. image:: mesh.png
 #    :scale: 50
 #    :align: center
 #
@@ -171,6 +171,7 @@ solver = moola.NewtonCG(problem, f_moola, options={'gtol': 1e-9,
 #                                                   'Hinit': "default",
 #                                                   'maxiter': 100,
 #                                                   'mem_lim': 10})
+#
 # Then we can solve the optimisation problem, extract the optimal
 # control and plot it:
 
