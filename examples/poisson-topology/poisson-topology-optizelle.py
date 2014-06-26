@@ -46,9 +46,9 @@ from dolfin_adjoint import *
 set_log_level(ERROR)
 
 try:
-  import pyipopt
+  import Optizelle
 except ImportError:
-  info_red("This example depends on IPOPT and pyipopt. When compiling IPOPT, make sure to link against HSL, as it is a necessity for practical problems.")
+  info_red("This example depends on Optizelle.")
   raise
 
 parameters["std_out_all_processes"] = False # turn off redundant output in parallel
@@ -127,29 +127,46 @@ if __name__ == "__main__":
       self.tmpvec = Function(A)
 
     def function(self, m):
-      m = m[0]  # FIXME: should not be required
       self.tmpvec.assign(m)
 
       # Compute the integral of the control over the domain
       integral = self.smass.inner(self.tmpvec.vector())
       if MPI.rank(mpi_comm_world()) == 0:
         print "Current control integral: ", integral
+        print "Maximum of control: ", m.vector().max()
+        print "Minimum of control: ", m.vector().min()
       return [self.V - integral]
 
     def jacobian(self, m):
       return [-self.smass]
 
-    def jacobian_adjoint_action(self, m, dm, result):
-      print "dm", dm
-      print "Norm of m", norm(m[0])#.norm("l2")
-      result[0].vector()[:] = self.smass*dm
+    def jacobian_action(self, m, dm, result):
+      result[:] = self.smass.inner(-dm.vector())
+
+    def jacobian_adjoint_action(self, m, dp, result):
+      result.vector()[:] = -self.smass*dp
 
     def length(self):
       """Return the number of components in the constraint vector (here, one)."""
       return 1
 
   problem = MinimizationProblem(Jhat, constraints=VolumeConstraint(V))
-  solver  = OptizelleSolver(problem)
+
+  parameters = {
+               "maximum_iterations": 5,
+               "optizelle_parameters":
+                   {
+                   "msg_level" : 10,
+                   "algorithm_class" : Optizelle.AlgorithmClass.LineSearch,
+                   "H_type" : Optizelle.Operators.UserDefined,
+                   "dir" : Optizelle.LineSearchDirection.BFGS,
+                   "eps_dx": 1.0e-32,
+                   "linesearch_iter_max" : 50,
+                   "ipm": Optizelle.InteriorPointMethod.PrimalDual
+                   }
+               }
+
+  solver  = OptizelleSolver(problem, parameters=parameters)
   a_opt   = solver.solve()
   File("output/control_solution.xml.gz") << a_opt
 
