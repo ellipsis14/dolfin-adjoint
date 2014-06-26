@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 # .. py:currentmodule:: dolfin_adjoint
 #
 # Dirichlet BC control of the Stokes equations

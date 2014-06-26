@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 # .. py:currentmodule:: dolfin_adjoint
 #
 # Optimal control of the Poisson equation
