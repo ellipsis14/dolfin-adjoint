@@ -532,7 +532,7 @@ elif dolfin_version() < (1, 5, 0):
     return
   dolfin.DirichletBC.zero_columns = DirichletBC_zero_columns
   del(DirichletBC_zero_columns)
-if dolfin_version() == (1, 4, 0):
+if dolfin_version() >= (1, 4, 0) and dolfin_version < (1, 5, 0):
   __all__ += \
     [
       "info_blue",
