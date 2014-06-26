@@ -167,12 +167,12 @@ try:
         @staticmethod
         def rand(x):
             """x <- random"""
-            numpy.copyto(x,map(lambda x:random.normalvariate(0.,1.),x))
+            x[:] = map(lambda x:random.normalvariate(0.,1.),x)
 
         @staticmethod
         def prod(x,y,z):
             """Jordan product, z <- x o y"""
-            numpy.copyto(z,x*y)
+            z[:] = x*y
 
         @staticmethod
         def id(x):
@@ -182,7 +182,12 @@ try:
         @staticmethod
         def linv(x,y,z):
             """Jordan product inverse, z <- inv(L(x)) y where L(x) y = x o y"""
-            numpy.copyto(z,numpy.divide(y,x))
+            try:
+                z[:] = numpy.divide(y,x)
+            except:
+                import traceback
+                traceback.print_exc()
+                raise
 
         @staticmethod
         def barr(x):
