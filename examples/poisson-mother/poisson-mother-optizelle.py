@@ -63,17 +63,19 @@ class VolumeConstraint(InequalityConstraint):
 
       # Compute the integral of the control over the domain
       integral = self.smass.inner(self.tmpvec.vector())
+      cmax = m.vector().max()
+      cmin = m.vector().min()
+
       if MPI.rank(mpi_comm_world()) == 0:
         print "Current control integral: ", integral
-        print "Maximum of control: ", m.vector().max()
-        print "Minimum of control: ", m.vector().min()
+        print "Maximum of control: ", cmax
+        print "Minimum of control: ", cmin
       return [self.volume - integral]
 
     def jacobian_action(self, m, dm, result):
       result[:] = self.smass.inner(-dm.vector())
 
     def jacobian_adjoint_action(self, m, dp, result):
-      #result.vector()[:] = -self.smass*dp
       result.vector()[:] = -1.*dp[0]
 
     def hessian_action(self, m, dm, dp, result):
