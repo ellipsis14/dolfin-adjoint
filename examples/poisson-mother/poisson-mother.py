@@ -77,6 +77,12 @@ subdomain = CompiledSubDomain('std::abs(x[0]-0.5)<.25 && std::abs(x[1]-0.5)<0.25
 subdomain.mark(cf, True)
 mesh = refine(mesh, cf)
 
+#The resulting mesh looks like this:
+#
+#.. image:: mesh.png
+#    :scale: 50
+#    :align: center
+#
 # Then we define the discrete function spaces and create functions for
 # the temperature and the control function.
 
@@ -159,6 +165,7 @@ solver = moola.NewtonCG(problem, f_moola, options={'gtol': 1e-9,
 # Alternatively an L-BFGS solver could initialised by:
 #
 # .. code-block:: python
+#
 #    solver = moola.BFGS(problem, f_moola, options={'jtol': 0,
 #                                                   'gtol': 1e-9,
 #                                                   'Hinit': "default",
@@ -193,7 +200,7 @@ print "Error in control: %e." % control_error
 #
 # .. code-block:: bash
 #
-#   $ python optimal-poisson.py
+#   $ python poisson-mother.py
 #   ...
 #
 # Convergence order and mesh independence
