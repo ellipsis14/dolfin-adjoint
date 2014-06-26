@@ -24,6 +24,7 @@ test_cmds = {'tlm_simple': 'mpirun -n 2 python tlm_simple.py',
              'matrix_free_heat': None,
              'matrix_free_simple': None,
              'ode_tentusscher': None,
+             'unit': None,
              'function_assigner': None,
              'mantle_convection': None}
 

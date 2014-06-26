@@ -27,6 +27,8 @@ class ReducedFunctionalNumPy(ReducedFunctional):
         self.__base_derivative__ = rf.derivative
         self.__base_hessian__ = rf.hessian
 
+        self.rf = rf
+
 
     def __call__(self, m_array):
         ''' An implementation of the reduced functional evaluation
@@ -40,7 +42,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
         adj_reset_cache()
 
         # Now its time to update the parameter values using the given array  
-        m = [p.data() for p in self.parameter]
+        m = self.rf.parameter.__class__([p.data() for p in self.parameter])
         self.set_local(m, m_array)
 
         return self.__base_call__(m)

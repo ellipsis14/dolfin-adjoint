@@ -3,10 +3,12 @@ from dolfin import Function, Constant, info_red, info_green, File
 from dolfin_adjoint import adjlinalg, adjrhs, constant, drivers
 from dolfin_adjoint.adjglobals import adjointer, mem_checkpoints, disk_checkpoints
 from functional import Functional
+from enlisting import enlist, delist
 import cPickle as pickle
 import hashlib
 
 global_eqn_list = {}
+
 class ReducedFunctional(object):
     ''' This class provides access to the reduced functional for a given functional/parameter pair. The 
         reduced functional maps a parameter value to the associated functional value by implicitly
@@ -127,7 +129,7 @@ class ReducedFunctional(object):
               output.data.rename(str(fwd_var), "a Function from dolfin-adjoint")
 
             if self.replay_cb is not None:
-              self.replay_cb(fwd_var, output.data, unlist(value))
+              self.replay_cb(fwd_var, output.data, delist(value))
 
             # Check if we checkpointing is active and if yes
             # record the exact same checkpoint variables as 
@@ -161,7 +163,7 @@ class ReducedFunctional(object):
 
         self.current_func_value = func_value 
         if self.eval_cb:
-            self.eval_cb(self.scale * func_value, unlist(value))
+            self.eval_cb(self.scale * func_value, delist(value))
 
         if self.cache:
             # Add result to cache
@@ -171,7 +173,7 @@ class ReducedFunctional(object):
         return self.scale*func_value
 
     def derivative(self, forget=True, project=False):
-        ''' Evaluates the derivative of the reduced functional for the lastly evaluated parameter value. ''' 
+        ''' Evaluates the derivative of the reduced functional for the most recently evaluated parameter value. ''' 
 
         if self.cache is not None:
             hash = value_hash([x.data() for x in self.parameter])
@@ -185,7 +187,7 @@ class ReducedFunctional(object):
         dfunc_value = enlist(dfunc_value)
 
         adjointer.reset_revolve()
-        scaled_dfunc_value = []
+        scaled_dfunc_value = self.parameter.__class__([])
         for df in list(dfunc_value):
             if hasattr(df, "function_space"):
                 scaled_dfunc_value.append(Function(df.function_space(), self.scale * df.vector()))
@@ -194,7 +196,8 @@ class ReducedFunctional(object):
 
         if self.derivative_cb:
             if self.current_func_value is not None:
-              self.derivative_cb(self.scale * self.current_func_value, unlist(scaled_dfunc_value), unlist([p.data() for p in self.parameter]))
+              values = self.parameter.__class__([p.data() for p in self.parameter])
+              self.derivative_cb(self.scale * self.current_func_value, delist(scaled_dfunc_value), delist(values))
             else:
               info_red("Gradient evaluated without functional evaluation, not calling derivative callback function")
 
@@ -224,7 +227,7 @@ class ReducedFunctional(object):
 
         if self.hessian_cb:
             self.hessian_cb(self.scale * self.current_func_value,
-                            unlist([p.data() for p in self.parameter]),
+                            delist([p.data() for p in self.parameter]),
                             m_dot,
                             Hm.vector() * self.scale)
 
@@ -354,20 +357,6 @@ def replace_tape_value(variable, new_value):
 
     else:
         raise NotImplementedError, "Can only replace a dolfin.Functions or dolfin.Constants"
-
-def unlist(x):
-    ''' If x is a list of length 1, return its element. Otherwise return x. '''
-    if len(x) == 1:
-        return x[0]
-    else:
-        return x
-
-def enlist(x):
-    ''' Opposite of unlist '''
-    if not isinstance(x, (list, tuple)):
-        return [x]
-    else:
-        return x
 
 def copy_data(m):
     ''' Returns a deep copy of the given Function/Constant. '''
