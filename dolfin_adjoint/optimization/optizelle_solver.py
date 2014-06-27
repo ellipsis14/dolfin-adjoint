@@ -120,8 +120,8 @@ class DolfinVectorSpace(object):
     @staticmethod
     def __linv_obj(x, y, z):
         if isinstance(x, GenericFunction):
-            z.vector()[:] = y.vector().array() / x.vector().array()
-            #z.vector().set_local( y.vector().array() / x.vector().array()
+            z.vector().set_local( y.vector().array() / x.vector().array() )
+            z.vector().apply("insert")
         elif isinstance(x, Constant):
             z.assign(float(y) / float(x))
         elif isinstance(x, numpy.ndarray):
@@ -144,7 +144,7 @@ class DolfinVectorSpace(object):
     def __srch_obj(x, y):
         if isinstance(x, GenericFunction):
             if any(x.vector() < 0):
-                my_min = min(-yy/xx for (xx, yy) in zip(x.vector(), y.vector()) if xx < 0)
+                my_min = min(-yy/xx for (xx, yy) in zip(x.vector().get_local(), y.vector().get_local()) if xx < 0)
             else:
                 my_min = numpy.inf
 
