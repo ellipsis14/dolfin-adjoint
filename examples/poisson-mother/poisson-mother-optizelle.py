@@ -14,6 +14,8 @@ from dolfin_adjoint import *
 
 import Optizelle
 
+parameters["adjoint"]["cache_factorizations"] = True
+
 set_log_level(ERROR)
 
 # Create mesh, refined in the center
@@ -29,7 +31,7 @@ mesh = refine(mesh, cf)
 V = FunctionSpace(mesh, "CG", 1)
 W = FunctionSpace(mesh, "DG", 0)
 
-f = interpolate(Expression("x[0]+x[1]"), W, name='Control')
+f = interpolate(Expression("0.11"), W, name='Control')
 u = Function(V, name='State')
 v = TestFunction(V)
 
@@ -81,9 +83,8 @@ class VolumeConstraint(InequalityConstraint):
     def hessian_action(self, m, dm, dp, result):
       result.vector()[:] = 0.0
 
-    def length(self):
-      """Return the number of components in the constraint vector (here, one)."""
-      return 1
+    def output_workspace(self):
+      return [0.0]
 
 class LowerBoundConstraint(InequalityConstraint):
     """A class that enforces the bound constraint m >= l."""
@@ -94,11 +95,11 @@ class LowerBoundConstraint(InequalityConstraint):
         if isinstance(self.l, Function):
             assert self.l.function_space().dim() == W.dim()
 
-        if isinstance(l, Constant):
+        if hasattr(l, '__float__'):
             self.l = float(l)
 
         if not isinstance(self.l, (float, Function)):
-            raise TypeError("Your bound must be a Function or a float.")
+            raise TypeError("Your bound must be a Function or a Constant or a float.")
 
     def output_workspace(self):
         return Function(self.W)
@@ -126,7 +127,7 @@ class LowerBoundConstraint(InequalityConstraint):
     def hessia_action(self, m, dm, dp, result):
         result.vector().zero()
 
-problem = MinimizationProblem(rf, constraints=LowerBoundConstraint(-10., W))
+problem = MinimizationProblem(rf, constraints=[VolumeConstraint(0.3, W), LowerBoundConstraint(0.1, W)])
 parameters = {
              "maximum_iterations": 50,
              "optizelle_parameters":

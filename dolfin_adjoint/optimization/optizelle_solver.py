@@ -19,6 +19,12 @@ def optizelle_callback(fun):
 
     return safe_fun
 
+def safe_log(x):
+    try:
+        return math.log(x)
+    except ValueError:
+        return -numpy.inf
+
 class DolfinVectorSpace(object):
     def __init__(self, parameters):
         self.parameters = parameters
@@ -92,9 +98,9 @@ class DolfinVectorSpace(object):
     @staticmethod
     def __prod_obj(x, y, z):
         if isinstance(x, GenericFunction):
-            raise NotImplementedError
+            z.vector()[:] = x.vector() * y.vector()
         elif isinstance(x, Constant):
-            raise NotImplementedError
+            z.assign(float(x)*float(y))
         elif isinstance(x, numpy.ndarray):
             z[:] = x*y
         else:
@@ -114,9 +120,10 @@ class DolfinVectorSpace(object):
     @staticmethod
     def __linv_obj(x, y, z):
         if isinstance(x, GenericFunction):
-            raise NotImplementedError
+            z.vector()[:] = y.vector().array() / x.vector().array()
+            #z.vector().set_local( y.vector().array() / x.vector().array()
         elif isinstance(x, Constant):
-            raise NotImplementedError
+            z.assign(float(y) / float(x))
         elif isinstance(x, numpy.ndarray):
             z[:] = numpy.divide(y, x)
         else:
@@ -125,11 +132,36 @@ class DolfinVectorSpace(object):
     @staticmethod
     def __barr_obj(x):
         if isinstance(x, GenericFunction):
-            raise NotImplementedError
+            return assemble(ln(x)*dx)
         elif isinstance(x, Constant):
-            raise NotImplementedError
+            return safe_log(float(x))
         elif isinstance(x, numpy.ndarray):
-            return sum(math.log(xx) for xx in x)
+            return sum(safe_log(xx) for xx in x)
+        else:
+            raise NotImplementedError
+
+    @staticmethod
+    def __srch_obj(x, y):
+        if isinstance(x, GenericFunction):
+            if any(x.vector() < 0):
+                my_min = min(-yy/xx for (xx, yy) in zip(x.vector(), y.vector()) if xx < 0)
+            else:
+                my_min = numpy.inf
+
+            return MPI.min(x.function_space().mesh().mpi_comm(), my_min)
+
+        elif isinstance(x, Constant):
+            if float(x) < 0:
+                return -float(y)/float(x)
+            else:
+                return numpy.inf
+
+        elif isinstance(x, numpy.ndarray):
+            if any(x < 0):
+                return min(-yy/xx for (xx, yy) in zip(x, y) if xx < 0)
+            else:
+                return numpy.inf
+
         else:
             raise NotImplementedError
 
@@ -191,12 +223,12 @@ class DolfinVectorSpace(object):
     @staticmethod
     @optizelle_callback
     def srch(x,y):
-        raise NotImplementedError
+        return min(DolfinVectorSpace.__srch_obj(xx, yy) for (xx, yy) in zip(x, y))
 
     @staticmethod
     @optizelle_callback
     def symm(x):
-        raise NotImplementedError
+        pass
 
     @staticmethod
     @optizelle_callback

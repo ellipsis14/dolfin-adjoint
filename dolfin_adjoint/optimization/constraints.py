@@ -1,8 +1,7 @@
 """This module offers a standard interface for control constraints,
 that can be used with different optimisation algorithms."""
 
-from ..utils import gather
-from numpy import append
+import numpy
 
 class Constraint(object):
   def function(self, m):
@@ -60,12 +59,14 @@ class InequalityConstraint(Constraint):
   for 0 <= i < n, where m is the parameter.
   """
 
+numpify = lambda x: numpy.array(x) if isinstance(x, list) else x
+
 class MergedConstraints(Constraint):
   def __init__(self, constraints):
     self.constraints = constraints
 
   def function(self, m):
-    return [c.function(m) for c in self.constraints]
+    return [numpify(c.function(m)) for c in self.constraints]
 
   def jacobian(self, m):
     return [c.jacobian(m) for c in self.constraints]
@@ -86,7 +87,7 @@ class MergedConstraints(Constraint):
     return len(self.constraints)
 
   def output_workspace(self):
-    return [c.output_workspace() for c in self.constraints]
+    return [numpify(c.output_workspace()) for c in self.constraints]
 
   def equality_constraints(self):
     ''' Filters out the equality constraints '''
