@@ -7,6 +7,18 @@ from ..enlisting import enlist, delist
 
 from backend import *
 
+def optizelle_callback(fun):
+    """Optizelle swallows exceptions. Very useful for debugging! Let's work around this."""
+    def safe_fun(*args, **kwargs):
+        try:
+            return fun(*args, **kwargs)
+        except:
+            import traceback
+            traceback.print_exc()
+            raise
+
+    return safe_fun
+
 class DolfinVectorSpace(object):
     def __init__(self, parameters):
         self.parameters = parameters
@@ -91,9 +103,9 @@ class DolfinVectorSpace(object):
     @staticmethod
     def __id_obj(x):
         if isinstance(x, GenericFunction):
-            raise NotImplementedError
+            x.assign(Constant(1.0))
         elif isinstance(x, Constant):
-            raise NotImplementedError
+            x.assign(Constant(1.0))
         elif isinstance(x, numpy.ndarray):
             x.fill(1.0)
         else:
@@ -122,58 +134,72 @@ class DolfinVectorSpace(object):
             raise NotImplementedError
 
     @staticmethod
+    @optizelle_callback
     def init(x):
         return [DolfinVectorSpace.__deep_copy_obj(xx) for xx in x]
 
     @staticmethod
+    @optizelle_callback
     def copy(x, y):
         [DolfinVectorSpace.__assign_obj(xx, yy) for (xx, yy) in zip(x, y)]
 
     @staticmethod
+    @optizelle_callback
     def scal(alpha, x):
         [DolfinVectorSpace.__scale_obj(alpha, xx) for xx in x]
 
     @staticmethod
+    @optizelle_callback
     def zero(x):
         [DolfinVectorSpace.__zero_obj(xx) for xx in x]
 
     @staticmethod
+    @optizelle_callback
     def axpy(alpha, x, y):
         [DolfinVectorSpace.__axpy_obj(alpha, xx, yy) for (xx, yy) in zip(x, y)]
 
     @staticmethod
+    @optizelle_callback
     def innr(x, y):
         return sum(DolfinVectorSpace.__inner_obj(xx, yy) for (xx, yy) in zip(x, y))
 
     @staticmethod
+    @optizelle_callback
     def rand(x):
         raise NotImplementedError
 
     @staticmethod
+    @optizelle_callback
     def prod(x, y, z):
         [DolfinVectorSpace.__prod_obj(xx, yy, zz) for (xx, yy, zz) in zip(x, y, z)]
 
     @staticmethod
+    @optizelle_callback
     def id(x):
         [DolfinVectorSpace.__id_obj(xx) for xx in x]
 
     @staticmethod
+    @optizelle_callback
     def linv(x, y, z):
         [DolfinVectorSpace.__linv_obj(xx, yy, zz) for (xx, yy, zz) in zip(x, y, z)]
 
     @staticmethod
+    @optizelle_callback
     def barr(x):
         return sum(DolfinVectorSpace.__barr_obj(xx) for xx in x)
 
     @staticmethod
+    @optizelle_callback
     def srch(x,y):
         raise NotImplementedError
 
     @staticmethod
+    @optizelle_callback
     def symm(x):
         raise NotImplementedError
 
     @staticmethod
+    @optizelle_callback
     def normsqdiff(x, y):
         """
         Compute ||x -y||^2; the squared norm of the difference between two functions.
@@ -282,43 +308,31 @@ try:
             self.last_J = None
             self.scale = scale
 
+        @optizelle_callback
         def eval(self, x):
-            try:
-                if self.last_x is not None:
-                    normsq = DolfinVectorSpace.normsqdiff(x, self.last_x)
-                    if normsq == 0.0:
-                        return self.last_J
+            if self.last_x is not None:
+                normsq = DolfinVectorSpace.normsqdiff(x, self.last_x)
+                if normsq == 0.0:
+                    return self.last_J
 
-                self.last_x = DolfinVectorSpace.init(x)
-                self.rf(x)
-                self.last_J = self.scale*self.rf(x)
-                return self.last_J
-            except:
-                import traceback
-                traceback.print_exc()
-                raise
+            self.last_x = DolfinVectorSpace.init(x)
+            self.rf(x)
+            self.last_J = self.scale*self.rf(x)
+            return self.last_J
 
+        @optizelle_callback
         def grad(self, x, grad):
-            try:
-                self.eval(x)
-                out = self.rf.derivative(forget=False, project=True)
-                DolfinVectorSpace.scal(self.scale, out)
-                DolfinVectorSpace.copy(out, grad)
-            except:
-                import traceback
-                traceback.print_exc()
-                raise
+            self.eval(x)
+            out = self.rf.derivative(forget=False, project=True)
+            DolfinVectorSpace.scal(self.scale, out)
+            DolfinVectorSpace.copy(out, grad)
 
+        @optizelle_callback
         def hessvec(self, x, dx, H_dx):
-            try:
-                self.eval(x)
-                H = self.rf.hessian(dx, project=True)
-                DolfinVectorSpace.scal(self.scale, H)
-                DolfinVectorSpace.copy(H, H_dx)
-            except:
-                import traceback
-                traceback.print_exc()
-                raise
+            self.eval(x)
+            H = self.rf.hessian(dx, project=True)
+            DolfinVectorSpace.scal(self.scale, H)
+            DolfinVectorSpace.copy(H, H_dx)
 
 
     class OptizelleConstraints(Optizelle.VectorValuedFunction):
@@ -331,6 +345,7 @@ try:
             self.constraints = constraints
             self.list_type = problem.reduced_functional.parameter
 
+        @optizelle_callback
         def eval(self, x, y):
             ''' Evaluates the constraints and stores the result in y. '''
 
@@ -339,31 +354,26 @@ try:
                 return
 
 
-            try:
-                x_list = delist(x, self.list_type)
+            x_list = delist(x, self.list_type)
 
+            if isinstance(y, Function):
+                y.assign(self.constraints.function(x_list))
+            else:
                 y[:] = self.constraints.function(x_list)
-            except:
-                import traceback
-                traceback.print_exc()
-                raise
 
+        @optizelle_callback
         def p(self, x, dx, y):
             ''' Evaluates the Jacobian action and stores the result in y. '''
 
             if len(self.constraints) == 0:
                 return
 
-            try: 
-                x_list = delist(x, self.list_type)
-                dx_list = delist(dx, self.list_type)
+            x_list = delist(x, self.list_type)
+            dx_list = delist(dx, self.list_type)
 
-                self.constraints.jacobian_action(x_list, dx_list, y)
-            except:
-                import traceback
-                traceback.print_exc()
-                raise
+            self.constraints.jacobian_action(x_list, dx_list, y)
 
+        @optizelle_callback
         def ps(self, x, dy, z):
             ''' 
                 Evaluates the Jacobian adjoint action and stores the result in y. 
@@ -373,16 +383,12 @@ try:
             if len(self.constraints) == 0:
                 return
 
-            try: 
-                x_list = delist(x, self.list_type)
-                z_list = delist(z, self.list_type)
+            x_list = delist(x, self.list_type)
+            z_list = delist(z, self.list_type)
 
-                self.constraints.jacobian_adjoint_action(x_list, dy, z_list)
-            except:
-                import traceback
-                traceback.print_exc()
-                raise
+            self.constraints.jacobian_adjoint_action(x_list, dy, z_list)
 
+        @optizelle_callback
         def pps(self, x, dx, dy, z):
             ''' 
                 Evaluates the Hessian adjoint action in directions dx and dy 
@@ -393,16 +399,11 @@ try:
             if len(self.constraints) == 0:
                 return
 
-            try: 
-                x_list = delist(x, self.list_type)
-                dx_list = delist(dx, self.list_type)
-                z_list = delist(z, self.list_type)
+            x_list = delist(x, self.list_type)
+            dx_list = delist(dx, self.list_type)
+            z_list = delist(z, self.list_type)
 
-                self.constraints.hessian_action(x_list, dx_list, dy, z_list)
-            except:
-                import traceback
-                traceback.print_exc()
-                raise
+            self.constraints.hessian_action(x_list, dx_list, dy, z_list)
 
 except ImportError:
     pass
@@ -480,12 +481,11 @@ class OptizelleSolver(OptimizationSolver):
         elif num_equality_constraints > 0 and num_inequality_constraints == 0:
 
             # Allocate memory for the equality multiplier
-            y = numpy.zeros(num_equality_constraints)
-
-            self.state = Optizelle.EqualityConstrained.State.t(DolfinVectorSpace, RmVectorSpace, Optizelle.Messaging(), x, y)
-            self.fns = Optizelle.Constrained.Functions.t()
-
             equality_constraints = self.problem.constraints.equality_constraints()
+            y = equality_constraints.output_workspace()
+
+            self.state = Optizelle.EqualityConstrained.State.t(DolfinVectorSpace, DolfinVectorSpace, Optizelle.Messaging(), x, y)
+            self.fns = Optizelle.Constrained.Functions.t()
 
             self.fns.f = OptizelleObjective(self.problem.reduced_functional, scale=scale)
             self.fns.g = OptizelleConstraints(self.problem, equality_constraints)
@@ -494,12 +494,11 @@ class OptizelleSolver(OptimizationSolver):
         elif num_equality_constraints == 0 and num_inequality_constraints > 0:
 
             # Allocate memory for the inequality multiplier
-            z = numpy.zeros(num_inequality_constraints)
-
-            self.state = Optizelle.InequalityConstrained.State.t(DolfinVectorSpace, RmVectorSpace, Optizelle.Messaging(), x, z)
-            self.fns = Optizelle.InequalityConstrained.Functions.t()
-
             inequality_constraints = self.problem.constraints.inequality_constraints()
+            z = inequality_constraints.output_workspace()
+
+            self.state = Optizelle.InequalityConstrained.State.t(DolfinVectorSpace, DolfinVectorSpace, Optizelle.Messaging(), x, z)
+            self.fns = Optizelle.InequalityConstrained.Functions.t()
 
             self.fns.f = OptizelleObjective(self.problem.reduced_functional, scale=scale)
             self.fns.h = OptizelleConstraints(self.problem, inequality_constraints)
@@ -508,16 +507,15 @@ class OptizelleSolver(OptimizationSolver):
         else:
 
             # Allocate memory for the equality multiplier
-            y = numpy.zeros(num_equality_constraints)
+            equality_constraints = self.problem.constraints.equality_constraints()
+            y = equality_constraints.output_workspace()
 
             # Allocate memory for the inequality multiplier
-            z = numpy.zeros(num_inequality_constraints)
-
-            self.state = Optizelle.Constrained.State.t(DolfinVectorSpace, RmVectorSpace, RmVectorSpace, Optizelle.Messaging(), x, y, z)
-            self.fns = Optizelle.Constrained.Functions.t()
-
-            equality_constraints = self.problem.constraints.equality_constraints()
             inequality_constraints = self.problem.constraints.inequality_constraints()
+            z = inequality_constraints.output_workspace()
+
+            self.state = Optizelle.Constrained.State.t(DolfinVectorSpace, DolfinVectorSpace, DolfinVectorSpace, Optizelle.Messaging(), x, y, z)
+            self.fns = Optizelle.Constrained.Functions.t()
 
             self.fns.f = OptizelleObjective(self.problem.reduced_functional, scale=scale)
             self.fns.g = OptizelleConstraints(self.problem, equality_constraints)
@@ -563,15 +561,15 @@ class OptizelleSolver(OptimizationSolver):
 
         # Equality constraints only
         elif num_equality_constraints > 0 and num_inequality_constraints == 0:
-            Optizelle.EqualityConstrained.Algorithms.getMin(DolfinVectorSpace, RmVectorSpace, Optizelle.Messaging(), self.fns, self.state)
+            Optizelle.EqualityConstrained.Algorithms.getMin(DolfinVectorSpace, DolfinVectorSpace, Optizelle.Messaging(), self.fns, self.state)
 
         # Inequality constraints only
         elif num_equality_constraints == 0 and num_inequality_constraints > 0:
-            Optizelle.InequalityConstrained.Algorithms.getMin(DolfinVectorSpace, RmVectorSpace, Optizelle.Messaging(), self.fns, self.state)
+            Optizelle.InequalityConstrained.Algorithms.getMin(DolfinVectorSpace, DolfinVectorSpace, Optizelle.Messaging(), self.fns, self.state)
 
         # Inequality and equality constraints
         else:
-            Optizelle.Constrained.Algorithms.getMin(DolfinVectorSpace, RmVectorSpace, RmVectorSpace, Optizelle.Messaging(), self.fns, self.state)
+            Optizelle.Constrained.Algorithms.getMin(DolfinVectorSpace, DolfinVectorSpace, DolfinVectorSpace, Optizelle.Messaging(), self.fns, self.state)
 
         # Print out the reason for convergence
         print("The algorithm converged due to: %s" % (Optizelle.StoppingCondition.to_string(self.state.opt_stop)))

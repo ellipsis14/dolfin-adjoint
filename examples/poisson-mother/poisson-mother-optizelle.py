@@ -85,7 +85,48 @@ class VolumeConstraint(InequalityConstraint):
       """Return the number of components in the constraint vector (here, one)."""
       return 1
 
-problem = MinimizationProblem(rf, constraints=VolumeConstraint(10., W))
+class LowerBoundConstraint(InequalityConstraint):
+    """A class that enforces the bound constraint m >= l."""
+    def __init__(self, l, W):
+        self.W = W
+        self.l = l
+
+        if isinstance(self.l, Function):
+            assert self.l.function_space().dim() == W.dim()
+
+        if isinstance(l, Constant):
+            self.l = float(l)
+
+        if not isinstance(self.l, (float, Function)):
+            raise TypeError("Your bound must be a Function or a float.")
+
+    def output_workspace(self):
+        return Function(self.W)
+
+    def function(self, m):
+        try:
+            out = Function(m)
+            if isinstance(self.l, float):
+                out.vector()[:] -= self.l
+            elif isinstance(self.l, Function):
+                out.assign(out - self.l)
+            return out
+        except:
+            import traceback
+            traceback.print_exc()
+            raise
+
+
+    def jacobian_action(self, m, dm, result):
+        result.assign(dm)
+
+    def jacobian_adjoint_action(self, m, dp, result):
+        result.assign(dp)
+
+    def hessia_action(self, m, dm, dp, result):
+        result.vector().zero()
+
+problem = MinimizationProblem(rf, constraints=LowerBoundConstraint(-10., W))
 parameters = {
              "maximum_iterations": 50,
              "optizelle_parameters":
