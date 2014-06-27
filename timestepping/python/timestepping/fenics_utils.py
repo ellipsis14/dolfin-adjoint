@@ -83,7 +83,7 @@ class QForm(ufl.form.Form):
     return hash((self.__quadrature_degree, ufl.form.Form.__hash__(self)))
   
   def equals(self, other):
-    return bool(ufl.form.Form.__eq__(ufl.form.Form(self.integrals()), ufl.form.Form(other.integrals())))
+    return form_quadrature_degree(self) == form_quadrature_degree(other) and bool(ufl.form.Form.__eq__(ufl.form.Form(self.integrals()), ufl.form.Form(other.integrals())))
 
   def __add__(self, other):
     if not isinstance(other, ufl.form.Form):
