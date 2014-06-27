@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*- 
 
 r"""
-Solve example 1 of
+Solve example 1 of 
 
 @article{gersborg2006,
 year={2006},
@@ -43,7 +43,6 @@ to solve the optimisation problem.
 
 from dolfin import *
 from dolfin_adjoint import *
-set_log_level(ERROR)
 
 try:
   import pyipopt
@@ -127,8 +126,7 @@ if __name__ == "__main__":
       self.tmpvec = Function(A)
 
     def function(self, m):
-      m = m[0]  # FIXME: should not be required
-      self.tmpvec.assign(m)
+      self.tmpvec.vector()[:] = m
 
       # Compute the integral of the control over the domain
       integral = self.smass.inner(self.tmpvec.vector())
@@ -139,23 +137,11 @@ if __name__ == "__main__":
     def jacobian(self, m):
       return [-self.smass]
 
-    def jacobian_adjoint_action(self, m, dm, result):
-      print "dm", dm
-      print "Norm of m", norm(m[0])#.norm("l2")
-      result[0].vector()[:] = self.smass*dm
-
     def length(self):
       """Return the number of components in the constraint vector (here, one)."""
       return 1
 
-  problem = MinimizationProblem(Jhat, constraints=VolumeConstraint(V))
-  solver  = OptizelleSolver(problem)
+  problem = MinimizationProblem(Jhat, bounds=(lb, ub), constraints=VolumeConstraint(V))
+  solver  = IPOPTSolver(problem)
   a_opt   = solver.solve()
   File("output/control_solution.xml.gz") << a_opt
-
-  # Consider this short form
-  # parameters["optimization_backend"] = "TAO"
-  # a_opt = optimize(problem)
-
-
-
