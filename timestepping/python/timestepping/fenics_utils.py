@@ -78,18 +78,12 @@ class QForm(ufl.form.Form):
     self.__quadrature_degree = quadrature_degree
 
     return
-
-  def __cmp__(self, other):
-    if not isinstance(other, ufl.form.Form):
-      raise InvalidArgumentException("other must be a Form")
-    comp = self.__quadrature_degree.__cmp__(form_quadrature_degree(other))
-    if comp == 0:
-      return ufl.form.Form.__cmp__(self, other)
-    else:
-      return comp
     
   def __hash__(self):
     return hash((self.__quadrature_degree, ufl.form.Form.__hash__(self)))
+  
+  def equals(self, other):
+    return bool(ufl.form.Form.__eq__(ufl.form.Form(self.integrals()), ufl.form.Form(other.integrals())))
 
   def __add__(self, other):
     if not isinstance(other, ufl.form.Form):
