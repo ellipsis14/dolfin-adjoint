@@ -127,7 +127,10 @@ class LowerBoundConstraint(InequalityConstraint):
     def hessia_action(self, m, dm, dp, result):
         result.vector().zero()
 
-problem = MinimizationProblem(rf, constraints=[VolumeConstraint(0.3, W), LowerBoundConstraint(0.1, W)])
+#problem = MinimizationProblem(rf, constraints=VolumeConstraint(0.3, W))
+#problem = MinimizationProblem(rf, constraints=[VolumeConstraint(0.3, W))
+#problem = MinimizationProblem(rf, bounds=(0.1, 0.8), constraints=VolumeConstraint(0.3, W))
+problem = MinimizationProblem(rf, bounds=(None, 0.8))
 parameters = {
              "maximum_iterations": 50,
              "optizelle_parameters":

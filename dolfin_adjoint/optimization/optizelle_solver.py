@@ -25,6 +25,64 @@ def safe_log(x):
     except ValueError:
         return -numpy.inf
 
+class BoundConstraint(constraints.InequalityConstraint):
+    """A class that enforces the bound constraint l <= m or m >= u."""
+    def __init__(self, m, bound, type):
+        assert type is 'lower' or type is 'upper'
+        assert isinstance(m, (Function, Constant))
+        self.m = m
+        self.bound = bound
+
+        if isinstance(self.m, Constant):
+            assert hasattr(bound, '__float__')
+
+        if type is 'lower':
+            self.scale = +1.0
+        else:
+            self.scale = -1.0
+
+        if hasattr(bound, '__float__'):
+            self.bound = float(bound)
+
+        if not isinstance(self.bound, (float, Function)):
+            raise TypeError("Your %s bound must be a Function or a Constant or a float." % type)
+
+    def output_workspace(self):
+        if isinstance(self.m, Function):
+            return Function(self.m.function_space())
+        elif isinstance(self.m, Constant):
+            return [0.0]
+
+    def function(self, m):
+        if isinstance(self.m, Constant):
+            return [self.scale*(float(m) - float(self.bound))]
+        elif isinstance(self.m, Function):
+            out = Function(m)
+
+            if isinstance(self.bound, float):
+                out.vector()[:] -= self.scale*self.bound
+            elif isinstance(self.bound, Function):
+                out.assign(self.scale*out - self.scale*self.bound)
+            return out
+
+    def jacobian_action(self, m, dm, result):
+        if isinstance(self.m, Constant):
+            result[0] = self.scale*dm[0]
+        elif isinstance(self.m, Function):
+            result.assign(self.scale*dm)
+
+    def jacobian_adjoint_action(self, m, dp, result):
+        if isinstance(self.m, Constant):
+            result[0] = self.scale*dp[0]
+        elif isinstance(self.m, Function):
+            result.assign(self.scale*dp)
+
+    def hessia_action(self, m, dm, dp, result):
+        if isinstance(self.m, Constant):
+            result[0] = 0.0
+        elif isinstance(self.m, Function):
+            result.vector().zero()
+
 class DolfinVectorSpace(object):
     def __init__(self, parameters):
         self.parameters = parameters
@@ -478,9 +536,6 @@ class OptizelleSolver(OptimizationSolver):
 
         OptimizationSolver.__init__(self, problem, parameters)
 
-        # TODO: Add bound support to Optizelle
-        assert self.problem.bounds is None
-
         self.__build_optizelle_state()
 
     def __build_optizelle_state(self):
@@ -492,19 +547,33 @@ class OptizelleSolver(OptimizationSolver):
         else:
             scale = +1
 
+        bound_inequality_constraints = []
+        if self.problem.bounds is not None:
+            # We need to process the damn bounds
+            for (parameter, bound) in zip(self.problem.reduced_functional.parameter, self.problem.bounds):
+                (lb, ub) = bound
+
+                if lb is not None:
+                    bound_inequality_constraints.append(BoundConstraint(parameter.data(), lb, 'lower'))
+
+                if ub is not None:
+                    bound_inequality_constraints.append(BoundConstraint(parameter.data(), ub, 'upper'))
+
+        self.bound_inequality_constraints = bound_inequality_constraints
+
         # Create the appropriate Optizelle state, taking into account which
         # type of constraints we have (unconstrained, (in)-equality constraints).
         if self.problem.constraints is None:
             num_equality_constraints = 0
-            num_inequality_constraints = 0
+            num_inequality_constraints = 0 + len(bound_inequality_constraints)
         else:
             num_equality_constraints = len(self.problem.constraints.equality_constraints())
-            num_inequality_constraints = len(self.problem.constraints.inequality_constraints())
+            num_inequality_constraints = len(self.problem.constraints.inequality_constraints()) + len(bound_inequality_constraints)
 
         x = [p.data() for p in self.problem.reduced_functional.parameter]
 
         # Unconstrained case
-        if self.problem.constraints is None:
+        if num_equality_constraints == 0 and num_inequality_constraints == 0:
             self.state = Optizelle.Unconstrained.State.t(DolfinVectorSpace, Optizelle.Messaging(), x)
             self.fns = Optizelle.Unconstrained.Functions.t()
             self.fns.f = OptizelleObjective(self.problem.reduced_functional, scale=scale)
@@ -526,14 +595,18 @@ class OptizelleSolver(OptimizationSolver):
         elif num_equality_constraints == 0 and num_inequality_constraints > 0:
 
             # Allocate memory for the inequality multiplier
-            inequality_constraints = self.problem.constraints.inequality_constraints()
-            z = inequality_constraints.output_workspace()
+            if self.problem.constraints is not None:
+                inequality_constraints = self.problem.constraints.inequality_constraints()
+                all_inequality_constraints = constraints.MergedConstraints(inequality_constraints.constraints + bound_inequality_constraints)
+            else:
+                all_inequality_constraints = constraints.MergedConstraints(bound_inequality_constraints)
+            z = all_inequality_constraints.output_workspace()
 
             self.state = Optizelle.InequalityConstrained.State.t(DolfinVectorSpace, DolfinVectorSpace, Optizelle.Messaging(), x, z)
             self.fns = Optizelle.InequalityConstrained.Functions.t()
 
             self.fns.f = OptizelleObjective(self.problem.reduced_functional, scale=scale)
-            self.fns.h = OptizelleConstraints(self.problem, inequality_constraints)
+            self.fns.h = OptizelleConstraints(self.problem, all_inequality_constraints)
 
         # Inequality and equality constraints
         else:
@@ -543,15 +616,19 @@ class OptizelleSolver(OptimizationSolver):
             y = equality_constraints.output_workspace()
 
             # Allocate memory for the inequality multiplier
-            inequality_constraints = self.problem.constraints.inequality_constraints()
-            z = inequality_constraints.output_workspace()
+            if self.problem.constraints is not None:
+                inequality_constraints = self.problem.constraints.inequality_constraints()
+                all_inequality_constraints = constraints.MergedConstraints(inequality_constraints.constraints + bound_inequality_constraints)
+            else:
+                all_inequality_constraints = constraints.MergedConstraints(bound_inequality_constraints)
+            z = all_inequality_constraints.output_workspace()
 
             self.state = Optizelle.Constrained.State.t(DolfinVectorSpace, DolfinVectorSpace, DolfinVectorSpace, Optizelle.Messaging(), x, y, z)
             self.fns = Optizelle.Constrained.Functions.t()
 
             self.fns.f = OptizelleObjective(self.problem.reduced_functional, scale=scale)
             self.fns.g = OptizelleConstraints(self.problem, equality_constraints)
-            self.fns.h = OptizelleConstraints(self.problem, inequality_constraints)
+            self.fns.h = OptizelleConstraints(self.problem, all_inequality_constraints)
 
         # Set solver parameters
         self.__set_optizelle_parameters()
@@ -582,13 +659,13 @@ class OptizelleSolver(OptimizationSolver):
 
         if self.problem.constraints is None:
             num_equality_constraints = 0
-            num_inequality_constraints = 0
+            num_inequality_constraints = 0 + len(self.bound_inequality_constraints)
         else:
             num_equality_constraints = len(self.problem.constraints.equality_constraints())
-            num_inequality_constraints = len(self.problem.constraints.inequality_constraints())
+            num_inequality_constraints = len(self.problem.constraints.inequality_constraints()) + len(self.bound_inequality_constraints)
 
         # No constraints
-        if self.problem.constraints is None:
+        if num_equality_constraints == 0 and num_inequality_constraints == 0:
             Optizelle.Unconstrained.Algorithms.getMin(DolfinVectorSpace, Optizelle.Messaging(), self.fns, self.state)
 
         # Equality constraints only
