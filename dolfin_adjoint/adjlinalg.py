@@ -412,7 +412,21 @@ def wrap_solve(A, x, b, solver_parameters):
    lu_solvers = ["lu", "mumps", "umfpack", "spooles", "superlu", "superlu_dist", "pastix", "petsc"]
    
    if backend.__name__ == "dolfin":
+     # dolfin's API for expressing linear_solvers and preconditioners has changed in 1.4. Here I try
+     # to support both.
      method = solver_parameters.get("linear_solver", "default")
+     pc = solver_parameters.get("preconditioner", "default")
+
+     if "nonlinear_solver" in solver_parameters or "newton_solver" in solver_parameters:
+        nonlinear_solver = solver_parameters.get("nonlinear_solver", "newton")
+        sub_options = nonlinear_solver + "_solver"
+
+        if sub_options in solver_parameters:
+          newton_options = solver_parameters[sub_options]
+
+          method = newton_options.get("linear_solver", method)
+          pc = newton_options.get("preconditioner", pc)
+
      if method in lu_solvers or method == "default":
        if method == "lu": method = "default"
        solver = backend.LUSolver(method)
@@ -423,8 +437,6 @@ def wrap_solve(A, x, b, solver_parameters):
        solver.solve(A, x, b)
        return
      else:
-       dangerous_parameters = ["preconditioner"]
-       pc = solver_parameters.get("preconditioner", "default")
        solver = backend.KrylovSolver(method, pc)
 
        if "krylov_solver" in solver_parameters:
