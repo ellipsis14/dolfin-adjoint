@@ -118,6 +118,9 @@ class InitialConditionParameter(DolfinAdjointParameter):
   def set_perturbation(self, m_dot):
     return InitialConditionParameter(self.coeff, perturbation=m_dot, value=self.value)
 
+# Set-up transitional syntax
+Control = InitialConditionParameter
+
 class ScalarParameter(DolfinAdjointParameter):
   '''This Parameter is used as input to the tangent linear model (TLM)
   when one wishes to compute dJ/da, where a is a single scalar parameter.'''
