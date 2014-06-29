@@ -289,10 +289,10 @@ if __name__ == "__main__":
 
 # The optimisation iterations can be visualised by opening
 # ``output/control_iterations.pvd`` in paraview. The resulting solution
-# exhibits fascinating dendritic structures.
+# exhibits fascinating structures.
 
 # .. image:: poisson-topology-3d.png
-#     :scale: 40
+#     :scale: 90
 #     :align: center
 
 # .. rubric:: References

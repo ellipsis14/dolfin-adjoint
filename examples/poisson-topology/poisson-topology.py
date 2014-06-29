@@ -286,7 +286,7 @@ if __name__ == "__main__":
 # generalisation of this example, with the following solution:
 
 # .. image:: poisson-topology-3d.png
-#     :scale: 40
+#     :scale: 90
 #     :align: center
 
 # .. rubric:: References
