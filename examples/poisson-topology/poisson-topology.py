@@ -282,6 +282,13 @@ if __name__ == "__main__":
 #     :scale: 40
 #     :align: center
 
+# See also ``examples/poisson-topology/poisson-topology-3d.py`` for a 3-dimensional
+# generalisation of this example, with the following solution:
+
+# .. image:: poisson-topology-3d.png
+#     :scale: 40
+#     :align: center
+
 # .. rubric:: References
 
 # .. bibliography:: /documentation/poisson-topology/poisson-topology.bib
