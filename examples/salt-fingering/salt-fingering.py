@@ -192,6 +192,8 @@ def get_ic():
   solve(a == L, z, bcs, solver_parameters={"linear_solver": "lu"})
   return z
 
+#
+
 # .. image:: salinity-ic.png
 #     :scale: 100
 #     :align: center
