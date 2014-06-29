@@ -180,8 +180,14 @@ def get_ic():
 
   # project zeta, t, s; solve for the streamfunction p
 
-  a = inner(zeta_test, zeta_trial)*dx + inner(t_test, t_trial)*dx + inner(s_test, s_trial)*dx + inner(grad(p_test), grad(p_trial))*dx
-  L = inner(zeta_test, zeta)*dx       + inner(t_test, t)*dx       + inner(s_test, s)*dx       - inner(p_test, zeta)*dx
+  a = (inner(zeta_test, zeta_trial)*dx +
+       inner(t_test, t_trial)*dx       +
+       inner(s_test, s_trial)*dx       +
+       inner(grad(p_test), grad(p_trial))*dx)
+  L = (inner(zeta_test, zeta)*dx       +
+       inner(t_test, t)*dx             +
+       inner(s_test, s)*dx             -
+       inner(p_test, zeta)*dx)
 
   solve(a == L, z, bcs, solver_parameters={"linear_solver": "lu"})
   return z
