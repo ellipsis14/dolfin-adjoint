@@ -44,14 +44,14 @@
 # equations, coupled to two advection equations for temperature and salinity:
 #
 # .. math::
-#            \frac{\partial \zeta}{\partial t} + \nabla^{\perp} \psi \cdot \nabla \zeta &= \frac{\Ra}{\Pr}\left(\frac{\partial T}{\partial x} - \frac{1}{R_{\rho}^0} \frac{\partial S}{\partial x}\right) + \nabla^2 \zeta, \\
-#            \frac{\partial T}{\partial t} + \nabla^{\perp} \psi \cdot \nabla T &= \frac{1}{\Pr} \nabla^2 T, \\
-#            \frac{\partial S}{\partial t} + \nabla^{\perp} \psi \cdot \nabla S &= \frac{1}{\Sc} \nabla^2 S, \\
+#            \frac{\partial \zeta}{\partial t} + \nabla^{\perp} \psi \cdot \nabla \zeta &= \frac{\textrm{Ra}}{\textrm{Pr}}\left(\frac{\partial T}{\partial x} - \frac{1}{R_{\rho}^0} \frac{\partial S}{\partial x}\right) + \nabla^2 \zeta, \\
+#            \frac{\partial T}{\partial t} + \nabla^{\perp} \psi \cdot \nabla T &= \frac{1}{\textrm{Pr}} \nabla^2 T, \\
+#            \frac{\partial S}{\partial t} + \nabla^{\perp} \psi \cdot \nabla S &= \frac{1}{\textrm{Sc}} \nabla^2 S, \\
 #            \nabla^2 \psi &= \zeta,
 #
 # where :math:`\zeta` is the vorticity, :math:`\psi` is the streamfunction,
-# :math:`T` is the temperature, :math:`S` is the salinity, and :math:`\Ra`,
-# :math:`\Sc`, :math:`\Pr` and :math:`{R_{\rho}^0}` are nondimensional parameters.
+# :math:`T` is the temperature, :math:`S` is the salinity, and :math:`\textrm{Ra}`,
+# :math:`\textrm{Sc}`, :math:`\textrm{Pr}` and :math:`{R_{\rho}^0}` are nondimensional parameters.
 # Periodic boundary conditions are applied on the left and right boundaries. 
 # The configuration consists of two well-mixed layers (i.e., of homogeneous
 # temperature and salinity) separated by an interface. To activate the
