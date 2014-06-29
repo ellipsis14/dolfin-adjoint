@@ -23,7 +23,7 @@
 # denser, and causing it to sink further. Similarly, if a parcel of cold, less
 # salty water rises into the warmer region, it will gain heat from its
 # surroundings much faster than it will gain salinity, making the parcel more
-# buoyant. This phenomenon is referred to as ``salt fingering''
+# buoyant. This phenomenon is referred to as ''salt fingering''
 # :cite:`stern1960` and has been observed in many real-world oceanographic
 # contexts :cite:`turner1985`.
 #
@@ -136,8 +136,9 @@ Rrho = Constant(1.8)
 # scalar field called "InitialSalinity" to a scalar field called
 # "FinalSalinity". Therefore the steps involved in setting up the
 # initial condition are:
-# 1. project the initial salinity field to the salinity function space
-# 2. project that field and the initial conditions for vorticity and
+#
+# 1. Project the initial salinity field to the salinity function space
+# 2. Project that field and the initial conditions for vorticity and
 #    temperature into the mixed function space, while simultaneously
 #    solving for the streamfunction.
 
