@@ -345,6 +345,10 @@ if __name__ == "__main__":
 # The fact that the singular values are greater than 1 indicates that the system
 # is unstable to the perturbations identified.
 
+# .. image:: salinity-combined.png
+#     :scale: 40
+#     :align: center
+
 # .. rubric:: References
 
 # .. bibliography:: /documentation/salt-fingering/salt-fingering.bib

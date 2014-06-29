@@ -65,6 +65,8 @@ from dolfin_adjoint import *
 # in the smoothed aggregation multigrid.
 
 PETScOptions.set("pc_gamg_agg_nsmooths", 1)
+PETScOptions.set("ksp_monitor_true_residual")
+PETScOptions.set("ksp_converged_reason")
 
 # Next we import the Python interface to IPOPT. If IPOPT is
 # unavailable on your system, we strongly :doc:`suggest you install it
@@ -92,7 +94,7 @@ p = Constant(5)        # power used in the solid isotropic material
 # with penalisation (SIMP) rule, to encourage the control solution to attain either 0 or 1
 eps = Constant(1.0e-3) # epsilon used in the solid isotropic material 
 # with penalisation (SIMP) rule, used to encourage the control solution to attain either 0 or 1
-alpha = Constant(1.0e-8) # regularisation coefficient in functional
+alpha = Constant(1.0e-9) # regularisation coefficient in functional
 
 
 def k(a):
@@ -103,7 +105,7 @@ rule, equation (11)."""
 # Next we define the mesh (a unit square) and the function spaces to be
 # used for the control :math:`a` and forward solution :math:`T`.
 
-n = 50
+n = 80
 mesh = UnitCubeMesh(n, n, n)
 A = FunctionSpace(mesh, "CG", 1)  # function space for control
 P = FunctionSpace(mesh, "CG", 1)  # function space for solution
