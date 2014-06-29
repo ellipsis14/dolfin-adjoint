@@ -192,6 +192,10 @@ def get_ic():
   solve(a == L, z, bcs, solver_parameters={"linear_solver": "lu"})
   return z
 
+# .. image:: salinity-ic.png
+#     :scale: 100
+#     :align: center
+
 # Finally, once we have the mixed function state (zeta, p, t, s) at the end of
 # the run, we need to project out the salinity. dolfin-adjoint considers whole
 # functions, not parts of mixed function spaces, and hence the final salinity
@@ -345,8 +349,12 @@ if __name__ == "__main__":
 # The fact that the singular values are greater than 1 indicates that the system
 # is unstable to the perturbations identified.
 
+# This image shows the leading initial perturbation and the arising final perturbation.
+# The perturbation selectively promotes the growth of some fingers, and retards the
+# growth of others.
+
 # .. image:: salinity-combined.png
-#     :scale: 40
+#     :scale: 100
 #     :align: center
 
 # .. rubric:: References
