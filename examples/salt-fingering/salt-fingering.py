@@ -337,3 +337,9 @@ if __name__ == "__main__":
 
 # The fact that the singular values are greater than 1 indicates that the system
 # is unstable to the perturbations identified.
+
+# .. rubric:: References
+
+# .. bibliography:: /documentation/salt-fingering/salt-fingering.bib
+#    :cited:
+#    :labelprefix: 6E-
