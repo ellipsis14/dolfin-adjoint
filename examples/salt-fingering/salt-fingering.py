@@ -257,8 +257,8 @@ def main():
       +  inner(grad(p_test), grad(p))*dx
       +  inner(p_test, zeta)*dx)
 
-    solve(F == 0, z, bcs=bcs, J=derivative(F, z), 
-     solver_parameters={"newton_solver": {"maximum_iterations": 20, "linear_solver": "mumps"}})
+    solve(F == 0, z, bcs=bcs, J=derivative(F, z), solver_parameters=
+    {"newton_solver": {"maximum_iterations": 20, "linear_solver": "mumps"}})
 
     z_old.assign(z)
 
