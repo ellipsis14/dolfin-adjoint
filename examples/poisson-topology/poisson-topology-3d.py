@@ -258,7 +258,8 @@ if __name__ == "__main__":
   File("output-3d/control_solution.xml.gz") << a_opt
 
 # The example code can be found in ``examples/poisson-topology/`` in the
-# ``dolfin-adjoint`` source tree, and executed as follows:
+# ``dolfin-adjoint`` source tree. Running it takes approximately 5 minutes
+# on my laptop. The code is executed as follows:
 
 # .. code-block:: bash
 
