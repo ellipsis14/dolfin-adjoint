@@ -10,9 +10,9 @@ Installation:
 See separate file INSTALL for how to install the module and a list
 of dependencies. If you're on Ubuntu, just do
 
-    sudo apt-add-repository ppa:libadjoint/ppa
-    sudo apt-get update
-    sudo apt-get install python-dolfin-adjoint
+     sudo apt-add-repository ppa:libadjoint/ppa
+     sudo apt-get update
+     sudo apt-get install python-dolfin-adjoint
 
 to install dolfin-adjoint.
 
