@@ -5,7 +5,7 @@
 #
 # .. py:currentmodule:: dolfin_adjoint
 #
-# Sensitivity analysis of the heat equation on Gray's Klein bottle
+# Sensitivity analysis of the heat equation on a Klein bottle
 # ================================================================
 #
 # .. sectionauthor:: Simon W. Funke <simon@simula.no>
@@ -79,90 +79,107 @@
 
 from dolfin import *
 from dolfin_adjoint import *
-from math import ceil
+set_log_level(ERROR)
 
-# We start with ...
+# Next we load a triangulation of the Klein bottle as a mesh file. 
+# FEniCS natively supports solving partial differential 
+# equations on manifolds :cite:`rognes2013`, so nothing else needs to 
+# be done here.
+# If you are interested how the mesh file was generated, you find the code 
+# in ``examples/klein/make_mesh.py`` in the ``dolfin-adjoint``
+# source tree.
 
-#: Activate some FEniCS optimizations
-parameters["form_compiler"]["cpp_optimize_flags"] = "-O3 -ffast-math -march=native"
-
-#: Load the mesh  
 mesh = Mesh("klein.xml.gz")
+
+# The next few lines perform the set up of the heat equation model. We 
+# perform 10 timesteps, starting from a fairly smooth initial temperature 
+# variation:
 
 # Set the options for the time discretization
 T = 1.
 t = 0.0
 step = 0.1
 
-# 
-#steps = int(ceil(T/float(step)))+1
-#adj_checkpointing('multistage', steps, 2, 1, verbose=True)
-
-#: Define the function space for the PDE solution
+# Define the function space for the PDE solution
 V = FunctionSpace(mesh, "CG", 1)
 
-#: Define the initial condition
+# Define the initial condition
 g = interpolate(Expression("sin(x[2])*cos(x[1])"), V)
 
-#: Define the solution at the current time level
+# Define the solution at the current time level
 u = Function(V)
 
-#: Define the solution at the previous time level
+# Define the solution at the previous time level
 u_old = Function(V)
 
-#: Define the test function
+# Define the test function
 v = TestFunction(V)
 
-#: Define the variational formulation of the problem
-F = u*v*dx - u_old*v*dx + step*inner(grad(v), grad(u))*dx
+# Define the thermal diffusivity
+nu = 1.0
 
-#: Define the solver options
-sps = {"nonlinear_solver": "newton"}
-sps["newton_solver"] = {"maximum_iterations": 200, 
-                        "relative_tolerance": 1.0e-200, 
-                        "linear_solver": "lu"}
+# Define the variational formulation of the problem
+F = u*v*dx - u_old*v*dx + step*nu*inner(grad(v), grad(u))*dx
 
-#: Solve the time-dependent forward problem
+# dolfin-adjoint supports optimal checkpointing based on the revolve library :cite:`griewank2000`.
+# We leave it commented our here, but we will present some runtime results at the end of this example with checkpointing activated.
+
+#adj_checkpointing('multistage', steps=11, snaps_on_disk=0, snaps_in_ram=5, verbose=True)
+
+# Next, we solve the forward model.
+
+# Solve the time-dependent forward problem
 u_pvd = File("output/u.pvd")
 u_pvd << g
 fwd_timer = Timer("Forward run")
 fwd_time = 0
 
 u_old.assign(g, annotate=True)
-plot(u_old, interactive=True)
 while t <= T:
     t += step
 
     fwd_timer.start()
-    solve(F == 0, u, solver_parameters=sps)
+    solve(F == 0, u)
     u_old.assign(u)
     fwd_time += fwd_timer.stop()
 
     u_pvd << u
     adj_inc_timestep()
 
+# Next we define the objetive functional.
 
-#: Define the functional and control
 J = Functional(inner(u, u)*dx*dt[FINISH_TIME])
 m = Control(g)
-plot(u, interactive=True)
 
-#: Compute the functional gradient with dolfin-adjoint
+# Now, we can compute the functional gradient with dolfin-adjoint
+
 adj_timer = Timer("Adjoint run")
 dJdm = compute_gradient(J, m)
 adj_time = adj_timer.stop()
 
-#: Print timing statistics 
+# Finally we plot the computed functional gradient and
+# print some timing statistics. 
+
+plot(dJdm, title="Sensitivity of ||u(t=%f)||_L2 with respect to u(t=0)." % t)
+interactive()
+
 print "Forward time: ", fwd_time
 print "Adjoint time: ", adj_time
 print "Adjoint to forward runtime ratio: ", adj_time / fwd_time
 
-# Plot the computed functional gradient
-plot(dJdm, title="Sensitivity of ||u(t=%f)||_L2 with respect to u(t=0)." % t)
-interactive()
+# The example code can be found in ``examples/klein`` in the ``dolfin-adjoint``
+# source tree, and executed as follows:
 
-dJdm_pvd = File("output/dJdm.pvd")
-dJdm_pvd << dJdm
+# .. code-block:: bash
+
+#   $ python klein.py
+#   ...
+#   Forward time:  8.62722325325
+#   Adjoint time:  7.75998806953
+#   Adjoint to forward runtime ratio:  0.899476904879
+
+# Since the forward model is linear, we the adjoint model should optimally take 
+# roughly the same time as the foward model. This is indeed the case here.
 
 # The following image on the left shows the initial temperature variation, that is :math:`u(T=0)` and the image on the right the final temperature variation, that is :math:`u(T=1)`.
 
@@ -175,3 +192,26 @@ dJdm_pvd << dJdm
 # .. image:: klein-sensitivity.png
 #     :scale: 30
 #     :align: center
+
+
+# Checkpointing timings
+# ---------------------
+
+# The revolve library 
+
+# 10 timesteps
+
+# =====================================================    ====   ====  ====   ====
+# Number of memory checkpoints                              2      3     4      5
+# =====================================================    ====   ====  ====   ====
+# Theoretical optimal adjoint to forward runtime ratio     5.00   2.18  1.63   1.45
+# Observed adjoint to forward runtime ratio                5.07   2.26  1.73   1.53
+# =====================================================    ====   ====  ====   ====
+
+
+# .. rubric:: References
+
+# .. bibliography:: /documentation/klein/klein.bib
+#    :cited:
+#    :labelprefix: 6E-
+
