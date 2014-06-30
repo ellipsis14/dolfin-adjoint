@@ -1,16 +1,22 @@
-dolfin-adjoint (1.3.0) trusty; urgency=low
+dolfin-adjoint (1.4) unstable; urgency=low
+
+  * Non-maintainer upload.
+
+ -- Patrick Farrell <patrick.farrell@maths.ox.ac.uk>  Mon, 30 Jun 2014 07:17:05 +0100
+
+dolfin-adjoint (1.3) unstable; urgency=low
 
   * Bump version number to match DOLFIN's
 
  -- Simon Funke <simon@simula.no>  Wed, 14 May 2014 12:53:50 +0200
 
-dolfin-adjoint (1.2.0) precise; urgency=low
+dolfin-adjoint (1.2) precise; urgency=low
 
   * Bump our version number to match DOLFIN's
 
  -- Patrick Farrell <patrick.farrell@imperial.ac.uk>  Thu, 27 Jun 2013 14:49:40 +0100
 
-dolfin-adjoint (1.1.0) unstable; urgency=low
+dolfin-adjoint (1.1) unstable; urgency=low
 
   * New release. Loads of new features.
   * Change the version numbering to match DOLFIN's.
