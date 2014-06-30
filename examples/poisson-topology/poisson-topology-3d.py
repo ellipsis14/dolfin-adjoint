@@ -65,8 +65,6 @@ from dolfin_adjoint import *
 # in the smoothed aggregation multigrid.
 
 PETScOptions.set("pc_gamg_agg_nsmooths", 1)
-PETScOptions.set("ksp_monitor_true_residual")
-PETScOptions.set("ksp_converged_reason")
 
 # Next we import the Python interface to IPOPT. If IPOPT is
 # unavailable on your system, we strongly :doc:`suggest you install it
@@ -94,7 +92,7 @@ p = Constant(5)        # power used in the solid isotropic material
 # with penalisation (SIMP) rule, to encourage the control solution to attain either 0 or 1
 eps = Constant(1.0e-3) # epsilon used in the solid isotropic material 
 # with penalisation (SIMP) rule, used to encourage the control solution to attain either 0 or 1
-alpha = Constant(1.0e-9) # regularisation coefficient in functional
+alpha = Constant(1.0e-8) # regularisation coefficient in functional
 
 
 def k(a):
@@ -105,7 +103,7 @@ rule, equation (11)."""
 # Next we define the mesh (a unit square) and the function spaces to be
 # used for the control :math:`a` and forward solution :math:`T`.
 
-n = 80
+n = 50
 mesh = UnitCubeMesh(n, n, n)
 A = FunctionSpace(mesh, "CG", 1)  # function space for control
 P = FunctionSpace(mesh, "CG", 1)  # function space for solution
@@ -173,7 +171,7 @@ if __name__ == "__main__":
 # executed on every functional derivative calculation
 # <../../documentation/optimisation>`.
 
-  controls = File("output/control_iterations.pvd")
+  controls = File("output-3d/control_iterations.pvd")
   a_viz = Function(A, name="ControlVisualisation")
   def eval_cb(j, a):
     a_viz.assign(a)
@@ -257,10 +255,11 @@ if __name__ == "__main__":
   nlp = rfn.pyipopt_problem(bounds=(lb, ub), constraints=VolumeConstraint(V))
   a_opt = nlp.solve(full=False)
 
-  File("output/control_solution.xml.gz") << a_opt
+  File("output-3d/control_solution.xml.gz") << a_opt
 
 # The example code can be found in ``examples/poisson-topology/`` in the
-# ``dolfin-adjoint`` source tree, and executed as follows:
+# ``dolfin-adjoint`` source tree. Running it takes approximately 5 minutes
+# on my laptop. The code is executed as follows:
 
 # .. code-block:: bash
 

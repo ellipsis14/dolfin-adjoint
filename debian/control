@@ -1,7 +1,7 @@
 Source: dolfin-adjoint
 Section: python
 Priority: optional
-Maintainer: Patrick Farrell <patrick.farrell06@imperial.org>
+Maintainer: Patrick Farrell <patrick.farrell@maths.ox.ac.uk>
 Build-Depends: debhelper (>> 5.0.0), cdbs, python, python-all-dev, dh-python
 XS-Python-Version: >= 2.5
 Standards-Version: 3.9.1

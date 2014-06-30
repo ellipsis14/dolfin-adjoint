@@ -13,12 +13,12 @@ importing the :py:mod:`firedrake` module. firedrake-adjoint relies on *overloadi
 the key functions of firedrake to achieve its degree of automation.
 """
 
-__version__ = '1.1.0+'
+__version__ = '1.4'
 __author__  = 'Simon Funke and Patrick Farrell'
 __credits__ = ['Patrick Farrell', 'Simon Funke', 'David Ham', 'Marie Rognes']
 __license__ = 'LGPL-3'
 __maintainer__ = 'Simon Funke'
-__email__ = 's.funke09@imperial.ac.uk'
+__email__ = 'simon@simula.no'
 
 import sys
 import firedrake
