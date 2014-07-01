@@ -139,8 +139,8 @@ F = u*v*dx - u_old*v*dx + step*nu*inner(grad(v), grad(u))*dx
 # While this approach is fast, it requires significant memory which can
 # quickly become infeasible for large-scale, time-dependent applications. For
 # such situations, an optimal checkpointing strategy based on the revolve
-# library :cite:`griewank2000` may be used, which trades off memory requirement
-# with additional computational cost. The following code demonstrates how
+# library :cite:`griewank2000` may be used, which trades off memory required
+# for additional computational cost. The following code demonstrates how
 # checkpointing would be activated:
 
 #adj_checkpointing('multistage', steps=11, snaps_on_disk=1, snaps_in_ram=3, verbose=True)
