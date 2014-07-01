@@ -19,11 +19,11 @@
 # The obvious approach to obtain this sensitivity information is to perturb each
 # input variable independently and observe how the objective value changes.
 # However, this approach quickly becomes infeasible if the number of input
-# variables grows or the model is computationally expensive.
+# variables grows or if the model is computationally expensive.
 #
 # One of the key advantages of the adjoint method is that the computational cost
-# for obtaining sensitivities is nearly independent on the number of input
-# variables.  This allows us to compute sensitivities with respect to millions
+# for obtaining sensitivities is nearly independent of the number of input
+# variables. This allows us to compute sensitivities with respect to millions
 # of input variables, or even with respect to entire input functions!
 #
 # In the following example we consider a time-dependent model and apply
@@ -37,7 +37,7 @@
 #
 # .. math::
 #            \frac{\partial u}{\partial t} - \nu \nabla^{2} u= 0 
-#             \quad & \textrm{in } \Omega \times (0, T), \\
+#             \quad & \textrm{in\phantom{r} } \Omega \times (0, T), \\
 #            u = g  \quad & \textrm{for } \Omega \times \{0\}.
 #
 #
@@ -60,8 +60,8 @@
 #
 # Note that we did not specify any boundary conditions for the heat equation
 # above.  The reason is that for this example the domain :math:`\Omega` is a
-# closed manifold, that is a manifold without boundary. More specifically the
-# domain is a 2D manifold embedded in 3D: the `Gray's Klein bottle
+# closed manifold, that is a manifold without a boundary. More specifically the
+# domain is a 2D manifold embedded in 3D, the `Gray's Klein bottle
 # <http://paulbourke.net/geometry/klein/>`_ with parameters a = 2, n = 2 and m =
 # 1. The meshed Klein bottle looks like this:
 
@@ -136,7 +136,7 @@ F = u*v*dx - u_old*v*dx + step*nu*inner(grad(v), grad(u))*dx
 # One remark before we continue with solving the forward problem.  Generally,
 # the adjoint equations depend on the solutions of the forward model.
 # Therefore, dolfin-adjoint stores every forward solution in memory by default.
-# While this approach is fast, it requires significant memory which can be
+# While this approach is fast, it requires significant memory which can
 # quickly become infeasible for large-scale, time-dependent applications. For
 # such situations, an optimal checkpointing strategy based on the revolve
 # library :cite:`griewank2000` may be used, which trades off memory requirement
@@ -245,7 +245,7 @@ print "Adjoint to forward runtime ratio: ", adj_time / fwd_time
 # In the following test, we investigate the additional computational cost when
 # using checkpointing over the default store-all strategy in dolfin-adjoint.
 # The following table compares the slow-down factor with 11 timesteps, no disk
-# checkpoints, varying memory checkpoints
+# checkpoints, and with varying memory checkpoints:
 
 # =====================================================    ====   ====  ====   ==== =====================
 # Number of memory checkpoints                              2      3     4      5   11 (no checkpointing)
@@ -261,5 +261,5 @@ print "Adjoint to forward runtime ratio: ", adj_time / fwd_time
 
 # .. bibliography:: /documentation/klein/klein.bib
 #    :cited:
-#    :labelprefix: 6E-
+#    :labelprefix: 0E-
 
