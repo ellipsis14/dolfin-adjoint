@@ -1,6 +1,6 @@
-dolfin-adjoint (1.4) trusty; urgency=low
+dolfin-adjoint (1.4) unstable; urgency=low
 
-  * Non-maintainer upload.
+  * Release dolfin-adjoint version 1.4.
 
  -- Patrick Farrell <patrick.farrell@maths.ox.ac.uk>  Mon, 30 Jun 2014 07:17:05 +0100
 
