@@ -14,32 +14,31 @@
 # Background
 # **********
 #
-# When working with a computational model, it is often desired to study 
-# the impact of model input parameters on a particular model output variable 
-# (which we call objective value from now on).
-# The obvious approach is to perturb each input variable independently 
-# and observe how the objective value changes. However, this quickly becomes
+# When working with computational models, it is often desired to study 
+# the impact of input parameters on a particular model output variable 
+# (the objective value).
+# The obvious approach to obtain sensitivity information is to perturb each 
+# input variable independently and observe how the objective value changes. 
+# However, this quickly becomes
 # infeasible if the number of input variables grows and/or 
 # the model is computational expensive.
 #
-# One of the main advantages of the adjoint method is that the 
-# cost for computing such sensitivities is nearly independent on the number of 
+# One of the key advantages of the adjoint method is that the 
+# computational cost for obtaining sensitivities is nearly independent on the number of 
 # input variables.
 # This allows us to easily compute sensitivities with respect
-# to hundreds of input variables, or even infinite dimensional functions!
+# to hundreds of input variables, or even with respect to infinite dimensional functions!
 #
-# In the following example we apply dolfin-adjoint to compute the sensitivity of 
-# a time-dependent model with respect to its initial condition. 
+# In the following example we consider a time-dependent model and apply dolfin-adjoint to 
+# determine how sensitive the final solution is with respect to changes in its initial condition. 
 #
 # Problem definition
 # ******************
 #
-# The equation for this example is the two-dimensional, time-dependent heat-equation:
-# computes the gradient of the solution norm at the final time
-# with respect to the initial condition.
+# The partial differential equation for this example is the two-dimensional, time-dependent heat-equation:
 #
 # .. math::
-#            \frac{\partial u}{\partial t} - \nu \nabla^{2} = 0 
+#            \frac{\partial u}{\partial t} - \nu \nabla^{2} u= 0 
 #             \quad & \textrm{in } \Omega \times (0, T), \\
 #            u = g  \quad & \textrm{for } \Omega \times \{0\}.
 #            
@@ -48,23 +47,23 @@
 # is the unkown temperature variation, :math:`\nu` is the thermal diffusivity, and 
 # :math:`g` is the initial temperature.
 #
-# The objective functional, that is the model output of interest, is the norm of the 
-# temperature at the end of the time interval:
+# The objective value, that is the model output of interest, is the norm of the 
+# temperature variation at the final time:
 #
 # .. math::
 #            J(u) := \int_\Omega u(t=T)^2 \textrm{d} \Omega
 # 
-# We would like to compute the sensitivity of :math:`J` on the initial condition, that is:
+# We are interested in the sensitivity of :math:`J` on the initial condition, that is:
 #
 # .. math::
-#            \frac{\textrm{d}J(u)}{\textrm{d} g}
+#            \frac{\textrm{d}J}{\textrm{d} g}
 #
 #
-# Note that we do not enforce any boundary conditions for the heat equation. 
-# The reason is that in this example the domain :math:`\Omega` is a closed 
+# Note that we did not specify any boundary conditions for the heat equation above. 
+# The reason is in this example the domain :math:`\Omega` is a closed 
 # manifold, that is a manifold without boundary. More specifically the domain is
 # a 2D manifold embedded in 3D: the `Gray's Klein bottle 
-# <http://paulbourke.net/geometry/klein/>`_ with parameters :math:`a = 2.0`, :math:`n = 2` and :math:`m = 1`. The meshed domain looks like this:
+# <http://paulbourke.net/geometry/klein/>`_ with parameters :math:`a = 2.0`, :math:`n = 2` and :math:`m = 1`. The meshed Klein bottle looks like this:
 
 # .. image:: klein-bottle.png
 #     :scale: 50
@@ -75,52 +74,67 @@
 # **************
 
 # We start the implementation by importing the :py:mod:`dolfin` and
-# :py:mod:`dolfin_adjoint` modules
+# :py:mod:`dolfin_adjoint` modules.
 
 from dolfin import *
 from dolfin_adjoint import *
-set_log_level(ERROR)
 
 # Next we load a triangulation of the Klein bottle as a mesh file. 
-# FEniCS natively supports solving partial differential 
-# equations on manifolds :cite:`rognes2013`, so nothing else needs to 
-# be done here.
-# If you are interested how the mesh file was generated, you find the code 
-# in ``examples/klein/make_mesh.py`` in the ``dolfin-adjoint``
-# source tree.
 
 mesh = Mesh("klein.xml.gz")
 
-# The next few lines perform the set up of the heat equation model. We 
-# perform 10 timesteps, starting from a fairly smooth initial temperature 
-# variation:
+# FEniCS natively supports solving partial differential 
+# equations on manifolds :cite:`rognes2013`, so nothing else needs to 
+# be done here.
+# If you are interested how this mesh was generated, you find the code 
+# in ``examples/klein/make_mesh.py`` in the ``dolfin-adjoint``
+# source tree.
+
+# The next lines perform the setup of the heat equation model. 
+# First we define a discrete function space based on a linear, continuous 
+# finite element. Then we create the solution, test and trial 
+# functions for the variational formulation.
+# We also define the initial temperature and the thermal diffusivity coefficient.
+
+
+# Function space for the PDE solution
+V = FunctionSpace(mesh, "CG", 1)
+
+# Solution at the current time level
+u = Function(V)
+
+# Solution at the previous time level
+u_old = Function(V)
+
+# Test function
+v = TestFunction(V)
+
+# Initial condition
+g = interpolate(Expression("sin(x[2])*cos(x[1])"), V)
+
+# Thermal diffusivity
+nu = 1.0
+
+# Now we can discretise the problem in time and specify the variational 
+# formulation of the problem. 
+# By multiplying the heat equation with a testfunction :math:`v \in V` and 
+# applying a backward Euler time-discretisation, the discrete problem for one time level reads: Find :math:`u \in V` such that for all :math:`v \in V`:
+
+# .. math::
+#            \frac{u - u_{\textrm{old}}}{\textrm{step}} + \nu \left<\nabla u, \nabla v \right> = 0 
+#            
+
+# or in code:
 
 # Set the options for the time discretization
 T = 1.
 t = 0.0
 step = 0.1
 
-# Define the function space for the PDE solution
-V = FunctionSpace(mesh, "CG", 1)
-
-# Define the initial condition
-g = interpolate(Expression("sin(x[2])*cos(x[1])"), V)
-
-# Define the solution at the current time level
-u = Function(V)
-
-# Define the solution at the previous time level
-u_old = Function(V)
-
-# Define the test function
-v = TestFunction(V)
-
-# Define the thermal diffusivity
-nu = 1.0
-
 # Define the variational formulation of the problem
-F = u*v*dx - u_old*v*dx + step*nu*inner(grad(v), grad(u))*dx
+F = (u*v*dx - u_old*v*dx)/step + nu*inner(grad(v), grad(u))*dx
 
+# A small remark before we continue solving the forward problem.
 # dolfin-adjoint supports optimal checkpointing based on the revolve library :cite:`griewank2000`.
 # We leave it commented our here, but we will present some runtime results at the end of this example with checkpointing activated.
 
