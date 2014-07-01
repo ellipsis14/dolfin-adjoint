@@ -126,6 +126,11 @@ nu = 1.0
 
 # or in code:
 
+# Set the options for the time discretization
+T = 1.
+t = 0.0
+step = 0.1
+
 # Define the variational formulation of the problem
 F = u*v*dx - u_old*v*dx + step*nu*inner(grad(v), grad(u))*dx
 
@@ -145,13 +150,10 @@ F = u*v*dx - u_old*v*dx + step*nu*inner(grad(v), grad(u))*dx
 
 # The next step is to solve the time-dependent forward problem. 
 
-# Set the options for the time discretization
-T = 1.
-t = 0.0
-step = 0.1
-
 fwd_timer = Timer("Forward run")
 fwd_time = 0
+
+u_pvd = File("output/u.pvd")
 
 # Execute the time loop
 u_old.assign(g, annotate=True)
