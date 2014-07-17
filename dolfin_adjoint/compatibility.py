@@ -11,5 +11,5 @@ else:
     matrix_types = lambda: backend.op2.petsc_base.Mat
 
     def _extract_args(*args, **kwargs):
-        eq, u, bcs, _, _, _, solver_parameters, _ = backend.solving._extract_args(*args, **kwargs)
+        eq, u, bcs, _, _, _, solver_parameters, _ = backend.solving._extract_args(*args, **kwargs)[:8]
         return eq, u, bcs, None, None, None, None, solver_parameters
