@@ -24,3 +24,5 @@ import sys
 import firedrake
 sys.modules['backend'] = firedrake
 from dolfin_adjoint import *
+
+firedrake.projection._solve = solve

@@ -445,7 +445,7 @@ def wrap_solve(A, x, b, solver_parameters):
        solver.solve(A, x, b)
        return
    else:
-     backend.solve(A, x, b)
+     backend.solve(A, x, b, solver_parameters=solver_parameters)
      return
 
 def wrap_assemble(form, test):
