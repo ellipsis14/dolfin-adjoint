@@ -207,7 +207,7 @@ def _check_and_extract_functions(e, linear_comb=None, scalar_weight=1.0,
     linear_comb = linear_comb or []
 
     # First check u
-    if isinstance(e, Function):
+    if isinstance(e, backend.Function):
         linear_comb.append((e, scalar_weight))
         return linear_comb
 
