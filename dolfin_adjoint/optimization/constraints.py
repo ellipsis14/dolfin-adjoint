@@ -1,26 +1,44 @@
 """This module offers a standard interface for control constraints,
 that can be used with different optimisation algorithms."""
 
-from ..utils import gather
-from numpy import append
+import numpy
 
 class Constraint(object):
   def function(self, m):
-    """Return a vector-like object (numpy array or dolfin Vector), which must be zero for the point to be feasible."""
+    """
+    Evaluate c(m), where c(m) == 0 for equality constraints and c(m) >= 0 for inequality constraints.
+
+    c(m) must return a numpy array or a dolfin Function or Constant.
+    """
 
     raise NotImplementedError, "Constraint.function must be supplied"
 
   def jacobian(self, m):
-    """Return a list of vector-like objects representing the gradient of the constraint function with respect to the parameter m.
+    """Returns the full Jacobian matrix as a list of vector-like objects representing the gradient of the constraint function with respect to the parameter m.
 
        The objects returned must be of the same type as m's data."""
 
-    raise NotImplementedError, "Constraint.jacobian must be supplied"
+    raise NotImplementedError, "Constraint.jacobian not implemented"
 
-  def length(self):
-    """Return the number of constraints (len(function(m)))."""
+  def jacobian_action(self, m, dm, result):
+    """Computes the Jacobian action of c(m) in direction dm and stores the result in result. """ 
 
-    raise NotImplementedError, "Constraint.length must be supplied"
+    raise NotImplementedError, "Constraint.jacobian_action is not implemented"
+
+  def jacobian_adjoint_action(self, m, dp, result):
+    """Computes the Jacobian adjoint action of c(m) in direction dp and stores the result in result. """ 
+
+    raise NotImplementedError, "Constraint.jacobian_adjoint_action is not implemented"
+
+  def hessian_action(self, m, dm, dp, result):
+    """Computes the Hessian action of c(m) in direction dm and dp and stores the result in result. """ 
+
+    raise NotImplementedError, "Constraint.hessian_action is not implemented"
+
+  def output_workspace(self):
+    """Return an object like the output of c(m) for calculations."""
+
+    raise NotImplementedError, "Constraint.output_workspace must be supplied"
 
   def __len__(self):
     return self.length()
@@ -41,21 +59,45 @@ class InequalityConstraint(Constraint):
   for 0 <= i < n, where m is the parameter.
   """
 
+numpify = lambda x: numpy.array(x) if isinstance(x, list) else x
+
 class MergedConstraints(Constraint):
   def __init__(self, constraints):
     self.constraints = constraints
 
   def function(self, m):
-    return reduce(append, [gather(c.function(m)) for c in self.constraints], [])
+    return [numpify(c.function(m)) for c in self.constraints]
 
   def jacobian(self, m):
-    return reduce(append, [gather(c.jacobian(m)) for c in self.constraints], [])
+    return [c.jacobian(m) for c in self.constraints]
+
+  def jacobian_action(self, m, dm, result):
+    [c.jacobian_action(m, dm, result[i]) for (i, c) in enumerate(self.constraints)]
+
+  def jacobian_adjoint_action(self, m, dp, result):
+    [c.jacobian_adjoint_action(m, dp[i], result) for (i, c) in enumerate(self.constraints)]
+
+  def hessian_action(self, m, dm, dp, result):
+    [c.hessian_action(m, dm, dp[i], result) for (i, c) in enumerate(self.constraints)]
 
   def __iter__(self):
     return iter(self.constraints)
 
-  def length(self):
-    return sum(c.length() for c in self.constraints)
+  def __len__(self):
+    return len(self.constraints)
+
+  def output_workspace(self):
+    return [numpify(c.output_workspace()) for c in self.constraints]
+
+  def equality_constraints(self):
+    ''' Filters out the equality constraints '''
+    constraints = [c for c in self.constraints if isinstance(c, EqualityConstraint)]
+    return MergedConstraints(constraints)
+
+  def inequality_constraints(self):
+    ''' Filters out the inequality constraints '''
+    constraints = [c for c in self.constraints if isinstance(c, InequalityConstraint)]
+    return MergedConstraints(constraints)
 
 def canonicalise(constraints):
   if constraints is None:

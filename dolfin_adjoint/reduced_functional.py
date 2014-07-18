@@ -2,50 +2,64 @@ import libadjoint
 from backend import Function, Constant, info_red, info_green, File
 from dolfin_adjoint import adjlinalg, adjrhs, constant, drivers
 from dolfin_adjoint.adjglobals import adjointer, mem_checkpoints, disk_checkpoints
+from functional import Functional
+from enlisting import enlist, delist
 import cPickle as pickle
 import hashlib
 
 global_eqn_list = {}
+
 class ReducedFunctional(object):
-    ''' This class implements the reduced functional for a given functional/parameter combination. The core idea 
-        of the reduced functional is to consider the problem as a pure function of the parameter value which 
-        implicitly solves the recorded PDE. '''
-    def __init__(self, functional, parameter, scale = 1.0, eval_cb = None, derivative_cb = None, replay_cb = None, hessian_cb = None, ignore = [], cache = None):
-        ''' Creates a reduced functional object, that evaluates the functional value for a given parameter value.
-            The arguments are as follows:
-            * 'functional' must be a dolfin_adjoint.Functional object. 
-            * 'parameter' must be a single or a list of dolfin_adjoint.DolfinAdjointParameter objects.
-            * 'scale' is an additional scaling factor. 
-            * 'eval_cb' is an optional callback that is executed after each functional evaluation. 
-              The interace must be eval_cb(j, m) where j is the functional value and 
-              m is the parameter value at which the functional is evaluated.
-            * 'derivative_cb' is an optional callback that is executed after each functional gradient evaluation. 
-              The interface must be eval_cb(j, dj, m) where j and dj are the functional and functional gradient values, and 
-              m is the parameter value at which the gradient is evaluated.
-            * 'hessian_cb' is an optional callback that is executed after each hessian action evaluation. The interface must be
-               hessian_cb(j, m, mdot, h) where mdot is the direction in which the hessian action is evaluated and h the value
-               of the hessian action.
-            '''
+    ''' This class provides access to the reduced functional for a given functional/parameter pair. The 
+        reduced functional maps a parameter value to the associated functional value by implicitly
+        solving the PDE that is annotated by dolfin-adjoint. The ReducedFunctional object may also be used
+        to compute derivatives of that map. '''
+
+    def __init__(self, functional, parameter, scale=1.0, eval_cb=None, derivative_cb=None, replay_cb=None, hessian_cb=None, cache=None):
+        ''' Creates a reduced functional object that mpas parameter values to functional values. '''
+
+        # Check the types of the inputs 
+        self.__check_input_types(functional, parameter, scale, cache)
+
+        #: The objective functional.
         self.functional = functional
-        if not isinstance(parameter, (list, tuple)):
-            parameter = [parameter]
-        self.parameter = parameter
-        # This flag indicates if the functional evaluation is based on replaying the forward annotation. 
-        self.replays_annotation = True
-        self.eqns = []
+
+        #: One, or a list of parameters.
+        self.parameter = enlist(parameter)
+
+        #: An optional scaling factor for the functional
         self.scale = scale
+
+        #: An optional callback function that is executed after each functional 
+        #: evaluation. 
+        #: The interace must be eval_cb(j, m) where j is the functional value and 
+        #: m is the parameter value at which the functional is evaluated.
         self.eval_cb = eval_cb
+
+        #: An optional callback function that is executed after each functional 
+        #: gradient evaluation. 
+        #: The interface must be eval_cb(j, dj, m) where j and dj are the 
+        #: functional and functional gradient values, and m is the parameter 
+        #: value at which the gradient is evaluated.
         self.derivative_cb = derivative_cb
+
+        #: An optional callback function that is executed after each hessian 
+        #: action evaluation. The interface must be hessian_cb(j, m, mdot, h) 
+        #: where mdot is the direction in which the hessian action is evaluated 
+        #: and h the value of the hessian action.
         self.hessian_cb = hessian_cb
+
+        #: An optional callback function that is executed after for each forward 
+        #: equation during a (forward) solve. The interface must be 
+        #: replay_cb(var, value, m) where var is the libadjoint variable 
+        #: containing information about the variable, value is the associated
+        #: dolfin object and m is the parameter at which the functional is 
+        #: evaluated.
         self.replay_cb = replay_cb
-        self.current_func_value = None
-        self.ignore = ignore
+
+        #: If not None, caching (memoization) will be activated. The parameter->ouput pairs
+        #: are stored on disk in the filename given by cache.
         self.cache = cache
-
-        # TODO: implement a drivers.hessian function that supports a list of parameters
-        if len(parameter) == 1:
-            self.H = drivers.hessian(functional, parameter[0], warn=False)
-
         if cache is not None:
             try:
                 self._cache = pickle.load(open(cache, "r"))
@@ -54,23 +68,52 @@ class ReducedFunctional(object):
                                 "derivative_cache": {},
                                 "hessian_cache": {}}
 
+        #: Indicator if the user has overloaded the functional evaluation and 
+        #: hence re-annotates the forward model at every evaluation.
+        #: By default the ReducedFunctional replays the tape for the 
+        #: evaluation.
+        self.replays_annotation = True
+
+        # Stores the functional value of the latest evaluation
+        self.current_func_value = None
+
+        # Set up the Hessian driver
+        # Note: drivers.hessian currently only supports one parameter
+        if len(self.parameter) == 1:
+            self.H = drivers.hessian(functional, self.parameter[0], warn=False)
+
+    def __check_input_types(self, functional, parameter, scale, cache):
+
+        if not isinstance(functional, Functional):
+            raise TypeError("functional should be a Functional")
+
+        # TODO: Check that parameter is a dolfin-adjoint.Parameter.
+
+        if not isinstance(scale, float):
+            raise TypeError("scale should be a float")
+
+        if cache is not None:
+            if not isinstance(cache, str):
+                raise TypeError("cache should be a filename")
+
     def __del__(self):
+
         if self.cache is not None:
             pickle.dump(self._cache, open(self.cache, "w"))
 
     def __call__(self, value):
-        ''' Evaluates the reduced functional for the given parameter value, by replaying the forward model.
-            Note: before using this evaluation, make sure that the forward model has been annotated. '''
+        ''' Evaluates the reduced functional for the given parameter value. '''
 
-        if not isinstance(value, (list, tuple)):
-            value = [value]
+        #: The parameter value at which the reduced functional is to be evaluated.
+        value = enlist(value)
+
         if len(value) != len(self.parameter):
             raise ValueError, "The number of parameters must equal the number of parameter values."
 
-        # Update the parameter values
-        for i in range(len(value)):
-            replace_parameter_value(self.parameter[i], value[i])
+        # Update the parameter values on the tape
+        replace_parameter_value(self.parameter, value)
 
+        # Check if the result is already cached
         if self.cache:
             hash = value_hash(value)
             if hash in self._cache["functional_cache"]:
@@ -86,7 +129,7 @@ class ReducedFunctional(object):
               output.data.rename(str(fwd_var), "a Function from dolfin-adjoint")
 
             if self.replay_cb is not None:
-              self.replay_cb(fwd_var, output.data, unlist(value))
+              self.replay_cb(fwd_var, output.data, delist(value, list_type=self.parameter))
 
             # Check if we checkpointing is active and if yes
             # record the exact same checkpoint variables as 
@@ -120,7 +163,7 @@ class ReducedFunctional(object):
 
         self.current_func_value = func_value 
         if self.eval_cb:
-            self.eval_cb(self.scale * func_value, unlist(value))
+            self.eval_cb(self.scale * func_value, delist(value, list_type=self.parameter))
 
         if self.cache:
             # Add result to cache
@@ -130,7 +173,7 @@ class ReducedFunctional(object):
         return self.scale*func_value
 
     def derivative(self, forget=True, project=False):
-        ''' Evaluates the derivative of the reduced functional for the lastly evaluated parameter value. ''' 
+        ''' Evaluates the derivative of the reduced functional for the most recently evaluated parameter value. ''' 
 
         if self.cache is not None:
             hash = value_hash([x.data() for x in self.parameter])
@@ -140,7 +183,7 @@ class ReducedFunctional(object):
                 info_green("Got a derivative cache hit.")
                 return cache_load(self._cache["derivative_cache"][hash], fnspaces)
 
-        dfunc_value = drivers.compute_gradient(self.functional, self.parameter, forget=forget, ignore=self.ignore, project=project)
+        dfunc_value = drivers.compute_gradient(self.functional, self.parameter, forget=forget, project=project)
         dfunc_value = enlist(dfunc_value)
 
         adjointer.reset_revolve()
@@ -153,7 +196,8 @@ class ReducedFunctional(object):
 
         if self.derivative_cb:
             if self.current_func_value is not None:
-              self.derivative_cb(self.scale * self.current_func_value, unlist(scaled_dfunc_value), unlist([p.data() for p in self.parameter]))
+              values = [p.data() for p in self.parameter]
+              self.derivative_cb(self.scale * self.current_func_value, delist(scaled_dfunc_value, list_type=self.parameter), delist(values, list_type=self.parameter))
             else:
               info_red("Gradient evaluated without functional evaluation, not calling derivative callback function")
 
@@ -163,7 +207,7 @@ class ReducedFunctional(object):
 
         return scaled_dfunc_value
 
-    def hessian(self, m_dot):
+    def hessian(self, m_dot, project=False):
         ''' Evaluates the Hessian action in direction m_dot. '''
         assert(len(self.parameter) == 1)
 
@@ -177,12 +221,13 @@ class ReducedFunctional(object):
 
         if isinstance(m_dot, list):
           assert len(m_dot) == 1
-          Hm = self.H(m_dot[0])
+          Hm = self.H(m_dot[0], project=project)
         else:
-          Hm = self.H(m_dot)
+          Hm = self.H(m_dot, project=project)
+
         if self.hessian_cb:
             self.hessian_cb(self.scale * self.current_func_value,
-                            unlist([p.data() for p in self.parameter]),
+                            delist([p.data() for p in self.parameter], list_type=self.parameter),
                             m_dot,
                             Hm.vector() * self.scale)
 
@@ -272,10 +317,11 @@ class ReducedFunctional(object):
 
       return problem
 
-def replace_parameter_value(parameter, new_value):
-    ''' Replaces the parameter value with new_value. '''
-    if hasattr(parameter, 'var'):
-        replace_tape_value(parameter.var, new_value)
+def replace_parameter_value(parameters, values):
+    ''' Replaces the parameter value with new values. '''
+    for parameter, value in zip(enlist(parameters), enlist(values)):
+        if hasattr(parameter, 'var'):
+            replace_tape_value(parameter.var, value)
 
 def replace_tape_value(variable, new_value):
     ''' Replaces the tape value of the given DolfinAdjointVariable with new_value. '''
@@ -311,20 +357,6 @@ def replace_tape_value(variable, new_value):
 
     else:
         raise NotImplementedError, "Can only replace a dolfin.Functions or dolfin.Constants"
-
-def unlist(x):
-    ''' If x is a list of length 1, return its element. Otherwise return x. '''
-    if len(x) == 1:
-        return x[0]
-    else:
-        return x
-
-def enlist(x):
-    ''' Opposite of unlist '''
-    if not isinstance(x, (list, tuple)):
-        return [x]
-    else:
-        return x
 
 def copy_data(m):
     ''' Returns a deep copy of the given Function/Constant. '''

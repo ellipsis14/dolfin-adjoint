@@ -7,6 +7,7 @@ import constant
 import adjresidual
 import adjlinalg
 import ufl.algorithms
+from parameter import ListParameter
 if backend.__name__  == "dolfin":
   from backend import cpp
 
@@ -426,6 +427,9 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
   info_blue("Running Taylor remainder convergence test ... ")
   import random
   import parameter
+
+  if isinstance(m, list):
+    m = ListParameter(m)
 
   if isinstance(m, parameter.ListParameter):
     if perturbation_direction is None:
