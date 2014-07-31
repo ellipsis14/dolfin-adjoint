@@ -55,7 +55,7 @@ class ReducedFunctional(object):
                                 "hessian_cache": {}}
 
     def __del__(self):
-        if self.cache is not None:
+        if hasattr(self, 'cache') and self.cache is not None:
             pickle.dump(self._cache, open(self.cache, "w"))
 
     def __call__(self, value):
