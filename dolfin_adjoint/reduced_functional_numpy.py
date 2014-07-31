@@ -430,6 +430,8 @@ def copy_data(m):
         return Function(m.function_space())
     elif hasattr(m, "value_size"): 
         return Constant(m(()))
+    elif hasattr(m, "copy"): 
+        return m.copy()
     else:
         raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
 
