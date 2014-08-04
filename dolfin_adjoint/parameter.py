@@ -435,3 +435,17 @@ def _add(x, y):
   x.axpy(1.0, y)
   return x
 
+
+def Control(obj, *args, **kwargs):
+    """ Creates a dolfin-adjoint control.  """
+
+    if isinstance(obj, backend.Coefficient):
+        return InitialConditionParameter(obj, *args, **kwargs)
+
+    elif isinstance(obj, backend.Constant):
+        return ScalarParameter(obj, *args, **kwargs)
+
+    elif isinstance(obj, [list, set]):
+        return [Control(o, *args, **kwargs) for o in obj]
+
+
