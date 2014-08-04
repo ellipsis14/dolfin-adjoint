@@ -24,14 +24,6 @@ def serialise_bounds(rf_np, bounds):
                 bound_len = len(get_global(rf_np.parameter[j].data()))
                 const_bound = bound*np.ones(bound_len)
 
-                if rf_np.in_euclidian_space:
-                   # Convert the bounds into Euclidian space if necessary
-                   if rf_np.has_cholmod:
-                       const_bound = rf_np.sqD*rf_np.factor.L_D()[0].transpose()*rf_np.factor.apply_P(const_bound)
-                   else:
-                       const_bound = np.dot(rf_np.LT, const_bound)
-
-
                 bounds_arr[i] += const_bound.tolist()
             else:
                 bounds_arr[i] += rf_np.obj_to_array(bound).tolist()
@@ -191,7 +183,7 @@ def print_optimization_methods():
     for function_name, (description, func) in optimization_algorithms_dict.iteritems():
         print function_name, ': ', description
 
-def minimize(rf, method='L-BFGS-B', scale=1.0, in_euclidian_space=False, **kwargs):
+def minimize(rf, method='L-BFGS-B', scale=1.0, **kwargs):
     ''' Solves the minimisation problem with PDE constraint:
 
            min_m func(u, m) 
@@ -208,8 +200,6 @@ def minimize(rf, method='L-BFGS-B', scale=1.0, in_euclidian_space=False, **kwarg
         * 'method' specifies the optimization method to be used to solve the problem. The available methods can be listed with the print_optimization_methods function.
         * 'scale' is a factor to scale to problem (default: 1.0). 
         * 'bounds' is an optional keyword parameter to support control constraints: bounds = (lb, ub). lb and ub must be of the same type than the parameters m. 
-        * 'in_euclidian_space' specifies if problem should be internally transformed to the Euclidian inner product. Since most optimisation implementations assume 
-          the Euclidian inner product, this is usually a good choice.
         
         Additional arguments specific for the optimization algorithms can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimization algorithm. For detailed information about which arguments are supported for each optimization algorithm, please refer to the documentaton of the optimization algorithm.
         '''
@@ -217,7 +207,7 @@ def minimize(rf, method='L-BFGS-B', scale=1.0, in_euclidian_space=False, **kwarg
     if isinstance(rf, ReducedFunctionalNumPy):
         rf_np = rf 
     elif isinstance(rf, ReducedFunctional):
-        rf_np = ReducedFunctionalNumPy(rf, in_euclidian_space)
+        rf_np = ReducedFunctionalNumPy(rf)
     else:
         rf_np = rf # Assume the user knows what he is doing - he might for example written his own reduced functional class (as in OpenTidalFarm)
 
@@ -239,7 +229,7 @@ def minimize(rf, method='L-BFGS-B', scale=1.0, in_euclidian_space=False, **kwarg
     else:
         return opt
 
-def maximize(rf, method='L-BFGS-B', scale=1.0, in_euclidian_space=False, **kwargs):
+def maximize(rf, method='L-BFGS-B', scale=1.0, **kwargs):
     ''' Solves the maximisation problem with PDE constraint:
 
            max_m func(u, m) 
@@ -259,7 +249,7 @@ def maximize(rf, method='L-BFGS-B', scale=1.0, in_euclidian_space=False, **kwarg
         
         Additional arguments specific for the optimization methods can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimization method. For detailed information about which arguments are supported for each optimization method, please refer to the documentaton of the optimization algorithm.
         '''
-    return minimize(rf, method, scale=-scale, in_euclidian_space=in_euclidian_space, **kwargs)
+    return minimize(rf, method, scale=-scale, **kwargs)
 
 minimise = minimize
 maximise = maximize
