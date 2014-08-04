@@ -35,14 +35,12 @@ class BoundConstraint(constraints.InequalityConstraint):
 
         if isinstance(self.m, Constant):
             assert hasattr(bound, '__float__')
+            self.bound = float(bound)
 
         if type is 'lower':
             self.scale = +1.0
         else:
             self.scale = -1.0
-
-        if hasattr(bound, '__float__'):
-            self.bound = float(bound)
 
         if not isinstance(self.bound, (float, Function)):
             raise TypeError("Your %s bound must be a Function or a Constant or a float." % type)
@@ -60,7 +58,9 @@ class BoundConstraint(constraints.InequalityConstraint):
             out = Function(m)
 
             if isinstance(self.bound, float):
-                out.vector()[:] -= self.scale*self.bound
+                out_vec = out.vector() 
+                out_vec *= self.scale
+                out_vec[:] -= self.scale*self.bound
             elif isinstance(self.bound, Function):
                 out.assign(self.scale*out - self.scale*self.bound)
             return out
@@ -354,12 +354,7 @@ try:
         @staticmethod
         def linv(x,y,z):
             """Jordan product inverse, z <- inv(L(x)) y where L(x) y = x o y"""
-            try:
-                z[:] = numpy.divide(y,x)
-            except:
-                import traceback
-                traceback.print_exc()
-                raise
+            z[:] = numpy.divide(y,x)
 
         @staticmethod
         def barr(x):
@@ -368,10 +363,6 @@ try:
                 return sum(math.log(xx) for xx in x)
             except ValueError:
                 return -numpy.inf
-            except:
-                import traceback
-                traceback.print_exc()
-                raise
             
         @staticmethod
         def srch(x,y):
