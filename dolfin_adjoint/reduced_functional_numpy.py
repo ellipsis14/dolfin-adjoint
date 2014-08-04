@@ -171,6 +171,9 @@ class ReducedFunctionalNumPy(ReducedFunctional):
             that accepts the parameter as an array of scalars. If m_array is None,
             the Hessian action at the latest forward run is returned. ''' 
 
+        if not hasattr(self, "H"):
+            raise NotImplementedError, "Hessian computation not supported."
+
         m = [p.data() for p in self.parameter]
         if m_array is not None:
             # In case the parameter values have changed since the last forward run, 
