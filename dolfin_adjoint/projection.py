@@ -2,12 +2,13 @@ import solving
 import backend
 if backend.__name__ == "dolfin":
   import backend.fem.projection
+import misc
 import libadjoint
 import adjglobals
 import adjlinalg
 import utils
 
-def project(v, V=None, bcs=None, mesh=None, solver_type="cg", preconditioner_type="default", form_compiler_parameters=None, annotate=None, name=None):
+def project_dolfin(v, V=None, bcs=None, mesh=None, solver_type="cg", preconditioner_type="default", form_compiler_parameters=None, annotate=None, name=None):
   '''The project call performs an equation solve, and so it too must be annotated so that the
   adjoint and tangent linear models may be constructed automatically by libadjoint.
 
@@ -24,10 +25,7 @@ def project(v, V=None, bcs=None, mesh=None, solver_type="cg", preconditioner_typ
   if isinstance(v, backend.Constant) and (annotate is not True):
     to_annotate = False
 
-  if backend.__name__ == "dolfin":
-    out = backend.project(v, V, bcs, mesh, solver_type, preconditioner_type, form_compiler_parameters)
-  else:
-    out = backend.project(v, V)
+  out = backend.project(v, V, bcs, mesh, solver_type, preconditioner_type, form_compiler_parameters)
 
   if name is not None:
     out.adj_name = name
@@ -52,3 +50,36 @@ def project(v, V=None, bcs=None, mesh=None, solver_type="cg", preconditioner_typ
 
   return out
 
+# In Firedrake, project wraps an actual variational solve, so there is
+# no need for dolfin-adjoint to treat it specially. It is sufficient
+# that the inner solve is annotated.
+def project_firedrake(*args, **kwargs):
+
+  try:
+    annotate = kwargs["annotate"]
+    kwargs.pop("annotate")
+  except KeyError:
+    annotate = None
+
+  to_annotate = utils.to_annotate(annotate)
+
+  if isinstance(args[0], backend.Expression) and (annotate is not True):
+    to_annotate = False
+
+  if isinstance(args[0], backend.Constant) and (annotate is not True):
+    to_annotate = False
+
+  if to_annotate:
+    result = backend.project(*args, **kwargs)
+  else:
+    flag = misc.pause_annotation()
+    result = backend.project(*args, **kwargs)
+    misc.continue_annotation(flag)
+
+  return result
+
+
+if backend.__name__ == "dolfin":
+  project = project_dolfin
+else:
+  project = project_firedrake
