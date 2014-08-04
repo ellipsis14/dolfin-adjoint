@@ -80,9 +80,11 @@ class ReducedFunctional(object):
         # Set up the Hessian driver
         # Note: drivers.hessian currently only supports one parameter
         try:
-            self.H = drivers.hessian(functional, unlist(parameter), warn=False)
+            self.H = drivers.hessian(functional, delist(parameter,
+                list_type=parameter), warn=False)
         except libadjoint.exceptions.LibadjointErrorNotImplemented:
-            # Might fail as Hessian support is currently limited to a single parameter
+            # Might fail as Hessian support is currently limited 
+            # to a single parameter
             pass
 
     def __check_input_types(self, functional, parameter, scale, cache):
