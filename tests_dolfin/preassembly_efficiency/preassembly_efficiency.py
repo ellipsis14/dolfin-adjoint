@@ -170,7 +170,7 @@ if __name__ == "__main__":
     assert ratio < 1.5
 
   J = Functional(inner(soln, soln)**1*dx*dt[FINISH_TIME] + inner(soln, soln)*dx*dt[START_TIME])
-  m = InitialConditionParameter(soln)
+  m = Control(soln)
   adj_timer = Timer("Adjoint run")
   dJdm = compute_gradient(J, m)
   adj_time = adj_timer.stop()

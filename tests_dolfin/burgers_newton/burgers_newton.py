@@ -60,13 +60,13 @@ if __name__ == "__main__":
 
     J = Functional(forward*forward*dx*dt[FINISH_TIME] + forward*forward*dx*dt[START_TIME])
     Jic = assemble(forward*forward*dx + ic*ic*dx)
-    dJdic = compute_gradient(J, InitialConditionParameter("Velocity"), forget=False)
+    dJdic = compute_gradient(J, FunctionControl("Velocity"), forget=False)
 
     def Jfunc(ic):
       forward = main(ic, annotate=False)
       return assemble(forward*forward*dx + ic*ic*dx)
 
-    HJic = hessian(J, InitialConditionParameter("Velocity"), warn=False)
+    HJic = hessian(J, FunctionControl("Velocity"), warn=False)
 
-    minconv = taylor_test(Jfunc, InitialConditionParameter("Velocity"), Jic, dJdic, HJm=HJic, seed=1.0e-3, perturbation_direction=interpolate(Expression("cos(x[0])"), V))
+    minconv = taylor_test(Jfunc, FunctionControl("Velocity"), Jic, dJdic, HJm=HJic, seed=1.0e-3, perturbation_direction=interpolate(Expression("cos(x[0])"), V))
     assert minconv > 2.7

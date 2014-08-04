@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
   # Pointwise evaluation (at the end of time, symbolically)
   J = Functional(inner(u,u)*dx*dt[FINISH_TIME])
-  dJdic = compute_gradient(J, InitialConditionParameter(u), forget=False)
+  dJdic = compute_gradient(J, Control(u), forget=False)
   # Work out the solution by hand -- it's 4
   assert dJdic.vector().array()[0] == 4.0
 

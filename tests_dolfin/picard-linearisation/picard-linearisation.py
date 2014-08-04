@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
   assert replay_dolfin(tol=0.0, stop=True)
   J = Functional(inner(u, u)*dx)
-  m = TimeConstantParameter(f)
+  m = Control(f)
   Jm = assemble(inner(u, u)*dx)
   dJdm = compute_gradient(J, m, forget=False)
 

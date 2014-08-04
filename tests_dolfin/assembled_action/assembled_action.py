@@ -25,11 +25,11 @@ if __name__ == "__main__":
 
   J = Functional(inner(soln, soln)*dx*dt[FINISH_TIME])
   j = assemble(inner(soln, soln)*dx)
-  dJdic = compute_gradient(J, InitialConditionParameter("Data"), forget=False)
+  dJdic = compute_gradient(J, FunctionControl("Data"), forget=False)
 
   def Jhat(data):
     soln = main(data)
     return assemble(soln*soln*dx)
 
-  minconv = taylor_test(Jhat, InitialConditionParameter("Data"), j, dJdic)
+  minconv = taylor_test(Jhat, FunctionControl("Data"), j, dJdic)
   assert minconv > 1.9

@@ -31,7 +31,7 @@ if __name__ == "__main__":
   for i in range(len(vec)):
     vec[i] = random.random()
 
-  m = InitialConditionParameter(ic, perturbation=perturbation_direction, value=ic)
+  m = Control(ic, perturbation=perturbation_direction, value=ic)
   Jm = assemble(soln*soln*dx)
   J = Functional(soln*soln*dx)
   dJdm = compute_gradient_tlm(J, m, forget=False)

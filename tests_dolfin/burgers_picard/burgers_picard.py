@@ -51,7 +51,7 @@ if __name__ == "__main__":
     adj_html("adjoint.html", "adjoint")
 
     J = Functional(inner(forward, forward)**2*dx*dt[FINISH_TIME])
-    m = InitialConditionParameter("Solution")
+    m = FunctionControl("Solution")
 
     Jm   = assemble(inner(forward, forward)**2*dx)
     dJdm = compute_gradient(J, m, forget=False)

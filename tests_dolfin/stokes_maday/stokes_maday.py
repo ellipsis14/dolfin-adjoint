@@ -117,7 +117,7 @@ if __name__ == "__main__":
     T = main(ic, annotate=True)
 
     J = Functional(T*T*dx*dt[FINISH_TIME])
-    reduced_functional = ReducedFunctional(J, InitialConditionParameter(T))
+    reduced_functional = ReducedFunctional(J, Control(T))
     T_opt = minimize(reduced_functional, method = "L-BFGS-B", options = {"gtol": 2e-8, "disp": True})
 
     assert True

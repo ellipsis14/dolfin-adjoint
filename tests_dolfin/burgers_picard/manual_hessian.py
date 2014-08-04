@@ -229,7 +229,7 @@ if __name__ == "__main__":
 
   dJdm = dJ(u, m, u_adj)
   #info_green("Applying Taylor test to gradient computed with adjoint ... ")
-  #minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, value=m)
+  #minconv = taylor_test(Jhat, Control(m), Jm, dJdm, value=m)
   #assert minconv > 1.8
 
   #info_green("Applying Taylor test to du/dm ... ")
@@ -240,5 +240,5 @@ if __name__ == "__main__":
 
   HJm = HJ(u, m)
   info_green("Applying Taylor test to Hessian computed with second-order adjoint ... ")
-  minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, HJm=HJm, value=m, perturbation_direction=m_dot, seed=0.2)
+  minconv = taylor_test(Jhat, Control(m), Jm, dJdm, HJm=HJm, value=m, perturbation_direction=m_dot, seed=0.2)
   assert minconv > 2.8

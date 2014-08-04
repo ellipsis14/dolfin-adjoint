@@ -18,5 +18,5 @@ def HJa(adot):
 
 Ja = J(a)
 
-minconv = taylor_test(J, ScalarParameter(a), Ja, dJda, HJa)
+minconv = taylor_test(J, Control(a), Ja, dJda, HJa)
 assert minconv > 2.9

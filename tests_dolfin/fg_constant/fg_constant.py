@@ -29,11 +29,11 @@ if __name__ == "__main__":
   soln = main(ic, a, annotate=True)
 
   J = Functional(soln*soln*dx*dt[FINISH_TIME])
-  dJda = compute_gradient(J, ScalarParameter("a"))
+  dJda = compute_gradient(J, ConstantControl("a"))
 
   def J(a):
     soln = main(ic, a, annotate=False)
     return assemble(soln*soln*dx)
   
   Ja = assemble(soln**2*dx)
-  taylor_test(J, ScalarParameter(a), Ja, dJda)
+  taylor_test(J, Control(a), Ja, dJda)

@@ -31,7 +31,7 @@ if __name__ == "__main__":
   success = replay_dolfin()
 
 #  J = Functional(out*out*dx*dt[FINISH_TIME])
-#  icparam = InitialConditionParameter("InitialCondition")
+#  icparam = FunctionControl("InitialCondition")
 #  dJdic = compute_gradient(J, icparam)
 #  
 #  def J(ic):
