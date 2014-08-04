@@ -46,7 +46,7 @@ class OptimizationProblem(object):
 
                 for b in bound:
                     klass = parameter.data().__class__
-                    if not (isinstance(b, (float, type(None), klass))):
+                    if not (isinstance(b, (int, float, type(None), klass))):
                         raise TypeError("This pair (lb, ub) should be None, a float, or a %s." % klass)
 
         if not ((constraints is None) or
