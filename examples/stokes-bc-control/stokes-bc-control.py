@@ -201,7 +201,7 @@ u, p = split(s)
 alpha = Constant(10)
 
 J = Functional(1./2*inner(grad(u), grad(u))*dx + alpha/2*inner(g, g)*ds(2))
-m = SteadyParameter(g)
+m = Control(g)
 Jhat = ReducedFunctional(J, m)
 
 # Now, everything is set up to run the optimisation and to plot the

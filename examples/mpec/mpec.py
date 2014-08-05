@@ -161,8 +161,8 @@ nu = 0.01
 J = Functional(0.5*inner(y - yd, y - yd)*dx + nu/2*inner(u, u)*dx)
 
 # Formulate the reduced problem
-m = SteadyParameter(u)  # Create a parameter from u, as it is the variable we want to optimise
-alpha_m = ScalarParameter(alpha)  # Also tell dolfin-adjoint that alpha is a parameter, 
+m = Control(u)  # Create a parameter from u, as it is the variable we want to optimise
+alpha_m = Control(alpha)  # Also tell dolfin-adjoint that alpha is a parameter, 
                           # this will allow us to modify its value on the tape
 Jhat = ReducedFunctional(J, m)
 
@@ -183,8 +183,8 @@ for i in range(4):
   info_green("Set alpha to %f." % float(alpha))
 
 # We rely on a useful property of dolfin-adjoint here: if a ``Constant``
-# object is used as a Parameter (here achieved by creating the
-# :py:class:`ScalarParameter <dolfin_adjoint.ScalarParameter>` object
+# object is used as a control (here achieved by creating the
+# :py:class:`Control <dolfin_adjoint.Control>` object
 # above), dolfin-adjoint does not copy that ``Constant`` object, but
 # keeps a reference to it instead.  That means that assigning a new
 # value to ``alpha`` has the effect that the optimisation routine will
@@ -217,7 +217,7 @@ for i in range(4):
 # :py:func:`replace_tape_value <dolfin_adjoint.replace_tape_value>`, if
 # we needed more control, e.g. replace a non-initial value function):
 
-  replace_parameter_value(InitialConditionParameter(y), y_opt)
+  replace_parameter_value(Control(y), y_opt)
 
 # Finally, we store the optimal state and control to disk and print some
 # statistics:

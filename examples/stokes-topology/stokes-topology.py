@@ -196,7 +196,7 @@ if __name__ == "__main__":
 # <../maths/2-problem>`:
 
   J = Functional(0.5 * inner(alpha(rho) * u, u) * dx + mu * inner(grad(u), grad(u)) * dx)
-  m = SteadyParameter(rho)
+  m = Control(rho)
   Jhat = ReducedFunctional(J, m, eval_cb=eval_cb)
   rfn = ReducedFunctionalNumPy(Jhat)
 
@@ -281,7 +281,7 @@ if __name__ == "__main__":
     allctrls << rho_viz
 
   J = Functional(0.5 * inner(alpha(rho) * u, u) * dx + mu * inner(grad(u), grad(u)) * dx)
-  m = SteadyParameter(rho)
+  m = Control(rho)
   Jhat = ReducedFunctional(J, m, eval_cb=eval_cb)
   rfn = ReducedFunctionalNumPy(Jhat)
 

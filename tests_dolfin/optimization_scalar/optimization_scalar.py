@@ -49,7 +49,10 @@ if __name__ == "__main__":
   J = Functional(inner(u, u)*dx*dt[FINISH_TIME])
 
   # Run the optimisation 
-  reduced_functional = ReducedFunctional(J, ScalarParameter("Nu"), eval_cb = eval_cb, derivative_cb = derivative_cb, replay_cb = replay_cb)
+  reduced_functional = ReducedFunctional(J, ConstantControl("Nu"), 
+                                         eval_cb= eval_cb, 
+                                         derivative_cb=derivative_cb, 
+                                         replay_cb=replay_cb)
   try:
     nu_opt = minimize(reduced_functional, 'SLSQP')
 

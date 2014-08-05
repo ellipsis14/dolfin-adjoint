@@ -163,7 +163,7 @@ if __name__ == "__main__":
     # Jtilde = ReducedFunctional(J, u) # FUTURE
     #replay_dolfin(forget=False, stop=True)
 
-    controls = map(SteadyParameter, m)
+    controls = map(Control, m)
     #compute_gradient(J, controls)
 
     # Optimize

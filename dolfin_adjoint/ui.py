@@ -1,7 +1,14 @@
 import backend
 from assembly import assemble, assemble_system
+
+# Functional
 from functional import Functional
-from parameter import InitialConditionParameter, ScalarParameter, ScalarParameters, TimeConstantParameter, SteadyParameter, Control
+
+# Controls
+from parameter import Control
+from parameter import FunctionControl
+from parameter import ConstantControl
+from parameter import ConstantControls
 
 from solving import solve, adj_checkpointing, annotate, record
 from adjglobals import adj_start_timestep, adj_inc_timestep, adjointer, adj_check_checkpoints, adj_html, adj_reset

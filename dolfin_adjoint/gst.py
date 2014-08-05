@@ -107,7 +107,8 @@ def perturbed_replay(parameter, perturbation, perturbation_scale, observation, p
 
   as a function of time.
 
-  :py:data:`parameter` -- an InitialConditionParameter to say what variable should be perturbed (e.g. InitialConditionParameter('InitialConcentration'))
+  :py:data:`parameter` -- an FunctionControl to say what variable should be
+                          perturbed (e.g. FunctionControl('InitialConcentration'))
   :py:data:`perturbation` -- a Function to give the perturbation direction (from a GST analysis, for example)
   :py:data:`perturbation_norm` -- a bilinear Form which induces a norm on the space of perturbation inputs
   :py:data:`perturbation_scale` -- how big the norm of the initial perturbation should be
@@ -119,7 +120,7 @@ def perturbed_replay(parameter, perturbation, perturbation_scale, observation, p
   if not backend.parameters["adjoint"]["record_all"]:
     info_red("Warning: your replay test will be much more effective with backend.parameters['adjoint']['record_all'] = True.")
 
-  assert isinstance(parameter, parameter_module.InitialConditionParameter)
+  assert isinstance(parameter, parameter_module.FunctionControl)
 
   if perturbation_norm == "mass":
     p_fnsp = perturbation.function_space()

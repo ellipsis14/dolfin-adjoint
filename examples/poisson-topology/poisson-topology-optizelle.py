@@ -162,7 +162,7 @@ if __name__ == "__main__":
 # term on the gradient of the material
 
   J = Functional(f*T*dx + alpha * inner(grad(a), grad(a))*dx)
-  m = SteadyParameter(a)
+  m = Control(a)
   Jhat = ReducedFunctional(J, m, eval_cb=eval_cb)
 
 # This :py:class:`ReducedFunctional` object solves the forward PDE using

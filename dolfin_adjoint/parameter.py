@@ -10,7 +10,7 @@ import adjresidual
 from constant import get_constant
 import constant
 
-class DolfinAdjointParameter(libadjoint.Parameter):
+class DolfinAdjointControl(libadjoint.Parameter):
   def __call__(self, adjointer, i, dependencies, values, variable):
     '''This function gives the source term for the tangent linear model.
     variable gives the forward variable associated with this tangent
@@ -64,7 +64,7 @@ class DolfinAdjointParameter(libadjoint.Parameter):
     direction m_dot.'''
     raise NotImplementedError
 
-class InitialConditionParameter(DolfinAdjointParameter):
+class FunctionControl(DolfinAdjointControl):
   '''This Parameter is used as input to the tangent linear model (TLM)
   when one wishes to compute dJ/d(initial condition) in a particular direction (perturbation).'''
   def __init__(self, coeff, value=None, perturbation=None):
@@ -116,12 +116,9 @@ class InitialConditionParameter(DolfinAdjointParameter):
       return adjglobals.adjointer.get_variable_value(self.var).data
 
   def set_perturbation(self, m_dot):
-    return InitialConditionParameter(self.coeff, perturbation=m_dot, value=self.value)
+    return FunctionControl(self.coeff, perturbation=m_dot, value=self.value)
 
-# Set-up transitional syntax
-Control = InitialConditionParameter
-
-class ScalarParameter(DolfinAdjointParameter):
+class ConstantControl(DolfinAdjointControl):
   '''This Parameter is used as input to the tangent linear model (TLM)
   when one wishes to compute dJ/da, where a is a single scalar parameter.'''
   def __init__(self, a, coeff=1):
@@ -279,9 +276,9 @@ class ScalarParameter(DolfinAdjointParameter):
   def set_perturbation(self, m_dot):
     '''Return another instance of the same class, representing the Parameter perturbed in a particular
     direction m_dot.'''
-    return ScalarParameter(self.a, coeff=m_dot)
+    return ConstantControl(self.a, coeff=m_dot)
 
-class ScalarParameters(DolfinAdjointParameter):
+class ConstantControls(DolfinAdjointControl):
   '''This Parameter is used as input to the tangent linear model (TLM)
   when one wishes to compute dJ/dv . delta v, where v is a vector of scalar parameters.'''
   def __init__(self, v, dv=None):
@@ -314,7 +311,7 @@ class ScalarParameters(DolfinAdjointParameter):
     return adjlinalg.Vector(diff_form)
 
   def __str__(self):
-    return str(self.v) + ':ScalarParameters'
+    return str(self.v) + ':ConstantControls'
 
   def equation_partial_derivative(self, adjointer, adjoint, i, variable):
     form = adjresidual.get_residual(i)
@@ -343,25 +340,11 @@ class ScalarParameters(DolfinAdjointParameter):
   def data(self):
     return self.v
 
-class TimeConstantParameter(InitialConditionParameter):
-  '''TimeConstantParameter is just another name for InitialConditionParameter,
-  since from dolfin-adjoint's point of view they're exactly the same. But it
-  confuses people to talk about initial conditions of data that doesn't change
-  in time (like diffusivities, or bathymetries, or whatever), so hence this
-  alias.'''
-  pass
 
-class SteadyParameter(InitialConditionParameter):
-  '''SteadyParameter is just another name for InitialConditionParameter,
-  since from dolfin-adjoint's point of view they're exactly the same. But it
-  confuses people to talk about initial conditions of data in steady state problems,
-  so hence this alias.'''
-  pass
-
-class ListParameter(DolfinAdjointParameter):
+class ListControl(DolfinAdjointControl):
   def __init__(self, parameters):
     for p in parameters:
-      assert isinstance(p, DolfinAdjointParameter)
+      assert isinstance(p, DolfinAdjointControl)
 
     self.parameters = parameters
 
@@ -420,7 +403,7 @@ class ListParameter(DolfinAdjointParameter):
   def set_perturbation(self, m_dot):
     '''Return another instance of the same class, representing the Parameter perturbed in a particular
     direction m_dot.'''
-    return ListParameter([p.set_perturbation(m) for (p, m) in zip(self.parameters, m_dot)])
+    return ListControl([p.set_perturbation(m) for (p, m) in zip(self.parameters, m_dot)])
 
   def __getitem__(self, i):
     return self.parameters[i]
@@ -435,3 +418,19 @@ def _add(x, y):
   x.axpy(1.0, y)
   return x
 
+
+def Control(obj, *args, **kwargs):
+    """ Creates a dolfin-adjoint control.  """
+
+    if isinstance(obj, backend.Constant):
+        return ConstantControl(obj, *args, **kwargs)
+
+    elif isinstance(obj, backend.Coefficient):
+        return FunctionControl(obj, *args, **kwargs)
+
+    elif isinstance(obj, (list, set)):
+        ctrls = [Control(o, *args, **kwargs) for o in obj]
+        return ListControls(ctrls)
+
+    else:
+        raise ValueError, "Unknown control data type %s." % type(obj)

@@ -303,7 +303,7 @@ if __name__ == "__main__":
 
     J = Functional(inner(sigma0[2], sigma0[2])*dx*dtm[FINISH_TIME])
     Jm = assemble(inner(sigma0[2], sigma0[2])*dx)
-    m = ScalarParameter(amplitude)
+    m = Control(amplitude)
     dJdm = compute_gradient(J, m)
 
     def Jfunc(amplitude):

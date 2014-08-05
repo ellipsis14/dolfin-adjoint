@@ -32,11 +32,11 @@ if __name__ == "__main__":
 
   J = Functional(soln*soln*dx*dt[FINISH_TIME])
   Ja = assemble(soln*soln*dx)
-  dJda = compute_gradient(J, ScalarParameters((a, b)))
+  dJda = compute_gradient(J, ConstantControls((a, b)))
 
   def J(params):
     soln = main(ic, params, annotate=False)
     return assemble(soln*soln*dx)
 
-  minconv = taylor_test(J, ScalarParameters((a, b)), Ja, dJda)
+  minconv = taylor_test(J, ConstantControls((a, b)), Ja, dJda)
 

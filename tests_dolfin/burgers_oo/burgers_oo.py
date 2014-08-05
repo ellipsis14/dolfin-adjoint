@@ -67,7 +67,7 @@ if __name__ == "__main__":
     forward = main(ic, annotate=True)
 
     J = Functional(forward*forward*dx*dt[FINISH_TIME])
-    m = InitialConditionParameter(forward)
+    m = Control(forward)
     dJdm = compute_gradient(J, m, forget = False)
     Jm = assemble(forward*forward*dx)
 

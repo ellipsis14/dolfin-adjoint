@@ -42,7 +42,8 @@ def main(u, annotate=False):
         adj_inc_timestep(time=t, finished = t>end)
 
 def derivative_cb(j, dj, m):
-  print "j = %f, max(dj) = %f, max(m) = %f." % (j, dj.vector().max(), m.vector().max())
+  print "j = %f, max(dj) = %f, max(m) = %f." % (j, dj.vector().max(), 
+                                                m.vector().max())
 
 if __name__ == "__main__":
 
@@ -59,7 +60,8 @@ if __name__ == "__main__":
     lb = project(Expression("-1"),  V)
     
     # Define the reduced funtional
-    reduced_functional = ReducedFunctional(J, InitialConditionParameter(u, value=ic), derivative_cb = derivative_cb)
+    reduced_functional = ReducedFunctional(J, Control(u, value=ic), 
+                                           derivative_cb=derivative_cb)
 
     try:
       print "\n === Solving problem with L-BFGS-B. === \n"

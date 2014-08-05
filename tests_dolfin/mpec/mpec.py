@@ -36,7 +36,7 @@ if __name__ == "__main__":
     return assemble(inner(y, y)*dx)
 
   y = main()
-  m = ScalarParameter(gamma)
+  m = Control(gamma)
 
   Jy = inner(y, y)*dx
   dJdu = assemble(derivative(Jy, y))
