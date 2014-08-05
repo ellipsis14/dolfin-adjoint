@@ -430,7 +430,7 @@ def Control(obj, *args, **kwargs):
 
     elif isinstance(obj, (list, set)):
         ctrls = [Control(o, *args, **kwargs) for o in obj]
-        return ListControls(ctrls)
+        return ListControl(ctrls)
 
     else:
         raise ValueError, "Unknown control data type %s." % type(obj)
