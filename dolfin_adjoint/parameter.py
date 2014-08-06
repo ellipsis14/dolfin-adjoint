@@ -289,6 +289,10 @@ class ConstantControl(DolfinAdjointControl):
 
     d = backend.derivative(form, get_constant(self.a), dparam)
     d = ufl.algorithms.expand_derivatives(d)
+
+    # Add the derivatives of Expressions wrt to the Constant
+    d = self.expression_derivative(form, d)
+
     if len(d.integrals()) != 0:
       return backend.assemble(d)
     else:

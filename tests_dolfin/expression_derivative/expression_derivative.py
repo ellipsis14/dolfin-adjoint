@@ -1,7 +1,7 @@
 from dolfin import *
 from dolfin_adjoint import *
 
-mesh = UnitSquareMesh(4,4)
+mesh = UnitSquareMesh(4, 4)
 V = FunctionSpace(mesh, "CG", 1)
 
 c = Constant(2)
@@ -41,7 +41,8 @@ def taylor_test_expression(exp, V):
     # Annotate test model
     s = project(exp, V, annotate=True)
 
-    Jform = s**2*dx
+    Jform = s**2*dx + exp*dx(domain=mesh)
+
     J = Functional(Jform)
     J0 = assemble(Jform)
 
@@ -59,15 +60,15 @@ def taylor_test_expression(exp, V):
             # Compute the functional value
             dep.assign(new_val)
             s = project(exp, V, annotate=False)
-            out = assemble(s**2*dx)
+            out = assemble(s**2*dx + exp*dx(domain=mesh))
 
             # Restore the old dependency value
             dep.assign(old_val)
 
             return out
 
-        #HJi = hessian(J, controls, warn=False)
-
+        #HJ = hessian(J, controls[i], warn=False)
+        #minconv = taylor_test(Jfunc, controls[i], J0, dJd0[i], HJm=HJ)
         minconv = taylor_test(Jfunc, controls[i], J0, dJd0[i])
     assert minconv > 1.9
 
