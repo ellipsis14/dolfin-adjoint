@@ -5,22 +5,31 @@ mesh = UnitSquareMesh(4,4)
 V = FunctionSpace(mesh, "CG", 1)
 
 c = Constant(2)
+d = Constant(3)
+
 
 class SourceExpression(Expression):
-    def __init__(self, c):
+    def __init__(self, c, d):
         self.c = c
+        self.d = d
 
     def eval(self, value, x):
-        value[0] = float(self.c)**2
+        value[0] = self.c**2
+        value[0] *= self.d
 
-    def deval(self, value, x, coeff):
-        value[0] = 2*self.c 
+    def deval(self, value, x, derivative_coeff):
+
+        if self.c == derivative_coeff:
+            value[0] = 2*self.c*self.d
+
+        elif self.d == derivative_coeff:
+            value[0] = self.c**2
 
     def dependencies(self):
-        return [self.c]
+        return [self.c, self.d]
 
     def copy(self):
-        return SourceExpression(self.c)
+        return SourceExpression(self.c, self.d)
 
 
 
@@ -36,27 +45,34 @@ def taylor_test_expression(exp, V):
     J = Functional(Jform)
     J0 = assemble(Jform)
 
-    controls = [Control(c) for c in exp.dependencies()]
+    deps = exp.dependencies()
+    controls = [Control(c) for c in deps]
     dJd0 = compute_gradient(J, controls, forget=False)
 
-    def Jfunc(dep_values):
+    for i in range(len(controls)):
+        def Jfunc(new_val):
+            dep = exp.dependencies()[i]
 
-        dep_values = enlist(dep_values)
+            # Remember the old dependency value for later
+            old_val = float(dep)
 
-        for new_val, dep in zip(dep_values, exp.dependencies()):
+            # Compute the functional value
             dep.assign(new_val)
+            s = project(exp, V, annotate=False)
+            out = assemble(s**2*dx)
 
-        s = project(source, V, annotate=False)
-        return assemble(s**2*dx)
+            # Restore the old dependency value
+            dep.assign(old_val)
 
-    #HJ0 = hessian(J, controls, warn=False)
+            return out
 
-    #minconv = taylor_test(Jfunc, controls, J0, dJdic, HJm=HJ0, seed=1.0e-3)
-    minconv = taylor_test(Jfunc, controls, J0, dJd0)
-    assert minconv > 2.0
-    print minconv
+        #HJi = hessian(J, controls, warn=False)
+
+        minconv = taylor_test(Jfunc, controls[i], J0, dJd0[i])
+    assert minconv > 1.9
+
 
     adj_reset()
 
-source = SourceExpression(c)
+source = SourceExpression(c, d)
 taylor_test_expression(source, V)
