@@ -491,5 +491,8 @@ def Control(obj, *args, **kwargs):
         ctrls = [Control(o, *args, **kwargs) for o in obj]
         return ListControl(ctrls)
 
+    elif isinstance(obj, str):
+        raise ValueError, "Control cannot be used with names. Use ConstantControl or FunctionControl instead."
+
     else:
         raise ValueError, "Unknown control data type %s." % type(obj)
