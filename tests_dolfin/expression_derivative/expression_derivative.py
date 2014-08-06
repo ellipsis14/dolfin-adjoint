@@ -1,13 +1,6 @@
 from dolfin import *
 from dolfin_adjoint import *
 
-mesh = UnitSquareMesh(4, 4)
-V = FunctionSpace(mesh, "CG", 1)
-
-c = Constant(2)
-d = Constant(3)
-
-
 class SourceExpression(Expression):
     def __init__(self, c, d):
         self.c = c
@@ -32,48 +25,12 @@ class SourceExpression(Expression):
         return SourceExpression(self.c, self.d)
 
 
+if __name__ == "__main__":
+    mesh = UnitSquareMesh(4, 4)
+    V = FunctionSpace(mesh, "CG", 1)
 
-def taylor_test_expression(exp, V):
-    """ Warning: This function resets the adjoint tape! """
+    c = Constant(2)
+    d = Constant(3)
 
-    adj_reset()
-
-    # Annotate test model
-    s = project(exp, V, annotate=True)
-
-    Jform = s**2*dx + exp*dx(domain=mesh)
-
-    J = Functional(Jform)
-    J0 = assemble(Jform)
-
-    deps = exp.dependencies()
-    controls = [Control(c) for c in deps]
-    dJd0 = compute_gradient(J, controls, forget=False)
-
-    for i in range(len(controls)):
-        def Jfunc(new_val):
-            dep = exp.dependencies()[i]
-
-            # Remember the old dependency value for later
-            old_val = float(dep)
-
-            # Compute the functional value
-            dep.assign(new_val)
-            s = project(exp, V, annotate=False)
-            out = assemble(s**2*dx + exp*dx(domain=mesh))
-
-            # Restore the old dependency value
-            dep.assign(old_val)
-
-            return out
-
-        #HJ = hessian(J, controls[i], warn=False)
-        #minconv = taylor_test(Jfunc, controls[i], J0, dJd0[i], HJm=HJ)
-        minconv = taylor_test(Jfunc, controls[i], J0, dJd0[i])
-    assert minconv > 1.9
-
-
-    adj_reset()
-
-source = SourceExpression(c, d)
-taylor_test_expression(source, V)
+    source = SourceExpression(c, d)
+    taylor_test_expression(source, V)

@@ -7,7 +7,10 @@ import constant
 import adjresidual
 import adjlinalg
 import ufl.algorithms
-from parameter import ListControl
+import projection
+import functional
+import drivers
+from parameter import ListControl, Control
 if backend.__name__  == "dolfin":
   from backend import cpp
 
@@ -584,6 +587,56 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
     return min(convergence_order(with_hessian))
   else:
     return min(convergence_order(with_gradient))
+
+
+def taylor_test_expression(exp, V):
+    """ 
+    Performs a Taylor test of an Expression with dependencies.
+
+    exp: The expression to test
+    V: A suitable function space on which the expression will be projected.
+    
+    Warning: This function resets the adjoint tape! """
+
+    adjglobals.adj_reset()
+
+    # Annotate test model
+    s = projection.project(exp, V, annotate=True)
+    mesh = V.mesh()
+
+    Jform = s**2*backend.dx + exp*backend.dx(domain=mesh)
+
+    J = functional.Functional(Jform)
+    J0 = backend.assemble(Jform)
+
+    deps = exp.dependencies()
+    controls = [Control(c) for c in deps]
+    dJd0 = drivers.compute_gradient(J, controls, forget=False)
+
+    for i in range(len(controls)):
+        def Jfunc(new_val):
+            dep = exp.dependencies()[i]
+
+            # Remember the old dependency value for later
+            old_val = float(dep)
+
+            # Compute the functional value
+            dep.assign(new_val)
+            s = projection.project(exp, V, annotate=False)
+            out = backend.assemble(s**2*backend.dx + exp*backend.dx(domain=mesh))
+
+            # Restore the old dependency value
+            dep.assign(old_val)
+
+            return out
+
+        #HJ = hessian(J, controls[i], warn=False)
+        #minconv = taylor_test(Jfunc, controls[i], J0, dJd0[i], HJm=HJ)
+        minconv = taylor_test(Jfunc, controls[i], J0, dJd0[i])
+    assert minconv > 1.9
+
+    adjglobals.adj_reset()
+
 
 def to_annotate(flag):
   '''Should dolfin-adjoint annotate this statement or not?'''
