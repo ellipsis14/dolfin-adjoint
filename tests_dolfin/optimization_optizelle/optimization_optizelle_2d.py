@@ -17,8 +17,8 @@ set_log_level(ERROR)
 parameters["adjoint"]["cache_factorizations"] = True
 
 # Create mesh
-n = 50
-mesh = UnitIntervalMesh(n)
+n = 8
+mesh = UnitSquareMesh(n, n)
 
 # Define discrete function spaces and funcions
 V = FunctionSpace(mesh, "CG", 1)
@@ -35,7 +35,7 @@ solve(F == 0, u, bc)
 
 # Define functional of interest and the reduced functional
 x = SpatialCoordinate(mesh)
-d = 1/(2*pi**2)*sin(pi*x[0])
+d = 1/(2*pi**2)*sin(pi*x[0])*sin(pi*x[1]) # the desired temperature profile
 
 alpha = Constant(1e-10)
 J = Functional((0.5*inner(u-d, u-d))*dx + alpha/2*f**2*dx)
@@ -115,7 +115,7 @@ f_opt = solver.solve()
 cmax = f_opt.vector().max()
 cmin = f_opt.vector().min()
 
-#plot(f_opt, interactive=True)
+plot(f_opt, interactive=True)
 
 # Check that the bounds are satisfied
 assert cmin >= lb

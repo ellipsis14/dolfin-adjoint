@@ -384,6 +384,7 @@ try:
 
     # May not have optizelle installed.
     class OptizelleObjective(Optizelle.ScalarValuedFunction):
+
         def __init__(self, rf, scale=1):
             self.rf = rf
             self.last_x = None
