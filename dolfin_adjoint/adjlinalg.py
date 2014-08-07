@@ -315,7 +315,7 @@ class Matrix(libadjoint.Matrix):
           output = Vector(backend.Function(output.fn_space, backend.assemble(output.data)))
     elif b.data is None:
         backend.info_red("Warning: got zero RHS for the solve associated with variable %s" % var)
-        output = Vector(backedn.Function(self.test_function().function_space()))
+        output = Vector(backend.Function(self.test_function().function_space()))
     else:
         dirichlet_bcs = [backend.homogenize(bc) for bc in self.bcs if isinstance(bc, backend.DirichletBC)]
         other_bcs  = [bc for bc in self.bcs if not isinstance(bc, backend.DirichletBC)]

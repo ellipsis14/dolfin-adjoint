@@ -27,6 +27,7 @@ def safe_log(x):
 
 class BoundConstraint(constraints.InequalityConstraint):
     """A class that enforces the bound constraint l <= m or m >= u."""
+
     def __init__(self, m, bound, type):
         assert type is 'lower' or type is 'upper'
         assert isinstance(m, (Function, Constant))
@@ -77,7 +78,7 @@ class BoundConstraint(constraints.InequalityConstraint):
         elif isinstance(self.m, Function):
             result.assign(self.scale*dp)
 
-    def hessia_action(self, m, dm, dp, result):
+    def hessian_action(self, m, dm, dp, result):
         if isinstance(self.m, Constant):
             result[0] = 0.0
         elif isinstance(self.m, Function):

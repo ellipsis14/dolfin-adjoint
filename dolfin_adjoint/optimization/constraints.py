@@ -75,10 +75,22 @@ class MergedConstraints(Constraint):
     [c.jacobian_action(m, dm, result[i]) for (i, c) in enumerate(self.constraints)]
 
   def jacobian_adjoint_action(self, m, dp, result):
-    [c.jacobian_adjoint_action(m, dp[i], result) for (i, c) in enumerate(self.constraints)]
+
+    result.vector().zero()
+    tmp = result.__class__(result)
+
+    for (i, c) in enumerate(self.constraints):
+        c.jacobian_adjoint_action(m, dp[i], tmp)
+        result.vector().axpy(1, tmp.vector())
 
   def hessian_action(self, m, dm, dp, result):
-    [c.hessian_action(m, dm, dp[i], result) for (i, c) in enumerate(self.constraints)]
+
+    result.vector().zero()
+    tmp = result.__class__(result)
+
+    for (i, c) in enumerate(self.constraints):
+        c.hessian_action(m, dm, dp[i], tmp)
+        result.vector().axpy(1, tmp.vector())
 
   def __iter__(self):
     return iter(self.constraints)

@@ -17,7 +17,7 @@ set_log_level(ERROR)
 parameters["adjoint"]["cache_factorizations"] = True
 
 # Create mesh
-n = 6
+n = 8
 mesh = UnitSquareMesh(n, n)
 
 # Define discrete function spaces and funcions
@@ -37,17 +37,17 @@ solve(F == 0, u, bc)
 x = SpatialCoordinate(mesh)
 d = 1/(2*pi**2)*sin(pi*x[0])*sin(pi*x[1]) # the desired temperature profile
 
-alpha = Constant(1e-6)
+alpha = Constant(1e-10)
 J = Functional((0.5*inner(u-d, u-d))*dx + alpha/2*f**2*dx)
 control = SteadyParameter(f)
 rf = ReducedFunctional(J, control)
 
 ub = Function(W)
-ub.vector()[:] = 0.5
-lb = -0.5
+ub.vector()[:] = 0.8
+lb = 0.1
 problem = MinimizationProblem(rf, bounds=[(lb, ub)])
 parameters = {
-             "maximum_iterations": 10,
+             "maximum_iterations": 12,
              "optizelle_parameters":
                  {
                  "msg_level" : 10,
@@ -68,9 +68,11 @@ f_opt = solver.solve()
 cmax = f_opt.vector().max()
 cmin = f_opt.vector().min()
 
+#plot(f_opt, interactive=True)
+
 # Check that the bounds are satisfied
 assert cmin >= lb
 assert cmax <= ub.vector().max()
 
 # Check that the functional value is below the threshold
-assert rf(f_opt) < 0.6e-4
+assert rf(f_opt) < 1e-5
