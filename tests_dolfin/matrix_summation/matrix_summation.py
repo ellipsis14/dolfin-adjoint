@@ -42,7 +42,7 @@ if __name__ == "__main__":
     print "Running adjoint ... "
 
     J = Functional(forward*forward*dx*dt[FINISH_TIME])
-    m = InitialConditionParameter("Velocity")
+    m = FunctionControl("Velocity")
     Jm = assemble(forward*forward*dx)
     dJdm = compute_gradient(J, m, forget=False)
 

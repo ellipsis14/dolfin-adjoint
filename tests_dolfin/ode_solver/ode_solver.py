@@ -104,7 +104,7 @@ if __name__ == "__main__":
 
   dtm = TimeMeasure()
   J = Functional(inner(u, u)*dx*dtm[FINISH_TIME])
-  m = InitialConditionParameter(u)
+  m = Control(u)
   assert m.data().vector()[0] == u0.vector()[0]
   Jm = assemble(inner(u, u)*dx)
 

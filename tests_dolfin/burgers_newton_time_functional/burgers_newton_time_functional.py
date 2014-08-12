@@ -74,7 +74,7 @@ if __name__ == "__main__":
     print "Running adjoint ... "
 
     J = Functional(forward*forward*forward*forward*dx*dt)
-    m = InitialConditionParameter(ic)
+    m = Control(ic)
     Jm = j
     dJdm = compute_gradient(J, m, forget=False)
     HJm  = hessian(J, m)

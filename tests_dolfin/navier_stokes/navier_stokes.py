@@ -153,7 +153,7 @@ if __name__ == "__main__":
   adj_html("adjoint.html", "adjoint")
 
   J = Functional(inner(soln, soln)**1*dx*dt[FINISH_TIME] + inner(soln, soln)*dx*dt[START_TIME])
-  m = InitialConditionParameter(soln)
+  m = Control(soln)
   Jm = assemble(inner(soln, soln)**1*dx + inner(ic, ic)*dx)
   rf = ReducedFunctional(J, m)
   dJdm = rf.derivative(forget=None)[0]

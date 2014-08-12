@@ -39,7 +39,7 @@ d = 1/(2*pi**2)*sin(pi*x[0])
 
 alpha = Constant(1e-10)
 J = Functional((0.5*inner(u-d, u-d))*dx + alpha/2*f**2*dx)
-control = SteadyParameter(f)
+control = Control(f)
 rf = ReducedFunctional(J, control)
 
 # Volume constraints

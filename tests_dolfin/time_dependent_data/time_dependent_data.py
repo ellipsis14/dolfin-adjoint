@@ -23,5 +23,5 @@ for t in range(nt):
 
 adj_html("forward.html", "forward")
 # ... so it can be replayed by the functional at the end
-J = ReducedFunctional(Functional((u-z)**2*dx*dt), InitialConditionParameter(m))
+J = ReducedFunctional(Functional((u-z)**2*dx*dt), Control(m))
 assert abs(float(J(m)) - 9.0) < 1.0e-14

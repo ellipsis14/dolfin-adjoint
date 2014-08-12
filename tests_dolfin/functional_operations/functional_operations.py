@@ -20,7 +20,7 @@ def main(f, annotate=True):
 if __name__ == "__main__":
 
   u = main(f)
-  m = SteadyParameter(f)
+  m = Control(f)
 
   J1 = Functional(u**2 * dx)
   dJ1dm = compute_gradient(J1, m, forget=False)

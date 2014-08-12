@@ -48,7 +48,7 @@ if __name__ == "__main__":
   alpha = Constant(1.0e-7)
   J = Functional(sum(inner(true - u, true - u)*dx*dt[time] for (time, true, computed) in combined if time >= 0.01) + alpha*inner(grad(u), grad(u))*dx*dt[START_TIME])
 
-  m = InitialConditionParameter("Temperature")
+  m = FunctionControl("Temperature")
 
   m_ex = Function(V, name="Temperature")
   viz  = File("output/iterations.pvd")

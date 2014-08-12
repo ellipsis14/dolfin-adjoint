@@ -116,8 +116,8 @@ if __name__ == "__main__":
 
   dtm = TimeMeasure()
   J = Functional((1.0/(4*eps)) * (pow( (-1.0/eps) * forward[1], 2))*dx*dtm)
-  dJdic = compute_gradient(J, InitialConditionParameter("Solution"), forget=False)
-  Hic = hessian(J, InitialConditionParameter("Solution"), warn=False)
+  dJdic = compute_gradient(J, FunctionControl("Solution"), forget=False)
+  Hic = hessian(J, FunctionControl("Solution"), warn=False)
 
   print "Functional value: ", j
 
@@ -125,5 +125,5 @@ if __name__ == "__main__":
     u, j = main(ic, annotate=False)
     return j
 
-  minconv = taylor_test(J, InitialConditionParameter("Solution"), j, dJdic, HJm=Hic, seed=1.0e-3)
+  minconv = taylor_test(J, FunctionControl("Solution"), j, dJdic, HJm=Hic, seed=1.0e-3)
   assert minconv > 1.9

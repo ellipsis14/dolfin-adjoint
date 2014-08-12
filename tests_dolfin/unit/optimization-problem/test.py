@@ -15,7 +15,7 @@ solve(a == L, u)
 
 J = Functional(u*u*dx)
 
-Jtilde = ReducedFunctional(J, SteadyParameter(m))
+Jtilde = ReducedFunctional(J, Control(m))
 #opt_problem = OptimizationProblem(Jtilde) # xfail
 #opt_problem = MinimizationProblem(J) # xfail
 opt_problem = MinimizationProblem(Jtilde) # xfail

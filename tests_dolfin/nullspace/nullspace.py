@@ -118,7 +118,7 @@ if __name__ == "__main__":
 
   Jm = assemble(frm(u))
   J = Functional(frm(u))
-  m = TimeConstantParameter(f)
+  m = Control(f)
   dJdm = compute_gradient(J, m, forget=False)
 
   def Jhat(f):
