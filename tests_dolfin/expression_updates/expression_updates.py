@@ -27,6 +27,4 @@ for i in range(2):
     bc.apply(F)
     solve(A, u.vector(), F, "cg", "ilu")
 
-adj_html("forward.html", "forward")
 assert replay_dolfin()
-

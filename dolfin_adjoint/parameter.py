@@ -9,6 +9,7 @@ from adjrhs import adj_get_forward_equation
 import adjresidual
 from constant import get_constant
 import constant
+import types
 
 class DolfinAdjointControl(libadjoint.Parameter):
   def __call__(self, adjointer, i, dependencies, values, variable):
@@ -168,10 +169,14 @@ class ConstantControl(DolfinAdjointControl):
       dparam = backend.Function(fn_space)
       dparam.vector()[:] = 1.0 * float(self.coeff)
 
-      diff_form = ufl.algorithms.expand_derivatives(backend.derivative(form, get_constant(self.a), dparam))
+      diff_form = ufl.algorithms.expand_derivatives(
+          backend.derivative(form, get_constant(self.a), dparam))
 
       if diff_form is None:
         return None
+
+      # Add the derivatives of Expressions wrt to the Constant
+      diff_form = self.expression_derivative(form, diff_form)
 
       # Let's see if the form actually depends on the parameter m
       if len(diff_form.integrals()) != 0:
@@ -179,9 +184,59 @@ class ConstantControl(DolfinAdjointControl):
         assert isinstance(dFdm, backend.GenericVector)
 
         out = dFdm.inner(adjoint.vector())
-        return out
       else:
-        return None # dF/dm is zero, return None
+        out = None # dF/dm is zero, return None
+
+      return out
+
+  def expression_derivative(self, form, diff_form):
+      """ Applies the chain rule on diff_form to add derivatives of Expressions  
+          with respect to the control. """
+
+      coeffs = ufl.algorithms.extract_coefficients(form)
+
+      # Take the derivative of Expressions with respect to Constants only 
+      # if the derivative is provided explicitly by the user
+      expr_deriv_coeffs = []
+      for coeff in coeffs:
+
+          # Check if the coefficient is an expression with user-defined 
+          # derivatives
+          if not hasattr(coeff, "deval"):
+              continue
+
+          if not hasattr(coeff, "dependencies"):
+              raise ValueError, "An expression with deval() must also \
+                                 implement the dependencies() function."
+
+          if not hasattr(coeff, "copy"):
+              raise ValueError, "An expression with deval() must also \
+                                 implement the copy() function."
+
+          # Check that that expression depends on self.a
+          elif self.a not in coeff.dependencies():
+              continue
+
+          else:
+              expr_deriv_coeffs.append(coeff)
+
+
+      # Ok, so diff_form has the expression "coeff" which depends on self.a
+      # For the following computation we temporarly change this expression
+      # such that it returns the derivative wrt to self.a instead of 
+      # plain evaluation.
+      # Now apply the chain rule to expand the diff_form through these
+      # expressions
+      for c in expr_deriv_coeffs:
+
+          dc = c.copy()
+          eval_deriv_a = lambda expr, value, x: expr.deval(value, x, self.a)
+          dc.eval = types.MethodType(eval_deriv_a, dc)
+
+          diff_form += ufl.algorithms.expand_derivatives(
+              backend.derivative(form, c, dc))
+
+      return diff_form
 
   def equation_partial_second_derivative(self, adjointer, adjoint, i, variable, m_dot):
     form = adjresidual.get_residual(i)
@@ -234,6 +289,10 @@ class ConstantControl(DolfinAdjointControl):
 
     d = backend.derivative(form, get_constant(self.a), dparam)
     d = ufl.algorithms.expand_derivatives(d)
+
+    # Add the derivatives of Expressions wrt to the Constant
+    d = self.expression_derivative(form, d)
+
     if len(d.integrals()) != 0:
       return backend.assemble(d)
     else:
