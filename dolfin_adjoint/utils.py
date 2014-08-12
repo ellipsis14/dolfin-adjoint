@@ -10,6 +10,7 @@ import ufl.algorithms
 import projection
 import functional
 import drivers
+import math
 from parameter import ListControl, Control
 if backend.__name__  == "dolfin":
   from backend import cpp
@@ -633,7 +634,13 @@ def taylor_test_expression(exp, V):
         #HJ = hessian(J, controls[i], warn=False)
         #minconv = taylor_test(Jfunc, controls[i], J0, dJd0[i], HJm=HJ)
         minconv = taylor_test(Jfunc, controls[i], J0, dJd0[i])
-    assert minconv > 1.9
+
+        if math.isnan(minconv):
+            warning("Convergence order is not a number. Assuming that you \
+have a linear or constant constraint dependency (e.g. check that the Taylor \
+remainder are all 0).")
+        else:
+            assert minconv > 1.9 
 
     adjglobals.adj_reset()
 
