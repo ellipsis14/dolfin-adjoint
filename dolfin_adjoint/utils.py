@@ -640,7 +640,9 @@ def taylor_test_expression(exp, V):
 have a linear or constant constraint dependency (e.g. check that the Taylor \
 remainder are all 0).")
         else:
-            assert minconv > 1.9 
+            if not minconv > 1.9:
+                raise Exception, "The Taylor test failed when checking the \
+derivative with respect to the %i'th dependency." % (i+1)
 
     adjglobals.adj_reset()
 
