@@ -11,8 +11,6 @@ parameters['std_out_all_processes'] = False
 parameters["adjoint"]["cache_factorizations"] = False
 parameters["adjoint"]["debug_cache"] = True
 
-x = triangle.x
-
 def solve_pde(u, V, m):
     v = TestFunction(V)
     F = (inner(grad(u), grad(v)) - m*v)*dx 
@@ -28,6 +26,8 @@ def solve_optimal_control(n):
     W = FunctionSpace(mesh, "DG", 0)
     s = Constant(1.0, name='ScalarControl')
     m = Function(W, name='Control')
+
+    x = SpatialCoordinate(mesh)
 
     u_d = 1/(2*pi**2)*sin(pi*x[0])*sin(pi*x[1]) 
 
