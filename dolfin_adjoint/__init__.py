@@ -31,7 +31,7 @@ import solving
 import assembly
 import expressions
 import utils
-import assign
+import assignment
 import functional
 import split_annotation
 
