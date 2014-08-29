@@ -40,9 +40,6 @@ class Constraint(object):
 
     raise NotImplementedError, "Constraint.output_workspace must be supplied"
 
-  def __len__(self):
-    return self.length()
-
 class EqualityConstraint(Constraint):
   """This class represents equality constraints of the form
 
@@ -94,9 +91,6 @@ class MergedConstraints(Constraint):
 
   def __iter__(self):
     return iter(self.constraints)
-
-  def __len__(self):
-    return len(self.constraints)
 
   def output_workspace(self):
     return [numpify(c.output_workspace()) for c in self.constraints]

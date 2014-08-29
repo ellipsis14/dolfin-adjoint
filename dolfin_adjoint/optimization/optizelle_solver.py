@@ -85,6 +85,7 @@ class BoundConstraint(constraints.InequalityConstraint):
             result.vector().zero()
 
 class DolfinVectorSpace(object):
+    """Optizelle wants a VectorSpace object that tells it how to do the linear algebra."""
     def __init__(self, parameters):
         self.parameters = parameters
 
@@ -303,10 +304,12 @@ class DolfinVectorSpace(object):
         return normsq
 
 try:
+    # May not have optizelle installed. That's why this is in a try block.
     import Optizelle
     import copy
 
     class RmVectorSpace(object):
+        """We also need a vector space for vectors of real numbers."""
         @staticmethod
         def init(x):
             """Memory allocation and size setting"""
@@ -382,7 +385,6 @@ try:
             pass
 
 
-    # May not have optizelle installed.
     class OptizelleObjective(Optizelle.ScalarValuedFunction):
 
         def __init__(self, rf, scale=1):
