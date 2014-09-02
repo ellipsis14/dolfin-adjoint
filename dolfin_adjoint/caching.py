@@ -49,10 +49,7 @@ def form_constants(form):
 
 def form_key(form):
   constants = form_constants(form)
-  try:
-    return (ufl.algorithms.expand_indices(form), constants)
-  except:
-    return (form, constants)
+  return (form, constants)
 
 assembled_fwd_forms = set()
 assembled_adj_forms = KeyedDict(keyfunc=form_key)
