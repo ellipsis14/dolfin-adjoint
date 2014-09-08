@@ -241,6 +241,9 @@ if __name__ == "__main__":
     def jacobian(self, m):
       return [-self.smass]
 
+    def output_workspace(self):
+      return [0.0]
+
     def length(self):
       """Return the number of components in the constraint vector (here, one)."""
       return 1

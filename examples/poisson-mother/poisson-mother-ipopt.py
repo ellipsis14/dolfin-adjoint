@@ -12,8 +12,6 @@
 from dolfin import *
 from dolfin_adjoint import *
 
-import Optizelle
-
 set_log_level(ERROR)
 
 # Create mesh, refined in the center
