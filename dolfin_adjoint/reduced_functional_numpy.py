@@ -179,7 +179,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
             return empty
       else:
 
-        nconstraints = len(constraints)
+        nconstraints = len(constraints.output_workspace())
 
         def fun_g(x, user_data=None):
           return np.array(constraints.function(x))
@@ -187,19 +187,19 @@ class ReducedFunctionalNumPy(ReducedFunctional):
           if flag:
             # Don't have any sparsity information on constraints, pass in a dense matrix (it usually is anyway).
             rows = []
-            for i in range(len(constraints)):
+            for i in range(len(constraints.output_workspace())):
               rows += [i] * n
-            cols = range(n) * len(constraints)
+            cols = range(n) * len(constraints.output_workspace())
             return (np.array(rows), np.array(cols))
           else:
-            return np.array(constraints.jacobian(x))
+            return np.array(gather(constraints.jacobian(x)))
 
-        clb = np.array([0] * len(constraints))
+        clb = np.array([0] * len(constraints.output_workspace()))
         def constraint_ub(c):
           if isinstance(c, EqualityConstraint):
-            return [0] * len(c)
+            return [0] * len(c.output_workspace())
           elif isinstance(c, InequalityConstraint):
-            return [np.inf] * len(c)
+            return [np.inf] * len(c.output_workspace())
         cub = np.array(sum([constraint_ub(c) for c in constraints], []))
 
       nlp = pyipopt.create(n,    # length of parameter vector
