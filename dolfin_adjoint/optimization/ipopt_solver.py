@@ -148,7 +148,7 @@ class IPOPTSolver(OptimizationSolver):
 
         else:
             # The length of the constraint vector
-            nconstraints = len(constraint)
+            nconstraints = constraint._get_constraint_dim()
             nparameters = len(self.rfn.get_parameters())
 
             # The constraint function
@@ -179,9 +179,9 @@ class IPOPTSolver(OptimizationSolver):
 
             def constraint_ub(c):
                 if isinstance(c, constraints.EqualityConstraint):
-                    return [0] * len(c)
+                    return [0] * c._get_constraint_dim()
                 elif isinstance(c, constraints.InequalityConstraint):
-                    return [numpy.inf] * len(c)
+                    return [numpy.inf] * c._get_constraint_dim()
             cub = numpy.array(sum([constraint_ub(c) for c in constraint], []))
 
             return (nconstraints, fun_g, jac_g, clb, cub)

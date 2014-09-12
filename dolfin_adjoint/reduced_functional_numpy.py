@@ -179,7 +179,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
             return empty
       else:
 
-        nconstraints = len(constraints.output_workspace())
+        nconstraints = constraints._get_constraint_dim()
 
         def fun_g(x, user_data=None):
           return np.array(constraints.function(x))
@@ -187,19 +187,19 @@ class ReducedFunctionalNumPy(ReducedFunctional):
           if flag:
             # Don't have any sparsity information on constraints, pass in a dense matrix (it usually is anyway).
             rows = []
-            for i in range(len(constraints.output_workspace())):
+            for i in range(constraints._get_constraint_dim()):
               rows += [i] * n
-            cols = range(n) * len(constraints.output_workspace())
+            cols = range(n) * constraints._get_constraint_dim()
             return (np.array(rows), np.array(cols))
           else:
             return np.array(gather(constraints.jacobian(x)))
 
-        clb = np.array([0] * len(constraints.output_workspace()))
+        clb = np.array([0] * constraints._get_constraint_dim())
         def constraint_ub(c):
           if isinstance(c, EqualityConstraint):
-            return [0] * len(c.output_workspace())
+            return [0] * c._get_constraint_dim()
           elif isinstance(c, InequalityConstraint):
-            return [np.inf] * len(c.output_workspace())
+            return [np.inf] * c._get_constraint_dim()
         cub = np.array(sum([constraint_ub(c) for c in constraints], []))
 
       nlp = pyipopt.create(n,    # length of parameter vector
@@ -335,9 +335,9 @@ class ReducedFunctionalNumPy(ReducedFunctional):
       if constraints is not None:
           for i, c in enumerate(constraints):
               if isinstance(c, optimization.constraints.EqualityConstraint):
-                opt_prob.addConGroup(str(i) + 'th constraint', len(c), type='e', equal=0.0)
+                opt_prob.addConGroup(str(i) + 'th constraint', c._get_constraint_dim(), type='e', equal=0.0)
               elif isinstance(c, optimization.constraints.InequalityConstraint):
-                opt_prob.addConGroup(str(i) + 'th constraint', len(c), type='i', lower=0.0, upper=np.inf)
+                opt_prob.addConGroup(str(i) + 'th constraint', c._get_constraint_dim(), type='i', lower=0.0, upper=np.inf)
 
       return opt_prob, grad
 

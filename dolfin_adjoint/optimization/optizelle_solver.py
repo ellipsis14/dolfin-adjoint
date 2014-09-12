@@ -435,7 +435,7 @@ try:
             ''' Evaluates the constraints and stores the result in y. '''
 
 
-            if len(self.constraints) == 0:
+            if self.constraints._get_constraint_dim() == 0:
                 return
 
 
@@ -450,7 +450,7 @@ try:
         def p(self, x, dx, y):
             ''' Evaluates the Jacobian action and stores the result in y. '''
 
-            if len(self.constraints) == 0:
+            if self.constraints._get_constraint_dim() == 0:
                 return
 
             x_list = delist(x, self.list_type)
@@ -465,7 +465,7 @@ try:
                     z=g'(x)*dy
             '''
 
-            if len(self.constraints) == 0:
+            if self.constraints._get_constraint_dim() == 0:
                 return
 
             x_list = delist(x, self.list_type)
@@ -481,7 +481,7 @@ try:
                     z=(g''(x)dx)*dy
             '''
 
-            if len(self.constraints) == 0:
+            if self.constraints._get_constraint_dim() == 0:
                 return
 
             x_list = delist(x, self.list_type)
@@ -562,8 +562,8 @@ class OptizelleSolver(OptimizationSolver):
             num_equality_constraints = 0
             num_inequality_constraints = 0 + len(bound_inequality_constraints)
         else:
-            num_equality_constraints = len(self.problem.constraints.equality_constraints())
-            num_inequality_constraints = len(self.problem.constraints.inequality_constraints()) + len(bound_inequality_constraints)
+            num_equality_constraints = self.problem.constraints.equality_constraints()._get_constraint_dim()
+            num_inequality_constraints = self.problem.constraints.inequality_constraints()._get_constraint_dim() + len(bound_inequality_constraints)
 
         x = [p.data() for p in self.problem.reduced_functional.parameter]
 
@@ -588,7 +588,7 @@ class OptizelleSolver(OptimizationSolver):
             self.fns.f = OptizelleObjective(self.problem.reduced_functional, scale=scale)
             self.fns.g = OptizelleConstraints(self.problem, equality_constraints)
 
-            log(INFO, "Found no equality and %i inequality constraints." % len(equality_constraints))
+            log(INFO, "Found no equality and %i inequality constraints." % equality_constraints._get_constraint_dim())
 
         # Inequality constraints only
         elif num_equality_constraints == 0 and num_inequality_constraints > 0:
@@ -607,7 +607,7 @@ class OptizelleSolver(OptimizationSolver):
             self.fns.f = OptizelleObjective(self.problem.reduced_functional, scale=scale)
             self.fns.h = OptizelleConstraints(self.problem, all_inequality_constraints)
 
-            log(INFO, "Found %i equality and 0 inequality constraints." % len(all_inequality_constraints))
+            log(INFO, "Found %i equality and 0 inequality constraints." % all_inequality_constraints._get_constraint_dim())
 
         # Inequality and equality constraints
         else:
@@ -631,7 +631,7 @@ class OptizelleSolver(OptimizationSolver):
             self.fns.g = OptizelleConstraints(self.problem, equality_constraints)
             self.fns.h = OptizelleConstraints(self.problem, all_inequality_constraints)
 
-            log(INFO, "Found %i equality and %i inequality constraints." % (len(equality_constraints), len(all_inequality_constraints)))
+            log(INFO, "Found %i equality and %i inequality constraints." % (equality_constraints._get_constraint_dim(), all_inequality_constraints._get_constraint_dim()))
 
 
         # Set solver parameters
@@ -665,8 +665,8 @@ class OptizelleSolver(OptimizationSolver):
             num_equality_constraints = 0
             num_inequality_constraints = 0 + len(self.bound_inequality_constraints)
         else:
-            num_equality_constraints = len(self.problem.constraints.equality_constraints())
-            num_inequality_constraints = len(self.problem.constraints.inequality_constraints()) + len(self.bound_inequality_constraints)
+            num_equality_constraints = self.problem.constraints.equality_constraints()._get_constraint_dim()
+            num_inequality_constraints = self.problem.constraints.inequality_constraints()._get_constraint_dim() + len(self.bound_inequality_constraints)
 
         # No constraints
         if num_equality_constraints == 0 and num_inequality_constraints == 0:

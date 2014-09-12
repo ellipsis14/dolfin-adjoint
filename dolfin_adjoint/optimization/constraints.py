@@ -2,6 +2,9 @@
 that can be used with different optimisation algorithms."""
 
 import numpy
+import backend
+if backend.__name__  == "dolfin":
+  from backend import cpp
 
 class Constraint(object):
   def function(self, m):
@@ -39,6 +42,19 @@ class Constraint(object):
     """Return an object like the output of c(m) for calculations."""
 
     raise NotImplementedError, "Constraint.output_workspace must be supplied"
+
+  def _get_constraint_dim(self):
+    """Returns the number of constraints in the supplied workspace."""
+    workspace = self.output_workspace()
+    
+    if isinstance(workspace, numpy.ndarray) or isinstance(workspace, list):
+      return len(workspace)
+    
+    if isinstance(workspace, backend.Constant):
+      return len(workspace.shape())
+    
+    if isinstance(workspace, cpp.Function):
+      return workspace.function_space().dim()
 
 class EqualityConstraint(Constraint):
   """This class represents equality constraints of the form

@@ -229,7 +229,7 @@ if __name__ == "__main__":
       result[:] = self.smass.inner(-dm.vector())
 
     def jacobian_adjoint_action(self, m, dp, result):
-      result.vector()[:] = -self.smass*dp
+      result.vector().set_local(-self.smass*dp)
 
     def output_workspace(self):
         return [0.0]
