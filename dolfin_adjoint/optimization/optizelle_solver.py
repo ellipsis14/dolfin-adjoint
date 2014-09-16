@@ -607,11 +607,10 @@ class OptizelleSolver(OptimizationSolver):
             self.fns.f = OptizelleObjective(self.problem.reduced_functional, scale=scale)
             self.fns.h = OptizelleConstraints(self.problem, all_inequality_constraints)
 
-            log(INFO, "Found %i equality and 0 inequality constraints." % all_inequality_constraints._get_constraint_dim())
+            log(INFO, "Found no equality and %i inequality constraints." % all_inequality_constraints._get_constraint_dim())
 
         # Inequality and equality constraints
         else:
-
             # Allocate memory for the equality multiplier
             equality_constraints = self.problem.constraints.equality_constraints()
             y = equality_constraints.output_workspace()
