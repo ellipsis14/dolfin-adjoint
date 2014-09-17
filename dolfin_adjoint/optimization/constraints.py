@@ -44,9 +44,9 @@ class Constraint(object):
     raise NotImplementedError, "Constraint.output_workspace must be supplied"
 
   def _get_constraint_dim(self):
-    """Returns the number of constraints in the supplied workspace."""
+    """Returns the number of constraint components."""
     workspace = self.output_workspace()
-    
+
     if isinstance(workspace, numpy.ndarray) or isinstance(workspace, list):
       return len(workspace)
     
@@ -120,6 +120,10 @@ class MergedConstraints(Constraint):
     ''' Filters out the inequality constraints '''
     constraints = [c for c in self.constraints if isinstance(c, InequalityConstraint)]
     return MergedConstraints(constraints)
+
+  def _get_constraint_dim(self):
+    ''' Returns the number of constraint components '''
+    return sum([c._get_constraint_dim() for c in self.constraints])
 
 def canonicalise(constraints):
   if constraints is None:
