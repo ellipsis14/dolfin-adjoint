@@ -51,7 +51,7 @@ class Constraint(object):
       return len(workspace)
     
     if isinstance(workspace, backend.Constant):
-      return len(workspace.shape())
+      return workspace.value_size()
     
     if isinstance(workspace, cpp.Function):
       return workspace.function_space().dim()
