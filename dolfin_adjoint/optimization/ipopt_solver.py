@@ -4,6 +4,7 @@ from ..reduced_functional_numpy import ReducedFunctionalNumPy
 import constraints
 from ..misc import rank
 from ..enlisting import enlist, delist
+from ..utils import gather
 
 import dolfin
 import numpy
@@ -85,7 +86,7 @@ class IPOPTSolver(OptimizationSolver):
                 len_parameter = len(self.rfn.get_global(parameter.data()))
                 general_lb, general_ub = bound # could be float, Constant, or Function
 
-                if isinstance(general_lb, float) or isinstance(general_lb, dolfin.Constant):
+                if isinstance(general_lb, (float, int, dolfin.Constant)):
                     lb = numpy.array([float(general_lb)]*len_parameter)
                 elif isinstance(general_lb, dolfin.Function):
                     assert general_lb.function_space().dim() == parameter.data().function_space().dim()
@@ -95,7 +96,7 @@ class IPOPTSolver(OptimizationSolver):
 
                 lb_list.append(lb)
 
-                if isinstance(general_ub, float) or isinstance(general_ub, dolfin.Constant):
+                if isinstance(general_ub, (float, int, dolfin.Constant)):
                     ub = numpy.array([float(general_ub)]*len_parameter)
                 elif isinstance(general_ub, dolfin.Function):
                     assert general_ub.function_space().dim() == parameter.data().function_space().dim()
@@ -168,7 +169,7 @@ class IPOPTSolver(OptimizationSolver):
                     cols = range(nparameters) * nconstraints
                     return (numpy.array(rows), numpy.array(cols))
                 else:
-                  return numpy.array(constraint.jacobian(x))
+                  return numpy.array(gather(constraint.jacobian(x)))
 
             # The bounds for the constraint: by the definition of our
             # constraint type, the lower bound is always zero,
@@ -191,12 +192,23 @@ class IPOPTSolver(OptimizationSolver):
         passed in, if any."""
 
         if self.parameters is not None:
-            if hasattr(self.parameters, 'tolerance'):
-                tol = self.parameters['tolerance']
-                self.pyipopt_problem.num_option('tol', tol)
-            if hasattr(self.parameters, 'maximum_iterations'):
-                maxiter = self.parameters['maximum_iterations']
-                self.pyipopt_problem.int_option('maxiter', maxiter)
+            for param in self.parameters:
+                if param == "tolerance":
+                    tol = self.parameters['tolerance']
+                    self.pyipopt_problem.num_option('tol', tol)
+                if param == "maximum_iterations":
+                    maxiter = self.parameters['maximum_iterations']
+                    self.pyipopt_problem.int_option('max_iter', maxiter)
+                else:
+                    out = self.parameters[param]
+                    if isinstance(out, int):
+                        self.pyipopt_problem.int_option(param, out)
+                    elif isinstance(out, str):
+                        self.pyipopt_problem.str_option(param, out)
+                    elif isinstance(out, float):
+                        self.pyipopt_problem.num_option(param, out)
+                    else:
+                        raise ValueError("Don't know how to deal with parameter %s (a %s)" % (param, out.__class__))
 
     def __copy_data(self, m):
         """Returns a deep copy of the given Function/Constant."""
