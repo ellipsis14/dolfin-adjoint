@@ -410,7 +410,7 @@ def wrap_solve(A, x, b, solver_parameters):
 
    # Comment. Why does list_lu_solver_methods() not return, a, uhm, list?
    lu_solvers = ["lu", "mumps", "umfpack", "spooles", "superlu", "superlu_dist", "pastix", "petsc"]
-   
+
    if backend.__name__ == "dolfin":
      # dolfin's API for expressing linear_solvers and preconditioners has changed in 1.4. Here I try
      # to support both.
