@@ -198,7 +198,6 @@ if __name__ == "__main__":
   J = Functional(0.5 * inner(alpha(rho) * u, u) * dx + mu * inner(grad(u), grad(u)) * dx)
   m = SteadyParameter(rho)
   Jhat = ReducedFunctional(J, m, eval_cb=eval_cb)
-  rfn = ReducedFunctionalNumPy(Jhat)
 
 # The control constraints are the same as the :doc:`Poisson topology
 # example <../poisson-topology/poisson-topology>`, and so won't be
@@ -249,9 +248,12 @@ if __name__ == "__main__":
 # completion, as its only purpose is to generate an initial guess.
 
   # Solve the optimisation problem with q = 0.01
-  nlp = rfn.pyipopt_problem(bounds=(lb, ub), constraints=VolumeConstraint(V))
-  nlp.int_option('max_iter', 20)
-  rho_opt = nlp.solve()
+  problem = MinimizationProblem(Jhat, bounds=(lb, ub), constraints=VolumeConstraint(V))
+  parameters = { 'maximum_iterations': 20 }
+
+  solver = IPOPTSolver(problem, parameters=parameters)
+  rho_opt = solver.solve()
+  
   File("output/control_solution_guess.xml.gz") << rho_opt
 
 # With the optimised value for :math:`q=0.01` in hand, we *reset* the
@@ -286,14 +288,16 @@ if __name__ == "__main__":
   J = Functional(0.5 * inner(alpha(rho) * u, u) * dx + mu * inner(grad(u), grad(u)) * dx)
   m = SteadyParameter(rho)
   Jhat = ReducedFunctional(J, m, eval_cb=eval_cb)
-  rfn = ReducedFunctionalNumPy(Jhat)
 
 # We can now solve the optimisation problem with :math:`q=0.1`, starting
 # from the solution of :math:`q=0.01`:
 
-  nlp = rfn.pyipopt_problem(bounds=(lb, ub), constraints=VolumeConstraint(V))
-  nlp.int_option('max_iter', 200)
-  rho_opt = nlp.solve()
+  problem = MinimizationProblem(Jhat, bounds=(lb, ub), constraints=VolumeConstraint(V))
+  parameters = { 'maximum_iterations': 200 }
+
+  solver = IPOPTSolver(problem, parameters=parameters)
+  rho_opt = solver.solve()
+
   File("output/control_solution_final.xml.gz") << rho_opt
 
 # The example code can be found in ``examples/stokes-topology/`` in the
