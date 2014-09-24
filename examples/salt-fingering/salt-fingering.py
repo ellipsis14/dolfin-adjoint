@@ -174,9 +174,7 @@ def get_ic():
   (zeta_test, p_test, t_test, s_test) = split(z_test)
 
   z = Function(Z, name="State")
-
-  z_trial = TrialFunction(Z)
-  (zeta_trial, p_trial, t_trial, s_trial) = split(z_trial)
+  (zeta_trial, p_trial, t_trial, s_trial) = split(z)
 
   # project zeta, t, s; solve for the streamfunction p
 
@@ -188,8 +186,9 @@ def get_ic():
        inner(t_test, t)*dx             +
        inner(s_test, s)*dx             -
        inner(p_test, zeta)*dx)
+  F = a - L
 
-  solve(a == L, z, bcs, solver_parameters={"linear_solver": "lu"})
+  solve(F == 0, z, bcs, solver_parameters={"newton_solver": {"linear_solver": "lu"}})
   return z
 
 #
@@ -286,7 +285,7 @@ def store(z, time):
   if MPI.rank(mpi_comm_world()) == 0:
     info_blue("Storing variables at t=%s" % time)
 
-  (u, p, t, s) = z.split(deepcopy=True)
+  (u, p, t, s) = z.split()
 
   u.rename("Velocity", "u")
   p.rename("Pressure", "p")

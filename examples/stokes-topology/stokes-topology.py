@@ -147,7 +147,6 @@ class InflowOutflow(Expression):
 # :doc:`Taylor remainder convergence tests
 # <../../documentation/verification>`.)
 
-
 def forward(rho):
   """Solve the forward problem for a given fluid distribution rho(x)."""
   w = Function(W)
@@ -157,7 +156,7 @@ def forward(rho):
   F = (alpha(rho) * inner(u, v) * dx + inner(grad(u), grad(v)) * dx +
        inner(grad(p), v) * dx  + inner(div(u), q) * dx)
   bc = DirichletBC(W.sub(0), InflowOutflow(), "on_boundary")
-  solve(F == 0, w, bcs=bc)
+  solve(F == 0, w, bcs=bc, solver_parameters={"newton_solver": {"relative_tolerance": 1.0e-6}})
 
   return w
 
@@ -214,13 +213,6 @@ if __name__ == "__main__":
     def __init__(self, V):
       self.V = float(V)
 
-# The derivative of the constraint g(x) is constant
-# (it is the negative of the diagonal of the lumped mass matrix for the
-# control function space), so let's assemble it here once.
-# This is also useful in rapidly calculating the integral each time
-# without re-assembling.
-
-      self.smass = assemble(TestFunction(A) * Constant(1) * dx)
       self.tmpvec = Function(A)
 
     def function(self, m):
@@ -228,13 +220,13 @@ if __name__ == "__main__":
       self.tmpvec.vector()[:] = m
 
       # Compute the integral of the control over the domain
-      integral = self.smass.inner(self.tmpvec.vector())
+      integral = assemble(self.tmpvec*dx)
       print "Current control integral: ", integral
       return [self.V - integral]
 
     def jacobian(self, m):
-      print "Computing constraint Jacobian"
-      return [-self.smass]
+      dintegral = assemble(derivative(self.tmpvec*dx, self.tmpvec))
+      return [-dintegral]
 
     def length(self):
       """Return the number of components in the constraint vector (here, one)."""
@@ -249,7 +241,6 @@ if __name__ == "__main__":
   nlp = rfn.pyipopt_problem(bounds=(lb, ub), constraints=VolumeConstraint(V))
   nlp.int_option('max_iter', 20)
   rho_opt = nlp.solve()
-  File("output/control_solution_guess.xml.gz") << rho_opt
 
 # With the optimised value for :math:`q=0.01` in hand, we *reset* the
 # dolfin-adjoint state, clearing its tape, and configure the new problem
@@ -266,8 +257,6 @@ if __name__ == "__main__":
 # functionals and parameters; this time, the evaluation callback will
 # save the optimisation iterations to
 # ``output/control_iterations_final.pvd``.
-
-  File("intermediate-guess-%s.xml.gz" % N) << rho
 
   w = forward(rho)
   (u, p) = split(w)
@@ -291,7 +280,6 @@ if __name__ == "__main__":
   nlp = rfn.pyipopt_problem(bounds=(lb, ub), constraints=VolumeConstraint(V))
   nlp.int_option('max_iter', 200)
   rho_opt = nlp.solve()
-  File("output/control_solution_final.xml.gz") << rho_opt
 
 # The example code can be found in ``examples/stokes-topology/`` in the
 # ``dolfin-adjoint`` source tree, and executed as follows:
