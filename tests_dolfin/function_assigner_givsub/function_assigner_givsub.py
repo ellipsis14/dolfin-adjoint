@@ -28,15 +28,11 @@ if __name__ == "__main__":
   z0 = interpolate(Constant((1, 2)), Z, name="State")
   v = main(z0)
 
-  A = tuple(z0.vector())
-  B = tuple(v.vector())
-  print A
-  print B
-  #assert A == B # Check for some dolfin bugs that have been fixed
+  # Check that the function assignment worked
+  assert tuple(v.vector()) == (1, 1, 1, 1, 1)
 
-  #assert adjglobals.adjointer.equation_count == 4
-  adj_html("forward.html", "forward")
-  adj_html("adjoint.html", "adjoint")
+  # Check taht the annotation worked
+  assert adjglobals.adjointer.equation_count == 3
 
   success = replay_dolfin(tol=0.0, stop=True)
   assert success
@@ -46,10 +42,7 @@ if __name__ == "__main__":
   J = Functional(form(v), name="a")
   m = InitialConditionParameter("State")
   Jm = assemble(form(v))
-  print "In compute gradient"
-
   dJdm = compute_gradient(J, m, forget=False)
-  print "Out compute gradient"
 
   eps = 0.0001
   dJdm_fd = Function(Z)

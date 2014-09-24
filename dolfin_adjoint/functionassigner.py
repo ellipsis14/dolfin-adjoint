@@ -126,12 +126,19 @@ if hasattr(backend, 'FunctionAssigner'):
               out = backend.Function(contraction_vector.data.sub(idx))
               return adjlinalg.Vector(out)
 
-            # OR, we were assigning to a subfunction, in which case the index information is contained in the receiving_idx.
+            # OR, we were assigning to a subfunction, in which case the index
+            # information is contained in giving_idxs and receiving_idx.
             out = backend.Function(self.giving_supers[0].function_space())
             out_sub = out
             for idx in self.giving_idxs[0]:
               out_sub = out_sub.sub(idx)
-            self.adj_function_assigner.assign(out_sub, contraction_vector.data)
+
+            in_ = contraction_vector.data
+            for idx in self.receiving_idx:
+              in_ = in_.sub(idx)
+
+            self.adj_function_assigner.assign(out_sub, in_)
+
             return adjlinalg.Vector(out)
 
         # If we got to here, we're differentiating with respect to the
