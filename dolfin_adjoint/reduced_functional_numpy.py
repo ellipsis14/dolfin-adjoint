@@ -329,7 +329,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
         lb = mn * np.ones(n)
 
       # Add parameters
-      opt_prob.addVarGroup(self.parameter[0].var.name, n, type='c', value=m, lower=lb, upper=ub)
+      opt_prob.addVarGroup("variables", n, type='c', value=m, lower=lb, upper=ub)
 
       # Add constraints
       if constraints is not None:
