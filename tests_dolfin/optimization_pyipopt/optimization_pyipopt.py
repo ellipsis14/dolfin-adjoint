@@ -66,8 +66,8 @@ if __name__ == "__main__":
 
     # Define the reduced funtional
     rf = ReducedFunctional(J, InitialConditionParameter(u, value=ic), derivative_cb = derivative_cb)
-    
-    problem = MinimizationProblem(rf, bounds=[(lb, ub)])
+
+    problem = MinimizationProblem(rf, bounds=(lb, ub))
 
     solver = IPOPTSolver(problem)
     m = solver.solve()
