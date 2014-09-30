@@ -250,7 +250,7 @@ if __name__ == "__main__":
   solver = IPOPTSolver(problem, parameters=parameters)
   rho_opt = solver.solve()
   
-  File("output/control_solution_guess.xml.gz") << rho_opt
+  File("output/control_solution_guess.xdmf") << rho_opt
 
 # With the optimised value for :math:`q=0.01` in hand, we *reset* the
 # dolfin-adjoint state, clearing its tape, and configure the new problem
@@ -268,7 +268,7 @@ if __name__ == "__main__":
 # save the optimisation iterations to
 # ``output/control_iterations_final.pvd``.
 
-  File("intermediate-guess-%s.xml.gz" % N) << rho
+  File("intermediate-guess-%s.xdmf" % N) << rho
 
   w = forward(rho)
   (u, p) = split(w)
@@ -294,7 +294,7 @@ if __name__ == "__main__":
   solver = IPOPTSolver(problem, parameters=parameters)
   rho_opt = solver.solve()
 
-  File("output/control_solution_final.xml.gz") << rho_opt
+  File("output/control_solution_final.xdmf") << rho_opt
 
 # The example code can be found in ``examples/stokes-topology/`` in the
 # ``dolfin-adjoint`` source tree, and executed as follows:
