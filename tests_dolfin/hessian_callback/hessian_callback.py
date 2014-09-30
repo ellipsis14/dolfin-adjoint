@@ -29,7 +29,7 @@ def hessian_cb(j, m, mdot, h):
   global test
   test = 1
 
-J_hat = ReducedFunctional(J, TimeConstantParameter(a), hessian_cb = hessian_cb)
+J_hat = ReducedFunctional(J, Control(a), hessian_cb = hessian_cb)
 J_hat(a)
 J_hat.hessian(a)
 assert test == 1, "Hessian callback was not called."

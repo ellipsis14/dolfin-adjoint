@@ -74,7 +74,7 @@ if __name__ == "__main__":
 
   dtm = TimeMeasure()
   J = Functional(inner(u, u)*dx*dtm[FINISH_TIME])
-  m = InitialConditionParameter(u)
+  m = Control(u)
   Jm = assemble(inner(u, u)*dx)
 
   def Jhat(ic):

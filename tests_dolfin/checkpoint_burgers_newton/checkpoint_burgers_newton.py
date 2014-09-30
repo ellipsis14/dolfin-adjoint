@@ -45,7 +45,7 @@ if __name__ == "__main__":
   adj_check_checkpoints()
 
   J = Functional(inner(u,u)*dx*dt[FINISH_TIME])
-  dJdnu = compute_gradient(J, ScalarParameter(nu))
+  dJdnu = compute_gradient(J, Control(nu))
 
   parameters["adjoint"]["stop_annotating"] = True
 
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     u = main(nu)
     return assemble(inner(u, u)*dx)
 
-  conv_rate = taylor_test(Jhat, ScalarParameter(nu), Jnu, dJdnu)
+  conv_rate = taylor_test(Jhat, Control(nu), Jnu, dJdnu)
 
   if conv_rate < 1.9:
     sys.exit(1)

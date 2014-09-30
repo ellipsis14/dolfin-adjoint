@@ -19,13 +19,13 @@ to en-list and de-list appropriately.
 """
 
 import collections
-from parameter import ListParameter
+from parameter import ListControl
 
 class Enlisted(list):
     pass
 
 def enlist(x):
-    assert not isinstance(x, ListParameter)
+    assert not isinstance(x, ListControl)
     if isinstance(x, (list, tuple)):
         return x
     else:

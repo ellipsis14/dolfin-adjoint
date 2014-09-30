@@ -118,7 +118,7 @@ if __name__ == "__main__":
 
     print "Running adjoint ... "
     J = Functional(T*T*dx*dt[FINISH_TIME])
-    m = InitialConditionParameter(ic)
+    m = Control(ic)
 
     def Jhat(ic):
       T = main(ic, annotate=False)

@@ -12,6 +12,7 @@
 from dolfin import *
 from dolfin_adjoint import *
 
+
 set_log_level(ERROR)
 
 # Create mesh, refined in the center
@@ -42,7 +43,7 @@ d = 1/(2*pi**2)*sin(pi*x[0])*sin(pi*x[1]) # the desired temperature profile
 
 alpha = Constant(1e-6)
 J = Functional((0.5*inner(u-d, u-d))*dx + alpha/2*f**2*dx)
-control = SteadyParameter(f)
+control = Control(f)
 rf = ReducedFunctional(J, control)
 
 problem = MinimizationProblem(rf)

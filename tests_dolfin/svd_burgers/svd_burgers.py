@@ -62,7 +62,7 @@ if __name__ == "__main__":
       vec[i] = random.random()
 
     info_blue("Computing the TLM the direct way ... ")
-    param = InitialConditionParameter(ic, perturbation=perturbation)
+    param = Control(ic, perturbation=perturbation)
     for (tlm, var) in compute_tlm(param, forget=False):
       pass
     final_tlm = tlm

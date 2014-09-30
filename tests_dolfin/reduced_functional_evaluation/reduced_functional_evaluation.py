@@ -44,7 +44,7 @@ print "+++++++++++++ REPLAY +++++++++"
 u_new.vector()[:] = 0.
 u_old.vector()[:] = 0.
 J = Functional(inner(u_new, u_new)*dx*dt) 
-reduced_functional = ReducedFunctional(J, InitialConditionParameter(u_old))
+reduced_functional = ReducedFunctional(J, Control(u_old))
 reduced_functional_value = reduced_functional(u_old)
 info_green("Functional value from reduced functional: %f", reduced_functional_value)
 

@@ -65,7 +65,7 @@ if __name__ == "__main__":
     ub = interpolate(Constant(1.0e200), V)
 
     # Define the reduced funtional
-    rf = ReducedFunctional(J, InitialConditionParameter(u, value=ic), derivative_cb = derivative_cb)
+    rf = ReducedFunctional(J, Control(u, value=ic), derivative_cb = derivative_cb)
 
     problem = MinimizationProblem(rf, bounds=(lb, ub))
 

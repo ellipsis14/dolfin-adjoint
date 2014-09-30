@@ -85,7 +85,7 @@ if __name__ == "__main__":
   for i in [1]:
     Jform = lambda u: inner(u[i], u[i])*dx
     J = Functional(Jform(u)*dtm[FINISH_TIME])
-    m = InitialConditionParameter(u)
+    m = Control(u)
     Jm = assemble(Jform(u))
 
     def Jhat(ic):

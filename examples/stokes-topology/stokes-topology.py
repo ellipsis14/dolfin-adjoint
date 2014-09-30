@@ -196,7 +196,7 @@ if __name__ == "__main__":
 # <../maths/2-problem>`:
 
   J = Functional(0.5 * inner(alpha(rho) * u, u) * dx + mu * inner(grad(u), grad(u)) * dx)
-  m = SteadyParameter(rho)
+  m = Control(rho)
   Jhat = ReducedFunctional(J, m, eval_cb=eval_cb)
 
 # The control constraints are the same as the :doc:`Poisson topology
@@ -282,7 +282,7 @@ if __name__ == "__main__":
     allctrls << rho_viz
 
   J = Functional(0.5 * inner(alpha(rho) * u, u) * dx + mu * inner(grad(u), grad(u)) * dx)
-  m = SteadyParameter(rho)
+  m = Control(rho)
   Jhat = ReducedFunctional(J, m, eval_cb=eval_cb)
 
 # We can now solve the optimisation problem with :math:`q=0.1`, starting

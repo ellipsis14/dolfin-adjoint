@@ -44,7 +44,7 @@ if __name__ == "__main__":
   adj_html("adjoint.html", "adjoint")
 
   J = Functional(u*u*u*u*dx*dt[FINISH_TIME])
-  m = InitialConditionParameter(u)
+  m = Control(u)
   Jm = assemble(u*u*u*u*dx)
   dJdm = compute_gradient(J, m, forget=False)
   HJm  = hessian(J, m, warn=False)
