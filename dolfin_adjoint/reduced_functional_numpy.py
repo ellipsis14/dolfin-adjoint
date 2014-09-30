@@ -152,7 +152,8 @@ class ReducedFunctionalNumPy(ReducedFunctional):
                   fail = True
 
           if constraints is not None:
-              g = constraints.function(x)
+              # Not sure how to do this in parallel, FIXME
+              g = np.concatenate(constraints.function(x))
           else:
               g = [0]  # SNOPT fails if no constraints are given, hence add a dummy constraint
 
