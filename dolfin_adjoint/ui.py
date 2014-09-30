@@ -1,7 +1,7 @@
 import backend
 from assembly import assemble, assemble_system
 from functional import Functional
-from parameter import InitialConditionParameter, ScalarParameter, ScalarParameters, TimeConstantParameter, SteadyParameter, ListParameter, Control
+from parameter import InitialConditionParameter, ScalarParameter, ScalarParameters, TimeConstantParameter, SteadyParameter, Control
 
 from solving import solve, adj_checkpointing, annotate, record
 from adjglobals import adj_start_timestep, adj_inc_timestep, adjointer, adj_check_checkpoints, adj_html, adj_reset
@@ -17,6 +17,12 @@ from interpolation import interpolate
 from constant import Constant
 from timeforms import dt, TimeMeasure, START_TIME, FINISH_TIME
 
+# Expose PDE-constrained optimization utilities
+from optimization.optimization_problem import *
+from optimization.optimization_solver import *
+from optimization.ipopt_solver import *
+from optimization.optizelle_solver import OptizelleSolver
+
 if backend.__name__ == "dolfin":
   from newton_solver import NewtonSolver
   from krylov_solver import KrylovSolver
@@ -25,7 +31,6 @@ if backend.__name__ == "dolfin":
   from reduced_functional import ReducedFunctional, replace_parameter_value, replace_tape_value
   from reduced_functional_numpy import ReducedFunctionalNumPy, ReducedFunctionalNumpy
   from optimization.optimization import minimize, maximize, print_optimization_methods, minimise, maximise
-  from optimization.steepest_descent import minimize_steepest_descent
   from optimization.multistage_optimization import minimize_multistage
   from optimization.constraints import InequalityConstraint, EqualityConstraint
   from pointintegralsolver import *

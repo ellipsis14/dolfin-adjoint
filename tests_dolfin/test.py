@@ -11,7 +11,7 @@ test_cmds = {'tlm_simple': 'mpirun -n 2 python tlm_simple.py',
              'svd_simple': 'mpirun -n 2 python svd_simple.py',
              'gst_mass': 'mpirun -n 2 python gst_mass.py',
              'hessian_eps': 'mpirun -n 2 python hessian_eps.py',
-             'optimization': 'mpirun -n 2 python optimization.py',
+             'optimization_scipy': 'mpirun -n 2 python optimization_scipy.py',
              'optimization_checkpointing': 'python optimization_checkpointing.py',
              'optimal_control_mms': 'mpirun -n 2 python optimal_control_mms.py',
              'preassembly_efficiency': 'mpirun -n 1 python preassembly_efficiency.py --ignore; mpirun -n 1 python preassembly_efficiency.py',
@@ -23,6 +23,7 @@ test_cmds = {'tlm_simple': 'mpirun -n 2 python tlm_simple.py',
              'matrix_free_heat': None,
              'matrix_free_simple': None,
              'ode_tentusscher': None,
+             'unit': None,
              'function_assigner': None,
              'mantle_convection': None}
 
@@ -45,7 +46,7 @@ if options.test_name:
   else:
     subdirs = [options.test_name]
 
-long_tests = ["viscoelasticity", "cahn_hilliard", "optimization", "svd_burgers_perturb", "supg", "mpec"] # special case the very long tests for speed
+long_tests = ["viscoelasticity", "cahn_hilliard", "optimization_scipy", "svd_burgers_perturb", "supg", "mpec"] # special case the very long tests for speed
 for test in long_tests:
   subdirs.remove(test)
 

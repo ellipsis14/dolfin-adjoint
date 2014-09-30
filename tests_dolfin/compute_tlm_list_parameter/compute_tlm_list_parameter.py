@@ -26,7 +26,7 @@ if __name__ == "__main__":
   soln = main(ic, a, b, annotate=True)
 
   p = [Constant(2.0), Constant(3.0)]
-  m = ListParameter([ScalarParameter("a", coeff=p[0]), ScalarParameter("b", coeff=p[1])])
+  m = [ScalarParameter("a", coeff=p[0]), ScalarParameter("b", coeff=p[1])]
 
   for (dudm, tlm_var) in compute_tlm(m, forget=False):
     # just keep iterating until we get the last dudm
@@ -36,7 +36,7 @@ if __name__ == "__main__":
   dJdm_tlm = assemble(derivative(frm, soln)).inner(dudm.vector())
 
   J = Functional(frm)
-  m = ListParameter([ScalarParameter("a"), ScalarParameter("b")]) # get rid of the perturbation direction \delta m
+  m = [ScalarParameter("a"), ScalarParameter("b")] # get rid of the perturbation direction \delta m
 
   dJdm_adm = compute_gradient(J, m, forget=False)
   dJdm_adm = float(dJdm_adm[0])*float(p[0]) + float(dJdm_adm[1])*float(p[1])
