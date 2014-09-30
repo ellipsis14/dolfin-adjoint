@@ -7,6 +7,13 @@ import adjlinalg
 
 if hasattr(backend, 'FunctionAssigner'):
   class FunctionAssigner(backend.FunctionAssigner):
+
+    def __init__(self, *args, **kwargs):
+        super(FunctionAssigner, self).__init__(*args, **kwargs)
+
+        # The adjoint function assigner with swapped FunctionSpace arguments
+        self.adj_function_assigner = backend.FunctionAssigner(args[1], args[0])
+
     def assign(self, receiving, giving, annotate=None):
 
       out = backend.FunctionAssigner.assign(self, receiving, giving)
@@ -22,7 +29,7 @@ if hasattr(backend, 'FunctionAssigner'):
         receiving_identity = utils.get_identity_block(receiving_fnspace)
         receiving_idx = get_super_idx(receiving)
 
-        rhs = FunctionAssignerRHS(self, receiving_super, receiving_idx, giving)
+        rhs = FunctionAssignerRHS(self, self.adj_function_assigner, receiving_super, receiving_idx, giving)
         receiving_dep = adjglobals.adj_variables.next(receiving_super)
 
         solving.register_initial_conditions(zip(rhs.coefficients(),rhs.dependencies()), linear=True)
@@ -37,8 +44,9 @@ if hasattr(backend, 'FunctionAssigner'):
       return out
 
   class FunctionAssignerRHS(libadjoint.RHS):
-    def __init__(self, function_assigner, receiving_super, receiving_idx, giving):
+    def __init__(self, function_assigner, adj_function_assigner, receiving_super, receiving_idx, giving):
       self.function_assigner = function_assigner
+      self.adj_function_assigner = adj_function_assigner
 
       self.receiving_super = receiving_super
       self.receiving_idx   = receiving_idx
@@ -84,6 +92,7 @@ if hasattr(backend, 'FunctionAssigner'):
 
         for (dep, value) in zip(dependencies, values):
           if dep == variable:
+            assert len(contraction_vector.data.vector()) == len(value.data.vector())
             new_values.append(contraction_vector)
           else:
             new_values.append(value.duplicate())
@@ -103,7 +112,7 @@ if hasattr(backend, 'FunctionAssigner'):
         # We can EITHER be assigning to a subfunction of a function, OR assigning multiple components to a mixed function.
         # i.e. it's either
         # assign(z.sub(0), u)
-        # or 
+        # or
         # assign(z, [u, p])
         # We need to treat their adjoints differently.
 
@@ -117,14 +126,23 @@ if hasattr(backend, 'FunctionAssigner'):
               out = backend.Function(contraction_vector.data.sub(idx))
               return adjlinalg.Vector(out)
 
-            # OR, we were assigning to a subfunction, in which case the index information is contained in the receiving_idx.
-            out = contraction_vector.data
+            # OR, we were assigning to a subfunction, in which case the index
+            # information is contained in giving_idxs and receiving_idx.
+            out = backend.Function(self.giving_supers[0].function_space())
+            out_sub = out
+            for idx in self.giving_idxs[0]:
+              out_sub = out_sub.sub(idx)
+
+            in_ = contraction_vector.data
             for idx in self.receiving_idx:
-              out = out.sub(idx)
-            out = backend.Function(out)
+              in_ = in_.sub(idx)
+
+            self.adj_function_assigner.assign(out_sub, in_)
+
             return adjlinalg.Vector(out)
 
-        # If we got to here, we're differentiating with respect to the background value.
+        # If we got to here, we're differentiating with respect to the
+        # background (receiving) value.
         else:
           assert variable == self.receiving_dep
 

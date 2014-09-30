@@ -130,129 +130,6 @@ class ReducedFunctionalNumPy(ReducedFunctional):
         m = [p.data() for p in self.parameter]
         return self.set_local(m, array)
 
-    def pyipopt_problem(self, constraints=None, bounds=None):
-      '''Return a pyipopt problem class that can be used with the pyipopt Python bindings,
-      https://github.com/xuy/pyipopt
-      '''
-
-      from optimization.constraints import canonicalise, InequalityConstraint, EqualityConstraint
-      constraints = canonicalise(constraints)
-
-      import pyipopt
-
-      m = self.get_parameters()
-      n = len(m)
-
-      if bounds is not None:
-        ulb, uub = bounds
-        if isinstance(ulb, float) or isinstance(ulb, Constant):
-          lb = np.array([float(ulb)]*n)
-        else:
-          lb = np.array([float(v) for v in ulb])
-
-        if isinstance(uub, float) or isinstance(uub, Constant):
-          ub = np.array([float(uub)]*n)
-        else:
-          ub = np.array([float(v) for v in uub])
-
-      else:
-        mx = np.finfo(np.double).max
-        ub = np.array([mx]*n)
-
-        mn = np.finfo(np.double).min
-        lb = np.array([mn]*n)
-
-      if constraints is None:
-        nconstraints = 0
-        empty = np.array([], dtype=float)
-        clb = empty
-        cub = empty
-
-        def fun_g(x, user_data=None):
-          return empty
-        def jac_g(x, flag, user_data=None):
-          if flag:
-            rows = np.array([], dtype=int)
-            cols = np.array([], dtype=int)
-            return (rows, cols)
-          else:
-            return empty
-      else:
-
-        nconstraints = len(constraints)
-
-        def fun_g(x, user_data=None):
-          return np.array(constraints.function(x))
-        def jac_g(x, flag, user_data=None):
-          if flag:
-            # Don't have any sparsity information on constraints, pass in a dense matrix (it usually is anyway).
-            rows = []
-            for i in range(len(constraints)):
-              rows += [i] * n
-            cols = range(n) * len(constraints)
-            return (np.array(rows), np.array(cols))
-          else:
-            return np.array(constraints.jacobian(x))
-
-        clb = np.array([0] * len(constraints))
-        def constraint_ub(c):
-          if isinstance(c, EqualityConstraint):
-            return [0] * len(c)
-          elif isinstance(c, InequalityConstraint):
-            return [np.inf] * len(c)
-        cub = np.array(sum([constraint_ub(c) for c in constraints], []))
-
-      nlp = pyipopt.create(n,    # length of parameter vector
-                           lb,   # lower bounds on parameter vector
-                           ub,   # upper bounds on parameter vector
-                           nconstraints,    # number of constraints (zero for now),
-                           clb,  # lower bounds on constraints,
-                           cub,  # upper bounds on constraints,
-                           nconstraints*n,    # number of nonzeros in the constraint Jacobian
-                           0,    # number of nonzeros in the Hessian
-                           self.__call__,   # to evaluate the functional
-                           partial(self.derivative, forget=False), # to evaluate the gradient
-                           fun_g,            # to evaluate the constraints
-                           jac_g)            # to evaluate the constraint Jacobian
-
-      pyipopt.set_loglevel(1) # turn off annoying pyipopt logging
-
-      rank = misc.rank()
-
-      if rank > 0:
-        nlp.int_option('print_level', 0) # disable redundant IPOPT output in parallel
-      else:
-        nlp.int_option('print_level', 6) # very useful IPOPT output
-
-
-      # At the moment, nlp.solve returns a bunch of numpy arrays, and
-      # the values of the parameters aren't changed. I'd like nlp.solve
-      # to instead return the high-level dolfin objects,
-
-      class IPOPTProblem(object):
-        def __init__(self, nlp):
-          self.nlp = nlp
-
-        def solve(newself, full=False):
-          # self refers to the ReducedFunctionalNumPy instance, newself to the IPOPTProblem instance
-          guess = self.get_parameters()
-          results = newself.nlp.solve(guess)
-          new_params = [copy_data(p.data()) for p in self.parameter]
-          self.set_local(new_params, results[0])
-
-          if len(new_params) == 1:
-            new_params = new_params[0]
-
-          if not full:
-            return new_params
-          else:
-            return [new_params] + results[1:]
-
-        def __getattr__(self, x):
-          return getattr(self.nlp, x)
-
-      return IPOPTProblem(nlp)
-
     def pyopt_problem(self, constraints=None, bounds=None, name="Problem", ignore_model_errors=False):
       '''Return a pyopt problem class that can be used with the PyOpt package,
       http://www.pyopt.org/
@@ -275,7 +152,8 @@ class ReducedFunctionalNumPy(ReducedFunctional):
                   fail = True
 
           if constraints is not None:
-              g = constraints.function(x)
+              # Not sure how to do this in parallel, FIXME
+              g = np.concatenate(constraints.function(x))
           else:
               g = [0]  # SNOPT fails if no constraints are given, hence add a dummy constraint
 
@@ -329,15 +207,15 @@ class ReducedFunctionalNumPy(ReducedFunctional):
         lb = mn * np.ones(n)
 
       # Add parameters
-      opt_prob.addVarGroup(self.parameter[0].var.name, n, type='c', value=m, lower=lb, upper=ub)
+      opt_prob.addVarGroup("variables", n, type='c', value=m, lower=lb, upper=ub)
 
       # Add constraints
       if constraints is not None:
           for i, c in enumerate(constraints):
               if isinstance(c, optimization.constraints.EqualityConstraint):
-                opt_prob.addConGroup(str(i) + 'th constraint', len(c), type='e', equal=0.0)
+                opt_prob.addConGroup(str(i) + 'th constraint', c._get_constraint_dim(), type='e', equal=0.0)
               elif isinstance(c, optimization.constraints.InequalityConstraint):
-                opt_prob.addConGroup(str(i) + 'th constraint', len(c), type='i', lower=0.0, upper=np.inf)
+                opt_prob.addConGroup(str(i) + 'th constraint', c._get_constraint_dim(), type='i', lower=0.0, upper=np.inf)
 
       return opt_prob, grad
 

@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
+<Xdmf Version="2.0" xmlns:xi="http://www.w3.org/2001/XInclude">
+  <Domain>
+    <Grid Name="mesh" GridType="Uniform">
+      <Topology NumberOfElements="131072" TopologyType="Triangle">
+        <DataItem Format="HDF" Dimensions="131072 3">klein.h5:/Mesh/mesh/topology</DataItem>
+      </Topology>
+      <Geometry GeometryType="XYZ">
+        <DataItem Format="HDF" Dimensions="65536 3">klein.h5:/Mesh/mesh/coordinates</DataItem>
+      </Geometry>
+    </Grid>
+  </Domain>
+</Xdmf>

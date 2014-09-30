@@ -58,8 +58,10 @@ if __name__ == "__main__":
 
   rf = ReducedFunctional(J, m, derivative_cb=derivative_cb)
 
-  rfn = ReducedFunctionalNumpy(rf)
-  problem = rfn.pyipopt_problem()
-  problem.int_option('max_iter', 50)
+  problem = MinimizationProblem(rf)
+  parameters = { 'maximum_iterations': 50 }
+
+  solver = IPOPTSolver(problem, parameters=parameters)
+  rho_opt = solver.solve()
 
   m_opt = problem.solve()

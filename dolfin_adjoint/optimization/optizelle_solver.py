@@ -85,6 +85,7 @@ class BoundConstraint(constraints.InequalityConstraint):
             result.vector().zero()
 
 class DolfinVectorSpace(object):
+    """Optizelle wants a VectorSpace object that tells it how to do the linear algebra."""
     def __init__(self, parameters):
         self.parameters = parameters
 
@@ -303,86 +304,10 @@ class DolfinVectorSpace(object):
         return normsq
 
 try:
+    # May not have optizelle installed. That's why this is in a try block.
     import Optizelle
     import copy
 
-    class RmVectorSpace(object):
-        @staticmethod
-        def init(x):
-            """Memory allocation and size setting"""
-            return copy.deepcopy(x) 
-
-        @staticmethod
-        def copy(x,y):
-            """y <- x (Shallow.  No memory allocation.)"""
-            y[:] = x[:]
-
-        @staticmethod
-        def scal(alpha,x):
-            """x <- alpha * x"""
-            x.__imul__(alpha)
-
-        @staticmethod
-        def zero(x):
-            """x <- 0"""
-            x.fill(0.)
-
-        @staticmethod
-        def axpy(alpha,x,y):
-            """y <- alpha * x + y"""
-            y.__iadd__(alpha*x)
-
-        @staticmethod
-        def innr(x,y):
-            """<- <x,y>"""
-            return numpy.inner(x,y) 
-
-        @staticmethod
-        def rand(x):
-            """x <- random"""
-            x[:] = map(lambda x:random.normalvariate(0.,1.),x)
-
-        @staticmethod
-        def prod(x,y,z):
-            """Jordan product, z <- x o y"""
-            z[:] = x*y
-
-        @staticmethod
-        def id(x):
-            """Identity element, x <- e such that x o e = x"""
-            x.fill(1.)
-
-        @staticmethod
-        def linv(x,y,z):
-            """Jordan product inverse, z <- inv(L(x)) y where L(x) y = x o y"""
-            z[:] = numpy.divide(y,x)
-
-        @staticmethod
-        def barr(x):
-            """Barrier function, <- barr(x) where x o grad barr(x) = e"""
-            try:
-                return sum(math.log(xx) for xx in x)
-            except ValueError:
-                return -numpy.inf
-            
-        @staticmethod
-        def srch(x,y):
-            """Line search, <- argmax {alpha \in Real >= 0 : alpha x + y >= 0} where y > 0"""
-            alpha = float("inf")
-            for i in xrange(0,len(x)):
-                if x[i] < 0:
-                    alpha0 = -y[i]/x[i]
-                    if alpha0 < alpha:
-                        alpha=alpha0
-            return alpha
-
-        @staticmethod
-        def symm(x):
-            """Symmetrization, x <- symm(x) such that L(symm(x)) is a symmetric operator"""
-            pass
-
-
-    # May not have optizelle installed.
     class OptizelleObjective(Optizelle.ScalarValuedFunction):
 
         def __init__(self, rf, scale=1):
@@ -433,7 +358,7 @@ try:
             ''' Evaluates the constraints and stores the result in y. '''
 
 
-            if len(self.constraints) == 0:
+            if self.constraints._get_constraint_dim() == 0:
                 return
 
 
@@ -448,7 +373,7 @@ try:
         def p(self, x, dx, y):
             ''' Evaluates the Jacobian action and stores the result in y. '''
 
-            if len(self.constraints) == 0:
+            if self.constraints._get_constraint_dim() == 0:
                 return
 
             x_list = delist(x, self.list_type)
@@ -463,7 +388,7 @@ try:
                     z=g'(x)*dy
             '''
 
-            if len(self.constraints) == 0:
+            if self.constraints._get_constraint_dim() == 0:
                 return
 
             x_list = delist(x, self.list_type)
@@ -479,7 +404,7 @@ try:
                     z=(g''(x)dx)*dy
             '''
 
-            if len(self.constraints) == 0:
+            if self.constraints._get_constraint_dim() == 0:
                 return
 
             x_list = delist(x, self.list_type)
@@ -560,8 +485,8 @@ class OptizelleSolver(OptimizationSolver):
             num_equality_constraints = 0
             num_inequality_constraints = 0 + len(bound_inequality_constraints)
         else:
-            num_equality_constraints = len(self.problem.constraints.equality_constraints())
-            num_inequality_constraints = len(self.problem.constraints.inequality_constraints()) + len(bound_inequality_constraints)
+            num_equality_constraints = self.problem.constraints.equality_constraints()._get_constraint_dim()
+            num_inequality_constraints = self.problem.constraints.inequality_constraints()._get_constraint_dim() + len(bound_inequality_constraints)
 
         x = [p.data() for p in self.problem.reduced_functional.parameter]
 
@@ -586,7 +511,7 @@ class OptizelleSolver(OptimizationSolver):
             self.fns.f = OptizelleObjective(self.problem.reduced_functional, scale=scale)
             self.fns.g = OptizelleConstraints(self.problem, equality_constraints)
 
-            log(INFO, "Found no equality and %i inequality constraints." % len(equality_constraints))
+            log(INFO, "Found no equality and %i inequality constraints." % equality_constraints._get_constraint_dim())
 
         # Inequality constraints only
         elif num_equality_constraints == 0 and num_inequality_constraints > 0:
@@ -605,11 +530,10 @@ class OptizelleSolver(OptimizationSolver):
             self.fns.f = OptizelleObjective(self.problem.reduced_functional, scale=scale)
             self.fns.h = OptizelleConstraints(self.problem, all_inequality_constraints)
 
-            log(INFO, "Found %i equality and 0 inequality constraints." % len(all_inequality_constraints))
+            log(INFO, "Found no equality and %i inequality constraints." % all_inequality_constraints._get_constraint_dim())
 
         # Inequality and equality constraints
         else:
-
             # Allocate memory for the equality multiplier
             equality_constraints = self.problem.constraints.equality_constraints()
             y = equality_constraints.output_workspace()
@@ -629,7 +553,7 @@ class OptizelleSolver(OptimizationSolver):
             self.fns.g = OptizelleConstraints(self.problem, equality_constraints)
             self.fns.h = OptizelleConstraints(self.problem, all_inequality_constraints)
 
-            log(INFO, "Found %i equality and %i inequality constraints." % (len(equality_constraints), len(all_inequality_constraints)))
+            log(INFO, "Found %i equality and %i inequality constraints." % (equality_constraints._get_constraint_dim(), all_inequality_constraints._get_constraint_dim()))
 
 
         # Set solver parameters
@@ -663,8 +587,8 @@ class OptizelleSolver(OptimizationSolver):
             num_equality_constraints = 0
             num_inequality_constraints = 0 + len(self.bound_inequality_constraints)
         else:
-            num_equality_constraints = len(self.problem.constraints.equality_constraints())
-            num_inequality_constraints = len(self.problem.constraints.inequality_constraints()) + len(self.bound_inequality_constraints)
+            num_equality_constraints = self.problem.constraints.equality_constraints()._get_constraint_dim()
+            num_inequality_constraints = self.problem.constraints.inequality_constraints()._get_constraint_dim() + len(self.bound_inequality_constraints)
 
         # No constraints
         if num_equality_constraints == 0 and num_inequality_constraints == 0:

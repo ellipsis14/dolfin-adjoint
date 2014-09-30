@@ -11,7 +11,13 @@
 """
 from dolfin import *
 from dolfin_adjoint import *
-import Optizelle
+
+try:
+    import Optizelle
+except ImportError:
+    info_red("Optizelle unavailable, skipping test")
+    import sys; sys.exit(0)
+
 set_log_level(ERROR)
 
 parameters["adjoint"]["cache_factorizations"] = True

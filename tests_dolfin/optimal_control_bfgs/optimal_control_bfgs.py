@@ -16,7 +16,7 @@ solve(F == 0, u, bc)
 
 # The functional of interest is the normed difference between desired
 # and simulated temperature profile 
-x = triangle.x
+x = SpatialCoordinate(mesh)
 u_desired = exp(-1/(1-x[0]*x[0])-1/(1-x[1]*x[1]))
 J = Functional((0.5*inner(u-u_desired, u-u_desired))*dx*dt[FINISH_TIME])
 

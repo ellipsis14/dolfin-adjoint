@@ -229,7 +229,8 @@ if __name__ == "__main__":
       result[:] = self.smass.inner(-dm.vector())
 
     def jacobian_adjoint_action(self, m, dp, result):
-      result.vector()[:] = -self.smass*dp
+      result.vector().zero()
+      result.vector().axpy(-dp[0], self.smass)
 
     def output_workspace(self):
         return [0.0]
@@ -263,5 +264,5 @@ if __name__ == "__main__":
 
   solver  = OptizelleSolver(problem, parameters=parameters)
   a_opt   = solver.solve()
-  File("output/control_solution.xml.gz") << a_opt
+  File("output/control_solution.xdmf") << a_opt
 

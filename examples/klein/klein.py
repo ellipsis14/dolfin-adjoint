@@ -81,7 +81,7 @@ from dolfin_adjoint import *
 
 # Next we load a triangulation of the Klein bottle as a mesh file. 
 
-mesh = Mesh("klein.xml.gz")
+mesh = Mesh("klein.xdmf")
 
 # FEniCS natively supports solving partial differential equations on manifolds
 # :cite:`rognes2013`, so nothing else needs to be done here.  The code for

@@ -59,7 +59,7 @@ def compute_adjoint(functional, forget=True, ignore=[]):
         if backend.__name__ == "dolfin":
           output.data.rename(str(adj_var) , "a Function from dolfin-adjoint")
         else:
-          output.data.name = str(adj_var) 
+          output.data.name = str(adj_var)
 
       storage = libadjoint.MemoryStorage(output)
       storage.set_overwrite(True)
@@ -255,7 +255,7 @@ class BasicHessian(libadjoint.Matrix):
         adjglobals.adjointer.record_variable(adj_var, storage)
 
       adj = adj.data
-      
+
       soa_timer = backend.Timer("Hessian action (SOA)")
       (soa_var, soa_vec) = adjglobals.adjointer.get_soa_solution(i, self.J, m_p)
       soa_timer.stop()
@@ -421,7 +421,7 @@ class compute_gradient_tlm(object):
       return mdot
 
     mdot = make_mdot(vec)
-    
+
     grad = 0.0
     last_timestep = -1
 

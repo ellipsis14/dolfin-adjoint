@@ -176,13 +176,7 @@ if __name__ == "__main__":
 # derives and solves the adjoint equation each time the functional
 # gradient is to be evaluated. The :py:class:`ReducedFunctional` object
 # takes in high-level Dolfin objects (i.e. the input to the evaluation
-# ``Jhat(a)`` would be a :py:class:`dolfin.Function`). But optimisation
-# algorithms expect to pass :py:mod:`numpy` arrays in and
-# out. Therefore, we introduce a :py:class:`ReducedFunctionalNumPy`
-# class that wraps the :py:class:`ReducedFunctional` to handle array
-# input and output.
-
-  rfn  = ReducedFunctionalNumPy(Jhat)
+# ``Jhat(a)`` would be a :py:class:`dolfin.Function`).
 
 # Now let us configure the control constraints. The bound constraints
 # are easy:
@@ -228,21 +222,25 @@ if __name__ == "__main__":
     def jacobian(self, m):
       return [-self.smass]
 
+    def output_workspace(self):
+      return [0.0]
+
     def length(self):
       """Return the number of components in the constraint vector (here, one)."""
       return 1
 
 # Now that all the ingredients are in place, we can perform the
-# optimisation.  The :py:class:`ReducedFunctionalNumPy` class has a
-# method :py:meth:`ReducedFunctionalNumPy.pyipopt_problem`, which
-# creates a :py:class:`pyipopt.Problem` class that represents the
-# optimisation problem to be solved. We call this and pass it to
-# :py:mod:`pyipopt` to solve:
+# optimisation.  The :py:class:`MinimizationProblem` class
+# represents the optimisation problem to be solved. We instantiate
+# this and pass it to :py:mod:`pyipopt` to solve:
 
-  nlp = rfn.pyipopt_problem(bounds=(lb, ub), constraints=VolumeConstraint(V))
-  a_opt = nlp.solve(full=False)
+  problem = MinimizationProblem(Jhat, bounds=(lb, ub), constraints=VolumeConstraint(V))
+  parameters = None
 
-  File("output/control_solution.xml.gz") << a_opt
+  solver = IPOPTSolver(problem, parameters=parameters)
+  a_opt = solver.solve()
+
+  File("output/control_solution.xdmf") << a_opt
 
 # The example code can be found in ``examples/poisson-topology/`` in the
 # ``dolfin-adjoint`` source tree, and executed as follows:

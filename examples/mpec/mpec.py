@@ -224,7 +224,7 @@ for i in range(4):
 
   ypvd << y_opt
   upvd << u_opt
-  feasibility = sqrt(assemble(inner((Max(0, -y_opt)), (Max(0, -y_opt)))*dx))
+  feasibility = sqrt(assemble(inner((Max(Constant(0.0), -y_opt)), (Max(Constant(0.0), -y_opt)))*dx))
   info_green("Feasibility: %s" % feasibility)
   info_green("Norm of y: %s" % sqrt(assemble(inner(y_opt, y_opt)*dx)))
   info_green("Norm of u_opt: %s" % sqrt(assemble(inner(u_opt, u_opt)*dx)))

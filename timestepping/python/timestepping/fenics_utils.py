@@ -518,8 +518,6 @@ def is_zero_rhs(rhs):
   
   if rhs in [0, 0.0]:
     return True
-  elif isinstance(rhs, dolfin.Constant):
-    return float(rhs) == 0.0
   else:
     return False
   

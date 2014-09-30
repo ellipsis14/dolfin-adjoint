@@ -8,7 +8,6 @@ import time
 from optparse import OptionParser
 
 test_cmds = {'tlm_simple': 'mpirun -n 2 python tlm_simple.py',
-             'navier_stokes': 'mpirun -n 2 python navier_stokes.py',
              'svd_simple': 'mpirun -n 2 python svd_simple.py',
              'gst_mass': 'mpirun -n 2 python gst_mass.py',
              'hessian_eps': 'mpirun -n 2 python hessian_eps.py',
@@ -24,7 +23,6 @@ test_cmds = {'tlm_simple': 'mpirun -n 2 python tlm_simple.py',
              'matrix_free_heat': None,
              'matrix_free_simple': None,
              'ode_tentusscher': None,
-             'unit': None,
              'function_assigner': None,
              'mantle_convection': None}
 
