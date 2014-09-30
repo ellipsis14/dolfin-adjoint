@@ -240,7 +240,7 @@ if __name__ == "__main__":
   solver = IPOPTSolver(problem, parameters=parameters)
   a_opt = solver.solve()
 
-  File("output/control_solution.xml.gz") << a_opt
+  File("output/control_solution.xdmf") << a_opt
 
 # The example code can be found in ``examples/poisson-topology/`` in the
 # ``dolfin-adjoint`` source tree, and executed as follows:
