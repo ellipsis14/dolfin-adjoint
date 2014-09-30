@@ -149,9 +149,6 @@ class ConstantControl(DolfinAdjointControl):
 
       diff_form = ufl.algorithms.expand_derivatives(backend.derivative(form, get_constant(self.a), dparam))
 
-      if diff_form is None:
-        return None
-
       return adjlinalg.Vector(diff_form)
     else:
       return None
@@ -171,9 +168,6 @@ class ConstantControl(DolfinAdjointControl):
 
       diff_form = ufl.algorithms.expand_derivatives(
           backend.derivative(form, get_constant(self.a), dparam))
-
-      if diff_form is None:
-        return None
 
       # Add the derivatives of Expressions wrt to the Constant
       diff_form = self.expression_derivative(form, diff_form)
