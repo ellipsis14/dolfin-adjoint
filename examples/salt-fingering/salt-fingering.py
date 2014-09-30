@@ -306,12 +306,12 @@ def store_gst(z, io, i):
   if io == "input":
     z.rename("SalinityIn%d" % i, "gst_in_%d" % i)
     s_in_pvd << (z, float(i))
-    f = File("results/gst_input_%s.xml.gz" % i)
+    f = File("results/gst_input_%s.xdmf" % i)
     f << z
   elif io == "output":
     z.rename("SalinityOut%d" % i, "gst_out_%d" % i)
     s_out_pvd << (z, float(i))
-    f = File("results/gst_output_%s.xml.gz" % i)
+    f = File("results/gst_output_%s.xdmf" % i)
     f << z
 
 if __name__ == "__main__":
