@@ -70,7 +70,7 @@ if __name__ == "__main__":
     j, forward = main(ic, annotate=True)
 
     J = Functional(forward*forward*dx*dt)
-    m = InitialConditionParameter(ic, value=ic)
+    m = Control(ic, value=ic)
     dJdm = compute_gradient(J, m)
 
     def Jhat(ic):

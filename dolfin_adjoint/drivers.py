@@ -80,7 +80,7 @@ def compute_adjoint(functional, forget=True, ignore=[]):
 def compute_tlm(parameter, forget=False):
 
   if isinstance(parameter, (list, tuple)):
-    parameter = ListParameter(parameter)
+    parameter = ListControl(parameter)
 
   for i in range(adjglobals.adjointer.equation_count):
       (tlm_var, output) = adjglobals.adjointer.get_tlm_solution(i, parameter)
@@ -108,7 +108,7 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
   backend.parameters["adjoint"]["stop_annotating"] = True
 
   enlisted_controls = enlist(param)
-  param = ListParameter(enlisted_controls)
+  param = ListControl(enlisted_controls)
   dJdparam = enlisted_controls.__class__([None] * len(enlisted_controls))
 
   last_timestep = adjglobals.adjointer.timestep_count
@@ -209,8 +209,10 @@ class BasicHessian(libadjoint.Matrix):
     if warn:
       backend.info_red("Warning: Hessian computation is still experimental and is known to not work for some problems. Please Taylor test thoroughly.")
 
-    if not isinstance(m, (InitialConditionParameter, ScalarParameter)):
-      raise libadjoint.exceptions.LibadjointErrorNotImplemented("Sorry, Hessian computation only works for InitialConditionParameter|SteadyParameter|TimeConstantParameter|ScalarParameter so far.")
+    if not isinstance(m, (FunctionControl, ConstantControl)):
+      error_msg = "Sorry, Hessian computation only works for FunctionControl \
+                   and ConstantControl so far."
+      raise libadjoint.exceptions.LibadjointErrorNotImplemented(error_msg)
 
     self.update(m)
 
@@ -368,7 +370,7 @@ class compute_gradient_tlm(object):
     self.J = J
 
     if isinstance(m, (list, tuple)):
-      m = ListParameter(m)
+      m = ListControl(m)
 
     self.m = m
     self.forget = forget
@@ -384,7 +386,7 @@ class compute_gradient_tlm(object):
     return self.inner(1.0)
 
   def __getitem__(self, i):
-    assert isinstance(self.m, ListParameter)
+    assert isinstance(self.m, ListControl)
     return compute_gradient_tlm(self.J, self.m[i], self.forget, self.cb, self.project)
 
   def cached_inner(self, vec):
@@ -411,9 +413,9 @@ class compute_gradient_tlm(object):
   def inner(self, vec):
     '''Compute the action of the gradient on the vector vec.'''
     def make_mdot(vec):
-      if isinstance(self.m, InitialConditionParameter):
+      if isinstance(self.m, FunctionControl):
         mdot = self.m.set_perturbation(backend.Function(self.m.data().function_space(), vec))
-      elif isinstance(self.m, ScalarParameter):
+      elif isinstance(self.m, ConstantControl):
         mdot = self.m.set_perturbation(backend.Constant(vec))
 
       return mdot

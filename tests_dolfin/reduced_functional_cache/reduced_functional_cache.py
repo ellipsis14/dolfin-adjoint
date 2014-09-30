@@ -52,8 +52,8 @@ if __name__ == "__main__":
 
     J = Functional(forward*forward*dx*dt[FINISH_TIME] + forward*forward*dx*dt[START_TIME])
 
-    m1 = InitialConditionParameter("Velocity")
-    m2 = ScalarParameter("nu")
+    m1 = FunctionControl("Velocity")
+    m2 = ConstantControl("nu")
 
     # Test caching of the reduced functional evaluation 
     rf = ReducedFunctional(J, [m1, m2], cache=cache_file)

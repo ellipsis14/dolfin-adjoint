@@ -37,7 +37,7 @@ def solve_optimal_control(n):
     solve_pde(u, V, m)
 
     # Run the optimisation 
-    rf = ReducedFunctional(J, InitialConditionParameter(m, value=m))
+    rf = ReducedFunctional(J, Control(m, value=m))
 
     minimize(rf, method = 'Newton-CG', tol = 1e-16, options = {'disp': True})
     solve_pde(u, V, m)

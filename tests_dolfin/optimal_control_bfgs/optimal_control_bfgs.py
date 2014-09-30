@@ -21,7 +21,7 @@ u_desired = exp(-1/(1-x[0]*x[0])-1/(1-x[1]*x[1]))
 J = Functional((0.5*inner(u-u_desired, u-u_desired))*dx*dt[FINISH_TIME])
 
 # Run the optimisation 
-rf = ReducedFunctional(J, InitialConditionParameter(m, value=m))
+rf = ReducedFunctional(J, Control(m, value=m))
 ub = 0.5 
 lb = interpolate(Constant(-1), V) # Test 2 different ways of imposing bounds
 

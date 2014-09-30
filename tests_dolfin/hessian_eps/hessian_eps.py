@@ -27,7 +27,7 @@ if __name__ == "__main__":
   parameters["adjoint"]["stop_annotating"] = True
 
   J = Functional((inner(u, u))**6*dx, name="NormSquared")
-  HJm  = hessian(J, TimeConstantParameter(m), warn=False)
+  HJm  = hessian(J, Control(m), warn=False)
 
   try:
     eps = HJm.eigendecomposition(n=3, solver='krylovschur')

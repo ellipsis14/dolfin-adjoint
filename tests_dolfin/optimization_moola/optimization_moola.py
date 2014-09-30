@@ -38,7 +38,7 @@ if __name__ == "__main__":
     solve_pde(u, V, m)
 
     # Run the optimisation 
-    rf = ReducedFunctional(J, InitialConditionParameter(m, value=m))
+    rf = ReducedFunctional(J, Control(m, value=m))
     problem = rf.moola_problem()
     m_moola = moola.DolfinPrimalVector(m)
     

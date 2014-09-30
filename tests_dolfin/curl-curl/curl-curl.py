@@ -46,7 +46,8 @@ if __name__ == "__main__":
   dbdt = Constant(1.0, name="dbdt")
   J = main(dbdt, annotate=True)
   Jc = assemble(inner(J, J)**2*dx + inner(dbdt, dbdt)*dx)
-  Jf = Functional(inner(J, J)**2*dx*dt[FINISH_TIME] + inner(dbdt, dbdt)*dx*dt[START_TIME]); m = ScalarParameter("dbdt")
+  Jf = Functional(inner(J, J)**2*dx*dt[FINISH_TIME] + inner(dbdt,
+                  dbdt)*dx*dt[START_TIME]); m = ConstantControl("dbdt")
   dJdc = compute_gradient(Jf, m, forget=False)
   HJc = hessian(Jf, m, warn=False)
 
@@ -54,6 +55,6 @@ if __name__ == "__main__":
     j = main(c, annotate=False)
     return assemble(inner(j, j)**2*dx + inner(c, c)*dx)
 
-  minconv = taylor_test(J, ScalarParameter("dbdt"), Jc, dJdc, HJm=HJc)
+  minconv = taylor_test(J, ConstantControl("dbdt"), Jc, dJdc, HJm=HJc)
 
   assert minconv > 2.8

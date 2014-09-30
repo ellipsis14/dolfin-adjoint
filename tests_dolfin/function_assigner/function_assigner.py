@@ -39,7 +39,7 @@ if __name__ == "__main__":
   form = lambda z: inner(z, z)*dx
 
   J = Functional(form(z), name="a")
-  m = InitialConditionParameter("Pressure")
+  m = FunctionControl("Pressure")
   Jm = assemble(form(z))
   dJdm = compute_gradient(J, m, forget=False)
 

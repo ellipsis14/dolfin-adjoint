@@ -106,13 +106,13 @@ if __name__ == "__main__":
 
   J = Functional(phi*phi*dx*dt[FINISH_TIME])
   Jkappa = assemble(phi*phi*dx)
-  dJdkappa = compute_gradient(J, ScalarParameter(kappa))
+  dJdkappa = compute_gradient(J, Control(kappa))
 
   def J(kappa):
     phi = main(kappa)
     return assemble(phi*phi*dx)
 
-  minconv = taylor_test(J, ScalarParameter(kappa), Jkappa, dJdkappa, seed=0.0001)
+  minconv = taylor_test(J, Control(kappa), Jkappa, dJdkappa, seed=0.0001)
 
   if minconv < 1.9:
     sys.exit(1)
