@@ -147,6 +147,7 @@ class InflowOutflow(Expression):
 # :doc:`Taylor remainder convergence tests
 # <../../documentation/verification>`.)
 
+
 def forward(rho):
   """Solve the forward problem for a given fluid distribution rho(x)."""
   w = Function(W)
@@ -156,7 +157,7 @@ def forward(rho):
   F = (alpha(rho) * inner(u, v) * dx + inner(grad(u), grad(v)) * dx +
        inner(grad(p), v) * dx  + inner(div(u), q) * dx)
   bc = DirichletBC(W.sub(0), InflowOutflow(), "on_boundary")
-  solve(F == 0, w, bcs=bc, solver_parameters={"newton_solver": {"relative_tolerance": 1.0e-6}})
+  solve(F == 0, w, bcs=bc)
 
   return w
 
@@ -197,7 +198,6 @@ if __name__ == "__main__":
   J = Functional(0.5 * inner(alpha(rho) * u, u) * dx + mu * inner(grad(u), grad(u)) * dx)
   m = SteadyParameter(rho)
   Jhat = ReducedFunctional(J, m, eval_cb=eval_cb)
-  rfn = ReducedFunctionalNumPy(Jhat)
 
 # The control constraints are the same as the :doc:`Poisson topology
 # example <../poisson-topology/poisson-topology>`, and so won't be
@@ -213,6 +213,13 @@ if __name__ == "__main__":
     def __init__(self, V):
       self.V = float(V)
 
+# The derivative of the constraint g(x) is constant
+# (it is the negative of the diagonal of the lumped mass matrix for the
+# control function space), so let's assemble it here once.
+# This is also useful in rapidly calculating the integral each time
+# without re-assembling.
+
+      self.smass = assemble(TestFunction(A) * Constant(1) * dx)
       self.tmpvec = Function(A)
 
     def function(self, m):
@@ -220,17 +227,16 @@ if __name__ == "__main__":
       self.tmpvec.vector()[:] = m
 
       # Compute the integral of the control over the domain
-      integral = assemble(self.tmpvec*dx)
+      integral = self.smass.inner(self.tmpvec.vector())
       print "Current control integral: ", integral
       return [self.V - integral]
 
     def jacobian(self, m):
-      dintegral = assemble(derivative(self.tmpvec*dx, self.tmpvec))
-      return [-dintegral]
+      print "Computing constraint Jacobian"
+      return [-self.smass]
 
-    def length(self):
-      """Return the number of components in the constraint vector (here, one)."""
-      return 1
+    def output_workspace(self):
+      return [0.0]
 
 # Now that all the ingredients are in place, we can perform the initial
 # optimisation. We set the maximum number of iterations for this initial
@@ -238,9 +244,13 @@ if __name__ == "__main__":
 # completion, as its only purpose is to generate an initial guess.
 
   # Solve the optimisation problem with q = 0.01
-  nlp = rfn.pyipopt_problem(bounds=(lb, ub), constraints=VolumeConstraint(V))
-  nlp.int_option('max_iter', 20)
-  rho_opt = nlp.solve()
+  problem = MinimizationProblem(Jhat, bounds=(lb, ub), constraints=VolumeConstraint(V))
+  parameters = {'maximum_iterations': 20}
+
+  solver = IPOPTSolver(problem, parameters=parameters)
+  rho_opt = solver.solve()
+  
+  File("output/control_solution_guess.xdmf") << rho_opt
 
 # With the optimised value for :math:`q=0.01` in hand, we *reset* the
 # dolfin-adjoint state, clearing its tape, and configure the new problem
@@ -258,6 +268,8 @@ if __name__ == "__main__":
 # save the optimisation iterations to
 # ``output/control_iterations_final.pvd``.
 
+  File("intermediate-guess-%s.xdmf" % N) << rho
+
   w = forward(rho)
   (u, p) = split(w)
 
@@ -272,14 +284,17 @@ if __name__ == "__main__":
   J = Functional(0.5 * inner(alpha(rho) * u, u) * dx + mu * inner(grad(u), grad(u)) * dx)
   m = SteadyParameter(rho)
   Jhat = ReducedFunctional(J, m, eval_cb=eval_cb)
-  rfn = ReducedFunctionalNumPy(Jhat)
 
 # We can now solve the optimisation problem with :math:`q=0.1`, starting
 # from the solution of :math:`q=0.01`:
 
-  nlp = rfn.pyipopt_problem(bounds=(lb, ub), constraints=VolumeConstraint(V))
-  nlp.int_option('max_iter', 200)
-  rho_opt = nlp.solve()
+  problem = MinimizationProblem(Jhat, bounds=(lb, ub), constraints=VolumeConstraint(V))
+  parameters = {'maximum_iterations': 100}
+
+  solver = IPOPTSolver(problem, parameters=parameters)
+  rho_opt = solver.solve()
+
+  File("output/control_solution_final.xdmf") << rho_opt
 
 # The example code can be found in ``examples/stokes-topology/`` in the
 # ``dolfin-adjoint`` source tree, and executed as follows:

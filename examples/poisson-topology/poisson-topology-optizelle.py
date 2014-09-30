@@ -65,13 +65,7 @@ from dolfin_adjoint import *
 # <../../download/index>`; IPOPT is a well-established open-source
 # optimisation algorithm.
 
-try:
-  import pyipopt
-except ImportError:
-  info_red("""This example depends on IPOPT and pyipopt. \
-When compiling IPOPT, make sure to link against HSL, as it \
-is a necessity for practical problems.""")
-  raise
+import Optizelle
 
 # turn off redundant output in parallel
 parameters["std_out_all_processes"] = False
@@ -176,7 +170,13 @@ if __name__ == "__main__":
 # derives and solves the adjoint equation each time the functional
 # gradient is to be evaluated. The :py:class:`ReducedFunctional` object
 # takes in high-level Dolfin objects (i.e. the input to the evaluation
-# ``Jhat(a)`` would be a :py:class:`dolfin.Function`).
+# ``Jhat(a)`` would be a :py:class:`dolfin.Function`). But optimisation
+# algorithms expect to pass :py:mod:`numpy` arrays in and
+# out. Therefore, we introduce a :py:class:`ReducedFunctionalNumPy`
+# class that wraps the :py:class:`ReducedFunctional` to handle array
+# input and output.
+
+  rfn  = ReducedFunctionalNumPy(Jhat)
 
 # Now let us configure the control constraints. The bound constraints
 # are easy:
@@ -196,99 +196,73 @@ if __name__ == "__main__":
 # compute its Jacobian, and one to return the number of components in
 # the constraint.
 
+  out = File("output/iterations.pvd")
+  # Volume constraints
   class VolumeConstraint(InequalityConstraint):
     """A class that enforces the volume constraint g(a) = V - a*dx >= 0."""
     def __init__(self, V):
       self.V  = float(V)
 
-# The derivative of the constraint g(x) is constant (it is the
-# diagonal of the lumped mass matrix for the control function space),
-# so let's assemble it here once.  This is also useful in rapidly
-# calculating the integral each time without re-assembling.
-
+      # The derivative of the constraint g(x) is constant (it is the diagonal of the lumped mass matrix for the control function space), so let's assemble it here once.
+      # This is also useful in rapidly calculating the integral each time without re-assembling.
       self.smass  = assemble(TestFunction(A) * Constant(1) * dx)
-      self.tmpvec = Function(A)
+      self.tmpvec = Function(A, name="Control")
 
     def function(self, m):
-      self.tmpvec.vector()[:] = m
+      self.tmpvec.assign(m)
+      out << self.tmpvec
 
-# Compute the integral of the control over the domain
-
+      # Compute the integral of the control over the domain
       integral = self.smass.inner(self.tmpvec.vector())
+      vecmax   = m.vector().max()
+      vecmin   = m.vector().min()
       if MPI.rank(mpi_comm_world()) == 0:
         print "Current control integral: ", integral
+        print "Maximum of control: ", vecmax
+        print "Minimum of control: ", vecmin
       return [self.V - integral]
 
     def jacobian(self, m):
       return [-self.smass]
 
+    def jacobian_action(self, m, dm, result):
+      result[:] = self.smass.inner(-dm.vector())
+
+    def jacobian_adjoint_action(self, m, dp, result):
+      result.vector().zero()
+      result.vector().axpy(-dp[0], self.smass)
+
     def output_workspace(self):
-      return [0.0]
+        return [0.0]
 
     def length(self):
-      """Return the number of components in the constraint vector (here, one)."""
-      return 1
+        return 1
 
 # Now that all the ingredients are in place, we can perform the
-# optimisation.  The :py:class:`MinimizationProblem` class
-# represents the optimisation problem to be solved. We instantiate
-# this and pass it to :py:mod:`pyipopt` to solve:
+# optimisation.  The :py:class:`ReducedFunctionalNumPy` class has a
+# method :py:meth:`ReducedFunctionalNumPy.pyipopt_problem`, which
+# creates a :py:class:`pyipopt.Problem` class that represents the
+# optimisation problem to be solved. We call this and pass it to
+# :py:mod:`pyipopt` to solve:
 
-  problem = MinimizationProblem(Jhat, bounds=(lb, ub), constraints=VolumeConstraint(V))
-  parameters = None
+  parameters["adjoint"]["stop_annotating"] = True
+  problem = MinimizationProblem(Jhat, constraints=VolumeConstraint(V))
 
-  solver = IPOPTSolver(problem, parameters=parameters)
-  a_opt = solver.solve()
+  parameters = {
+               "maximum_iterations": 50,
+               "optizelle_parameters":
+                   {
+                   "msg_level" : 10,
+                   "algorithm_class" : Optizelle.AlgorithmClass.LineSearch,
+                   "H_type" : Optizelle.Operators.UserDefined,
+                   "dir" : Optizelle.LineSearchDirection.BFGS,
+                   "eps_dx": 1.0e-32,
+                   "linesearch_iter_max" : 50,
+                   "ipm": Optizelle.InteriorPointMethod.LogBarrier
+                   }
+               }
 
+  solver  = OptizelleSolver(problem, parameters=parameters)
+  a_opt   = solver.solve()
   File("output/control_solution.xdmf") << a_opt
 
-# The example code can be found in ``examples/poisson-topology/`` in the
-# ``dolfin-adjoint`` source tree, and executed as follows:
-
-# .. code-block:: bash
-
-#   $ mpiexec -n 4 python poisson-topology.py
-#   ...
-#   Number of Iterations....: 28
-
-#                                      (scaled)                 (unscaled)
-#   Objective...............:   8.5918769312525156e-05    8.5918769312525156e-05
-#   Dual infeasibility......:   6.2885905846597543e-08    6.2885905846597543e-08
-#   Constraint violation....:   0.0000000000000000e+00    0.0000000000000000e+00
-#   Complementarity.........:   3.1475629953894822e-09    3.1475629953894822e-09
-#   Overall NLP error.......:   6.2885905846597543e-08    6.2885905846597543e-08
-
-
-#   Number of objective function evaluations             = 29
-#   Number of objective gradient evaluations             = 29
-#   Number of equality constraint evaluations            = 0
-#   Number of inequality constraint evaluations          = 29
-#   Number of equality constraint Jacobian evaluations   = 0
-#   Number of inequality constraint Jacobian evaluations = 29
-#   Number of Lagrangian Hessian evaluations             = 0
-#   Total CPU secs in IPOPT (w/o function evaluations)   =      2.628
-#   Total CPU secs in NLP function evaluations           =     27.790
-
-#   EXIT: Solved To Acceptable Level.
-
-# The optimisation iterations can be visualised by opening
-# ``output/control_iterations.pvd`` in paraview. The resulting solution
-# exhibits fascinating dendritic structures, similar to the reference
-# solution found in :cite:`gersborg2006`.
-
-# .. image:: poisson-topology.png
-#     :scale: 40
-#     :align: center
-
-# See also ``examples/poisson-topology/poisson-topology-3d.py`` for a 3-dimensional
-# generalisation of this example, with the following solution:
-
-# .. image:: poisson-topology-3d.png
-#     :scale: 90
-#     :align: center
-
-# .. rubric:: References
-
-# .. bibliography:: /documentation/poisson-topology/poisson-topology.bib
-#    :cited:
-#    :labelprefix: 3E-

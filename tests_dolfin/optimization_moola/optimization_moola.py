@@ -26,6 +26,7 @@ if __name__ == "__main__":
     u = Function(V, name='State')
     W = FunctionSpace(mesh, "DG", 0)
     m = Function(W, name='Control')
+    x = SpatialCoordinate(mesh)
 
     x = SpatialCoordinate(mesh)
 

@@ -64,15 +64,10 @@
 from dolfin import *
 from dolfin_adjoint import *
 
-# Next, we define the domain of interest and generate the mesh. Here
-# we use the mesh generation capabilities of FEniCS. (This requires
-# that your FEniCS installation was compiled against CGAL.)
+# Next, we load the mesh. The mesh was generated with mshr; see make-mesh.py
+# in the same directory.
 
-rect = Rectangle(0, 0, 30, 10)
-circ = Circle(10, 5, 2.5)
-domain = rect - circ
-N = 50
-mesh = Mesh(domain, N)
+mesh = Mesh("rectangle-less-circle.xdmf")
 
 # Then, we define the discrete function spaces. A Taylor-Hood
 # finite-element pair is a suitable choice for the Stokes equations.
@@ -122,7 +117,7 @@ h = CellSize(mesh)
 u_inflow = Expression(("x[1]*(10-x[1])/25", "0"))
 noslip = DirichletBC(W.sub(0), (0, 0),
                      "on_boundary && (x[1] >= 9.9 || x[1] < 0.1)")
-inflow = DirichletBC(W.sub(0), u_inflow, "on_boundary && x[0] <= 0.0")
+inflow = DirichletBC(W.sub(0), u_inflow, "on_boundary && x[0] <= 0.1")
 bcs = [inflow, noslip]
 
 # The Dirichlet condition at the circle is enforced by the Nitsche

@@ -156,6 +156,6 @@ def transform_mesh(mesh, coord_map):
   return new_mesh
 
 new_mesh = transform_mesh(wrapped_mesh, KleinMap)
-File("klein.xml.gz") << new_mesh
+File("klein.xdmf") << new_mesh
 
 plot(new_mesh, wireframe=True, interactive=True)
