@@ -5,7 +5,7 @@ import backend
 import parameter as parameter_module
 import math
 
-def compute_gst(ic, final, nsv, ic_norm="mass", final_norm="mass"):
+def compute_gst(ic, final, nsv, ic_norm="mass", final_norm="mass", which=1):
   '''This function computes the generalised stability analysis of a simulation.
   Generalised stability theory computes the perturbations to a field (such as an
   initial condition, forcing term, etc.) that /grow the most/ over the finite
@@ -17,6 +17,7 @@ def compute_gst(ic, final, nsv, ic_norm="mass", final_norm="mass"):
   - :py:data:`nsv` -- the number of optimal perturbations to compute
   - :py:data:`ic_norm` -- a symmetric positive-definite bilinear form that defines the norm on the input space
   - :py:data:`final_norm` -- a symmetric positive-definite bilinear form that defines the norm on the output space
+  - :py:data:`which` -- which singular vectors to compute. Use e.g. slepc4py.SLEPc.EPS.Which.LARGEST_REAL
 
   You can supply :py:data:`"mass"` for :py:data:`ic_norm` and :py:data:`final_norm` to use the (default) mass matrices associated
   with these spaces.
@@ -53,7 +54,7 @@ def compute_gst(ic, final, nsv, ic_norm="mass", final_norm="mass"):
   elif ic_norm is not None:
     ic_norm = adjlinalg.Matrix(ic_norm)
 
-  return adjglobals.adjointer.compute_gst(ic_var, ic_norm, final_var, final_norm, nsv)
+  return adjglobals.adjointer.compute_gst(ic_var, ic_norm, final_var, final_norm, nsv, which)
 
 orig_get_gst = libadjoint.GSTHandle.get_gst
 def new_get_gst(self, *args, **kwargs):
