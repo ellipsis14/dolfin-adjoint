@@ -76,7 +76,14 @@ if dolfin.__version__ > '1.2.0':
       self.scheme.t().assign(self.time)
       self.solver.step(self.dt)
 
-      return adjlinalg.Vector(self.scheme.solution())
+      # FIXME: This form should actually be from before the solve.
+      out = adjlinalg.Vector(self.scheme.solution())
+      out.nonlinear_form = self.scheme.rhs_form()
+      out.nonlinear_u = self.scheme.solution()
+      out.nonlinear_bcs = []
+      out.nonlinear_J = ufl.derivative(out.nonlinear_form, out.nonlinear_u)
+
+      return out
 
     def derivative_action(self, dependencies, values, variable, contraction_vector, hermitian):
       if not hermitian:
