@@ -14,6 +14,11 @@ import libadjoint.exceptions
 dolfin.parameters["adjoint"]["record_all"] = True
 dolfin.parameters["adjoint"]["fussy_replay"] = False
 
+args = """
+        --petsc.eps_type krylovschur
+       """.split()
+parameters.parse([sys.argv[0]] + args)
+
 n = 10
 mesh = UnitIntervalMesh(n)
 V = FunctionSpace(mesh, "CG", 1)
