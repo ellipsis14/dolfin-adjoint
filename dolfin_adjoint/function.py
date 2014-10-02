@@ -164,6 +164,8 @@ class Function(backend.Function):
 
         if known or (annotate is True):
           assignment.register_assign(self, args[0])
+        else:
+          adjglobals.adj_variables.forget(args[0])
 
   def assign(self, other, annotate=None, *args, **kwargs):
     '''To disable the annotation, just pass :py:data:`annotate=False` to this routine, and it acts exactly like the
