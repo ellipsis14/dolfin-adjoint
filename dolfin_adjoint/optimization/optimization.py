@@ -1,5 +1,5 @@
 import dolfin
-from dolfin_adjoint import constant 
+from dolfin_adjoint import constant
 from ..reduced_functional_numpy import ReducedFunctionalNumPy, get_global, set_local
 from ..reduced_functional import ReducedFunctional
 from ..utils import gather
@@ -8,7 +8,7 @@ import sys
 from ..misc import rank
 
 def serialise_bounds(rf_np, bounds):
-    ''' Converts bounds to an array of (min, max) tuples and serialises it in a parallel environment. ''' 
+    ''' Converts bounds to an array of (min, max) tuples and serialises it in a parallel environment. '''
 
     if len(np.array(bounds).shape) == 1:
         bounds = np.array([[b] for b in bounds])
@@ -28,7 +28,7 @@ def serialise_bounds(rf_np, bounds):
             else:
                 bounds_arr[i] += rf_np.obj_to_array(bound).tolist()
 
-    # Transpose and return the array to get the form [ [lower_bound1, upper_bound1], [lower_bound2, upper_bound2], ... ] 
+    # Transpose and return the array to get the form [ [lower_bound1, upper_bound1], [lower_bound2, upper_bound2], ... ]
     return np.array(bounds_arr).T
 
 def minimize_scipy_generic(rf_np, method, bounds = None, **kwargs):
@@ -53,12 +53,12 @@ def minimize_scipy_generic(rf_np, method, bounds = None, **kwargs):
     else:
         forget = False
 
-    project = kwargs.pop("project", False) 
+    project = kwargs.pop("project", False)
 
     m = [p.data() for p in rf_np.parameter]
     m_global = rf_np.obj_to_array(m)
     J = rf_np.__call__
-    dJ = lambda m: rf_np.derivative(m, taylor_test=dolfin.parameters["optimization"]["test_gradient"], 
+    dJ = lambda m: rf_np.derivative(m, taylor_test=dolfin.parameters["optimization"]["test_gradient"],
                                        seed=dolfin.parameters["optimization"]["test_gradient_seed"],
                                        forget=forget,
                                        project=project)
@@ -78,7 +78,7 @@ def minimize_scipy_generic(rf_np, method, bounds = None, **kwargs):
     if method == "SLSQP" and "iprint" not in kwargs["options"]:
         kwargs["options"]["iprint"] = 2
 
-    # For gradient-based methods add the derivative function to the argument list 
+    # For gradient-based methods add the derivative function to the argument list
     if method not in ["COBYLA", "Nelder-Mead", "Anneal", "Powell"]:
         kwargs["jac"] = dJ
 
@@ -140,12 +140,12 @@ def minimize_custom(rf_np, bounds=None, **kwargs):
         algo = kwargs["algorithm"]
         del kwargs["algorithm"]
     except KeyError:
-        raise KeyError, 'When using a "Custom" optimisation method, you must pass the optimisation function as the "algorithm" parameter. Make sure that this function accepts the same arguments as scipy.optimize.minimize.' 
+        raise KeyError, 'When using a "Custom" optimisation method, you must pass the optimisation function as the "algorithm" parameter. Make sure that this function accepts the same arguments as scipy.optimize.minimize.'
 
     m = [p.data() for p in rf_np.parameter]
     m_global = rf_np.obj_to_array(m)
     J = rf_np.__call__
-    dJ = lambda m: rf_np.derivative(m, taylor_test=dolfin.parameters["optimization"]["test_gradient"], 
+    dJ = lambda m: rf_np.derivative(m, taylor_test=dolfin.parameters["optimization"]["test_gradient"],
                                        seed=dolfin.parameters["optimization"]["test_gradient_seed"],
                                        forget=None)
     H = rf_np.hessian
@@ -158,15 +158,15 @@ def minimize_custom(rf_np, bounds=None, **kwargs):
     try:
         rf_np.set_parameters(np.array(res))
     except Exception as e:
-        raise e, "Failed to updated the optimised parameter value. Are you sure your custom optimisation algorithm returns an array containing the optimised values?" 
+        raise e, "Failed to updated the optimised parameter value. Are you sure your custom optimisation algorithm returns an array containing the optimised values?"
     m = [p.data() for p in rf_np.parameter]
     return m
 
 optimization_algorithms_dict = {'L-BFGS-B': ('The L-BFGS-B implementation in scipy.', minimize_scipy_generic),
                                 'SLSQP': ('The SLSQP implementation in scipy.', minimize_scipy_generic),
-                                'TNC': ('The truncated Newton algorithm implemented in scipy.', minimize_scipy_generic), 
-                                'CG': ('The nonlinear conjugate gradient algorithm implemented in scipy.', minimize_scipy_generic), 
-                                'BFGS': ('The BFGS implementation in scipy.', minimize_scipy_generic), 
+                                'TNC': ('The truncated Newton algorithm implemented in scipy.', minimize_scipy_generic),
+                                'CG': ('The nonlinear conjugate gradient algorithm implemented in scipy.', minimize_scipy_generic),
+                                'BFGS': ('The BFGS implementation in scipy.', minimize_scipy_generic),
                                 'Nelder-Mead': ('Gradient-free Simplex algorithm.', minimize_scipy_generic),
                                 'Powell': ('Gradient-free Powells method', minimize_scipy_generic),
                                 'Newton-CG': ('Newton-CG method', minimize_scipy_generic),
@@ -186,32 +186,31 @@ def print_optimization_methods():
 def minimize(rf, method='L-BFGS-B', scale=1.0, **kwargs):
     ''' Solves the minimisation problem with PDE constraint:
 
-           min_m func(u, m) 
-             s.t. 
+           min_m func(u, m)
+             s.t.
            e(u, m) = 0
            lb <= m <= ub
            g(m) <= u
-           
-        where m is the control variable, u is the solution of the PDE system e(u, m) = 0, func is the functional of interest and lb, ub and g(m) constraints the control variables. 
+
+        where m is the control variable, u is the solution of the PDE system e(u, m) = 0, func is the functional of interest and lb, ub and g(m) constraints the control variables.
         The optimization problem is solved using a gradient based optimization algorithm and the functional gradients are computed by solving the associated adjoint system.
 
         The function arguments are as follows:
-        * 'rf' must be a ReducedFunctional object. 
+        * 'rf' must be a ReducedFunctional object.
         * 'method' specifies the optimization method to be used to solve the problem. The available methods can be listed with the print_optimization_methods function.
-        * 'scale' is a factor to scale to problem (default: 1.0). 
-        * 'bounds' is an optional keyword parameter to support control constraints: bounds = (lb, ub). lb and ub must be of the same type than the parameters m. 
-        
+        * 'scale' is a factor to scale to problem (default: 1.0).
+        * 'bounds' is an optional keyword parameter to support control constraints: bounds = (lb, ub). lb and ub must be of the same type than the parameters m.
+
         Additional arguments specific for the optimization algorithms can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimization algorithm. For detailed information about which arguments are supported for each optimization algorithm, please refer to the documentaton of the optimization algorithm.
         '''
 
     if isinstance(rf, ReducedFunctionalNumPy):
-        rf_np = rf 
+        rf_np = rf
     elif isinstance(rf, ReducedFunctional):
+        rf.scale = scale
         rf_np = ReducedFunctionalNumPy(rf)
     else:
         rf_np = rf # Assume the user knows what he is doing - he might for example written his own reduced functional class (as in OpenTidalFarm)
-
-    rf_np.scale = scale
 
     try:
         algorithm = optimization_algorithms_dict[method][1]
@@ -219,8 +218,8 @@ def minimize(rf, method='L-BFGS-B', scale=1.0, **kwargs):
         raise KeyError, 'Unknown optimization method ' + method + '. Use print_optimization_methods() to get a list of the available methods.'
 
     if algorithm == minimize_scipy_generic:
-        # For scipy's generic inteface we need to pass the optimisation method as a parameter. 
-        kwargs["method"] = method 
+        # For scipy's generic inteface we need to pass the optimisation method as a parameter.
+        kwargs["method"] = method
 
     opt = algorithm(rf_np, **kwargs)
 
@@ -232,21 +231,21 @@ def minimize(rf, method='L-BFGS-B', scale=1.0, **kwargs):
 def maximize(rf, method='L-BFGS-B', scale=1.0, **kwargs):
     ''' Solves the maximisation problem with PDE constraint:
 
-           max_m func(u, m) 
-             s.t. 
+           max_m func(u, m)
+             s.t.
            e(u, m) = 0
            lb <= m <= ub
            g(m) <= u
-           
-        where m is the control variable, u is the solution of the PDE system e(u, m) = 0, func is the functional of interest and lb, ub and g(m) constraints the control variables. 
+
+        where m is the control variable, u is the solution of the PDE system e(u, m) = 0, func is the functional of interest and lb, ub and g(m) constraints the control variables.
         The optimization problem is solved using a gradient based optimization algorithm and the functional gradients are computed by solving the associated adjoint system.
 
         The function arguments are as follows:
-        * 'rf' must be a ReducedFunctional object. 
+        * 'rf' must be a ReducedFunctional object.
         * 'method' specifies the optimization method to be used to solve the problem. The available methods can be listed with the print_optimization_methods function.
-        * 'scale' is a factor to scale to problem (default: 1.0). 
-        * 'bounds' is an optional keyword parameter to support control constraints: bounds = (lb, ub). lb and ub must be of the same type than the parameters m. 
-        
+        * 'scale' is a factor to scale to problem (default: 1.0).
+        * 'bounds' is an optional keyword parameter to support control constraints: bounds = (lb, ub). lb and ub must be of the same type than the parameters m.
+
         Additional arguments specific for the optimization methods can be added to the minimize functions (e.g. iprint = 2). These arguments will be passed to the underlying optimization method. For detailed information about which arguments are supported for each optimization method, please refer to the documentaton of the optimization algorithm.
         '''
     return minimize(rf, method, scale=-scale, **kwargs)
