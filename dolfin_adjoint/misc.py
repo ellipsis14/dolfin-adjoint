@@ -20,6 +20,6 @@ def rank():
   try:
     # DOLFIN 1.4 and onwards
     return backend.MPI.rank(backend.mpi_comm_world())
-  except RuntimeError:
+  except AttributeError:
     # Will be removed in DOLFIN 1.5:
     return backend.MPI.process_number()
