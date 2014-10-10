@@ -27,12 +27,13 @@ if __name__ == "__main__":
 
   J = Functional((inner(u, u))**3*dx + inner(m, m)*dx, name="NormSquared")
   Jm = assemble(inner(u, u)**3*dx + inner(m, m)*dx)
-  dJdm = compute_gradient(J, TimeConstantParameter(m), forget=None)
-  HJm  = hessian(J, TimeConstantParameter(m), warn=False)
+  dJdm = compute_gradient(J, Control(m), forget=None)
+  HJm  = hessian(J, Control(m), warn=False)
 
   def Jhat(m):
     u = main(m)
     return assemble(inner(u, u)**3*dx + inner(m, m)*dx)
 
-  minconv = taylor_test(Jhat, TimeConstantParameter(m), Jm, dJdm, HJm=HJm, perturbation_direction=interpolate(Constant(0.1), V))
+  minconv = taylor_test(Jhat, Control(m), Jm, dJdm, HJm=HJm, 
+                        perturbation_direction=interpolate(Constant(0.1), V))
   assert minconv > 2.9

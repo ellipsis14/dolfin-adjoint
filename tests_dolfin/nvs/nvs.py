@@ -24,13 +24,14 @@ def main(f, annotate=False):
 
 u = main(f, annotate=True)
 replay_dolfin()
-grad = compute_gradient(Functional(u*u*dx*dt[FINISH_TIME] + f*f*dx*dt[START_TIME]), InitialConditionParameter(f), forget = False)
+grad = compute_gradient(Functional(u*u*dx*dt[FINISH_TIME] +
+                        f*f*dx*dt[START_TIME]), Control(f), forget = False)
 
 def J(f):
   u = main(f, annotate=False)
   return assemble(u*u*dx + f*f*dx)
 
 Jf = assemble(u*u*dx + f*f*dx)
-minconv = taylor_test(J, InitialConditionParameter("ic"), Jf, grad)
+minconv = taylor_test(J, FunctionControl("ic"), Jf, grad)
 if minconv < 1.9:
   sys.exit(1)

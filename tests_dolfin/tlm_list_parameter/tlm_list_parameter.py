@@ -47,7 +47,7 @@ if __name__ == "__main__":
 
     J = Functional(forward*forward*dx*dt[FINISH_TIME] + forward*forward*dx*dt[START_TIME])
     Jm = assemble(forward*forward*dx + ic*ic*dx)
-    m = ListParameter([InitialConditionParameter("Velocity"), ScalarParameter(nu)])
+    m = [FunctionControl("Velocity"), Control(nu)]
     dJdm = compute_gradient_tlm(J, m, forget=False)
 
     def Jfunc(m):

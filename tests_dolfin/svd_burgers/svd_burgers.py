@@ -14,6 +14,11 @@ import libadjoint.exceptions
 dolfin.parameters["adjoint"]["record_all"] = True
 dolfin.parameters["adjoint"]["fussy_replay"] = False
 
+args = """
+        --petsc.eps_type krylovschur
+       """.split()
+parameters.parse([sys.argv[0]] + args)
+
 n = 10
 mesh = UnitIntervalMesh(n)
 V = FunctionSpace(mesh, "CG", 1)
@@ -62,7 +67,7 @@ if __name__ == "__main__":
       vec[i] = random.random()
 
     info_blue("Computing the TLM the direct way ... ")
-    param = InitialConditionParameter(ic, perturbation=perturbation)
+    param = Control(ic, perturbation=perturbation)
     for (tlm, var) in compute_tlm(param, forget=False):
       pass
     final_tlm = tlm

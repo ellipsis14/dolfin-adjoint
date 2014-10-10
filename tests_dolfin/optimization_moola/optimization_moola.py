@@ -26,6 +26,7 @@ if __name__ == "__main__":
     u = Function(V, name='State')
     W = FunctionSpace(mesh, "DG", 0)
     m = Function(W, name='Control')
+    x = SpatialCoordinate(mesh)
 
     x = SpatialCoordinate(mesh)
 
@@ -37,7 +38,7 @@ if __name__ == "__main__":
     solve_pde(u, V, m)
 
     # Run the optimisation 
-    rf = ReducedFunctional(J, InitialConditionParameter(m, value=m))
+    rf = ReducedFunctional(J, Control(m, value=m))
     problem = rf.moola_problem()
     m_moola = moola.DolfinPrimalVector(m)
     

@@ -9,7 +9,7 @@ except ImportError:
   sys.exit(0)
 
 
-dolfin.set_log_level(ERROR)
+dolfin.set_log_level(INFO)
 parameters['std_out_all_processes'] = False
 
 def solve_pde(u, V, m):
@@ -25,6 +25,7 @@ def solve_optimal_control(n):
     u = Function(V, name='State')
     W = FunctionSpace(mesh, "DG", 0)
     m = Function(W, name='Control')
+    x = SpatialCoordinate(mesh)
 
     x = SpatialCoordinate(mesh)
 
@@ -36,7 +37,7 @@ def solve_optimal_control(n):
     solve_pde(u, V, m)
 
     # Run the optimisation 
-    rf = ReducedFunctional(J, InitialConditionParameter(m, value=m))
+    rf = ReducedFunctional(J, Control(m, value=m))
 
     rfn = ReducedFunctionalNumPy(rf)
     nlp, grad = rfn.pyopt_problem()

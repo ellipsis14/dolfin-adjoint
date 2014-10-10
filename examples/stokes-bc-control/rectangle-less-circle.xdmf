@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
+<Xdmf Version="2.0" xmlns:xi="http://www.w3.org/2001/XInclude">
+  <Domain>
+    <Grid Name="mesh" GridType="Uniform">
+      <Topology NumberOfElements="3519" TopologyType="Triangle">
+        <DataItem Format="HDF" Dimensions="3519 3">rectangle-less-circle.h5:/Mesh/mesh/topology</DataItem>
+      </Topology>
+      <Geometry GeometryType="XY">
+        <DataItem Format="HDF" Dimensions="1863 2">rectangle-less-circle.h5:/Mesh/mesh/coordinates</DataItem>
+      </Geometry>
+    </Grid>
+  </Domain>
+</Xdmf>

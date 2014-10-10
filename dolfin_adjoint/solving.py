@@ -382,7 +382,8 @@ def define_nonlinear_equation(F, u):
 
   return (mass, backend.action(mass, u) - F)
 
-def adj_checkpointing(strategy, steps, snaps_on_disk, snaps_in_ram, verbose=False, replay = False, replay_comparison_tolerance = 1e-10):
+def adj_checkpointing(strategy, steps, snaps_on_disk,
+        snaps_in_ram, verbose=False, replay = False, replay_comparison_tolerance = 1e-10):
   backend.parameters["adjoint"]["record_all"] = replay
   adjglobals.adjointer.set_checkpoint_strategy(strategy)
   adjglobals.adjointer.set_revolve_options(steps, snaps_on_disk, snaps_in_ram, verbose)

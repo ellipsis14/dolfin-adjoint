@@ -65,10 +65,12 @@ if __name__ == "__main__":
     ub = interpolate(Constant(1.0e200), V)
 
     # Define the reduced funtional
-    rf = ReducedFunctional(J, InitialConditionParameter(u, value=ic), derivative_cb = derivative_cb)
-    rfn = ReducedFunctionalNumPy(rf)
-    nlp = rfn.pyipopt_problem(bounds=(lb.vector(), ub.vector()))
-    m = nlp.solve()
+    rf = ReducedFunctional(J, Control(u, value=ic), derivative_cb = derivative_cb)
+
+    problem = MinimizationProblem(rf, bounds=(lb, ub))
+
+    solver = IPOPTSolver(problem)
+    m = solver.solve()
 
     Jm = rf(m)
     assert Jm < 1.0e-10

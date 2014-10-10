@@ -9,8 +9,9 @@ from adjrhs import adj_get_forward_equation
 import adjresidual
 from constant import get_constant
 import constant
+import types
 
-class DolfinAdjointParameter(libadjoint.Parameter):
+class DolfinAdjointControl(libadjoint.Parameter):
   def __call__(self, adjointer, i, dependencies, values, variable):
     '''This function gives the source term for the tangent linear model.
     variable gives the forward variable associated with this tangent
@@ -64,7 +65,7 @@ class DolfinAdjointParameter(libadjoint.Parameter):
     direction m_dot.'''
     raise NotImplementedError
 
-class InitialConditionParameter(DolfinAdjointParameter):
+class FunctionControl(DolfinAdjointControl):
   '''This Parameter is used as input to the tangent linear model (TLM)
   when one wishes to compute dJ/d(initial condition) in a particular direction (perturbation).'''
   def __init__(self, coeff, value=None, perturbation=None):
@@ -116,12 +117,9 @@ class InitialConditionParameter(DolfinAdjointParameter):
       return adjglobals.adjointer.get_variable_value(self.var).data
 
   def set_perturbation(self, m_dot):
-    return InitialConditionParameter(self.coeff, perturbation=m_dot, value=self.value)
+    return FunctionControl(self.coeff, perturbation=m_dot, value=self.value)
 
-# Set-up transitional syntax
-Control = InitialConditionParameter
-
-class ScalarParameter(DolfinAdjointParameter):
+class ConstantControl(DolfinAdjointControl):
   '''This Parameter is used as input to the tangent linear model (TLM)
   when one wishes to compute dJ/da, where a is a single scalar parameter.'''
   def __init__(self, a, coeff=1):
@@ -151,9 +149,6 @@ class ScalarParameter(DolfinAdjointParameter):
 
       diff_form = ufl.algorithms.expand_derivatives(backend.derivative(form, get_constant(self.a), dparam))
 
-      if diff_form is None:
-        return None
-
       return adjlinalg.Vector(diff_form)
     else:
       return None
@@ -171,10 +166,11 @@ class ScalarParameter(DolfinAdjointParameter):
       dparam = backend.Function(fn_space)
       dparam.vector()[:] = 1.0 * float(self.coeff)
 
-      diff_form = ufl.algorithms.expand_derivatives(backend.derivative(form, get_constant(self.a), dparam))
+      diff_form = ufl.algorithms.expand_derivatives(
+          backend.derivative(form, get_constant(self.a), dparam))
 
-      if diff_form is None:
-        return None
+      # Add the derivatives of Expressions wrt to the Constant
+      diff_form = self.expression_derivative(form, diff_form)
 
       # Let's see if the form actually depends on the parameter m
       if len(diff_form.integrals()) != 0:
@@ -182,9 +178,59 @@ class ScalarParameter(DolfinAdjointParameter):
         assert isinstance(dFdm, backend.GenericVector)
 
         out = dFdm.inner(adjoint.vector())
-        return out
       else:
-        return None # dF/dm is zero, return None
+        out = None # dF/dm is zero, return None
+
+      return out
+
+  def expression_derivative(self, form, diff_form):
+      """ Applies the chain rule on diff_form to add derivatives of Expressions  
+          with respect to the control. """
+
+      coeffs = ufl.algorithms.extract_coefficients(form)
+
+      # Take the derivative of Expressions with respect to Constants only 
+      # if the derivative is provided explicitly by the user
+      expr_deriv_coeffs = []
+      for coeff in coeffs:
+
+          # Check if the coefficient is an expression with user-defined 
+          # derivatives
+          if not hasattr(coeff, "deval"):
+              continue
+
+          if not hasattr(coeff, "dependencies"):
+              raise ValueError, "An expression with deval() must also \
+                                 implement the dependencies() function."
+
+          if not hasattr(coeff, "copy"):
+              raise ValueError, "An expression with deval() must also \
+                                 implement the copy() function."
+
+          # Check that that expression depends on self.a
+          elif self.a not in coeff.dependencies():
+              continue
+
+          else:
+              expr_deriv_coeffs.append(coeff)
+
+
+      # Ok, so diff_form has the expression "coeff" which depends on self.a
+      # For the following computation we temporarly change this expression
+      # such that it returns the derivative wrt to self.a instead of 
+      # plain evaluation.
+      # Now apply the chain rule to expand the diff_form through these
+      # expressions
+      for c in expr_deriv_coeffs:
+
+          dc = c.copy()
+          eval_deriv_a = lambda expr, value, x: expr.deval(value, x, self.a)
+          dc.eval = types.MethodType(eval_deriv_a, dc)
+
+          diff_form += ufl.algorithms.expand_derivatives(
+              backend.derivative(form, c, dc))
+
+      return diff_form
 
   def equation_partial_second_derivative(self, adjointer, adjoint, i, variable, m_dot):
     form = adjresidual.get_residual(i)
@@ -237,6 +283,10 @@ class ScalarParameter(DolfinAdjointParameter):
 
     d = backend.derivative(form, get_constant(self.a), dparam)
     d = ufl.algorithms.expand_derivatives(d)
+
+    # Add the derivatives of Expressions wrt to the Constant
+    d = self.expression_derivative(form, d)
+
     if len(d.integrals()) != 0:
       return backend.assemble(d)
     else:
@@ -279,9 +329,9 @@ class ScalarParameter(DolfinAdjointParameter):
   def set_perturbation(self, m_dot):
     '''Return another instance of the same class, representing the Parameter perturbed in a particular
     direction m_dot.'''
-    return ScalarParameter(self.a, coeff=m_dot)
+    return ConstantControl(self.a, coeff=m_dot)
 
-class ScalarParameters(DolfinAdjointParameter):
+class ConstantControls(DolfinAdjointControl):
   '''This Parameter is used as input to the tangent linear model (TLM)
   when one wishes to compute dJ/dv . delta v, where v is a vector of scalar parameters.'''
   def __init__(self, v, dv=None):
@@ -314,7 +364,7 @@ class ScalarParameters(DolfinAdjointParameter):
     return adjlinalg.Vector(diff_form)
 
   def __str__(self):
-    return str(self.v) + ':ScalarParameters'
+    return str(self.v) + ':ConstantControls'
 
   def equation_partial_derivative(self, adjointer, adjoint, i, variable):
     form = adjresidual.get_residual(i)
@@ -343,25 +393,11 @@ class ScalarParameters(DolfinAdjointParameter):
   def data(self):
     return self.v
 
-class TimeConstantParameter(InitialConditionParameter):
-  '''TimeConstantParameter is just another name for InitialConditionParameter,
-  since from dolfin-adjoint's point of view they're exactly the same. But it
-  confuses people to talk about initial conditions of data that doesn't change
-  in time (like diffusivities, or bathymetries, or whatever), so hence this
-  alias.'''
-  pass
 
-class SteadyParameter(InitialConditionParameter):
-  '''SteadyParameter is just another name for InitialConditionParameter,
-  since from dolfin-adjoint's point of view they're exactly the same. But it
-  confuses people to talk about initial conditions of data in steady state problems,
-  so hence this alias.'''
-  pass
-
-class ListParameter(DolfinAdjointParameter):
+class ListControl(DolfinAdjointControl):
   def __init__(self, parameters):
     for p in parameters:
-      assert isinstance(p, DolfinAdjointParameter)
+      assert isinstance(p, DolfinAdjointControl)
 
     self.parameters = parameters
 
@@ -420,7 +456,7 @@ class ListParameter(DolfinAdjointParameter):
   def set_perturbation(self, m_dot):
     '''Return another instance of the same class, representing the Parameter perturbed in a particular
     direction m_dot.'''
-    return ListParameter([p.set_perturbation(m) for (p, m) in zip(self.parameters, m_dot)])
+    return ListControl([p.set_perturbation(m) for (p, m) in zip(self.parameters, m_dot)])
 
   def __getitem__(self, i):
     return self.parameters[i]
@@ -435,3 +471,22 @@ def _add(x, y):
   x.axpy(1.0, y)
   return x
 
+
+def Control(obj, *args, **kwargs):
+    """ Creates a dolfin-adjoint control.  """
+
+    if isinstance(obj, backend.Constant):
+        return ConstantControl(obj, *args, **kwargs)
+
+    elif isinstance(obj, backend.Coefficient):
+        return FunctionControl(obj, *args, **kwargs)
+
+    elif isinstance(obj, (list, set)):
+        ctrls = [Control(o, *args, **kwargs) for o in obj]
+        return ListControl(ctrls)
+
+    elif isinstance(obj, str):
+        raise ValueError, "Control cannot be used with names. Use ConstantControl or FunctionControl instead."
+
+    else:
+        raise ValueError, "Unknown control data type %s." % type(obj)

@@ -63,8 +63,6 @@ def adj_reset_cache():
   if backend.parameters["adjoint"]["debug_cache"]:
     backend.info_blue("Resetting solver cache")
 
-  backend.parameters["adjoint"]["stop_annotating"] = False
-
   caching.assembled_fwd_forms.clear()
   caching.assembled_adj_forms.clear()
   caching.lu_solvers.clear()
@@ -92,6 +90,7 @@ def adj_reset():
   adj_variables.__init__()
   function_names.__init__()
   adj_reset_cache()
+  backend.parameters["adjoint"]["stop_annotating"] = False
 
 # Map from FunctionSpace to LUSolver that has factorised the fsp mass matrix
 fsp_lu = {}

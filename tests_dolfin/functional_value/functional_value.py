@@ -52,7 +52,7 @@ if __name__ == "__main__":
   print "Base functional value: ", J_orig
 
   J = Functional(inner(u - data, u - data)*dx*dt[FINISH_TIME])
-  m = InitialConditionParameter("Temperature")
+  m = FunctionControl("Temperature")
   rf = ReducedFunctional(J, m)
 
   print "rf(guess_ic): ", rf(guess_ic)

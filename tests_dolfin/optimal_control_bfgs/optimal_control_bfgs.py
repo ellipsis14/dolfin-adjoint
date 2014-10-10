@@ -21,12 +21,12 @@ u_desired = exp(-1/(1-x[0]*x[0])-1/(1-x[1]*x[1]))
 J = Functional((0.5*inner(u-u_desired, u-u_desired))*dx*dt[FINISH_TIME])
 
 # Run the optimisation 
-rf = ReducedFunctional(J, InitialConditionParameter(m, value=m))
+rf = ReducedFunctional(J, Control(m, value=m))
 ub = 0.5 
 lb = interpolate(Constant(-1), V) # Test 2 different ways of imposing bounds
 
-m_opt = minimize(rf, method="L-BFGS-B", in_euclidian_space=True,
-                                  tol=2e-08, bounds=(lb, ub), options={"disp": True, "maxiter": 5})
+m_opt = minimize(rf, method="L-BFGS-B", 
+                 tol=2e-08, bounds=(lb, ub), options={"disp": True, "maxiter": 5})
 
 assert min(m_opt.vector().array()) > lb((0, 0)) - 0.05 
 info_red("Skipping bound check in L-BFGS-B test")

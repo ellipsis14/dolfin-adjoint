@@ -127,8 +127,13 @@ class Functional(libadjoint.Functional):
       functional_value = _add(functional_value,
                               self._substitute_form(adjointer, timestep, dependencies, values))
 
+    if functional_value is None:
+        backend.info_red("Your functional is supposed to depend on %s, but does not?" % variable)
+        raise libadjoint.exceptions.LibadjointErrorInvalidInputs
+
     d = backend.derivative(functional_value, values[dependencies.index(variable)].data)
     d = ufl.algorithms.expand_derivatives(d)
+
     if len(d.integrals()) == 0:
       raise SystemExit, "This isn't supposed to happen -- your functional is supposed to depend on %s" % variable
     return adjlinalg.Vector(d)
