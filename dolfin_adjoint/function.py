@@ -285,7 +285,7 @@ def _check_mul_and_division(e, linear_comb, scalar_weight=1.0, multi_index=None)
     if isinstance(e, Product):
         for i, op in enumerate(e.operands()):
             if isinstance(op, ScalarValue) or \
-                   (isinstance(op, Constant) and op.value_size()==1):
+                   (isinstance(op, backend.Constant) and op.value_size()==1):
                 scalar = op
                 expr = e.operands()[1-i]
                 break
@@ -296,7 +296,7 @@ def _check_mul_and_division(e, linear_comb, scalar_weight=1.0, multi_index=None)
     elif isinstance(e, Division):
         expr, scalar = e.operands()
         if not (isinstance(scalar, ScalarValue) or \
-                isinstance(scalar, Constant) and scalar.value_rank()==1):
+                isinstance(scalar, backend.Constant) and scalar.value_rank()==1):
             _assign_error()
         scalar_weight /= float(scalar)
     else:
