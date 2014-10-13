@@ -15,10 +15,10 @@ state=Function(W)
 
 state.interpolate(kelvin.InitialConditions())
 
-kelvin.params["basename"]="p1dgp2"
-kelvin.params["finish_time"]=kelvin.params["dt"]*10
-kelvin.params["finish_time"]=kelvin.params["dt"]*2
-kelvin.params["dump_period"]=1
+kelvin.params["basename"] = "p1dgp2"
+kelvin.params["dt"] = 2
+kelvin.params["finish_time"] = kelvin.params["dt"]*2
+kelvin.params["dump_period"] = 1
 
 M, G=sw_lib.construct_shallow_water(W, kelvin.params)
 

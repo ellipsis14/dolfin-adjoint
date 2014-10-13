@@ -1,6 +1,5 @@
 from dolfin import *
 from dolfin_adjoint import *
-import numpy
 import sys
 
 class parameters(dict):
@@ -32,7 +31,7 @@ def rt0(mesh):
     "Return a function space U*H on mesh from the rt0 space."
 
     V = FunctionSpace(mesh, 'Raviart-Thomas', 1) # Velocity space
- 
+
     H = FunctionSpace(mesh, 'DG', 0)             # Height space
 
     W=V*H                                        # Mixed space of both.
@@ -42,7 +41,7 @@ def p1dgp2(mesh):
     "Return a function space U*H on mesh from the rt0 space."
 
     V = VectorFunctionSpace(mesh, 'DG', 1, dim=2)# Velocity space
- 
+
     H = FunctionSpace(mesh, 'CG', 2)             # Height space
 
     W=V*H                                        # Mixed space of both.
@@ -53,7 +52,7 @@ def bdfmp1dg(mesh):
     "Return a function space U*H on mesh from the BFDM1 space."
 
     V = FunctionSpace(mesh, 'BDFM', 1)# Velocity space
- 
+
     H = FunctionSpace(mesh, 'DG', 1)             # Height space
 
     W=V*H                                        # Mixed space of both.
@@ -64,7 +63,7 @@ def bdmp0(mesh):
     "Return a function space U*H on mesh from the BFDM1 space."
 
     V = FunctionSpace(mesh, 'BDM', 1)# Velocity space
- 
+
     H = FunctionSpace(mesh, 'DG', 0)             # Height space
 
     W=V*H                                        # Mixed space of both.
@@ -75,7 +74,7 @@ def bdmp1dg(mesh):
     "Return a function space U*H on mesh from the BFDM1 space."
 
     V = FunctionSpace(mesh, 'BDM', 1)# Velocity space
- 
+
     H = FunctionSpace(mesh, 'DG', 1)             # Height space
 
     W=V*H                                        # Mixed space of both.
@@ -106,7 +105,7 @@ def construct_shallow_water(W,params):
 
     try:
         # Coriolis term
-        F=params["f"]*inner(v,as_vector([-u[1],u[0]]))*dx      
+        F=params["f"]*inner(v,as_vector([-u[1],u[0]]))*dx
     except KeyError:
         F=0
 
@@ -118,7 +117,7 @@ def construct_shallow_water(W,params):
 
 def timeloop_theta(M, G, state, params, annotate=True):
     '''Solve M*dstate/dt = G*state using a theta scheme.'''
-    
+
     A=M+params["theta"]*params["dt"]*G
 
     A_r=M-(1-params["theta"])*params["dt"]*G
@@ -131,19 +130,19 @@ def timeloop_theta(M, G, state, params, annotate=True):
 
     # Project the solution to P1 for visualisation.
     rhs=assemble(inner(v_out,state.split()[0])*dx)
-    solve(M_u_out, u_out_state.vector(),rhs,"cg","sor", annotate=False) 
-    
+    solve(M_u_out, u_out_state.vector(),rhs,"cg","sor", annotate=False)
+
     # Project the solution to P1 for visualisation.
     rhs=assemble(inner(q_out,state.split()[1])*dx)
-    solve(M_p_out, p_out_state.vector(),rhs,"cg","sor", annotate=False) 
-    
+    solve(M_p_out, p_out_state.vector(),rhs,"cg","sor", annotate=False)
+
     u_out << u_out_state
     p_out << p_out_state
-    
+
     t = params["current_time"]
     dt= params["dt"]
-    
-    step=0    
+
+    step=0
 
     tmpstate=Function(state.function_space())
 
@@ -151,23 +150,22 @@ def timeloop_theta(M, G, state, params, annotate=True):
         t+=dt
         step+=1
         rhs=action(A_r,state)
-        
+
         # Solve the shallow water equations.
         solve(A==rhs, tmpstate, annotate=annotate)
-        #solve(A, state.vector(), rhs, "preonly", "lu")
 
         state.assign(tmpstate, annotate=annotate)
 
         if step%params["dump_period"] == 0:
-        
+
             # Project the solution to P1 for visualisation.
             rhs=assemble(inner(v_out,state.split()[0])*dx)
-            solve(M_u_out, u_out_state.vector(),rhs,"cg","sor", annotate=False) 
+            solve(M_u_out, u_out_state.vector(),rhs,"cg","sor", annotate=False)
 
             # Project the solution to P1 for visualisation.
             rhs=assemble(inner(q_out,state.split()[1])*dx)
-            solve(M_p_out, p_out_state.vector(),rhs,"cg","sor", annotate=False) 
-            
+            solve(M_p_out, p_out_state.vector(),rhs,"cg","sor", annotate=False)
+
             u_out << u_out_state
             p_out << p_out_state
 
@@ -203,12 +201,12 @@ def adjoint(state, params, functional):
 def u_output_projector(W):
     # Projection operator for output.
     Output_V=VectorFunctionSpace(W.mesh(), 'CG', 1, dim=2)
-    
+
     u_out=TrialFunction(Output_V)
     v_out=TestFunction(Output_V)
-    
+
     M_out=assemble(inner(v_out,u_out)*dx)
-    
+
     out_state=Function(Output_V)
 
     return M_out, v_out, out_state
@@ -216,22 +214,22 @@ def u_output_projector(W):
 def p_output_projector(W):
     # Projection operator for output.
     Output_V=FunctionSpace(W.mesh(), 'CG', 1)
-    
+
     u_out=TrialFunction(Output_V)
     v_out=TestFunction(Output_V)
-    
+
     M_out=assemble(inner(v_out,u_out)*dx)
-    
+
     out_state=Function(Output_V)
 
     return M_out, v_out, out_state
 
 def output_files(basename):
-        
+
     # Output file
     u_out = File(basename+"_u.pvd", "compressed")
     p_out = File(basename+"_p.pvd", "compressed")
 
     return u_out, p_out
-            
+
 
