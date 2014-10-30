@@ -533,6 +533,14 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
 
       pinputs.append(pinput)
 
+  # Issue 34: We must evaluate HJm before we evaluate the tape at the
+  # perturbed parameters below.
+  if HJm is not None:
+    HJm_values = []
+        for perturbation in perturbations:
+            HJmp = HJm(perturbation)
+            HJm_values.append(HJmp)
+
   # At last: the common bit!
   functional_values = []
   for pinput in pinputs:
@@ -572,15 +580,15 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
     with_hessian = []
     if isinstance(m, parameter.ConstantControl):
       for i in range(len(perturbations)):
-        remainder = abs(functional_values[i] - Jm - float(dJdm)*perturbations[i] - 0.5*perturbations[i]*HJm(perturbations[i]))
+        remainder = abs(functional_values[i] - Jm - float(dJdm)*perturbations[i] - 0.5*perturbations[i]*HJm_values[i])
         with_hessian.append(remainder)
     elif isinstance(m, parameter.ConstantControls):
       for i in range(len(perturbations)):
-        remainder = abs(functional_values[i] - Jm - numpy.dot(dJdm, perturbations[i]) - 0.5*numpy.dot(perturbations[i], HJm(perturbations[i])))
+        remainder = abs(functional_values[i] - Jm - numpy.dot(dJdm, perturbations[i]) - 0.5*numpy.dot(perturbations[i], HJm_values[i]))
         with_hessian.append(remainder)
     elif isinstance(m, parameter.FunctionControl):
       for i in range(len(perturbations)):
-        remainder = abs(functional_values[i] - Jm - dJdm.vector().inner(perturbations[i].vector()) - 0.5*perturbations[i].vector().inner(HJm(perturbations[i]).vector()))
+        remainder = abs(functional_values[i] - Jm - dJdm.vector().inner(perturbations[i].vector()) - 0.5*perturbations[i].vector().inner(HJm_values[i].vector()))
         with_hessian.append(remainder)
 
     info("Taylor remainder with Hessian information: " + str(with_hessian))
