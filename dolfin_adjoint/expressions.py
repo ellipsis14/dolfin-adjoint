@@ -22,7 +22,7 @@ if backend.__name__ == "dolfin":
   expression_init = backend.Expression.__init__
   def __init__(self, *args, **kwargs):
     expression_init(self, *args, **kwargs)
-    attr_list = expressions_attributes[self]
+    attr_list = expression_attrs[self]
     attr_list.union(kwargs.keys())
 
   backend.Expression.__init__ = __init__
