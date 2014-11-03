@@ -1,7 +1,7 @@
 import libadjoint
 from backend import Function, Constant, info_red, info_green, File
 from dolfin_adjoint import adjlinalg, adjrhs, constant, drivers
-from dolfin_adjoint.adjglobals import adjointer, mem_checkpoints, disk_checkpoints
+from dolfin_adjoint.adjglobals import adjointer, mem_checkpoints, disk_checkpoints, adj_reset_cache
 from functional import Functional
 from enlisting import enlist, delist
 import cPickle as pickle
@@ -108,6 +108,8 @@ class ReducedFunctional(object):
 
     def __call__(self, value):
         ''' Evaluates the reduced functional for the given parameter value. '''
+
+        adj_reset_cache()
 
         #: The parameter value at which the reduced functional is to be evaluated.
         value = enlist(value)
