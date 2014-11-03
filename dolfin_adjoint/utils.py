@@ -537,9 +537,9 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
   # perturbed parameters below.
   if HJm is not None:
     HJm_values = []
-        for perturbation in perturbations:
-            HJmp = HJm(perturbation)
-            HJm_values.append(HJmp)
+    for perturbation in perturbations:
+      HJmp = HJm(perturbation)
+      HJm_values.append(HJmp)
 
   # At last: the common bit!
   functional_values = []
