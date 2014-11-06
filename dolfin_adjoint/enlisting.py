@@ -19,7 +19,7 @@ to en-list and de-list appropriately.
 """
 
 import collections
-from parameter import ListControl
+from controls import ListControl
 
 class Enlisted(list):
     pass

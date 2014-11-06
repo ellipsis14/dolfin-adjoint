@@ -21,7 +21,7 @@ def serialise_bounds(rf_np, bounds):
         for j in range(len(bounds[i])):
             bound = bounds[i][j]
             if type(bound) in [int,  float, np.int32, np.int64, np.float32, np.float64]:
-                bound_len = len(get_global(rf_np.parameter[j].data()))
+                bound_len = len(get_global(rf_np.controls[j].data()))
                 const_bound = bound*np.ones(bound_len)
 
                 bounds_arr[i] += const_bound.tolist()
@@ -55,7 +55,7 @@ def minimize_scipy_generic(rf_np, method, bounds = None, **kwargs):
 
     project = kwargs.pop("project", False)
 
-    m = [p.data() for p in rf_np.parameter]
+    m = [p.data() for p in rf_np.controls]
     m_global = rf_np.obj_to_array(m)
     J = rf_np.__call__
     dJ = lambda m: rf_np.derivative(m, taylor_test=dolfin.parameters["optimization"]["test_gradient"],
@@ -129,8 +129,8 @@ def minimize_scipy_generic(rf_np, method, bounds = None, **kwargs):
     else:
         res = scipy_minimize(J, m_global, method=method, **kwargs)
 
-    rf_np.set_parameters(np.array(res["x"]))
-    m = [p.data() for p in rf_np.parameter]
+    rf_np.set_controls(np.array(res["x"]))
+    m = [p.data() for p in rf_np.controls]
     return m
 
 def minimize_custom(rf_np, bounds=None, **kwargs):
@@ -142,7 +142,7 @@ def minimize_custom(rf_np, bounds=None, **kwargs):
     except KeyError:
         raise KeyError, 'When using a "Custom" optimisation method, you must pass the optimisation function as the "algorithm" parameter. Make sure that this function accepts the same arguments as scipy.optimize.minimize.'
 
-    m = [p.data() for p in rf_np.parameter]
+    m = [p.data() for p in rf_np.controls]
     m_global = rf_np.obj_to_array(m)
     J = rf_np.__call__
     dJ = lambda m: rf_np.derivative(m, taylor_test=dolfin.parameters["optimization"]["test_gradient"],
@@ -156,10 +156,10 @@ def minimize_custom(rf_np, bounds=None, **kwargs):
     res = algo(J, m_global, dJ, H, bounds, **kwargs)
 
     try:
-        rf_np.set_parameters(np.array(res))
+        rf_np.set_controls(np.array(res))
     except Exception as e:
-        raise e, "Failed to updated the optimised parameter value. Are you sure your custom optimisation algorithm returns an array containing the optimised values?"
-    m = [p.data() for p in rf_np.parameter]
+        raise e, "Failed to update the optimised control values. Are you sure your custom optimisation algorithm returns an array containing the optimised values?"
+    m = [p.data() for p in rf_np.controls]
     return m
 
 optimization_algorithms_dict = {'L-BFGS-B': ('The L-BFGS-B implementation in scipy.', minimize_scipy_generic),

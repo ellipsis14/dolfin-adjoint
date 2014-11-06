@@ -26,7 +26,7 @@ class OptimizationProblem(object):
         self.bounds = bounds
 
         #: constraints: general (possibly nonlinear) constraints on the controls.
-        #: None means no constraints, otherwise a Constraint object or a list of 
+        #: None means no constraints, otherwise a Constraint object or a list of
         #: Constraints.
         self.constraints = canonicalise(constraints)
 
@@ -39,14 +39,14 @@ class OptimizationProblem(object):
             raise TypeError("reduced_functional should be a ReducedFunctional")
 
         if bounds is not None:
-            if len(bounds) != len(reduced_functional.parameter):
+            if len(bounds) != len(reduced_functional.controls):
                 raise TypeError("bounds should be of length number of controls of the ReducedFunctional")
-            for (bound, parameter) in zip(bounds, reduced_functional.parameter):
+            for (bound, control) in zip(bounds, reduced_functional.controls):
                 if len(bound) != 2:
                     raise TypeError("Each bound should be a tuple of length 2 (lb, ub)")
 
                 for b in bound:
-                    klass = parameter.data().__class__
+                    klass = control.data().__class__
                     if not (isinstance(b, (int, float, type(None), klass))):
                         raise TypeError("This pair (lb, ub) should be None, a float, or a %s." % klass)
 
@@ -56,7 +56,7 @@ class OptimizationProblem(object):
             raise TypeError("constraints should be None or a Constraint or a list of Constraints")
 
     def enlist(self, bounds):
-        """Make bounds into canonical format: a list (ideally the same length as the number of parameters)."""
+        """Make bounds into canonical format: a list (ideally the same length as the number of controls)."""
         if bounds is None:
             return None
 

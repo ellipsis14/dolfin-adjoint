@@ -5,10 +5,10 @@ from assembly import assemble, assemble_system
 from functional import Functional
 
 # Controls
-from parameter import Control
-from parameter import FunctionControl
-from parameter import ConstantControl
-from parameter import ConstantControls
+from controls import Control
+from controls import FunctionControl
+from controls import ConstantControl
+from controls import ConstantControls
 
 from solving import solve, adj_checkpointing, annotate, record
 from adjglobals import adj_start_timestep, adj_inc_timestep, adjointer, adj_check_checkpoints, adj_html, adj_reset
@@ -36,7 +36,7 @@ if backend.__name__ == "dolfin":
   from krylov_solver import KrylovSolver
   from linear_solver import LinearSolver
   from lusolver import LUSolver
-  from reduced_functional import ReducedFunctional, replace_parameter_value, replace_tape_value
+  from reduced_functional import ReducedFunctional, replace_control_value, replace_tape_value
   from reduced_functional_numpy import ReducedFunctionalNumPy, ReducedFunctionalNumpy
   from optimization.optimization import minimize, maximize, print_optimization_methods, minimise, maximise
   from optimization.multistage_optimization import minimize_multistage

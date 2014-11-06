@@ -143,7 +143,7 @@ w = TestFunction(V)
 alpha = Constant(1e-2)
 # The source term
 f = interpolate(Expression("-std::abs(x[0]*x[1] - 0.5) + 0.25"), V)
-F = inner(grad(y), grad(w))*dx - 1 / alpha * inner(smoothmax(-y), w)*dx - inner(f + u, w)*dx  
+F = inner(grad(y), grad(w))*dx - 1 / alpha * inner(smoothmax(-y), w)*dx - inner(f + u, w)*dx
 bc = DirichletBC(V, 0.0, "on_boundary")
 solve(F == 0, y, bcs=bc)
 
@@ -162,13 +162,13 @@ J = Functional(0.5*inner(y - yd, y - yd)*dx + nu/2*inner(u, u)*dx)
 
 # Formulate the reduced problem
 m = Control(u)  # Create a parameter from u, as it is the variable we want to optimise
-alpha_m = Control(alpha)  # Also tell dolfin-adjoint that alpha is a parameter, 
+alpha_m = Control(alpha)  # Also tell dolfin-adjoint that alpha is a parameter,
                           # this will allow us to modify its value on the tape
 Jhat = ReducedFunctional(J, m)
 
 # Create output files
-ypvd = File("output/y_opt.pvd") 
-upvd = File("output/u_opt.pvd") 
+ypvd = File("output/y_opt.pvd")
+upvd = File("output/u_opt.pvd")
 
 # Next, we implement the main loop of the algorithm. In every iteration
 # we will halve the penalisation parameter and (re-)solve the
@@ -212,12 +212,12 @@ for i in range(4):
 # The next line modifies the tape such that the initial guess for ``y``
 # (to be used in the Newton solver in the forward problem) is set to
 # ``y_opt``.  This is achieved with the function
-# :py:func:`replace_parameter_value
-# <dolfin_adjoint.replace_parameter_value>` (or alternatively with
+# :py:func:`replace_control_value
+# <dolfin_adjoint.replace_control_value>` (or alternatively with
 # :py:func:`replace_tape_value <dolfin_adjoint.replace_tape_value>`, if
 # we needed more control, e.g. replace a non-initial value function):
 
-  replace_parameter_value(Control(y), y_opt)
+  replace_control_value(Control(y), y_opt)
 
 # Finally, we store the optimal state and control to disk and print some
 # statistics:

@@ -2,7 +2,7 @@ import adjglobals
 import adjlinalg
 import libadjoint
 import backend
-import parameter as parameter_module
+import controls
 import math
 
 def compute_gst(ic, final, nsv, ic_norm="mass", final_norm="mass", which=1):
@@ -101,7 +101,7 @@ def perturbed_replay(parameter, perturbation, perturbation_scale, observation, p
   .. math::
 
     \frac{
-    \left|\left| \delta \mathrm{observation} \right|\right| 
+    \left|\left| \delta \mathrm{observation} \right|\right|
     }{
     \left|\left| \delta \mathrm{input} \right| \right|
     }
@@ -121,7 +121,7 @@ def perturbed_replay(parameter, perturbation, perturbation_scale, observation, p
   if not backend.parameters["adjoint"]["record_all"]:
     info_red("Warning: your replay test will be much more effective with backend.parameters['adjoint']['record_all'] = True.")
 
-  assert isinstance(parameter, parameter_module.FunctionControl)
+  assert isinstance(parameter, controls.FunctionControl)
 
   if perturbation_norm == "mass":
     p_fnsp = perturbation.function_space()

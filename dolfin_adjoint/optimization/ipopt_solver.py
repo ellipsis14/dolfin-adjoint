@@ -33,19 +33,19 @@ class IPOPTSolver(OptimizationSolver):
         from functools import partial
 
         self.rfn = ReducedFunctionalNumPy(self.problem.reduced_functional)
-        nparameters = len(self.rfn.get_parameters())
+        ncontrols = len(self.rfn.get_controls())
 
         (lb, ub) = self.__get_bounds()
         (nconstraints, fun_g, jac_g, clb, cub) = self.__get_constraints()
-        constraints_nnz = nconstraints * nparameters
+        constraints_nnz = nconstraints * ncontrols
 
         # A callback that evaluates the functional and derivative.
         J  = self.rfn.__call__
         dJ = partial (self.rfn.derivative, forget=False)
 
-        nlp = pyipopt.create(len(ub),           # length of parameter vector
-                             lb,                # lower bounds on parameter vector
-                             ub,                # upper bounds on parameter vector
+        nlp = pyipopt.create(len(ub),           # length of control vector
+                             lb,                # lower bounds on control vector
+                             ub,                # upper bounds on control vector
                              nconstraints,      # number of constraints
                              clb,               # lower bounds on constraints,
                              cub,               # upper bounds on constraints,
@@ -80,16 +80,16 @@ class IPOPTSolver(OptimizationSolver):
 
         if bounds is not None:
             lb_list = []
-            ub_list = [] # a list of numpy arrays, one for each parameter
+            ub_list = [] # a list of numpy arrays, one for each control
 
-            for (bound, parameter) in zip(bounds, self.rfn.parameter):
-                len_parameter = len(self.rfn.get_global(parameter.data()))
+            for (bound, control) in zip(bounds, self.rfn.controls):
+                len_control = len(self.rfn.get_global(control.data()))
                 general_lb, general_ub = bound # could be float, Constant, or Function
 
                 if isinstance(general_lb, (float, int, dolfin.Constant)):
-                    lb = numpy.array([float(general_lb)]*len_parameter)
+                    lb = numpy.array([float(general_lb)]*len_control)
                 elif isinstance(general_lb, dolfin.Function):
-                    assert general_lb.function_space().dim() == parameter.data().function_space().dim()
+                    assert general_lb.function_space().dim() == control.data().function_space().dim()
                     lb = self.rfn.get_global(general_lb)
                 else:
                     raise TypeError("Unknown bound type %s" % general_lb.__class__)
@@ -97,9 +97,9 @@ class IPOPTSolver(OptimizationSolver):
                 lb_list.append(lb)
 
                 if isinstance(general_ub, (float, int, dolfin.Constant)):
-                    ub = numpy.array([float(general_ub)]*len_parameter)
+                    ub = numpy.array([float(general_ub)]*len_control)
                 elif isinstance(general_ub, dolfin.Function):
-                    assert general_ub.function_space().dim() == parameter.data().function_space().dim()
+                    assert general_ub.function_space().dim() == control.data().function_space().dim()
                     ub = self.rfn.get_global(general_ub)
                 else:
                     raise TypeError("Unknown bound type %s" % general_ub.__class__)
@@ -111,12 +111,12 @@ class IPOPTSolver(OptimizationSolver):
 
         else:
             # Unfortunately you really need to specify bounds, I think?!
-            nparameters = len(self.rfn.get_parameters())
+            ncontrols = len(self.rfn.get_controls())
             max_float = numpy.finfo(numpy.double).max
-            ub = numpy.array([max_float]*nparameters)
+            ub = numpy.array([max_float]*ncontrols)
 
             min_float = numpy.finfo(numpy.double).min
-            lb = numpy.array([min_float]*nparameters)
+            lb = numpy.array([min_float]*ncontrols)
 
         return (lb, ub)
 
@@ -150,7 +150,7 @@ class IPOPTSolver(OptimizationSolver):
         else:
             # The length of the constraint vector
             nconstraints = constraint._get_constraint_dim()
-            nparameters = len(self.rfn.get_parameters())
+            ncontrols = len(self.rfn.get_controls())
 
             # The constraint function
             def fun_g(x, user_data=None):
@@ -165,8 +165,8 @@ class IPOPTSolver(OptimizationSolver):
                     # pass in a dense matrix (it usually is anyway).
                     rows = []
                     for i in range(nconstraints):
-                        rows += [i] * nparameters
-                    cols = range(nparameters) * nconstraints
+                        rows += [i] * ncontrols
+                    cols = range(ncontrols) * nconstraints
                     return (numpy.array(rows), numpy.array(cols))
                 else:
                   return numpy.array(gather(constraint.jacobian(x)))
@@ -212,18 +212,19 @@ class IPOPTSolver(OptimizationSolver):
 
     def __copy_data(self, m):
         """Returns a deep copy of the given Function/Constant."""
-        if hasattr(m, "vector"): 
+        if hasattr(m, "vector"):
             return dolfin.Function(m.function_space())
-        elif hasattr(m, "value_size"): 
+        elif hasattr(m, "value_size"):
             return dolfin.Constant(m(()))
         else:
-            raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
+            raise TypeError, 'Unknown control type %s.' % str(type(m))
 
     def solve(self):
-        """Solve the optimization problem and return the optimized parameters."""
-        guess = self.rfn.get_parameters()
+        """Solve the optimization problem and return the optimized controls."""
+        guess = self.rfn.get_controls()
         results = self.pyipopt_problem.solve(guess)
-        new_params = [self.__copy_data(p.data()) for p in self.rfn.parameter]
+        new_params = [self.__copy_data(p.data()) for p in self.rfn.controls]
         self.rfn.set_local(new_params, results[0])
 
-        return delist(new_params, list_type=self.problem.reduced_functional.parameter)
+        return delist(new_params,
+                list_type=self.problem.reduced_functional.controls)

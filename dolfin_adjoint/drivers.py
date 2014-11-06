@@ -1,5 +1,5 @@
 import libadjoint
-from parameter import *
+from controls import *
 from backend import info_red, info_blue, info, info_green, parameters
 import backend
 import adjglobals
