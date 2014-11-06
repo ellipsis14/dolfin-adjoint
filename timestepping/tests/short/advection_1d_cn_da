@@ -94,7 +94,7 @@ assert((orders > 1.99).all())
 
 assert(replay_dolfin(forget = False, tol = 0.0, stop = True))
 
-g_da = compute_gradient(Functional(T[N] * T[N] * dx * dolfin_adjoint.dt[FINISH_TIME]), [InitialConditionParameter(T_ic), ScalarParameter(T_bc)])
+g_da = compute_gradient(Functional(T[N] * T[N] * dx * dolfin_adjoint.dt[FINISH_TIME]), [Control(T_ic), Control(T_bc)])
 
 err = abs(g[0].sum() - g_da[0].vector().sum())
 print("%.16e" % err)

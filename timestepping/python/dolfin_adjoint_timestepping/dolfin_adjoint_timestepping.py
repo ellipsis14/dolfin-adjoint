@@ -227,7 +227,7 @@ def da_annotate_assign(y, x):
     # ?? What does this do ??
     if not adjglobals.adjointer.variable_known(adjglobals.adj_variables[x]):
       adjglobals.adj_variables.forget(x)
-    assign.register_assign(x, y)
+    assignment.register_assign(x, y)
     
   return False
   

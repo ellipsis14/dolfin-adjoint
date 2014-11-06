@@ -82,7 +82,7 @@ parameters["adjoint"]["stop_annotating"] = True
 J = u[N] * dx
 # Perform a total derivative calculation
 J_da = Functional(J * dolfin_adjoint.dt[FINISH_TIME])
-nu_da = ScalarParameter(nu)
+nu_da = Control(nu)
 dJ = compute_gradient(J_da, nu_da)
 
 # Verify the computed derivative using a Taylor remainder

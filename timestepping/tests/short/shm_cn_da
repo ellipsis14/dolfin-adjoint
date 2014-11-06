@@ -100,7 +100,7 @@ assert((orders > 1.98).all())
 
 assert(replay_dolfin(forget = False, tol = 0.0, stop = True))
 
-dJdp_da = compute_gradient(Functional(X[N][1] * dx * dolfin_adjoint.dt[FINISH_TIME]), ScalarParameter(omega))
+dJdp_da = compute_gradient(Functional(X[N][1] * dx * dolfin_adjoint.dt[FINISH_TIME]), Control(omega))
 err = abs(float(dJdp) - float(dJdp_da))
 print("%.16e" % dJdp_da)
 print("%.16e" % float(dJdp))
@@ -111,7 +111,7 @@ omega_old = float(omega)
 omega.assign(0.0)
 clear_caches(omega)
 minimize(ReducedFunctional(Functional((X[N][1] - Constant(J)) * (X[N][1] - Constant(J)) * dx * dolfin_adjoint.dt[FINISH_TIME]),
-  ScalarParameter(omega)), bounds = (1.75 * numpy.pi, 2.25 * numpy.pi), tol = 1.0e-8)
+  Control(omega)), bounds = (1.75 * numpy.pi, 2.25 * numpy.pi), tol = 1.0e-8)
 err = abs(float(omega) - omega_old)
 print("%.16e" % (float(omega) / numpy.pi))
 print("%.16e" % (omega_old / numpy.pi))

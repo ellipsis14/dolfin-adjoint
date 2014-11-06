@@ -108,7 +108,7 @@ assert((orders > 1.99).all())
 
 assert(replay_dolfin(forget = False, tol = 3.0e-16, stop = True))
 
-grad_da = compute_gradient(Functional(u[N] * u[N] * dx * dolfin_adjoint.dt[FINISH_TIME]), [InitialConditionParameter(ic), ScalarParameter(nu)])
+grad_da = compute_gradient(Functional(u[N] * u[N] * dx * dolfin_adjoint.dt[FINISH_TIME]), [Control(ic), Control(nu)])
 
 err = (grad[0] - grad_da[0].vector()).norm("linf")
 print("%s %.16e" % (grad_da[0].vector().array(), err))
