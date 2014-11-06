@@ -10,15 +10,14 @@ import hashlib
 global_eqn_list = {}
 
 class ReducedFunctional(object):
-    ''' This class provides access to the reduced functional for a given functional/parameter pair. The 
-        reduced functional maps a parameter value to the associated functional value by implicitly
-        solving the PDE that is annotated by dolfin-adjoint. The ReducedFunctional object may also be used
-        to compute derivatives of that map. '''
+    ''' This class provides access to the reduced functional for a given functional/parameter pair. The
+        reduced functional maps a point in control space to the associated functional value by implicitly
+        solving the PDE that is annotated by dolfin-adjoint. The ReducedFunctional object can
+        also compute functional derivatives with respect to the controls using the adjoint method. '''
 
     def __init__(self, functional, parameter, scale=1.0, eval_cb=None, derivative_cb=None, replay_cb=None, hessian_cb=None, cache=None):
-        ''' Creates a reduced functional object that mpas parameter values to functional values. '''
 
-        # Check the types of the inputs 
+        # Check the types of the inputs
         self.__check_input_types(functional, parameter, scale, cache)
 
         #: The objective functional.
@@ -30,30 +29,30 @@ class ReducedFunctional(object):
         #: An optional scaling factor for the functional
         self.scale = scale
 
-        #: An optional callback function that is executed after each functional 
-        #: evaluation. 
-        #: The interace must be eval_cb(j, m) where j is the functional value and 
+        #: An optional callback function that is executed after each functional
+        #: evaluation.
+        #: The interace must be eval_cb(j, m) where j is the functional value and
         #: m is the parameter value at which the functional is evaluated.
         self.eval_cb = eval_cb
 
-        #: An optional callback function that is executed after each functional 
-        #: gradient evaluation. 
-        #: The interface must be eval_cb(j, dj, m) where j and dj are the 
-        #: functional and functional gradient values, and m is the parameter 
+        #: An optional callback function that is executed after each functional
+        #: gradient evaluation.
+        #: The interface must be eval_cb(j, dj, m) where j and dj are the
+        #: functional and functional gradient values, and m is the parameter
         #: value at which the gradient is evaluated.
         self.derivative_cb = derivative_cb
 
-        #: An optional callback function that is executed after each hessian 
-        #: action evaluation. The interface must be hessian_cb(j, m, mdot, h) 
-        #: where mdot is the direction in which the hessian action is evaluated 
+        #: An optional callback function that is executed after each hessian
+        #: action evaluation. The interface must be hessian_cb(j, m, mdot, h)
+        #: where mdot is the direction in which the hessian action is evaluated
         #: and h the value of the hessian action.
         self.hessian_cb = hessian_cb
 
-        #: An optional callback function that is executed after for each forward 
-        #: equation during a (forward) solve. The interface must be 
-        #: replay_cb(var, value, m) where var is the libadjoint variable 
+        #: An optional callback function that is executed after for each forward
+        #: equation during a (forward) solve. The interface must be
+        #: replay_cb(var, value, m) where var is the libadjoint variable
         #: containing information about the variable, value is the associated
-        #: dolfin object and m is the parameter at which the functional is 
+        #: dolfin object and m is the parameter at which the functional is
         #: evaluated.
         self.replay_cb = replay_cb
 
@@ -68,9 +67,9 @@ class ReducedFunctional(object):
                                 "derivative_cache": {},
                                 "hessian_cache": {}}
 
-        #: Indicator if the user has overloaded the functional evaluation and 
+        #: Indicator if the user has overloaded the functional evaluation and
         #: hence re-annotates the forward model at every evaluation.
-        #: By default the ReducedFunctional replays the tape for the 
+        #: By default the ReducedFunctional replays the tape for the
         #: evaluation.
         self.replays_annotation = True
 
@@ -83,7 +82,7 @@ class ReducedFunctional(object):
             self.H = drivers.hessian(functional, delist(parameter,
                 list_type=parameter), warn=False)
         except libadjoint.exceptions.LibadjointErrorNotImplemented:
-            # Might fail as Hessian support is currently limited 
+            # Might fail as Hessian support is currently limited
             # to a single parameter
             pass
 
@@ -139,8 +138,8 @@ class ReducedFunctional(object):
               self.replay_cb(fwd_var, output.data, delist(value, list_type=self.parameter))
 
             # Check if we checkpointing is active and if yes
-            # record the exact same checkpoint variables as 
-            # in the initial forward run 
+            # record the exact same checkpoint variables as
+            # in the initial forward run
             if adjointer.get_checkpoint_strategy() != None:
                 if str(fwd_var) in mem_checkpoints:
                     storage = libadjoint.MemoryStorage(output, cs = True)
@@ -168,7 +167,7 @@ class ReducedFunctional(object):
                 if adjointer.get_checkpoint_strategy() != None:
                     adjointer.forget_forward_equation(i)
 
-        self.current_func_value = func_value 
+        self.current_func_value = func_value
         if self.eval_cb:
             self.eval_cb(self.scale * func_value, delist(value, list_type=self.parameter))
 
@@ -180,7 +179,7 @@ class ReducedFunctional(object):
         return self.scale*func_value
 
     def derivative(self, forget=True, project=False):
-        ''' Evaluates the derivative of the reduced functional for the most recently evaluated parameter value. ''' 
+        ''' Evaluates the derivative of the reduced functional for the most recently evaluated parameter value. '''
 
         if self.cache is not None:
             hash = value_hash([x.data() for x in self.parameter])
@@ -274,7 +273,7 @@ class ReducedFunctional(object):
                       self.latest_eval_deriv = None
                       moola.events.increment("Functional evaluation")
                   else:
-                      #print  "Using memoised functional evaluation" 
+                      #print  "Using memoised functional evaluation"
                       pass
 
                   return self.latest_eval_eval
@@ -335,7 +334,7 @@ def replace_tape_value(variable, new_value):
 
     # Case 1: The parameter value and new_value are Functions
     if hasattr(new_value, 'vector'):
-        # Functions are copied in da and occur as rhs in the annotation. 
+        # Functions are copied in da and occur as rhs in the annotation.
         # Hence we need to update the right hand side callbacks for
         # the equation that targets the associated variable.
 
@@ -356,7 +355,7 @@ def replace_tape_value(variable, new_value):
         global_eqn_list[eqn_nb] = eqn
 
     # Case 2: The parameter value and new_value are Constants
-    elif hasattr(new_value, "value_size"): 
+    elif hasattr(new_value, "value_size"):
         # Constants are not copied in the annotation. That is, changing a constant that occurs
         # in the forward model will also change the forward replay with libadjoint.
         constant = parameter.data()
@@ -367,12 +366,12 @@ def replace_tape_value(variable, new_value):
 
 def copy_data(m):
     ''' Returns a deep copy of the given Function/Constant. '''
-    if hasattr(m, "vector"): 
+    if hasattr(m, "vector"):
         return Function(m.function_space())
-    elif hasattr(m, "value_size"): 
+    elif hasattr(m, "value_size"):
         return Constant(m(()))
     else:
-        raise TypeError, 'Unknown parameter type %s.' % str(type(m)) 
+        raise TypeError, 'Unknown parameter type %s.' % str(type(m))
 
 def value_hash(value):
     if isinstance(value, Constant):
