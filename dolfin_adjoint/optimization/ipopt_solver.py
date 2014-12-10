@@ -226,5 +226,8 @@ class IPOPTSolver(OptimizationSolver):
         new_params = [self.__copy_data(p.data()) for p in self.rfn.controls]
         self.rfn.set_local(new_params, results[0])
 
+        if results[-1] != 0:
+            raise ValueError("IPOPT did not converge")
+
         return delist(new_params,
                 list_type=self.problem.reduced_functional.controls)
