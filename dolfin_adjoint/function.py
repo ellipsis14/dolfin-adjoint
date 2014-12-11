@@ -6,6 +6,7 @@ import assignment
 import adjlinalg
 import adjglobals
 import utils
+import compatibility
 
 dolfin_assign = backend.Function.assign
 dolfin_split  = backend.Function.split
@@ -152,11 +153,7 @@ class Function(backend.Function):
         self.name = self.adj_name
 
     if to_annotate:
-      if backend.__name__ == "dolfin":
-        function_space_class = backend.cpp.FunctionSpace
-      else:
-        function_space_class = backend.FunctionSpace
-      if not isinstance(args[0], function_space_class):
+      if not isinstance(args[0], compatibility.function_space_type):
         if isinstance(args[0], backend.Function):
           known = adjglobals.adjointer.variable_known(adjglobals.adj_variables[args[0]])
         else:
