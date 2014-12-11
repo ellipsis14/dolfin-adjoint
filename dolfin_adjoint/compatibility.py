@@ -4,11 +4,13 @@ if backend.__name__ == "dolfin":
     solve = backend.fem.solving.solve
     matrix_types = lambda: (backend.cpp.Matrix, backend.GenericMatrix)
     _extract_args = backend.fem.solving._extract_args
+    function_type = backend.cpp.Function
 
 
 else:
     solve = backend.solving.solve
     matrix_types = lambda: backend.op2.petsc_base.Mat
+    function_type = backend.Function
 
     def _extract_args(*args, **kwargs):
         eq, u, bcs, _, _, _, _, solver_parameters, _ = backend.solving._extract_args(*args, **kwargs)

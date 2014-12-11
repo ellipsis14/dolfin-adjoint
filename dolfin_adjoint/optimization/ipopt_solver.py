@@ -6,7 +6,7 @@ from ..misc import rank
 from ..enlisting import enlist, delist
 from ..utils import gather
 
-import dolfin
+import backend
 import numpy
 
 class IPOPTSolver(OptimizationSolver):
@@ -86,9 +86,9 @@ class IPOPTSolver(OptimizationSolver):
                 len_control = len(self.rfn.get_global(control.data()))
                 general_lb, general_ub = bound # could be float, Constant, or Function
 
-                if isinstance(general_lb, (float, int, dolfin.Constant)):
+                if isinstance(general_lb, (float, int, backend.Constant)):
                     lb = numpy.array([float(general_lb)]*len_control)
-                elif isinstance(general_lb, dolfin.Function):
+                elif isinstance(general_lb, backend.Function):
                     assert general_lb.function_space().dim() == control.data().function_space().dim()
                     lb = self.rfn.get_global(general_lb)
                 else:
@@ -96,9 +96,9 @@ class IPOPTSolver(OptimizationSolver):
 
                 lb_list.append(lb)
 
-                if isinstance(general_ub, (float, int, dolfin.Constant)):
+                if isinstance(general_ub, (float, int, backend.Constant)):
                     ub = numpy.array([float(general_ub)]*len_control)
-                elif isinstance(general_ub, dolfin.Function):
+                elif isinstance(general_ub, backend.Function):
                     assert general_ub.function_space().dim() == control.data().function_space().dim()
                     ub = self.rfn.get_global(general_ub)
                 else:
@@ -213,9 +213,9 @@ class IPOPTSolver(OptimizationSolver):
     def __copy_data(self, m):
         """Returns a deep copy of the given Function/Constant."""
         if hasattr(m, "vector"):
-            return dolfin.Function(m.function_space())
+            return backend.Function(m.function_space())
         elif hasattr(m, "value_size"):
-            return dolfin.Constant(m(()))
+            return backend.Constant(m(()))
         else:
             raise TypeError, 'Unknown control type %s.' % str(type(m))
 
