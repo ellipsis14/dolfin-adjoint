@@ -348,8 +348,12 @@ def solve(*args, **kwargs):
 
   # Avoid recursive annotation
   flag = misc.pause_annotation()
-  ret = backend.solve(*args, **kwargs)
-  misc.continue_annotation(flag)
+  try:
+      ret = backend.solve(*args, **kwargs)
+  except:
+      raise
+  finally:
+      misc.continue_annotation(flag)
 
   if to_annotate:
     # Finally, if we want to record all of the solutions of the real forward model
