@@ -81,9 +81,9 @@ parameters["std_out_all_processes"] = False
 
 V = Constant(0.4)      # volume bound on the control
 p = Constant(5)        # power used in the solid isotropic material 
-# with penalisation (SIMP) rule, to encourage the control solution to attain either 0 or 1
+                       # with penalisation (SIMP) rule, to encourage the control 
+                       # solution to attain either 0 or 1
 eps = Constant(1.0e-3) # epsilon used in the solid isotropic material 
-# with penalisation (SIMP) rule, used to encourage the control solution to attain either 0 or 1
 alpha = Constant(1.0e-8) # regularisation coefficient in functional
 
 
@@ -95,7 +95,7 @@ rule, equation (11)."""
 # Next we define the mesh (a unit square) and the function spaces to be
 # used for the control :math:`a` and forward solution :math:`T`.
 
-n = 100
+n = 250
 mesh = UnitSquareMesh(n, n)
 A = FunctionSpace(mesh, "CG", 1)  # function space for control
 P = FunctionSpace(mesh, "CG", 1)  # function space for solution
@@ -235,7 +235,7 @@ if __name__ == "__main__":
 # this and pass it to :py:mod:`pyipopt` to solve:
 
   problem = MinimizationProblem(Jhat, bounds=(lb, ub), constraints=VolumeConstraint(V))
-  parameters = None
+  parameters = {"acceptable_tol": 1.0e-200, "maximum_iterations": 100}
 
   solver = IPOPTSolver(problem, parameters=parameters)
   a_opt = solver.solve()
