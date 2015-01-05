@@ -17,10 +17,13 @@ class LocalSolverMatrix(adjlinalg.Matrix):
 
 
         # First: check if L is None (meaning zero)
-	if L is None:
+        if L is None:
             x_vec = adjlinalg.Vector(x)
-            return x_vec	
-	
+            return x_vec
+
+        if isinstance(L, dolfin.Function):
+            L = L.form
+
         if (a, L) not in caching.localsolvers:
             if dolfin.parameters["adjoint"]["debug_cache"]:
                 dolfin.info_red("Creating new LocalSolver")
@@ -28,8 +31,8 @@ class LocalSolverMatrix(adjlinalg.Matrix):
             caching.localsolvers[(a, L)] = newsolver
         else:
             if dolfin.parameters["adjoint"]["debug_cache"]:
-                dolfin.info_green("Reusing LocalSolver")            
-           
+                dolfin.info_green("Reusing LocalSolver")
+
         solver = caching.localsolvers[(a, L)]
         solver.solve(x.vector())
 
@@ -40,12 +43,12 @@ class LocalSolver(dolfin.LocalSolver):
     def __init__(self, a, L):
         # overloading
         dolfin.LocalSolver.__init__(self, a, L)
-        
+
         self.a = a
         self.L = L
 
     def solve(self, x_vec, **kwargs):
-        # Figure out whether to annotate or not 
+        # Figure out whether to annotate or not
         to_annotate = utils.to_annotate(kwargs.pop("annotate", None))
         x = x_vec.function
 
