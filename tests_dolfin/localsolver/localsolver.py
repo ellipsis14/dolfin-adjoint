@@ -18,7 +18,7 @@ def main(c, annotate=False):
     #c = Constant(1.0)
 
     # Set initial values
-    u0 = interpolate(uinit, U)
+    u0 = interpolate(uinit, U, name="u0")
 
     # Define test and trial functions
     v = TestFunction(U)
@@ -38,15 +38,15 @@ def main(c, annotate=False):
         -DT* uhatbnd * v*ds
 
     # Prepare solution
-    u_ls = Function(U)
+    u_ls = Function(U, name="u_ls")
 
     # Prepare LocalSolver
     local_solver = LocalSolver(a, L)
 
     # The acutal timestepping
-    for i in range(2):
+    for i in range(1):
         local_solver.solve(u_ls.vector())
-#        u0.assign(u_ls)
+        u0.assign(u_ls)
     
     return u_ls
 
@@ -61,6 +61,9 @@ if __name__ == "__main__":
 #    print "assemble(inner(v, v)*dx): ", assemble(inner(v, v)*dx)
 #    import sys; sys.exit(1)
 
+
+    adj_html("forward.html", "forward")
+    adj_html("adjoint.html", "adjoint")
 
     info_blue("Replaying")
     replay_dolfin(forget=False, tol=0.0, stop=True)
