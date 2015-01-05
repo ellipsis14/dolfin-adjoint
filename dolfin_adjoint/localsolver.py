@@ -10,8 +10,17 @@ import caching
 
 class LocalSolverMatrix(adjlinalg.Matrix):
     def solve(self, var, b):
+        x = dolfin.Function(self.test_function().function_space())
+
         # b is a libadjoint object (form or function)
         (a, L) = (self.data, b.data)
+
+
+        # First: check if L is None (meaning zero)
+	if L is None:
+            x_vec = adjlinalg.Vector(x)
+            return x_vec	
+	
         if (a, L) not in caching.localsolvers:
             if dolfin.parameters["adjoint"]["debug_cache"]:
                 dolfin.info_red("Creating new LocalSolver")
@@ -22,7 +31,6 @@ class LocalSolverMatrix(adjlinalg.Matrix):
                 dolfin.info_green("Reusing LocalSolver")            
            
         solver = caching.localsolvers[(a, L)]
-        x = dolfin.Function(self.test_function().function_space())
         solver.solve(x.vector())
 
         x_vec = adjlinalg.Vector(x)

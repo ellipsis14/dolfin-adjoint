@@ -44,7 +44,7 @@ def main(c, annotate=False):
     local_solver = LocalSolver(a, L)
 
     # The acutal timestepping
-    for i in range(1):
+    for i in range(2):
         local_solver.solve(u_ls.vector())
 #        u0.assign(u_ls)
     
