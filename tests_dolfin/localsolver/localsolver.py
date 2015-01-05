@@ -1,5 +1,9 @@
 from dolfin import *
 from dolfin_adjoint import *
+import ufl
+
+parameters["adjoint"]["debug_cache"] = True
+ufl.set_level(INFO)
 
 def main(c, annotate=False):
     # Prepare a mesh
@@ -22,7 +26,7 @@ def main(c, annotate=False):
 
     # Set time step size
     DT = Constant(2.e-5)
-
+    
     # Define fluxes on interior and exterior facets
     uhat    = avg(u0) + 0.25*jump(u0)
     uhatbnd = -u0 + 0.25*(u0-ubdr)
@@ -38,8 +42,12 @@ def main(c, annotate=False):
 
     # Prepare LocalSolver
     local_solver = LocalSolver(a, L)
-    local_solver.solve(u_ls.vector())
 
+    # The acutal timestepping
+    for i in range(1):
+        local_solver.solve(u_ls.vector())
+#        u0.assign(u_ls)
+    
     return u_ls
 
 if __name__ == "__main__":
@@ -54,8 +62,8 @@ if __name__ == "__main__":
 #    import sys; sys.exit(1)
 
 
-    #info_blue("Replaying")
-    #replay_dolfin(forget=False, tol=0.0, stop=True)
+    info_blue("Replaying")
+    replay_dolfin(forget=False, tol=0.0, stop=True)
 
     info_blue("Computing adjoint")
     J = Functional(inner(u, u)*dx)
