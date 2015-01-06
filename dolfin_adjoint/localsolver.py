@@ -44,7 +44,7 @@ class LocalSolverMatrix(adjlinalg.Matrix):
         return x_vec
 
 class LocalSolver(dolfin.LocalSolver):
-    def __init__(self, a, L):
+    def __init__(self, a, L = None):
         dolfin.LocalSolver.__init__(self, a, L)
         self.a = a
         self.L = L
