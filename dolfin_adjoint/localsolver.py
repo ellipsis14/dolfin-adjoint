@@ -15,12 +15,12 @@ class LocalSolverMatrix(adjlinalg.Matrix):
         # b is a libadjoint object (form or function)
         (a, L) = (self.data, b.data)
 
-
         # First: check if L is None (meaning zero)
-	if L is None:
+        if L is None:
             x_vec = adjlinalg.Vector(x)
             return x_vec	
-	
+
+        # Next: if necessary, create a new solver and add to dictionary
         if (a, L) not in caching.localsolvers:
             if dolfin.parameters["adjoint"]["debug_cache"]:
                 dolfin.info_red("Creating new LocalSolver")
@@ -29,7 +29,8 @@ class LocalSolverMatrix(adjlinalg.Matrix):
         else:
             if dolfin.parameters["adjoint"]["debug_cache"]:
                 dolfin.info_green("Reusing LocalSolver")            
-           
+        
+        # Get the right solver from the solver dictionary
         solver = caching.localsolvers[(a, L)]
         solver.solve(x.vector())
 
@@ -38,9 +39,7 @@ class LocalSolverMatrix(adjlinalg.Matrix):
 
 class LocalSolver(dolfin.LocalSolver):
     def __init__(self, a, L):
-        # overloading
         dolfin.LocalSolver.__init__(self, a, L)
-        
         self.a = a
         self.L = L
 
@@ -50,8 +49,7 @@ class LocalSolver(dolfin.LocalSolver):
         x = x_vec.function
 
         if to_annotate:
-            # The important part
-            # Use this new matrix type to solve the problem
+            # Set Matrix class for solving the adjoint systems
             solving.annotate(self.a == self.L, x, matrix_class=LocalSolverMatrix)
 
         # Use standard local solver

@@ -5,7 +5,7 @@ import ufl
 parameters["adjoint"]["debug_cache"] = True
 ufl.set_level(INFO)
 
-def main(c, annotate=False):
+def main(c, annotate = False):
     # Prepare a mesh
     mesh = UnitIntervalMesh(50)
 
