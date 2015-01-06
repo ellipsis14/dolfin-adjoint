@@ -5,7 +5,7 @@ import ufl
 parameters["adjoint"]["debug_cache"] = True
 ufl.set_level(INFO)
 
-def main(c, annotate = False):
+def main(c, annotate=False):
     # Prepare a mesh
     mesh = UnitIntervalMesh(50)
 
@@ -26,7 +26,7 @@ def main(c, annotate = False):
 
     # Set time step size
     DT = Constant(2.e-5)
-    
+
     # Define fluxes on interior and exterior facets
     uhat    = avg(u0) + 0.25*jump(u0)
     uhatbnd = -u0 + 0.25*(u0-ubdr)
@@ -41,13 +41,18 @@ def main(c, annotate = False):
     u_ls = Function(U, name="u_ls")
 
     # Prepare LocalSolver
+    # Want to write:
+    #local_solver = LocalSolver(a)
     local_solver = LocalSolver(a, L)
 
     # The acutal timestepping
-    for i in range(1):
-        local_solver.solve(u_ls.vector())
+    b = None
+    for i in range(30):
+        b = assemble(L, tensor=b)
+        local_solver.solve(u_ls.vector(), b)
+        #local_solver.solve(u_ls.vector())
         u0.assign(u_ls)
-    
+
     return u_ls
 
 if __name__ == "__main__":
