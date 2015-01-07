@@ -14,7 +14,7 @@ class LocalSolverMatrix(adjlinalg.Matrix):
 
         # b is a libadjoint object (form or function)
         (a, L) = (self.data, b.data)
-
+        
         # First: check if L is None (meaning zero)
         if L is None:
             x_vec = adjlinalg.Vector(x)
@@ -24,47 +24,44 @@ class LocalSolverMatrix(adjlinalg.Matrix):
             b_vec = L.vector()
             L = None
         else:
-            b_vec = None
+            b_vec = dolfin.assemble(L)
 
         # Next: if necessary, create a new solver and add to dictionary
-        if (a, L) not in caching.localsolvers:
+        if a not in caching.localsolvers:
             if dolfin.parameters["adjoint"]["debug_cache"]:
                 dolfin.info_red("Creating new LocalSolver")
-            newsolver = dolfin.LocalSolver(a, L)
-            caching.localsolvers[(a, L)] = newsolver
+            newsolver = dolfin.LocalSolver(a)
+            caching.localsolvers[a] = newsolver
         else:
             if dolfin.parameters["adjoint"]["debug_cache"]:
                 dolfin.info_green("Reusing LocalSolver")
 
         # Get the right solver from the solver dictionary
-        solver = caching.localsolvers[(a, L)]
+        solver = caching.localsolvers[a]
         solver.solve(x.vector(), b_vec)
 
+        
         x_vec = adjlinalg.Vector(x)
         return x_vec
 
 class LocalSolver(dolfin.LocalSolver):
-    def __init__(self, a, L = None):
-        dolfin.LocalSolver.__init__(self, a, L)
+    def __init__(self, a):
+        dolfin.LocalSolver.__init__(self, a)
         self.a = a
-        self.L = L
 
-    def solve(self, x_vec, b_vec=None, **kwargs):
+    def solve(self, x_vec, b_vec, **kwargs):
         # Figure out whether to annotate or not
         to_annotate = utils.to_annotate(kwargs.pop("annotate", None))
         x = x_vec.function
 
         if to_annotate:
-            if b_vec is not None:
-                L = b_vec.form
-            else:
-                L = self.L
-
+            L = b_vec.form
+            
             # Set Matrix class for solving the adjoint systems
             solving.annotate(self.a == L, x, matrix_class=LocalSolverMatrix)
 
         # Use standard local solver
-        out = dolfin.LocalSolver.solve(self, x_vec)
+        out = dolfin.LocalSolver.solve(self, x_vec, b_vec)
 
         if to_annotate:
             # checkpointing

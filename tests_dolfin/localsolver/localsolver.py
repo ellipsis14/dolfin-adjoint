@@ -41,16 +41,13 @@ def main(c, annotate=False):
     u_ls = Function(U, name="u_ls")
 
     # Prepare LocalSolver
-    # Want to write:
-    #local_solver = LocalSolver(a)
-    local_solver = LocalSolver(a, L)
+    local_solver = LocalSolver(a)
 
     # The acutal timestepping
     b = None
     for i in range(30):
         b = assemble(L, tensor=b)
         local_solver.solve(u_ls.vector(), b)
-        #local_solver.solve(u_ls.vector())
         u0.assign(u_ls)
 
     return u_ls
