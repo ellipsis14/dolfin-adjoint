@@ -43,9 +43,17 @@
 # :math:`p` prescribed constants, :math:`\alpha` is a regularisation
 # term, and :math:`V` is the volume bound on the control.
 #
-# Physically, this corresponds to finding the material distribution
-# :math:`a(x)` that produces the least heat when the amount of high
-# conduction material is limited.
+# Physically, the problem is to finding the material distribution
+# :math:`a(x)` that minimises the integral of the temperature when the amount of highly
+# conducting material is limited. This code makes several approximations to
+# this physical problem. Instead of solving an integer optimisation problem (at each
+# location, we either have conducting material or we do not), a continuous relaxation
+# is performed; this is standard in topology optimisation :cite:`bendsoe2003`. Furthermore,
+# the discrete solution varies as the mesh is refined: the continuous solution exhibits
+# features at all scales, and these must be carefully handled in a discretisation
+# of the problem. In this example we merely add a fixed :math:`H^1` regularisation
+# term; a better approach is to add a mesh-dependent Helmholtz filter (see for example
+# :cite:`lazarov2011`).
 #
 # This example demonstrates how to implement general control
 # constraints, and how to use IPOPT :cite:`wachter2006` to solve the
