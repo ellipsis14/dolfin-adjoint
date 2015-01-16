@@ -59,7 +59,7 @@ class BoundConstraint(constraints.InequalityConstraint):
             out = Function(m)
 
             if isinstance(self.bound, float):
-                out_vec = out.vector() 
+                out_vec = out.vector()
                 out_vec *= self.scale
                 out_vec[:] -= self.scale*self.bound
             elif isinstance(self.bound, Function):
@@ -344,14 +344,14 @@ try:
 
 
     class OptizelleConstraints(Optizelle.VectorValuedFunction):
-        ''' This class generates a (equality and inequality) constraint object from 
-            a dolfin_adjoint.Constraint which is compatible with the Optizelle 
+        ''' This class generates a (equality and inequality) constraint object from
+            a dolfin_adjoint.Constraint which is compatible with the Optizelle
             interface.
         '''
 
         def __init__(self, problem, constraints):
             self.constraints = constraints
-            self.list_type = problem.reduced_functional.parameter
+            self.list_type = problem.reduced_functional.controls
 
         @optizelle_callback
         def eval(self, x, y):
@@ -383,8 +383,8 @@ try:
 
         @optizelle_callback
         def ps(self, x, dy, z):
-            ''' 
-                Evaluates the Jacobian adjoint action and stores the result in y. 
+            '''
+                Evaluates the Jacobian adjoint action and stores the result in y.
                     z=g'(x)*dy
             '''
 
@@ -398,9 +398,9 @@ try:
 
         @optizelle_callback
         def pps(self, x, dx, dy, z):
-            ''' 
-                Evaluates the Hessian adjoint action in directions dx and dy 
-                and stores the result in z. 
+            '''
+                Evaluates the Hessian adjoint action in directions dx and dy
+                and stores the result in z.
                     z=(g''(x)dx)*dy
             '''
 
@@ -458,7 +458,7 @@ class OptizelleSolver(OptimizationSolver):
 
     def __build_optizelle_state(self):
 
-        # Optizelle does not support maximization problem directly, 
+        # Optizelle does not support maximization problem directly,
         # hence we negate the functional instead
         if isinstance(self.problem, MaximizationProblem):
             scale = -1
@@ -468,14 +468,14 @@ class OptizelleSolver(OptimizationSolver):
         bound_inequality_constraints = []
         if self.problem.bounds is not None:
             # We need to process the damn bounds
-            for (parameter, bound) in zip(self.problem.reduced_functional.parameter, self.problem.bounds):
+            for (control, bound) in zip(self.problem.reduced_functional.controls, self.problem.bounds):
                 (lb, ub) = bound
 
                 if lb is not None:
-                    bound_inequality_constraints.append(BoundConstraint(parameter.data(), lb, 'lower'))
+                    bound_inequality_constraints.append(BoundConstraint(control.data(), lb, 'lower'))
 
                 if ub is not None:
-                    bound_inequality_constraints.append(BoundConstraint(parameter.data(), ub, 'upper'))
+                    bound_inequality_constraints.append(BoundConstraint(control.data(), ub, 'upper'))
 
         self.bound_inequality_constraints = bound_inequality_constraints
 
@@ -488,7 +488,7 @@ class OptizelleSolver(OptimizationSolver):
             num_equality_constraints = self.problem.constraints.equality_constraints()._get_constraint_dim()
             num_inequality_constraints = self.problem.constraints.inequality_constraints()._get_constraint_dim() + len(bound_inequality_constraints)
 
-        x = [p.data() for p in self.problem.reduced_functional.parameter]
+        x = [p.data() for p in self.problem.reduced_functional.controls]
 
         # Unconstrained case
         if num_equality_constraints == 0 and num_inequality_constraints == 0:
@@ -610,5 +610,5 @@ class OptizelleSolver(OptimizationSolver):
         print("The algorithm converged due to: %s" % (Optizelle.StoppingCondition.to_string(self.state.opt_stop)))
 
         # Return the optimal control
-        list_type = self.problem.reduced_functional.parameter
+        list_type = self.problem.reduced_functional.controls
         return delist(self.state.x, list_type)
