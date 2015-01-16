@@ -1,3 +1,9 @@
+dolfin-adjoint (1.5~utopic) utopic; urgency=low
+
+  * Release dolfin-adjoint version 1.5.
+
+ -- Simon Funke <simon@simula.no>  Fri, 16 Jan 2015 16:37:05 +0100
+
 dolfin-adjoint (1.4~precise1) precise; urgency=low
 
   * Release dolfin-adjoint version 1.4.
