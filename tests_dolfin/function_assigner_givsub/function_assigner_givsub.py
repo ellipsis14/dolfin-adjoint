@@ -48,7 +48,8 @@ if __name__ == "__main__":
   dJdm_fd = Function(Z)
   for i in range(Z.dim()):
     z_ptb = Function(z0)
-    z_ptb.vector()[i] += eps
+    vec = z_ptb.vector()
+    vec[i] = vec[i][0] + eps
     v_ptb = main(z_ptb)
     J_ptb = assemble(form(v_ptb))
     dJdm_fd.vector()[i] = (J_ptb - Jm)/eps
