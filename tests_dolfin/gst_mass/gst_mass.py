@@ -16,7 +16,8 @@ def main(ic, annotate=False):
   mass = inner(u, v)*dx
   soln = Function(V)
 
-  solve(mass == action(mass, ic), soln, annotate=annotate)
+  solve(mass == action(mass, ic), soln, annotate=annotate,
+          solver_parameters={"linear_solver": "cg"})
   return soln
 
 if __name__ == "__main__":

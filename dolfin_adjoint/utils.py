@@ -62,7 +62,6 @@ def test_initial_condition_adjoint(J, ic, final_adjoint, seed=0.01, perturbation
   # We will compute the gradient of the functional with respect to the initial condition,
   # and check its correctness with the Taylor remainder convergence test.
   info_blue("Running Taylor remainder convergence analysis for the adjoint model ... ")
-  import random
 
   # First run the problem unperturbed
   ic_copy = backend.Function(ic)
@@ -72,8 +71,9 @@ def test_initial_condition_adjoint(J, ic, final_adjoint, seed=0.01, perturbation
   if perturbation_direction is None:
     perturbation_direction = backend.Function(ic.function_space())
     vec = perturbation_direction.vector()
-    for i in range(len(vec)):
-      vec[i] = random.random()
+    vec_size = vec.local_size()
+    vec.set_local(numpy.random.random(vec_size))
+    vec.apply("")
 
   # Run the forward problem for various perturbed initial conditions
   functional_values = []
@@ -151,7 +151,6 @@ def test_initial_condition_tlm(J, dJ, ic, seed=0.01, perturbation_direction=None
   # We will compute the gradient of the functional with respect to the initial condition,
   # and check its correctness with the Taylor remainder convergence test.
   info_blue("Running Taylor remainder convergence analysis for the tangent linear model... ")
-  import random
   import controls
 
   adj_var = adjglobals.adj_variables[ic]; adj_var.timestep = 0
@@ -167,8 +166,9 @@ def test_initial_condition_tlm(J, dJ, ic, seed=0.01, perturbation_direction=None
   if perturbation_direction is None:
     perturbation_direction = backend.Function(ic.function_space())
     vec = perturbation_direction.vector()
-    for i in range(len(vec)):
-      vec[i] = random.random()
+    vec_size = vec.local_size()
+    vec.set_local(numpy.random.random(vec_size))
+    vec.apply("")
 
   # Run the forward problem for various perturbed initial conditions
   functional_values = []
@@ -219,7 +219,6 @@ def test_initial_condition_adjoint_cdiff(J, ic, final_adjoint, seed=0.01, pertur
   # We will compute the gradient of the functional with respect to the initial condition,
   # and check its correctness with the Taylor remainder convergence test.
   info_blue("Running central differencing Taylor remainder convergence analysis for the adjoint model ... ")
-  import random
 
   # First run the problem unperturbed
   ic_copy = backend.Function(ic)
@@ -229,8 +228,9 @@ def test_initial_condition_adjoint_cdiff(J, ic, final_adjoint, seed=0.01, pertur
   if perturbation_direction is None:
     perturbation_direction = backend.Function(ic.function_space())
     vec = perturbation_direction.vector()
-    for i in range(len(vec)):
-      vec[i] = random.random()
+    vec_size = vec.local_size()
+    vec.set_local(numpy.random.random(vec_size))
+    vec.apply("")
 
   # Run the forward problem for various perturbed initial conditions
   functional_values_plus = []
@@ -360,11 +360,6 @@ def test_gradient_array(J, dJdx, x, seed = 0.01, perturbation_direction = None, 
      This function returns the order of convergence of the Taylor
      series remainder, which should be 2 if the gradient is correct.'''
 
-  import random
-  # Set the random seed to a constant. This is important for parallel environments to ensure that the
-  # perturbation direction is consistent between all processors.
-  random.seed(random_seed)
-
   # We will compute the gradient of the functional with respect to the initial condition,
   # and check its correctness with the Taylor remainder convergence test.
   info("Running Taylor remainder convergence analysis to check the gradient ... ")
@@ -375,8 +370,10 @@ def test_gradient_array(J, dJdx, x, seed = 0.01, perturbation_direction = None, 
   # Randomise the perturbation direction:
   if perturbation_direction is None:
     perturbation_direction = x.copy()
-    for i in range(len(x)):
-      perturbation_direction[i] = random.random()
+    vec = perturbation_direction.vector()
+    vec_size = vec.local_size()
+    vec.set_local(numpy.random.random(vec_size))
+    vec.apply("")
 
   # Run the forward problem for various perturbed initial conditions
   functional_values = []
@@ -429,7 +426,6 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
      is correct.'''
 
   info_blue("Running Taylor remainder convergence test ... ")
-  import random
   import controls
 
   if isinstance(m, list):
@@ -488,8 +484,9 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
       ic = get_value(m, value)
       perturbation_direction = backend.Function(ic)
       vec = perturbation_direction.vector()
-      for i in range(len(vec)):
-        vec[i] = random.random()
+      vec_size = vec.local_size()
+      vec.set_local(numpy.random.random(vec_size))
+      vec.apply("")
     else:
       raise libadjoint.exceptions.LibadjointErrorNotImplemented("Don't know how to compute a perturbation direction")
   else:

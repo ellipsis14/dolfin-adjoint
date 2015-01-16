@@ -184,17 +184,17 @@ class ConstantControl(DolfinAdjointControl):
       return out
 
   def expression_derivative(self, form, diff_form):
-      """ Applies the chain rule on diff_form to add derivatives of Expressions  
+      """ Applies the chain rule on diff_form to add derivatives of Expressions
           with respect to the control. """
 
       coeffs = ufl.algorithms.extract_coefficients(form)
 
-      # Take the derivative of Expressions with respect to Constants only 
+      # Take the derivative of Expressions with respect to Constants only
       # if the derivative is provided explicitly by the user
       expr_deriv_coeffs = []
       for coeff in coeffs:
 
-          # Check if the coefficient is an expression with user-defined 
+          # Check if the coefficient is an expression with user-defined
           # derivatives
           if not hasattr(coeff, "deval"):
               continue
@@ -217,7 +217,7 @@ class ConstantControl(DolfinAdjointControl):
 
       # Ok, so diff_form has the expression "coeff" which depends on self.a
       # For the following computation we temporarly change this expression
-      # such that it returns the derivative wrt to self.a instead of 
+      # such that it returns the derivative wrt to self.a instead of
       # plain evaluation.
       # Now apply the chain rule to expand the diff_form through these
       # expressions

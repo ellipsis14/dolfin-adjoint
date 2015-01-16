@@ -1,8 +1,7 @@
-import random
-
+import sys
+from numpy.random import random
 from dolfin import *
 from dolfin_adjoint import *
-import sys
 
 mesh = UnitSquareMesh(4, 4)
 V = FunctionSpace(mesh, "CG", 3)
@@ -28,8 +27,9 @@ if __name__ == "__main__":
 
   perturbation_direction = Function(V)
   vec = perturbation_direction.vector()
-  for i in range(len(vec)):
-    vec[i] = random.random()
+  vec_size = vec.local_size()
+  vec.set_local(random(vec_size))
+  vec.apply("")
 
   m = Control(ic, perturbation=perturbation_direction, value=ic)
   Jm = assemble(soln*soln*dx)
