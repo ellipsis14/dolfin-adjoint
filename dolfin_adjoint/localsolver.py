@@ -14,7 +14,7 @@ class LocalSolverMatrix(adjlinalg.Matrix):
 
         # b is a libadjoint object (form or function)
         (a, L) = (self.data, b.data)
-        
+
         # First: check if L is None (meaning zero)
         if L is None:
             x_vec = adjlinalg.Vector(x)
@@ -30,7 +30,7 @@ class LocalSolverMatrix(adjlinalg.Matrix):
         if a not in caching.localsolvers:
             if dolfin.parameters["adjoint"]["debug_cache"]:
                 dolfin.info_red("Creating new LocalSolver")
-            newsolver = dolfin.LocalSolver(a)
+            newsolver = dolfin.LocalSolver(a, b.data.form)
             caching.localsolvers[a] = newsolver
         else:
             if dolfin.parameters["adjoint"]["debug_cache"]:
@@ -38,30 +38,31 @@ class LocalSolverMatrix(adjlinalg.Matrix):
 
         # Get the right solver from the solver dictionary
         solver = caching.localsolvers[a]
-        solver.solve(x.vector(), b_vec)
+        solver.solve_local(x.vector(), b_vec, b.data.function_space().dofmap())
 
-        
         x_vec = adjlinalg.Vector(x)
         return x_vec
 
 class LocalSolver(dolfin.LocalSolver):
-    def __init__(self, a):
-        dolfin.LocalSolver.__init__(self, a)
+    def __init__(self, a, L, solver_type = dolfin.LocalSolver.LU):
+        dolfin.LocalSolver.__init__(self, a, L, solver_type)
         self.a = a
+        self.L = L
+        self.solver_type = solver_type
 
-    def solve(self, x_vec, b_vec, **kwargs):
+    def solve(self, x_vec, b_vec, b_dofmap, **kwargs):
         # Figure out whether to annotate or not
         to_annotate = utils.to_annotate(kwargs.pop("annotate", None))
         x = x_vec.function
 
         if to_annotate:
             L = b_vec.form
-            
+
             # Set Matrix class for solving the adjoint systems
             solving.annotate(self.a == L, x, matrix_class=LocalSolverMatrix)
 
         # Use standard local solver
-        out = dolfin.LocalSolver.solve(self, x_vec, b_vec)
+        out = dolfin.LocalSolver.solve_local(self, x_vec, b_vec, b_dofmap)
 
         if to_annotate:
             # checkpointing
