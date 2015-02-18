@@ -19,7 +19,7 @@ def main(nu):
   timestep = Constant(1.0/n, name="Timestep")
 
   F = ((u_next - u)/timestep*v
-      + u_next*u_next.dx(0)*v 
+      + u_next*u_next.dx(0)*v
       + nu*u_next.dx(0)*v.dx(0))*dx
   bc = DirichletBC(V, 0.0, "on_boundary")
 
@@ -48,11 +48,12 @@ if __name__ == "__main__":
 
   J = Functional(inner(u, u)*dx*dt[FINISH_TIME])
 
-  # Run the optimisation 
-  reduced_functional = ReducedFunctional(J, ConstantControl("Nu"), 
-                                         eval_cb= eval_cb, 
-                                         derivative_cb=derivative_cb, 
-                                         replay_cb=replay_cb)
+  # Run the optimisation
+  reduced_functional = ReducedFunctional(J, ConstantControl("Nu"),
+                                         eval_cb= eval_cb,
+                                         derivative_cb=derivative_cb,
+                                         replay_cb=replay_cb,
+                                         scale=2.0)
   try:
     nu_opt = minimize(reduced_functional, 'SLSQP')
 

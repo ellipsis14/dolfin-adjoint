@@ -1,4 +1,5 @@
 import libadjoint
+import utils
 from backend import Function, Constant, info_red, info_green, File
 from dolfin_adjoint import adjlinalg, adjrhs, constant, drivers
 from dolfin_adjoint.adjglobals import adjointer, mem_checkpoints, disk_checkpoints, adj_reset_cache
@@ -190,6 +191,8 @@ class ReducedFunctional(object):
         ''' Evaluates the derivative of the reduced functional for the most
         recently evaluated control value. '''
 
+        # Check if we have the gradient already in the cash.
+        # If so, return the cached value
         if self.cache is not None:
             hash = value_hash([x.data() for x in self.controls])
             fnspaces = [p.data().function_space() if isinstance(p.data(),
@@ -199,17 +202,17 @@ class ReducedFunctional(object):
                 info_green("Got a derivative cache hit.")
                 return cache_load(self._cache["derivative_cache"][hash], fnspaces)
 
+        # Compute the gradient by solving the adjoint equations
         dfunc_value = drivers.compute_gradient(self.functional, self.controls, forget=forget, project=project)
         dfunc_value = enlist(dfunc_value)
 
+        # Reset the checkpointing state in dolfin-adjoint
         adjointer.reset_revolve()
-        scaled_dfunc_value = []
-        for df in list(dfunc_value):
-            if hasattr(df, "function_space"):
-                scaled_dfunc_value.append(Function(df.function_space(), self.scale * df.vector()))
-            else:
-                scaled_dfunc_value.append(self.scale * df)
 
+        # Apply the scaling factor
+        scaled_dfunc_value = [utils.scale(df, self.scale) for df in list(dfunc_value)]
+
+        # Call the user-specific callback routine
         if self.derivative_cb:
             if self.current_func_value is not None:
               values = [p.data() for p in self.controls]
@@ -219,6 +222,7 @@ class ReducedFunctional(object):
             else:
               info_red("Gradient evaluated without functional evaluation, not calling derivative callback function")
 
+        # Cache the result
         if self.cache is not None:
             info_red("Got a derivative cache miss")
             self._cache["derivative_cache"][hash] = cache_store(scaled_dfunc_value, self.cache)
@@ -227,8 +231,11 @@ class ReducedFunctional(object):
 
     def hessian(self, m_dot, project=False):
         ''' Evaluates the Hessian action in direction m_dot. '''
+
         assert(len(self.controls) == 1)
 
+        # Check if we have the gradient already in the cash.
+        # If so, return the cached value
         if self.cache is not None:
             hash = value_hash([x.data() for x in self.controls] + [m_dot])
             fnspaces = [p.data().function_space() if isinstance(p.data(),
@@ -237,30 +244,31 @@ class ReducedFunctional(object):
             if hash in self._cache["hessian_cache"]:
                 info_green("Got a Hessian cache hit.")
                 return cache_load(self._cache["hessian_cache"][hash], fnspaces)
+            else:
+                info_red("Got a Hessian cache miss")
 
+        # Compute the Hessian action by solving the second order adjoint equations
         if isinstance(m_dot, list):
           assert len(m_dot) == 1
           Hm = self.H(m_dot[0], project=project)
         else:
           Hm = self.H(m_dot, project=project)
 
+        # Apply the scaling factor
+        scaled_Hm = [utils.scale(Hm, self.scale)]
+
+        # Call the user-specific callback routine
         if self.hessian_cb:
+            control_data = [p.data() for p in self.controls]
             self.hessian_cb(self.scale * self.current_func_value,
-                            delist([p.data() for p in self.controls],
-                                list_type=self.controls),
-                            m_dot,
-                            Hm.vector() * self.scale)
+                            delist(control_data, list_type=self.controls),
+                            m_dot, scaled_Hm[0])
 
-        if hasattr(Hm, 'function_space'):
-            val = [Function(Hm.function_space(), Hm.vector() * self.scale)]
-        else:
-            val = [self.scale * Hm]
-
+        # Cache the result
         if self.cache is not None:
-            info_red("Got a Hessian cache miss")
-            self._cache["hessian_cache"][hash] = cache_store(val, self.cache)
+            self._cache["hessian_cache"][hash] = cache_store(scaled_Hm, self.cache)
 
-        return val
+        return scaled_Hm
 
 
     def moola_problem(self, memoize=True):
@@ -377,15 +385,6 @@ def replace_tape_value(variable, new_value):
 
     else:
         raise NotImplementedError, "Can only replace a dolfin.Functions or dolfin.Constants"
-
-def copy_data(m):
-    ''' Returns a deep copy of the given Function/Constant. '''
-    if hasattr(m, "vector"):
-        return Function(m.function_space())
-    elif hasattr(m, "value_size"):
-        return Constant(m(()))
-    else:
-        raise TypeError, 'Unknown control type %s.' % str(type(m))
 
 def value_hash(value):
     if isinstance(value, Constant):

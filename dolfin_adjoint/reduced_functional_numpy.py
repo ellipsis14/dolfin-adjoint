@@ -14,8 +14,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
     This "NumPy version" of the dolfin_adjoint.ReducedFunctional is created from
     an existing ReducedFunctional object:
     rf_np = ReducedFunctionalNumPy(rf = rf)
-
-        '''
+    '''
 
     def __init__(self, rf):
         super(ReducedFunctionalNumPy, self).__init__(rf.functional, rf.controls, scale=rf.scale,
@@ -72,6 +71,7 @@ class ReducedFunctionalNumPy(ReducedFunctional):
             self(m_array)
 
         dJdm = self.__base_derivative__(forget=forget, project=project)
+
         if project:
             dJdm_global = self.get_global(dJdm)
         else:

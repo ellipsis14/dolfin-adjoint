@@ -15,6 +15,37 @@ from controls import ListControl, Control
 if backend.__name__  == "dolfin":
   from backend import cpp
 
+def scale(obj, factor):
+    """ A generic function to scale Functions, 
+        Constants and lists, numpy arrays, ... 
+    """
+
+    if hasattr(obj, "function_space"):
+        # dolfin.Function
+        scaled_obj = backend.Function(obj.function_space(), factor * obj.vector())
+    elif isinstance(obj, backend.Constant):
+        # dolfin.Constant
+        scaled_obj = backend.Constant(factor * constant_to_array(obj))
+    else:
+        # Lists, numpy arrays, ...
+        scaled_obj = factor * obj
+    return scaled_obj
+
+
+def constant_to_array(c):
+    """ Converts a Constant to a numpy.array. """
+
+    a = numpy.zeros(c.value_size())
+    p = numpy.zeros(c.value_size())
+    c.eval(a, p)
+    if len(a) == 1:
+        r = a[0]
+
+    # Make sure input and output have the same shape
+    assert c.shape() == r.shape
+
+    return r
+
 def gather(vec):
   """Parallel gather of distributed data (for optimisation algorithms, usually)"""
   if isinstance(vec, cpp.Function):
