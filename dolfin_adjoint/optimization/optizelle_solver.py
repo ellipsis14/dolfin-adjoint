@@ -70,12 +70,16 @@ class BoundConstraint(constraints.InequalityConstraint):
         if isinstance(self.m, Constant):
             result[0] = self.scale*dm[0]
         elif isinstance(self.m, Function):
+            # We need to finalise the dm vector, otherwise we get PETSc 73 errors
+            dm.vector().apply("")
             result.assign(self.scale*dm)
 
     def jacobian_adjoint_action(self, m, dp, result):
         if isinstance(self.m, Constant):
             result[0] = self.scale*dp[0]
         elif isinstance(self.m, Function):
+            # We need to finalise the dm vector, otherwise we get PETSc 73 errors
+            dp.vector().apply("")
             result.assign(self.scale*dp)
 
     def hessian_action(self, m, dm, dp, result):
@@ -130,6 +134,18 @@ class DolfinVectorSpace(object):
             x.assign(0.0)
         elif isinstance(x, numpy.ndarray):
             x.fill(0.0)
+        else:
+            raise NotImplementedError
+
+    @staticmethod
+    def __rand(x):
+        if isinstance(x, GenericFunction):
+           xvec = x.vector()
+           xvec.set_local( numpy.random.random(xvec.local_size()) )
+        elif isinstance(x, Constant):
+            raise NotImplementedError
+        elif isinstance(x, numpy.ndarray):
+            x[:] = numpy.random.random(x.shape)
         else:
             raise NotImplementedError
 
@@ -228,6 +244,7 @@ class DolfinVectorSpace(object):
     @staticmethod
     @optizelle_callback
     def init(x):
+
         return [DolfinVectorSpace.__deep_copy_obj(xx) for xx in x]
 
     @staticmethod
@@ -258,7 +275,7 @@ class DolfinVectorSpace(object):
     @staticmethod
     @optizelle_callback
     def rand(x):
-        raise NotImplementedError
+        [DolfinVectorSpace.__rand(xx) for xx in x]
 
     @staticmethod
     @optizelle_callback
