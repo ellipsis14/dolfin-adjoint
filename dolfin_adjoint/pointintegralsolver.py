@@ -7,6 +7,8 @@ import adjglobals
 import hashlib
 import utils
 import caching
+import expressions
+import constant
 
 if dolfin.__version__ > '1.2.0':
   class PointIntegralSolver(dolfin.PointIntegralSolver):
@@ -24,7 +26,9 @@ if dolfin.__version__ > '1.2.0':
           solving.register_initial_conditions([(var, current_var)], linear=True)
 
         identity_block = utils.get_identity_block(fn_space)
-        rhs = PointIntegralRHS(self, dt, current_var)
+        frozen_expressions = expressions.freeze_dict()
+        frozen_constants = constant.freeze_dict()
+        rhs = PointIntegralRHS(self, dt, current_var, frozen_expressions, frozen_constants)
         next_var = adjglobals.adj_variables.next(var)
 
         eqn = libadjoint.Equation(next_var, blocks=[identity_block], targets=[next_var], rhs=rhs)
@@ -33,13 +37,16 @@ if dolfin.__version__ > '1.2.0':
       super(PointIntegralSolver, self).step(dt)
 
       if to_annotate:
+        curtime = float(scheme.t())
+        scheme.t().assign(curtime) # so that d-a sees the time update, which is implict in step
+
         solving.do_checkpoint(cs, next_var, rhs)
 
         if dolfin.parameters["adjoint"]["record_all"]:
           adjglobals.adjointer.record_variable(next_var, libadjoint.MemoryStorage(adjlinalg.Vector(var)))
 
   class PointIntegralRHS(libadjoint.RHS):
-    def __init__(self, solver, dt, ic_var):
+    def __init__(self, solver, dt, ic_var, frozen_expressions, frozen_constants):
       self.solver = solver
       if hasattr(self.solver, 'reset'): self.solver.reset()
       self.dt = dt
@@ -59,6 +66,9 @@ if dolfin.__version__ > '1.2.0':
         self.coeffs.append(scheme.solution())
         self.deps.append(ic_var)
 
+      self.frozen_expressions = frozen_expressions
+      self.frozen_constants = frozen_constants
+
     def dependencies(self):
       return self.deps
 
@@ -69,6 +79,10 @@ if dolfin.__version__ > '1.2.0':
       return hashlib.md5(str(self.form)).hexdigest()
 
     def __call__(self, dependencies, values):
+
+      expressions.update_expressions(self.frozen_expressions)
+      constant.update_constants(self.frozen_constants)
+
       coeffs = [x for x in ufl.algorithms.extract_coefficients(self.scheme.rhs_form()) if hasattr(x, 'function_space')]
       for (coeff, value) in zip(coeffs, values):
         coeff.assign(value.data)
@@ -86,6 +100,9 @@ if dolfin.__version__ > '1.2.0':
       return out
 
     def derivative_action(self, dependencies, values, variable, contraction_vector, hermitian):
+      expressions.update_expressions(self.frozen_expressions)
+      constant.update_constants(self.frozen_constants)
+
       if not hermitian:
         if self.solver not in caching.pis_fwd_to_tlm:
           dolfin.info_blue("No TLM solver, creating ... ")
