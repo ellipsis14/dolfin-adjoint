@@ -230,7 +230,7 @@ if __name__ == "__main__":
         result.vector()[:] = interpolate(Constant(-dp[0]), A).vector()
 
     def hessian_action(self, m, dm, dp, result):
-        result.vector()[:] = 0
+        result.vector().zero()
 
     def output_workspace(self):
         return [0.0]
