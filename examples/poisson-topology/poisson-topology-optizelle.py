@@ -59,6 +59,7 @@
 
 from dolfin import *
 from dolfin_adjoint import *
+set_log_level(WARNING)
 
 # Next we import the Python interface to IPOPT. If IPOPT is
 # unavailable on your system, we strongly :doc:`suggest you install it
@@ -74,9 +75,9 @@ parameters["std_out_all_processes"] = False
 # Penalisation (SIMP) rule.
 
 V = Constant(0.4)      # volume bound on the control
-p = Constant(5)        # power used in the solid isotropic material 
+p = Constant(5)        # power used in the solid isotropic material
 # with penalisation (SIMP) rule, to encourage the control solution to attain either 0 or 1
-eps = Constant(1.0e-3) # epsilon used in the solid isotropic material 
+eps = Constant(1.0e-3) # epsilon used in the solid isotropic material
 # with penalisation (SIMP) rule, used to encourage the control solution to attain either 0 or 1
 alpha = Constant(1.0e-8) # regularisation coefficient in functional
 
@@ -103,7 +104,7 @@ class WestNorth(SubDomain):
 
 # the Dirichlet BC; the Neumann BC will be implemented implicitly by
 # dropping the surface integral after integration by parts
-bc = [DirichletBC(P, 0.0, WestNorth())]                 
+bc = [DirichletBC(P, 0.0, WestNorth())]
 f = interpolate(Constant(1.0e-2), P, name="SourceTerm") # the volume source term for the PDE
 
 # Next we define a function that given a control :math:`a` solves the
@@ -131,7 +132,7 @@ def forward(a):
 # bound constraint are satisfied.
 
 if __name__ == "__main__":
-  a = interpolate(V, A, name="Control") # initial guess.
+  a = interpolate(Constant(0.3), A, name="Control") # initial guess.
   T = forward(a)                        # solve the forward problem once.
 
 # With the forward problem solved once, :py:mod:`dolfin_adjoint` has
@@ -222,15 +223,14 @@ if __name__ == "__main__":
         print "Minimum of control: ", vecmin
       return [self.V - integral]
 
-    def jacobian(self, m):
-      return [-self.smass]
-
     def jacobian_action(self, m, dm, result):
-      result[:] = self.smass.inner(-dm.vector())
+      result[:] = - self.smass.inner(dm.vector())
 
     def jacobian_adjoint_action(self, m, dp, result):
-      result.vector().zero()
-      result.vector().axpy(-dp[0], self.smass)
+        result.vector()[:] = interpolate(Constant(-dp[0]), A).vector()
+
+    def hessian_action(self, m, dm, dp, result):
+        result.vector()[:] = 0
 
     def output_workspace(self):
         return [0.0]
@@ -246,19 +246,23 @@ if __name__ == "__main__":
 # :py:mod:`pyipopt` to solve:
 
   parameters["adjoint"]["stop_annotating"] = True
-  problem = MinimizationProblem(Jhat, constraints=VolumeConstraint(V))
+  problem = MinimizationProblem(Jhat, bounds=(lb, ub), constraints=VolumeConstraint(V))
 
   parameters = {
-               "maximum_iterations": 50,
+               "maximum_iterations": 200,
                "optizelle_parameters":
                    {
                    "msg_level" : 10,
-                   "algorithm_class" : Optizelle.AlgorithmClass.LineSearch,
-                   "H_type" : Optizelle.Operators.UserDefined,
+                   "algorithm_class" : Optizelle.AlgorithmClass.TrustRegion,
+                   "H_type" : Optizelle.Operators.SR1,
                    "dir" : Optizelle.LineSearchDirection.BFGS,
                    "eps_dx": 1.0e-32,
-                   "linesearch_iter_max" : 50,
-                   "ipm": Optizelle.InteriorPointMethod.LogBarrier
+                   "linesearch_iter_max" : 5,
+                   "ipm": Optizelle.InteriorPointMethod.PrimalDual,
+                   "mu": 1e-3,
+                   #"dscheme": Optizelle.DiagnosticScheme.DiagnosticsOnly,
+                   "h_diag" : Optizelle.FunctionDiagnostics.SecondOrder,
+                   "stored_history": 25,
                    }
                }
 
