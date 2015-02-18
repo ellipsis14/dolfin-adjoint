@@ -24,17 +24,17 @@ class Constraint(object):
     raise NotImplementedError, "Constraint.jacobian not implemented"
 
   def jacobian_action(self, m, dm, result):
-    """Computes the Jacobian action of c(m) in direction dm and stores the result in result. """ 
+    """Computes the Jacobian action of c(m) in direction dm and stores the result in result. """
 
     raise NotImplementedError, "Constraint.jacobian_action is not implemented"
 
   def jacobian_adjoint_action(self, m, dp, result):
-    """Computes the Jacobian adjoint action of c(m) in direction dp and stores the result in result. """ 
+    """Computes the Jacobian adjoint action of c(m) in direction dp and stores the result in result. """
 
     raise NotImplementedError, "Constraint.jacobian_adjoint_action is not implemented"
 
   def hessian_action(self, m, dm, dp, result):
-    """Computes the Hessian action of c(m) in direction dm and dp and stores the result in result. """ 
+    """Computes the Hessian action of c(m) in direction dm and dp and stores the result in result. """
 
     raise NotImplementedError, "Constraint.hessian_action is not implemented"
 
@@ -49,10 +49,10 @@ class Constraint(object):
 
     if isinstance(workspace, numpy.ndarray) or isinstance(workspace, list):
       return len(workspace)
-    
+
     if isinstance(workspace, backend.Constant):
       return workspace.value_size()
-    
+
     if isinstance(workspace, cpp.Function):
       return workspace.function_space().dim()
 
