@@ -7,6 +7,8 @@ from ..enlisting import enlist, delist
 
 from backend import *
 
+__all__ = ['OptizelleSolver', 'OptizelleBoundConstraint']
+
 def optizelle_callback(fun):
     """Optizelle swallows exceptions. Very useful for debugging! Let's work around this."""
     def safe_fun(*args, **kwargs):
@@ -25,7 +27,7 @@ def safe_log(x):
     except ValueError:
         return -numpy.inf
 
-class BoundConstraint(constraints.InequalityConstraint):
+class OptizelleBoundConstraint(constraints.InequalityConstraint):
     """A class that enforces the bound constraint l <= m or m >= u."""
 
     def __init__(self, m, bound, type):
@@ -37,6 +39,11 @@ class BoundConstraint(constraints.InequalityConstraint):
         if isinstance(self.m, Constant):
             assert hasattr(bound, '__float__')
             self.bound = float(bound)
+        elif isinstance(self.m, GenericFunction):
+            V = self.m.function_space()
+            p = TestFunction(V)
+            q = TrialFunction(V)
+            self.mass = assemble(inner(p, q)*dx)
 
         if type is 'lower':
             self.scale = +1.0
@@ -48,7 +55,7 @@ class BoundConstraint(constraints.InequalityConstraint):
 
     def output_workspace(self):
         if isinstance(self.m, Function):
-            return Function(self.m.function_space())
+            return numpy.zeros(self.m.vector().size())
         elif isinstance(self.m, Constant):
             return [0.0]
 
@@ -57,14 +64,16 @@ class BoundConstraint(constraints.InequalityConstraint):
             return [self.scale*(float(m) - float(self.bound))]
         elif isinstance(self.m, Function):
             out = Function(m)
+            out_vec = out.vector()
 
             if isinstance(self.bound, float):
-                out_vec = out.vector()
                 out_vec *= self.scale
                 out_vec[:] -= self.scale*self.bound
             elif isinstance(self.bound, Function):
                 out.assign(self.scale*out - self.scale*self.bound)
-            return out
+
+            res = (self.mass*out_vec).array()
+            return res
 
     def jacobian_action(self, m, dm, result):
         if isinstance(self.m, Constant):
@@ -72,15 +81,13 @@ class BoundConstraint(constraints.InequalityConstraint):
         elif isinstance(self.m, Function):
             # We need to finalise the dm vector, otherwise we get PETSc 73 errors
             dm.vector().apply("")
-            result.assign(self.scale*dm)
+            result[:] = self.scale*(self.mass*dm.vector()).array()
 
     def jacobian_adjoint_action(self, m, dp, result):
         if isinstance(self.m, Constant):
             result[0] = self.scale*dp[0]
         elif isinstance(self.m, Function):
-            # We need to finalise the dm vector, otherwise we get PETSc 73 errors
-            dp.vector().apply("")
-            result.assign(self.scale*dp)
+            result.vector()[:] = self.scale*dp
 
     def hessian_action(self, m, dm, dp, result):
         if isinstance(self.m, Constant):
@@ -96,6 +103,7 @@ class DolfinVectorSpace(object):
     @staticmethod
     def __deep_copy_obj(x):
         if isinstance(x, GenericFunction):
+            x.vector().apply("")
             return Function(x)
         elif isinstance(x, Constant):
             return Constant(float(x))
@@ -242,6 +250,10 @@ class DolfinVectorSpace(object):
             raise NotImplementedError
 
     @staticmethod
+    def __symm_obj(x):
+        pass
+
+    @staticmethod
     @optizelle_callback
     def init(x):
 
@@ -305,7 +317,7 @@ class DolfinVectorSpace(object):
     @staticmethod
     @optizelle_callback
     def symm(x):
-        pass
+        [DolfinVectorSpace.__symm_obj(xx) for xx in x]
 
     @staticmethod
     @optizelle_callback
@@ -489,10 +501,10 @@ class OptizelleSolver(OptimizationSolver):
                 (lb, ub) = bound
 
                 if lb is not None:
-                    bound_inequality_constraints.append(BoundConstraint(control.data(), lb, 'lower'))
+                    bound_inequality_constraints.append(OptizelleBoundConstraint(control.data(), lb, 'lower'))
 
                 if ub is not None:
-                    bound_inequality_constraints.append(BoundConstraint(control.data(), ub, 'upper'))
+                    bound_inequality_constraints.append(OptizelleBoundConstraint(control.data(), ub, 'upper'))
 
         self.bound_inequality_constraints = bound_inequality_constraints
 
@@ -624,7 +636,8 @@ class OptizelleSolver(OptimizationSolver):
             Optizelle.Constrained.Algorithms.getMin(DolfinVectorSpace, DolfinVectorSpace, DolfinVectorSpace, Optizelle.Messaging(), self.fns, self.state)
 
         # Print out the reason for convergence
-        print("The algorithm converged due to: %s" % (Optizelle.StoppingCondition.to_string(self.state.opt_stop)))
+        # FIXME: Use logging
+        print("The algorithm stopped due to: %s" % (Optizelle.StoppingCondition.to_string(self.state.opt_stop)))
 
         # Return the optimal control
         list_type = self.problem.reduced_functional.controls
