@@ -2,7 +2,12 @@
 
 from dolfin import *
 from dolfin_adjoint import *
-import Optizelle
+try:
+  import Optizelle
+except ImportError:
+  info_blue("Optizelle bindings unavailable, skipping test")
+  sys.exit(0)
+
 set_log_level(WARNING)
 
 V = Constant(0.4)      # volume bound on the control
