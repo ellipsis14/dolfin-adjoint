@@ -105,8 +105,6 @@ parameters = {
                  "H_type" : Optizelle.Operators.UserDefined,
                  "dir" : Optizelle.LineSearchDirection.NewtonCG,
                  "ipm": Optizelle.InteriorPointMethod.PrimalDualLinked,
-                 #"sigma": 0.001,
-                 #"gamma": 0.995,
                  "linesearch_iter_max" : 50,
                  "krylov_iter_max" : 100,
                  "eps_krylov" : 1e-4
