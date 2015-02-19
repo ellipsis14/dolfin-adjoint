@@ -105,8 +105,8 @@ parameters = {
                  "H_type" : Optizelle.Operators.UserDefined,
                  "dir" : Optizelle.LineSearchDirection.NewtonCG,
                  "ipm": Optizelle.InteriorPointMethod.PrimalDualLinked,
-                 "sigma": 0.001,
-                 "gamma": 0.995,
+                 #"sigma": 0.001,
+                 #"gamma": 0.995,
                  "linesearch_iter_max" : 50,
                  "krylov_iter_max" : 100,
                  "eps_krylov" : 1e-4
@@ -118,7 +118,7 @@ f_opt = solver.solve()
 cmax = f_opt.vector().max()
 cmin = f_opt.vector().min()
 
-#plot(f_opt, interactive=True)
+plot(f_opt, interactive=True)
 
 # Check that the bounds are satisfied
 assert cmin >= lb
