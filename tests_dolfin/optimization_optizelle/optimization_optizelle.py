@@ -1,5 +1,6 @@
 """ Solves a optimal control problem constrained by the Poisson equation:
 
+
     min_(u, m) \int_\Omega 1/2 || u - d ||^2 + 1/2 || f ||^2
 
     subjecct to
@@ -97,7 +98,7 @@ lb = 0.1
 problem = MinimizationProblem(rf, bounds=[(lb, ub)], constraints=Vconst)
 
 parameters = {
-             "maximum_iterations": 20,
+             "maximum_iterations": 10,
              "optizelle_parameters":
                  {
                  "msg_level" : 10,
@@ -106,8 +107,11 @@ parameters = {
                  "dir" : Optizelle.LineSearchDirection.NewtonCG,
                  "ipm": Optizelle.InteriorPointMethod.PrimalDualLinked,
                  "linesearch_iter_max" : 50,
-                 "krylov_iter_max" : 100,
-                 "eps_krylov" : 1e-4
+                 "krylov_iter_max" : 10,
+                 "eps_krylov" : 1e-4,
+                 "eps_dx" : 1e-10,
+                 "sigma": 0.001,
+                 "gamma": 0.995,
                  }
              }
 
@@ -116,7 +120,7 @@ f_opt = solver.solve()
 cmax = f_opt.vector().max()
 cmin = f_opt.vector().min()
 
-plot(f_opt, interactive=True)
+#plot(f_opt, interactive=True)
 
 # Check that the bounds are satisfied
 assert cmin >= lb
