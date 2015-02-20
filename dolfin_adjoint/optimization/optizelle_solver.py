@@ -72,8 +72,7 @@ class OptizelleBoundConstraint(constraints.InequalityConstraint):
             elif isinstance(self.bound, Function):
                 out.assign(self.scale*out - self.scale*self.bound)
 
-            res = (self.mass*out_vec).array()
-            return res
+            return out_vec.array()
 
     def jacobian_action(self, m, dm, result):
         if isinstance(self.m, Constant):
@@ -81,13 +80,16 @@ class OptizelleBoundConstraint(constraints.InequalityConstraint):
         elif isinstance(self.m, Function):
             # We need to finalise the dm vector, otherwise we get PETSc 73 errors
             dm.vector().apply("")
-            result[:] = self.scale*(self.mass*dm.vector()).array()
+
+            result[:] = self.scale*dm.vector().array()
 
     def jacobian_adjoint_action(self, m, dp, result):
         if isinstance(self.m, Constant):
             result[0] = self.scale*dp[0]
         elif isinstance(self.m, Function):
-            result.vector()[:] = self.scale*dp
+            tmp = Vector(result.vector())
+            tmp[:] = self.scale*dp
+            solve(self.mass, result.vector(), tmp)
 
     def hessian_action(self, m, dm, dp, result):
         if isinstance(self.m, Constant):
@@ -115,10 +117,13 @@ class DolfinVectorSpace(object):
     @staticmethod
     def __assign_obj(x, y):
         if isinstance(x, GenericFunction):
+            assert isinstance(y, GenericFunction)
+            x.vector().apply("")
             y.assign(x)
         elif isinstance(x, Constant):
             y.assign(float(x))
         elif isinstance(x, numpy.ndarray):
+            assert isinstance(y, numpy.ndarray)
             y[:] = x
         else:
             raise NotImplementedError
@@ -160,10 +165,12 @@ class DolfinVectorSpace(object):
     @staticmethod
     def __axpy_obj(alpha, x, y):
         if isinstance(x, GenericFunction):
+            assert isinstance(y, GenericFunction)
             y.vector().axpy(alpha, x.vector())
         elif isinstance(x, Constant):
             y.assign(alpha * float(x) + float(y))
         elif isinstance(x, numpy.ndarray):
+            assert isinstance(y, numpy.ndarray)
             y.__iadd__(alpha*x)
         else:
             raise NotImplementedError
@@ -171,10 +178,12 @@ class DolfinVectorSpace(object):
     @staticmethod
     def __inner_obj(x, y):
         if isinstance(x, GenericFunction):
+            assert isinstance(y, GenericFunction)
             return assemble(inner(x, y)*dx)
         elif isinstance(x, Constant):
             return float(x)*float(y)
         elif isinstance(x, numpy.ndarray):
+            assert isinstance(y, numpy.ndarray)
             return numpy.inner(x, y)
         else:
             raise NotImplementedError
@@ -182,10 +191,14 @@ class DolfinVectorSpace(object):
     @staticmethod
     def __prod_obj(x, y, z):
         if isinstance(x, GenericFunction):
+            assert isinstance(y, GenericFunction)
+            assert isinstance(z, GenericFunction)
             z.vector()[:] = x.vector() * y.vector()
         elif isinstance(x, Constant):
             z.assign(float(x)*float(y))
         elif isinstance(x, numpy.ndarray):
+            assert isinstance(y, numpy.ndarray)
+            assert isinstance(z, numpy.ndarray)
             z[:] = x*y
         else:
             raise NotImplementedError
@@ -204,11 +217,15 @@ class DolfinVectorSpace(object):
     @staticmethod
     def __linv_obj(x, y, z):
         if isinstance(x, GenericFunction):
+            assert isinstance(y, GenericFunction)
+            assert isinstance(z, GenericFunction)
             z.vector().set_local( y.vector().array() / x.vector().array() )
             z.vector().apply("insert")
         elif isinstance(x, Constant):
             z.assign(float(y) / float(x))
         elif isinstance(x, numpy.ndarray):
+            assert isinstance(y, numpy.ndarray)
+            assert isinstance(z, numpy.ndarray)
             z[:] = numpy.divide(y, x)
         else:
             raise NotImplementedError
@@ -227,6 +244,7 @@ class DolfinVectorSpace(object):
     @staticmethod
     def __srch_obj(x, y):
         if isinstance(x, GenericFunction):
+            assert isinstance(y, GenericFunction)
             if any(x.vector() < 0):
                 my_min = min(-yy/xx for (xx, yy) in zip(x.vector().get_local(), y.vector().get_local()) if xx < 0)
             else:
@@ -241,6 +259,7 @@ class DolfinVectorSpace(object):
                 return numpy.inf
 
         elif isinstance(x, numpy.ndarray):
+            assert isinstance(y, numpy.ndarray)
             if any(x < 0):
                 return min(-yy/xx for (xx, yy) in zip(x, y) if xx < 0)
             else:
