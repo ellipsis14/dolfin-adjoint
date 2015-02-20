@@ -109,8 +109,9 @@ parameters = {
                  "x_diag" : Optizelle.VectorSpaceDiagnostics.Basic,
                  "y_diag" : Optizelle.VectorSpaceDiagnostics.Basic,
                  "z_diag" : Optizelle.VectorSpaceDiagnostics.EuclideanJordan,
-                 "f_diag" : Optizelle.FunctionDiagnostics.FirstOrder,
-                 #"g_diag" : Optizelle.FunctionDiagnostics.SecondOrder,
+                 "f_diag" : Optizelle.FunctionDiagnostics.SecondOrder,
+                 "g_diag" : Optizelle.FunctionDiagnostics.SecondOrder,
+                 "L_diag" : Optizelle.FunctionDiagnostics.SecondOrder,
                  "stored_history": 25,
                  }
              }
