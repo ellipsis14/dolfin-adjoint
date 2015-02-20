@@ -43,9 +43,17 @@
 # :math:`p` prescribed constants, :math:`\alpha` is a regularisation
 # term, and :math:`V` is the volume bound on the control.
 #
-# Physically, this corresponds to finding the material distribution
-# :math:`a(x)` that produces the least heat when the amount of high
-# conduction material is limited.
+# Physically, the problem is to finding the material distribution
+# :math:`a(x)` that minimises the integral of the temperature when the amount of highly
+# conducting material is limited. This code makes several approximations to
+# this physical problem. Instead of solving an integer optimisation problem (at each
+# location, we either have conducting material or we do not), a continuous relaxation
+# is performed; this is standard in topology optimisation :cite:`bendsoe2003`. Furthermore,
+# the discrete solution varies as the mesh is refined: the continuous solution exhibits
+# features at all scales, and these must be carefully handled in a discretisation
+# of the problem. In this example we merely add a fixed :math:`H^1` regularisation
+# term; a better approach is to add a mesh-dependent Helmholtz filter (see for example
+# :cite:`lazarov2011`).
 #
 # This example demonstrates how to implement general control
 # constraints, and how to use IPOPT :cite:`wachter2006` to solve the
@@ -76,9 +84,9 @@ parameters["std_out_all_processes"] = False
 
 V = Constant(0.4)      # volume bound on the control
 p = Constant(5)        # power used in the solid isotropic material
-# with penalisation (SIMP) rule, to encourage the control solution to attain either 0 or 1
+                       # with penalisation (SIMP) rule, to encourage the control
+                       # solution to attain either 0 or 1
 eps = Constant(1.0e-3) # epsilon used in the solid isotropic material
-# with penalisation (SIMP) rule, used to encourage the control solution to attain either 0 or 1
 alpha = Constant(1.0e-8) # regularisation coefficient in functional
 
 
@@ -203,11 +211,15 @@ if __name__ == "__main__":
     """A class that enforces the volume constraint g(a) = V - a*dx >= 0."""
     def __init__(self, V):
       self.V  = float(V)
+      self.scale = 1.
 
-      # The derivative of the constraint g(x) is constant (it is the diagonal of the lumped mass matrix for the control function space), so let's assemble it here once.
-      # This is also useful in rapidly calculating the integral each time without re-assembling.
+# The derivative of the constraint g(x) is constant (it is the
+# diagonal of the lumped mass matrix for the control function space),
+# so let's assemble it here once.  This is also useful in rapidly
+# calculating the integral each time without re-assembling.
+
       self.smass  = assemble(TestFunction(A) * Constant(1) * dx)
-      self.tmpvec = Function(A, name="Control")
+      self.tmpvec = Function(A)
 
     def function(self, m):
       self.tmpvec.assign(m)
@@ -215,28 +227,23 @@ if __name__ == "__main__":
 
       # Compute the integral of the control over the domain
       integral = self.smass.inner(self.tmpvec.vector())
-      vecmax   = m.vector().max()
-      vecmin   = m.vector().min()
-      if MPI.rank(mpi_comm_world()) == 0:
-        print "Current control integral: ", integral
-        print "Maximum of control: ", vecmax
-        print "Minimum of control: ", vecmin
-      return [self.V - integral]
+      return [self.scale * (self.V - integral)]
 
     def jacobian_action(self, m, dm, result):
-      result[:] = - self.smass.inner(dm.vector())
+      result[:] = - self.scale * self.smass.inner(dm.vector())
 
     def jacobian_adjoint_action(self, m, dp, result):
-        result.vector()[:] = interpolate(Constant(-dp[0]), A).vector()
+      result.vector()[:] = interpolate(Constant(-self.scale * dp[0]), A).vector()
 
     def hessian_action(self, m, dm, dp, result):
-        result.vector().zero()
+      result.vector().zero()
 
     def output_workspace(self):
-        return [0.0]
+      return [0.0]
 
     def length(self):
-        return 1
+      """Return the number of components in the constraint vector (here, one)."""
+      return 1
 
 # Now that all the ingredients are in place, we can perform the
 # optimisation.  The :py:class:`ReducedFunctionalNumPy` class has a
@@ -254,14 +261,32 @@ if __name__ == "__main__":
                    {
                    "msg_level" : 10,
                    "algorithm_class" : Optizelle.AlgorithmClass.TrustRegion,
-                   "H_type" : Optizelle.Operators.SR1,
+                   "H_type" : Optizelle.Operators.ScaledIdentity,
                    "dir" : Optizelle.LineSearchDirection.BFGS,
                    "eps_dx": 1.0e-32,
                    "linesearch_iter_max" : 5,
                    "ipm": Optizelle.InteriorPointMethod.PrimalDual,
-                   "mu": 1e-3,
+                   "mu": 1e-5,
+                   "eps_mu": 1e-3,
+                   "sigma" : 0.5,
+                   "delta" : 100.,
+                   #"xi_qn" : 1e-12,
+                   #"xi_pg" : 1e-12,
+                   #"xi_proj" : 1e-12,
+                   #"xi_tang" : 1e-12,
+                   #"xi_lmh" : 1e-12,
+                   "rho" : 100.,
+                   #"augsys_iter_max" : 1000,
+                   "krylov_iter_max" : 40,
+                   "eps_krylov" : 1e-6,
                    #"dscheme": Optizelle.DiagnosticScheme.DiagnosticsOnly,
                    "h_diag" : Optizelle.FunctionDiagnostics.SecondOrder,
+                   "x_diag" : Optizelle.VectorSpaceDiagnostics.Basic,
+                   "y_diag" : Optizelle.VectorSpaceDiagnostics.Basic,
+                   "z_diag" : Optizelle.VectorSpaceDiagnostics.EuclideanJordan,
+                   #"f_diag" : Optizelle.FunctionDiagnostics.FirstOrder,
+                   "g_diag" : Optizelle.FunctionDiagnostics.SecondOrder,
+                   "L_diag" : Optizelle.FunctionDiagnostics.SecondOrder,
                    "stored_history": 25,
                    }
                }

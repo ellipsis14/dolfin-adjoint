@@ -1,9 +1,9 @@
 from optimization_solver import OptimizationSolver
-from optimization_problem import MaximizationProblem, MinimizationProblem
+from optimization_problem import MaximizationProblem
 from ..reduced_functional_numpy import ReducedFunctionalNumPy
 import constraints
 from ..misc import rank
-from ..enlisting import enlist, delist
+from ..enlisting import delist
 from ..utils import gather
 
 import backend

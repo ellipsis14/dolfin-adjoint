@@ -1,10 +1,8 @@
+import numpy as np
 import dolfin
-from dolfin_adjoint import constant
-from ..reduced_functional_numpy import ReducedFunctionalNumPy, get_global, set_local
+from ..reduced_functional_numpy import ReducedFunctionalNumPy, get_global
 from ..reduced_functional import ReducedFunctional
 from ..utils import gather
-import numpy as np
-import sys
 from ..misc import rank
 
 def serialise_bounds(rf_np, bounds):

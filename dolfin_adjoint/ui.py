@@ -29,7 +29,7 @@ from timeforms import dt, TimeMeasure, START_TIME, FINISH_TIME
 from optimization.optimization_problem import *
 from optimization.optimization_solver import *
 from optimization.ipopt_solver import *
-from optimization.optizelle_solver import OptizelleSolver
+from optimization.optizelle_solver import *
 
 if backend.__name__ == "dolfin":
   from newton_solver import NewtonSolver
