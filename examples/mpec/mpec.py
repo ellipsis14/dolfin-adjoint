@@ -211,13 +211,11 @@ for i in range(4):
 
 # The next line modifies the tape such that the initial guess for ``y``
 # (to be used in the Newton solver in the forward problem) is set to
-# ``y_opt``.  This is achieved with the function
-# :py:func:`replace_control_value
-# <dolfin_adjoint.replace_control_value>` (or alternatively with
-# :py:func:`replace_tape_value <dolfin_adjoint.replace_tape_value>`, if
-# we needed more control, e.g. replace a non-initial value function):
+# ``y_opt``.  This is achieved with the
+# :py:func:`FunctionControl.update
+# <dolfin_adjoint.FunctionControl.update>` function:
 
-  replace_control_value(Control(y), y_opt)
+  Control(y).update(y_opt)
 
 # Finally, we store the optimal state and control to disk and print some
 # statistics:

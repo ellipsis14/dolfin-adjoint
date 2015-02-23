@@ -10,6 +10,9 @@ import adjresidual
 from constant import get_constant
 import constant
 import types
+import adjrhs
+
+global_eqn_list = {}
 
 class DolfinAdjointControl(libadjoint.Parameter):
   def __call__(self, adjointer, i, dependencies, values, variable):
@@ -60,6 +63,10 @@ class DolfinAdjointControl(libadjoint.Parameter):
     '''Return the data associated with the current values of the Parameter.'''
     raise NotImplementedError
 
+  def update(self, value):
+    '''Update the control value.'''
+    raise NotImplementedError
+
   def set_perturbation(self, m_dot):
     '''Return another instance of the same class, representing the Parameter perturbed in a particular
     direction m_dot.'''
@@ -68,21 +75,25 @@ class DolfinAdjointControl(libadjoint.Parameter):
 class FunctionControl(DolfinAdjointControl):
   '''This Parameter is used as input to the tangent linear model (TLM)
   when one wishes to compute dJ/d(initial condition) in a particular direction (perturbation).'''
+
   def __init__(self, coeff, value=None, perturbation=None):
     '''coeff: the variable whose initial condition you wish to perturb.
        perturbation: the perturbation direction in which you wish to compute the gradient. Must be a Function.'''
 
     if not (isinstance(coeff, backend.Function) or isinstance(coeff, str)):
       raise TypeError, "The coefficient must be a Function or a String"
+
     self.coeff = coeff
     self.value = value
     self.var = None
-    # Find the first occurance of the coeffcient
+
+    # Find the first occurance of the coefficient
     for t in range(adjglobals.adjointer.timestep_count):
       var = libadjoint.Variable(str(coeff), t, 0)
       if adjglobals.adjointer.variable_known(var):
         self.var = var
         break
+
     # Fallback option for cases where the parameter is initialised before the annotation
     if not self.var:
       self.var = libadjoint.Variable(str(coeff), 0, 0)
@@ -116,6 +127,30 @@ class FunctionControl(DolfinAdjointControl):
     else:
       return adjglobals.adjointer.get_variable_value(self.var).data
 
+  def update(self, value):
+    '''Update the control value.'''
+
+    # Functions occur in the right-hand-side of an equation in the
+    # dolfin-adjoint annotation.
+    # Hence we update the right hand side callbacks for
+    # the equation which targets the associated variable.
+
+    # Create a RHS object with the new control values
+    init_rhs = adjlinalg.Vector(value).duplicate()
+    init_rhs.axpy(1.0, adjlinalg.Vector(value))
+    rhs = adjrhs.RHS(init_rhs)
+    # Register the new rhs in the annotation
+    class DummyEquation(object):
+        pass
+
+    eqn = DummyEquation()
+    eqn_nb = self.var.equation_nb(adjglobals.adjointer)
+    eqn.equation = adjglobals.adjointer.adjointer.equations[eqn_nb]
+    rhs.register(eqn)
+
+    # Keep a python reference of the equation
+    global_eqn_list[eqn_nb] = eqn
+
   def set_perturbation(self, m_dot):
     return FunctionControl(self.coeff, perturbation=m_dot, value=self.value)
 
@@ -123,8 +158,11 @@ class ConstantControl(DolfinAdjointControl):
   '''This Parameter is used as input to the tangent linear model (TLM)
   when one wishes to compute dJ/da, where a is a single scalar parameter.'''
   def __init__(self, a, coeff=1):
+
+    # Check input types
     if not (isinstance(a, backend.Constant) or isinstance(a, str)):
       raise TypeError, "The coefficient must be a Constant or a String"
+
     self.a = a
     self.coeff = coeff
 
@@ -326,6 +364,14 @@ class ConstantControl(DolfinAdjointControl):
   def data(self):
     return get_constant(self.a)
 
+  def update(self, value):
+    '''Update the control value.'''
+
+    # Constants are not copied in the annotation. That is, changing a constant that occurs
+    # in the forward model will also change the forward replay with libadjoint.
+    constant = self.data()
+    constant.assign(value(()))
+
   def set_perturbation(self, m_dot):
     '''Return another instance of the same class, representing the Parameter perturbed in a particular
     direction m_dot.'''
@@ -333,7 +379,7 @@ class ConstantControl(DolfinAdjointControl):
 
 class ConstantControls(DolfinAdjointControl):
   '''This Parameter is used as input to the tangent linear model (TLM)
-  when one wishes to compute dJ/dv . delta v, where v is a vector of scalar parameters.'''
+  when one wishes to compute dJ/dv . delta v, where v is a vector of ControlControls.'''
   def __init__(self, v, dv=None):
     self.v = v
     if dv is not None:
@@ -395,11 +441,11 @@ class ConstantControls(DolfinAdjointControl):
 
 
 class ListControl(DolfinAdjointControl):
-  def __init__(self, parameters):
-    for p in parameters:
-      assert isinstance(p, DolfinAdjointControl)
+  def __init__(self, controls):
+    for c in controls:
+      assert isinstance(c, DolfinAdjointControl)
 
-    self.parameters = parameters
+    self.controls = controls
 
   def __call__(self, adjointer, i, dependencies, values, variable):
     '''This function gives the source term for the tangent linear model.
@@ -410,7 +456,7 @@ class ListControl(DolfinAdjointControl):
     Return an adjlinalg.Vector to contribute a source term, or return
     None if there's nothing to do.'''
 
-    calls = [p(adjointer, i, dependencies, values, variable) for p in self.parameters]
+    calls = [p(adjointer, i, dependencies, values, variable) for p in self.controls]
 
     return reduce(_add, calls, None)
 
@@ -425,7 +471,7 @@ class ListControl(DolfinAdjointControl):
     variable associated with it)
     and m is the Parameter.'''
 
-    return [p.equation_partial_derivative(adjointer, adjoint, i, variable) for p in self.parameters]
+    return [p.equation_partial_derivative(adjointer, adjoint, i, variable) for p in self.controls]
 
   def equation_partial_second_derivative(self, adjointer, adjoint, i, variable, m_dot):
     '''This function computes the contribution to the functional gradient
@@ -437,29 +483,35 @@ class ListControl(DolfinAdjointControl):
     where F is a particular equation (i is its number, variable is the forward
     variable associated with it)
     and m is the Parameter.'''
-    return [p.equation_partial_second_derivative(adjointer, adjoint, i, variable, m) for (p, m) in zip(self.parameters, m_dot)]
+    return [p.equation_partial_second_derivative(adjointer, adjoint, i, variable, m) for (p, m) in zip(self.controls, m_dot)]
 
   def functional_partial_derivative(self, adjointer, J, timestep):
     '''Given a functional J, compute derivative(J, m) -- the partial derivative of
     J with respect to m. This is necessary to compute correct functional gradients.'''
-    return [p.functional_partial_derivative(adjointer, J, timestep) for p in self.parameters]
+    return [p.functional_partial_derivative(adjointer, J, timestep) for p in self.controls]
 
   def functional_partial_second_derivative(self, adjointer, J, timestep, m_dot):
     '''Given a functional J, compute derivative(derivative(J, m), m, m_dot) -- the partial second derivative of
     J with respect to m in the direction m_dot. This is necessary to compute correct functional Hessians.'''
-    return [p.functional_partial_second_derivative(adjointer, J, timestep, m) for (p, m) in zip(self.parameters, m_dot)]
+    return [p.functional_partial_second_derivative(adjointer, J, timestep, m) for (p, m) in zip(self.controls, m_dot)]
 
   def data(self):
     '''Return the data associated with the current values of the Parameter.'''
-    return [p.data() for p in self.parameters]
+    return [p.data() for p in self.controls]
+
+  def update(self, value):
+    if len(value) != len(self.controls):
+      raise ValueError, "The number of controls must equal to len(values)."
+
+    [c.update(v) for c, v in zip(self.controls, value)]
 
   def set_perturbation(self, m_dot):
     '''Return another instance of the same class, representing the Parameter perturbed in a particular
     direction m_dot.'''
-    return ListControl([p.set_perturbation(m) for (p, m) in zip(self.parameters, m_dot)])
+    return ListControl([p.set_perturbation(m) for (p, m) in zip(self.controls, m_dot)])
 
   def __getitem__(self, i):
-    return self.parameters[i]
+    return self.controls[i]
 
 def _add(x, y):
   if x is None:

@@ -1,15 +1,13 @@
+import cPickle as pickle
+import hashlib
 import libadjoint
 import utils
 from backend import Function, Constant, info_red, info_green, File
-from dolfin_adjoint import adjlinalg, adjrhs, constant, drivers
+from dolfin_adjoint import drivers
 from dolfin_adjoint.adjglobals import adjointer, mem_checkpoints, disk_checkpoints, adj_reset_cache
 from functional import Functional
 from enlisting import enlist, delist
-from controls import DolfinAdjointControl
-import cPickle as pickle
-import hashlib
-
-global_eqn_list = {}
+from controls import DolfinAdjointControl, ListControl
 
 class ReducedFunctional(object):
     ''' This class provides access to the reduced functional for given
@@ -100,7 +98,6 @@ class ReducedFunctional(object):
                 print control.__class__
                 raise TypeError("control should be a Control")
 
-
         if not isinstance(scale, float):
             raise TypeError("scale should be a float")
 
@@ -116,16 +113,14 @@ class ReducedFunctional(object):
     def __call__(self, value):
         ''' Evaluates the reduced functional for the given control value. '''
 
+        # Reset any cached data in dolfin-adjoint
         adj_reset_cache()
 
         #: The control values at which the reduced functional is to be evaluated.
         value = enlist(value)
 
-        if len(value) != len(self.controls):
-            raise ValueError, "The number of controls must equal the number of controls values."
-
         # Update the control values on the tape
-        replace_control_value(self.controls, value)
+        ListControl(self.controls).update(value)
 
         # Check if the result is already cached
         if self.cache:
@@ -344,47 +339,6 @@ class ReducedFunctional(object):
       problem = moola.Problem(functional)
 
       return problem
-
-def replace_control_value(controls, values):
-    ''' Replaces the control value with new values. '''
-    for control, value in zip(enlist(controls), enlist(values)):
-        if hasattr(control, 'var'):
-            replace_tape_value(control.var, value)
-
-def replace_tape_value(variable, new_value):
-    ''' Replaces the tape value of the given DolfinAdjointVariable with new_value. '''
-
-    # Case 1: The control value and new_value are Functions
-    if hasattr(new_value, 'vector'):
-        # Functions are copied in da and occur as rhs in the annotation.
-        # Hence we need to update the right hand side callbacks for
-        # the equation that targets the associated variable.
-
-        # Create a RHS object with the new control values
-        init_rhs = adjlinalg.Vector(new_value).duplicate()
-        init_rhs.axpy(1.0, adjlinalg.Vector(new_value))
-        rhs = adjrhs.RHS(init_rhs)
-        # Register the new rhs in the annotation
-        class DummyEquation(object):
-            pass
-
-        eqn = DummyEquation()
-        eqn_nb = variable.equation_nb(adjointer)
-        eqn.equation = adjointer.adjointer.equations[eqn_nb]
-        rhs.register(eqn)
-
-        # Keep a python reference of the equation in memory
-        global_eqn_list[eqn_nb] = eqn
-
-    # Case 2: The control value and new_value are Constants
-    elif hasattr(new_value, "value_size"):
-        # Constants are not copied in the annotation. That is, changing a constant that occurs
-        # in the forward model will also change the forward replay with libadjoint.
-        constant = control.data()
-        constant.assign(new_value(()))
-
-    else:
-        raise NotImplementedError, "Can only replace a dolfin.Functions or dolfin.Constants"
 
 def value_hash(value):
     if isinstance(value, Constant):

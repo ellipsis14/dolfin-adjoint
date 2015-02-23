@@ -16,8 +16,8 @@ if backend.__name__  == "dolfin":
   from backend import cpp
 
 def scale(obj, factor):
-    """ A generic function to scale Functions, 
-        Constants and lists, numpy arrays, ... 
+    """ A generic function to scale Functions,
+        Constants and lists, numpy arrays, ...
     """
 
     if hasattr(obj, "function_space"):
@@ -466,12 +466,12 @@ def taylor_test(J, m, Jm, dJdm, HJm=None, seed=None, perturbation_direction=None
 
   if isinstance(m, controls.ListControl):
     if perturbation_direction is None:
-      perturbation_direction = [None] * len(m.parameters)
+      perturbation_direction = [None] * len(m.controls)
 
     if value is None:
-      value = [None] * len(m.parameters)
+      value = [None] * len(m.controls)
 
-    return min(taylor_test(J, m[i], Jm, dJdm[i], HJm, seed, perturbation_direction[i], value[i]) for i in range(len(m.parameters)))
+    return min(taylor_test(J, m[i], Jm, dJdm[i], HJm, seed, perturbation_direction[i], value[i]) for i in range(len(m.controls)))
 
   def get_const(val):
     if isinstance(val, str):

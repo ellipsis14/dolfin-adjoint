@@ -36,7 +36,7 @@ if backend.__name__ == "dolfin":
   from krylov_solver import KrylovSolver
   from linear_solver import LinearSolver
   from lusolver import LUSolver
-  from reduced_functional import ReducedFunctional, replace_control_value, replace_tape_value
+  from reduced_functional import ReducedFunctional
   from reduced_functional_numpy import ReducedFunctionalNumPy, ReducedFunctionalNumpy
   from optimization.optimization import minimize, maximize, print_optimization_methods, minimise, maximise
   from optimization.multistage_optimization import minimize_multistage

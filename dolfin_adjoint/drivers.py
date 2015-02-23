@@ -163,7 +163,7 @@ def compute_gradient(J, param, forget=True, ignore=[], callback=lambda var, outp
 
 def rename(J, dJdparam, param):
   if isinstance(dJdparam, list):
-    [rename(J, dJdm, m) for (dJdm, m) in zip(dJdparam, param.parameters)]
+    [rename(J, dJdm, m) for (dJdm, m) in zip(dJdparam, param.controls)]
   elif isinstance(dJdparam, backend.Function):
     if backend.__name__ == "dolfin":
       dJdparam.rename("d(%s)/d(%s)" % (str(J), str(param)), "a Function from dolfin-adjoint")
