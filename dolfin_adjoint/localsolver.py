@@ -30,8 +30,9 @@ class LocalSolverMatrix(adjlinalg.Matrix):
         if a not in caching.localsolvers:
             if dolfin.parameters["adjoint"]["debug_cache"]:
                 dolfin.info_red("Creating new LocalSolver")
-            newsolver = dolfin.LocalSolver(a, b.data.form)
+            newsolver = dolfin.LocalSolver(a, None, solver_type=self.solver_parameters["solver_type"])
             caching.localsolvers[a] = newsolver
+            import IPython; IPython.embed()
         else:
             if dolfin.parameters["adjoint"]["debug_cache"]:
                 dolfin.info_green("Reusing LocalSolver")
@@ -44,7 +45,7 @@ class LocalSolverMatrix(adjlinalg.Matrix):
         return x_vec
 
 class LocalSolver(dolfin.LocalSolver):
-    def __init__(self, a, L, solver_type = dolfin.LocalSolver.LU):
+    def __init__(self, a, L = None, solver_type = dolfin.LocalSolver.LU):
         dolfin.LocalSolver.__init__(self, a, L, solver_type)
         self.a = a
         self.L = L
@@ -59,7 +60,7 @@ class LocalSolver(dolfin.LocalSolver):
             L = b_vec.form
 
             # Set Matrix class for solving the adjoint systems
-            solving.annotate(self.a == L, x, matrix_class=LocalSolverMatrix)
+            solving.annotate(self.a == L, x, solver_parameters={"solver_type": self.solver_type}, matrix_class=LocalSolverMatrix)
 
         # Use standard local solver
         out = dolfin.LocalSolver.solve_local(self, x_vec, b_vec, b_dofmap)

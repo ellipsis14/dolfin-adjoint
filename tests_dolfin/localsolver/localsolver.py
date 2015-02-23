@@ -41,7 +41,7 @@ def main(c, annotate=False):
     u_ls = Function(U, name="u_ls")
 
     # Prepare LocalSolver
-    local_solver = LocalSolver(a, L)
+    local_solver = LocalSolver(a, solver_type = LocalSolver.Cholesky)
 
     # The acutal timestepping
     b = None
