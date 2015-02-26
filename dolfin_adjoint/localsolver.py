@@ -31,15 +31,15 @@ class LocalSolverMatrix(adjlinalg.Matrix):
             if dolfin.parameters["adjoint"]["debug_cache"]:
                 dolfin.info_red("Creating new LocalSolver")
             newsolver = dolfin.LocalSolver(a, None, solver_type=self.solver_parameters["solver_type"])
+            newsolver.factorize()
             caching.localsolvers[a] = newsolver
-            import IPython; IPython.embed()
         else:
             if dolfin.parameters["adjoint"]["debug_cache"]:
                 dolfin.info_green("Reusing LocalSolver")
 
         # Get the right solver from the solver dictionary
         solver = caching.localsolvers[a]
-        solver.solve_local(x.vector(), b_vec, b.data.function_space().dofmap())
+        solver.solve_local(x.vector(), b_vec, b.fn_space.dofmap())
 
         x_vec = adjlinalg.Vector(x)
         return x_vec
@@ -72,3 +72,6 @@ class LocalSolver(dolfin.LocalSolver):
                            libadjoint.MemoryStorage(adjlinalg.Vector(x)))
 
         return out
+
+    def solve_global_rhs(*args, **kwargs):
+        error("ERROR: Only use LocalSolver.solve(), solve_global_rhs() doesn't get annotated.")

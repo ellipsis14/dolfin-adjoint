@@ -67,8 +67,9 @@ if __name__ == "__main__":
     adj_html("forward.html", "forward")
     adj_html("adjoint.html", "adjoint")
 
-    #info_blue("Replaying")
-    #replay_dolfin(forget=False, tol=0.0, stop=True)
+    info_blue("Replaying")
+    rep = replay_dolfin(forget=False, tol=0.0, stop=True)
+    print rep
 
     info_blue("Computing adjoint")
     J = Functional(inner(u, u)*dx)
