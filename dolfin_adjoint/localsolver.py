@@ -27,34 +27,38 @@ class LocalSolverMatrix(adjlinalg.Matrix):
             b_vec = dolfin.assemble(L)
 
         # Next: if necessary, create a new solver and add to dictionary
-        if a not in caching.localsolvers:
+        idx = a.arguments()
+        if idx not in caching.localsolvers:
             if dolfin.parameters["adjoint"]["debug_cache"]:
                 dolfin.info_red("Creating new LocalSolver")
+                print a
+#                import IPython; IPython.embed()
             newsolver = dolfin.LocalSolver(a, None, solver_type=self.solver_parameters["solver_type"])
             if self.solver_parameters["factorize"] : newsolver.factorize()
-            caching.localsolvers[a] = newsolver
+            caching.localsolvers[idx] = newsolver
         else:
             if dolfin.parameters["adjoint"]["debug_cache"]:
                 dolfin.info_green("Reusing LocalSolver")
 
         # Get the right solver from the solver dictionary
-        solver = caching.localsolvers[a]
+        solver = caching.localsolvers[idx]
         solver.solve_local(x.vector(), b_vec, b.fn_space.dofmap())
 
         x_vec = adjlinalg.Vector(x)
         return x_vec
 
 class LocalSolver(dolfin.LocalSolver):
-    def __init__(self, a, L = None, solver_type = dolfin.LocalSolver.LU):
+    def __init__(self, a, L = None, solver_type = dolfin.LocalSolver.LU, **kwargs):
         dolfin.LocalSolver.__init__(self, a, L, solver_type)
+        factorize = kwargs.pop("factorize", False)
         self.a = a
         self.L = L
         self.solver_type = solver_type
+        self.adjoint_factorize = factorize
 
     def solve(self, x_vec, b_vec, b_dofmap, **kwargs):
         # Figure out whether to annotate or not
         to_annotate = utils.to_annotate(kwargs.pop("annotate", None))
-        factorize = kwargs.pop("factorize", False)
         x = x_vec.function
 
         if to_annotate:
@@ -62,7 +66,7 @@ class LocalSolver(dolfin.LocalSolver):
 
             # Set Matrix class for solving the adjoint systems
             solving.annotate(self.a == L, x, \
-                            solver_parameters={"solver_type": self.solver_type, "factorize" : factorize}, \
+                            solver_parameters={"solver_type": self.solver_type, "factorize" : self.adjoint_factorize}, \
                             matrix_class=LocalSolverMatrix)
 
         # Use standard local solver

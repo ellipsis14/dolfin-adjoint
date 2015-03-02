@@ -15,7 +15,6 @@ def main(c, annotate=False):
     # Set some expressions
     uinit = Expression("cos(pi*x[0])")
     ubdr = Constant(1.0)
-    #c = Constant(1.0)
 
     # Set initial values
     u0 = interpolate(uinit, U, name="u0")
@@ -41,14 +40,17 @@ def main(c, annotate=False):
     u_ls = Function(U, name="u_ls")
 
     # Prepare LocalSolver
-    local_solver = LocalSolver(a, solver_type = LocalSolver.Cholesky)
+    local_solver = LocalSolver(a, solver_type = LocalSolver.Cholesky, factorize = True)
+    local_solver.factorize()
 
     # The acutal timestepping
     b = None
+    if annotate: adj_start_timestep()
     for i in range(30):
         b = assemble(L, tensor=b)
         local_solver.solve(u_ls.vector(), b, U.dofmap())
         u0.assign(u_ls)
+        if annotate: adj_inc_timestep((i+1)*float(DT), i == 30)
 
     return u_ls
 
@@ -63,7 +65,6 @@ if __name__ == "__main__":
 #    print "assemble(inner(v, v)*dx): ", assemble(inner(v, v)*dx)
 #    import sys; sys.exit(1)
 
-
     adj_html("forward.html", "forward")
     adj_html("adjoint.html", "adjoint")
 
@@ -75,11 +76,11 @@ if __name__ == "__main__":
     J = Functional(inner(u, u)*dx)
     m = Control(c)
     Jm = assemble(inner(u, u)*dx)
-    dJdm = compute_gradient(J, m, forget=False)
+    dJdm = compute_gradient(J, m, forget = False)
 
     def Jhat(m):
         print "Evaluating with c: ", float(m)
-        u = main(m, annotate=False)
+        u = main(m, annotate = False)
         J = assemble(inner(u, u)*dx)
         print "Functional: ", J
         return J
