@@ -31,7 +31,7 @@ class LocalSolverMatrix(adjlinalg.Matrix):
             if dolfin.parameters["adjoint"]["debug_cache"]:
                 dolfin.info_red("Creating new LocalSolver")
             newsolver = dolfin.LocalSolver(a, None, solver_type=self.solver_parameters["solver_type"])
-            newsolver.factorize()
+            if self.solver_parameters["factorize"] : newsolver.factorize()
             caching.localsolvers[a] = newsolver
         else:
             if dolfin.parameters["adjoint"]["debug_cache"]:
@@ -54,13 +54,16 @@ class LocalSolver(dolfin.LocalSolver):
     def solve(self, x_vec, b_vec, b_dofmap, **kwargs):
         # Figure out whether to annotate or not
         to_annotate = utils.to_annotate(kwargs.pop("annotate", None))
+        factorize = kwargs.pop("factorize", False)
         x = x_vec.function
 
         if to_annotate:
             L = b_vec.form
 
             # Set Matrix class for solving the adjoint systems
-            solving.annotate(self.a == L, x, solver_parameters={"solver_type": self.solver_type}, matrix_class=LocalSolverMatrix)
+            solving.annotate(self.a == L, x, \
+                            solver_parameters={"solver_type": self.solver_type, "factorize" : factorize}, \
+                            matrix_class=LocalSolverMatrix)
 
         # Use standard local solver
         out = dolfin.LocalSolver.solve_local(self, x_vec, b_vec, b_dofmap)
