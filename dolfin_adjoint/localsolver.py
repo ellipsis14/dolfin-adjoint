@@ -56,7 +56,7 @@ class LocalSolver(dolfin.LocalSolver):
         self.solver_type = solver_type
         self.adjoint_factorize = factorize
 
-    def solve(self, x_vec, b_vec, b_dofmap, **kwargs):
+    def solve_local(self, x_vec, b_vec, b_dofmap, **kwargs):
         # Figure out whether to annotate or not
         to_annotate = utils.to_annotate(kwargs.pop("annotate", None))
         x = x_vec.function
@@ -81,4 +81,4 @@ class LocalSolver(dolfin.LocalSolver):
         return out
 
     def solve_global_rhs(*args, **kwargs):
-        error("ERROR: Only use LocalSolver.solve(), solve_global_rhs() doesn't get annotated.")
+        error("ERROR: Only use LocalSolver.solve_local(), solve_global_rhs() doesn't get annotated.")

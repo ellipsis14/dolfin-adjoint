@@ -48,7 +48,7 @@ def main(c, annotate=False):
     if annotate: adj_start_timestep()
     for i in range(30):
         b = assemble(L, tensor=b)
-        local_solver.solve(u_ls.vector(), b, U.dofmap())
+        local_solver.solve_local(u_ls.vector(), b, U.dofmap())
         u0.assign(u_ls)
         if annotate: adj_inc_timestep((i+1)*float(DT), i == 30)
 
