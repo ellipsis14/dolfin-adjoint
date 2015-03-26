@@ -57,3 +57,6 @@ assembled_adj_forms = KeyedDict(keyfunc=form_key)
 ### Stuff for PointIntegralSolver caching
 pis_fwd_to_tlm = {}
 pis_fwd_to_adj = {}
+
+# LocalSolver Cache
+localsolvers = {}
