@@ -19,7 +19,6 @@ def replay_dolfin(forget=False, tol=0.0, stop=False):
   success = True
   for i in range(adjglobals.adjointer.equation_count):
       (fwd_var, output) = adjglobals.adjointer.get_forward_solution(i)
-
       storage = libadjoint.MemoryStorage(output)
       storage.set_compare(tol=tol)
       storage.set_overwrite(True)

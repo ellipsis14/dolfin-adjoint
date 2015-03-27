@@ -78,9 +78,8 @@ class Vector(libadjoint.Vector):
       else:
         # This occurs when adding a RHS derivative to an adjoint equation
         # corresponding to the initial conditions.
-        #print "axpy assembling FuncForm. self.data is a %s; x.data is a %s" % (self.data.__class__, x.data.__class__)
-        #import IPython; IPython.embed()
         self.data.vector().axpy(alpha, backend.assemble(x.data))
+        self.data.form = alpha * x.data
     elif isinstance(x.data, ufl.form.Form) and isinstance(self.data, ufl.form.Form):
 
       # Let's do a bit of argument shuffling, shall we?

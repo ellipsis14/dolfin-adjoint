@@ -66,6 +66,7 @@ def adj_reset_cache():
   caching.assembled_fwd_forms.clear()
   caching.assembled_adj_forms.clear()
   caching.lu_solvers.clear()
+  caching.localsolvers.clear()
 
   caching.pis_fwd_to_tlm.clear()
   caching.pis_fwd_to_adj.clear()
