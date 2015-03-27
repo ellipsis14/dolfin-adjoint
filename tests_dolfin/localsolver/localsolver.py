@@ -58,13 +58,6 @@ if __name__ == "__main__":
     c = Constant(1.0, name="BoundaryValue")
     u = main(c, annotate=True)
 
-#    plot(u, interactive=True)
-#    v = main(Constant(1.1), annotate=False)
-#    plot(v, interactive=True)
-#    print "assemble(inner(u, u)*dx): ", assemble(inner(u, u)*dx)
-#    print "assemble(inner(v, v)*dx): ", assemble(inner(v, v)*dx)
-#    import sys; sys.exit(1)
-
     adj_html("forward.html", "forward")
     adj_html("adjoint.html", "adjoint")
 

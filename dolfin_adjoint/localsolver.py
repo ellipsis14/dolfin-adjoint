@@ -31,8 +31,6 @@ class LocalSolverMatrix(adjlinalg.Matrix):
         if idx not in caching.localsolvers:
             if dolfin.parameters["adjoint"]["debug_cache"]:
                 dolfin.info_red("Creating new LocalSolver")
-                print a
-#                import IPython; IPython.embed()
             newsolver = dolfin.LocalSolver(a, None, solver_type=self.solver_parameters["solver_type"])
             if self.solver_parameters["factorize"] : newsolver.factorize()
             caching.localsolvers[idx] = newsolver
